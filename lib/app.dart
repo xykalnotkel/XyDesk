@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/devlog.dart';
 import 'core/theme.dart';
 import 'core/tokens.dart';
 import 'features/account/account_page.dart';
@@ -21,6 +23,18 @@ class XyDeskApp extends ConsumerWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ref.watch(themeModeProvider),
+      // builder membungkus SELURUH rute, jadi tombol DevLog tetap ada
+      // saat masuk SessionPage sekalipun.
+      builder: (context, child) => Stack(
+        children: [
+          if (child != null) child,
+          Positioned(
+            right: 8,
+            bottom: MediaQuery.paddingOf(context).bottom + 78,
+            child: const SafeArea(child: DevLogFab()),
+          ),
+        ],
+      ),
       home: const AppShell(),
     );
   }
@@ -54,11 +68,11 @@ class _AppShellState extends ConsumerState<AppShell> {
         if (_index == 0) ...[
           IconButton(
               onPressed: () {},
-              icon: const Icon(Icons.search_rounded, size: 19),
+              icon: const Icon(LucideIcons.search, size: 19),
               visualDensity: VisualDensity.compact),
           IconButton(
               onPressed: () {},
-              icon: const Icon(Icons.add_rounded, size: 20),
+              icon: const Icon(LucideIcons.plus, size: 20),
               visualDensity: VisualDensity.compact),
         ],
         if (_index == 3)
@@ -71,8 +85,8 @@ class _AppShellState extends ConsumerState<AppShell> {
             },
             icon: Icon(
               ref.watch(themeModeProvider) == ThemeMode.dark
-                  ? Icons.light_mode_outlined
-                  : Icons.dark_mode_outlined,
+                  ? LucideIcons.sun
+                  : LucideIcons.moon,
               size: 19,
             ),
             visualDensity: VisualDensity.compact,
@@ -84,20 +98,20 @@ class _AppShellState extends ConsumerState<AppShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
+              icon: Icon(LucideIcons.home),
+              selectedIcon: Icon(LucideIcons.home),
               label: 'Home'),
           NavigationDestination(
-              icon: Icon(Icons.link_outlined),
-              selectedIcon: Icon(Icons.link_rounded),
+              icon: Icon(LucideIcons.link2),
+              selectedIcon: Icon(LucideIcons.link2),
               label: 'Connect'),
           NavigationDestination(
-              icon: Icon(Icons.tune_outlined),
-              selectedIcon: Icon(Icons.tune_rounded),
+              icon: Icon(LucideIcons.slidersHorizontal),
+              selectedIcon: Icon(LucideIcons.slidersHorizontal),
               label: 'Control'),
           NavigationDestination(
-              icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded),
+              icon: Icon(LucideIcons.user),
+              selectedIcon: Icon(LucideIcons.user),
               label: 'Akun'),
         ],
       ),
@@ -121,21 +135,21 @@ class _ControlPlaceholder extends StatelessWidget {
         ListRow(
             title: 'Valorant',
             subtitle: '18 elemen · ganti otomatis',
-            icon: Icons.sports_esports_outlined,
+            icon: LucideIcons.gamepad2,
             trailing:
-                Icon(Icons.chevron_right_rounded, size: 16, color: c.textLow)),
+                Icon(LucideIcons.chevronRight, size: 16, color: c.textLow)),
         ListRow(
             title: 'Photoshop',
             subtitle: '12 elemen · ganti otomatis',
-            icon: Icons.tune_rounded,
+            icon: LucideIcons.slidersHorizontal,
             trailing:
-                Icon(Icons.chevron_right_rounded, size: 16, color: c.textLow)),
+                Icon(LucideIcons.chevronRight, size: 16, color: c.textLow)),
         ListRow(
             title: 'Desktop umum',
             subtitle: '6 elemen · bawaan',
-            icon: Icons.mouse_outlined,
+            icon: LucideIcons.mouse,
             trailing:
-                Icon(Icons.chevron_right_rounded, size: 16, color: c.textLow)),
+                Icon(LucideIcons.chevronRight, size: 16, color: c.textLow)),
       ],
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/tokens.dart';
+import '../../widgets/brand.dart';
 import '../../widgets/seamless.dart';
 import '../session/session_page.dart';
 
@@ -23,6 +25,14 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (_devices.isEmpty) {
+      return const IllustrationState(
+        asset: Img.empty,
+        title: 'Belum ada perangkat',
+        message: 'Pasang XyDesk Host di PC kamu, lalu masukkan ID '
+            'yang muncul di sana.',
+      );
+    }
     return ListView(
       padding: EdgeInsets.only(
         top: MediaQuery.paddingOf(context).top + 60,
@@ -101,7 +111,7 @@ class _DeviceCard extends StatelessWidget {
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                         color: c.accent)),
-                Icon(Icons.arrow_forward_rounded, size: 14, color: c.accent),
+                Icon(LucideIcons.arrowRight, size: 14, color: c.accent),
               ],
             ),
           ],

@@ -109,62 +109,9 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-  # ── 3. Windows portable (ZIP, tanpa instalasi) ──
-  windows:
-    name: Windows ZIP
-    needs: check
-    runs-on: windows-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-
-      - run: flutter config --enable-windows-desktop
-      - run: flutter pub get
-
-      # Folder windows/ tidak ikut di-commit; dibuat ulang di runner.
-      - name: Siapkan proyek Windows
-        run: flutter create --platforms=windows .
-
-      - name: Build Windows
-        run: flutter build windows --release
-
-      - name: Kemas ZIP portable
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          $src = "build/windows/x64/runner/Release"
-          # Catatan singkat untuk pengguna awam yang mengekstrak ZIP-nya.
-          @"
-          XyDesk - Windows Portable
-
-          Jalankan xydesk.exe untuk membuka aplikasi.
-          Tidak perlu instalasi. Seluruh isi folder harus tetap bersama;
-          file .dll di sini dibutuhkan aplikasi untuk berjalan.
-
-          Jika Windows SmartScreen muncul: klik "More info" lalu
-          "Run anyway". Ini terjadi karena build belum ditandatangani
-          secara digital.
-          "@ | Out-File -FilePath "$src/BACA-SAYA.txt" -Encoding utf8
-          Compress-Archive -Path "$src/*" -DestinationPath "dist/XyDesk-Windows-x64.zip" -Force
-          Get-ChildItem dist
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: XyDesk-Windows-ZIP
-          path: dist/XyDesk-Windows-x64.zip
-          retention-days: 30
-          if-no-files-found: error
-
-  # ── 4. Ringkasan supaya hasil terlihat langsung di halaman run ──
   summary:
     name: Ringkasan
-    needs: [android, windows]
+    needs: [android]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -175,9 +122,7 @@ jobs:
             echo ""
             echo "| Target | Status | Artefak |"
             echo "|---|---|---|"
-            echo "| Android APK universal | ${{ needs.android.result }} | \`XyDesk-Android-APK\` |"
-            echo "| Windows x64 portable | ${{ needs.windows.result }} | \`XyDesk-Windows-ZIP\` |"
+            echo "| Android APK universal | ${{ needs.android.result }} | \`XyDesk-APK\` |"
             echo ""
             echo "Unduh dari bagian **Artifacts** di bawah halaman ini."
-            echo "Artefak tersimpan 30 hari."
           } >> $GITHUB_STEP_SUMMARY

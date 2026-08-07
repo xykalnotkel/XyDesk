@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/tokens.dart';
 
 /// Kategori pengaturan sesi. Tiap kategori punya panel sendiri, jadi isinya
 /// tetap pendek — tidak perlu menggulir daftar panjang saat sedang main.
 enum PanelCat {
-  info('Info', Icons.speed_rounded),
-  video('Video', Icons.videocam_outlined),
-  audio('Audio', Icons.volume_up_outlined),
-  mic('Mik', Icons.mic_none_rounded),
-  control('Kontrol', Icons.sports_esports_outlined),
-  pointer('Pointer', Icons.mouse_outlined),
-  network('Jaringan', Icons.wifi_rounded),
-  other('Lain', Icons.settings_outlined);
+  info('Info', LucideIcons.gauge),
+  video('Video', LucideIcons.video),
+  audio('Audio', LucideIcons.volume2),
+  mic('Mik', LucideIcons.mic),
+  control('Kontrol', LucideIcons.gamepad2),
+  pointer('Pointer', LucideIcons.mouse),
+  network('Jaringan', LucideIcons.wifi),
+  other('Lain', LucideIcons.settings);
 
   const PanelCat(this.label, this.icon);
   final String label;
@@ -65,15 +66,13 @@ class LeftRail extends StatelessWidget {
                 color: c.textLow.withValues(alpha: 0.22),
               ),
               _RailItem(
-                  icon: Icons.refresh_rounded,
+                  icon: LucideIcons.refreshCw,
                   label: 'Restart',
                   onTap: onRestart),
               _RailItem(
-                  icon: Icons.arrow_back_rounded,
-                  label: 'Kembali',
-                  onTap: onBack),
+                  icon: LucideIcons.arrowLeft, label: 'Kembali', onTap: onBack),
               _RailItem(
-                icon: Icons.power_settings_new_rounded,
+                icon: LucideIcons.power,
                 label: 'Putus',
                 danger: true,
                 onTap: onDisconnect,
@@ -168,7 +167,7 @@ class RightPanel extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 7),
                     child: Row(
                       children: [
-                        Icon(Icons.chevron_left_rounded,
+                        Icon(LucideIcons.chevronLeft,
                             size: 13, color: c.textMid),
                         const SizedBox(width: 5),
                         Text('Kembali ke kategori',

@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/devlog.dart';
 import '../../core/tokens.dart';
+import '../../widgets/brand.dart';
 import '../../widgets/hud_glyphs.dart';
 import 'session_panels.dart';
 import 'virtual_keyboard.dart';
@@ -40,18 +43,24 @@ class _SessionPageState extends State<SessionPage> {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    // edgeToEdge, bukan immersiveSticky: immersive menyembunyikan status
+    // bar lalu memunculkannya lagi saat disentuh, membuat tata letak
+    // melompat-lompat dan sempat terlihat kosong.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    DevLog.i('sesi', 'Membuka sesi ke ${widget.deviceName}',
+        'id=${widget.deviceId}');
     // Simulasi tahap koneksi.
     Timer(const Duration(milliseconds: 2200), () {
-      if (mounted) {
-        setState(() => _connecting = false);
-        _restartIdle();
-      }
+      if (!mounted) return;
+      setState(() => _connecting = false);
+      DevLog.ok('sesi', 'Terhubung — placeholder aktif');
+      _restartIdle();
     });
   }
 
   @override
   void dispose() {
+    DevLog.i('sesi', 'Menutup sesi');
     _idle?.cancel();
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -90,41 +99,35 @@ class _SessionPageState extends State<SessionPage> {
 
                 // Statistik kiri atas
                 _fade(
-                  Positioned(
-                    top: 10,
-                    left: _leftRail ? 56 : 12,
-                    child: const _StatsOverlay(),
-                  ),
+                  top: 10,
+                  left: _leftRail ? 56 : 12,
+                  child: const _StatsOverlay(),
                 ),
 
                 // Panah kiri-atas → buka bilah kiri
                 _fade(
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    child: _OverlayIcon(
-                      icon: Icons.chevron_right_rounded,
-                      onTap: () {
-                        setState(() => _leftRail = !_leftRail);
-                        _wake();
-                      },
-                    ),
+                  top: 6,
+                  left: 6,
+                  child: _OverlayIcon(
+                    icon: LucideIcons.chevronRight,
+                    onTap: () {
+                      setState(() => _leftRail = !_leftRail);
+                      _wake();
+                    },
                   ),
                 ),
 
                 // Panah kanan-atas → buka panel kategori
                 _fade(
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: _OverlayIcon(
-                      icon: Icons.chevron_left_rounded,
-                      onTap: () {
-                        setState(() =>
-                            _panel = _panel == null ? PanelCat.info : null);
-                        _wake();
-                      },
-                    ),
+                  top: 6,
+                  right: 6,
+                  child: _OverlayIcon(
+                    icon: LucideIcons.chevronLeft,
+                    onTap: () {
+                      setState(
+                          () => _panel = _panel == null ? PanelCat.info : null);
+                      _wake();
+                    },
                   ),
                 ),
 
@@ -167,14 +170,12 @@ class _SessionPageState extends State<SessionPage> {
                 // FAB keyboard kanan bawah
                 if (!_keyboard)
                   _fade(
-                    Positioned(
-                      right: 12,
-                      bottom: 12,
-                      child: _KeyboardFab(onTap: () {
-                        setState(() => _keyboard = true);
-                        _idle?.cancel();
-                      }),
-                    ),
+                    right: 12,
+                    bottom: 12,
+                    child: _KeyboardFab(onTap: () {
+                      setState(() => _keyboard = true);
+                      _idle?.cancel();
+                    }),
                   ),
 
                 // Bilah ikon kiri
@@ -228,11 +229,31 @@ class _SessionPageState extends State<SessionPage> {
     );
   }
 
-  Widget _fade(Widget child) => AnimatedOpacity(
+  /// Membungkus isi overlay dengan animasi pudar.
+  ///
+  /// PENTING: `Positioned` harus tetap menjadi anak LANGSUNG dari `Stack`.
+  /// Versi sebelumnya membungkus `Positioned` dengan `AnimatedOpacity`,
+  /// yang membuat Flutter melempar "Incorrect use of ParentDataWidget"
+  /// dan seluruh layar sesi gagal dirender (tampak putih/kosong).
+  Widget _fade({
+    double? left,
+    double? top,
+    double? right,
+    double? bottom,
+    required Widget child,
+  }) {
+    return Positioned(
+      left: left,
+      top: top,
+      right: right,
+      bottom: bottom,
+      child: AnimatedOpacity(
         opacity: _overlayVisible ? 1 : 0,
         duration: D.fade,
         child: IgnorePointer(ignoring: !_overlayVisible, child: child),
-      );
+      ),
+    );
+  }
 
   Future<void> _confirmDisconnect() async {
     final ok = await showDialog<bool>(
@@ -327,14 +348,14 @@ class _Step extends StatelessWidget {
       child: Row(
         children: [
           if (done)
-            const Icon(Icons.check_rounded, size: 12, color: AppColors.success)
+            const Icon(LucideIcons.check, size: 12, color: AppColors.success)
           else if (active)
             const SizedBox(
                 width: 11,
                 height: 11,
                 child: CircularProgressIndicator(strokeWidth: 1.8))
           else
-            Icon(Icons.remove_rounded, size: 12, color: c.textLow),
+            Icon(LucideIcons.minus, size: 12, color: c.textLow),
           const SizedBox(width: 9),
           Expanded(
               child: Text(label, style: TextStyle(fontSize: 11, color: col))),
@@ -353,6 +374,8 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Placeholder yang JELAS terbaca sebagai placeholder, bukan layar kosong.
+    // Sebelumnya hanya gradient gelap sehingga terlihat seperti aplikasi hang.
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -361,25 +384,40 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
           colors: [Color(0xFF1A1C22), Color(0xFF101116), Color(0xFF16181D)],
         ),
       ),
-      child: Stack(
-        children: [
-          for (final r in const [
-            Rect.fromLTWH(24, 26, 150, 92),
-            Rect.fromLTWH(200, 44, 190, 114),
-          ])
-            Positioned(
-              left: r.left,
-              top: r.top,
-              width: r.width,
-              height: r.height,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.045),
-                  borderRadius: BorderRadius.circular(6),
-                ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Opacity(
+              opacity: 0.55,
+              child: Image.asset(Img.gaming,
+                  width: 96,
+                  height: 96,
+                  filterQuality: FilterQuality.medium,
+                  errorBuilder: (_, __, ___) => const SizedBox(height: 96)),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Layar remote akan tampil di sini',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                color: Colors.white.withValues(alpha: 0.42),
               ),
             ),
-        ],
+            const SizedBox(height: 5),
+            Text(
+              'WebRTC belum tersambung — ini mode demo.\n'
+              'Panel, keyboard, dan HUD tetap bisa dicoba.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10.5,
+                height: 1.5,
+                color: Colors.white.withValues(alpha: 0.24),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -452,8 +490,8 @@ class _KeyboardFab extends StatelessWidget {
           child: SizedBox(
             width: 44,
             height: 44,
-            child: Icon(Icons.keyboard_outlined,
-                size: 19, color: context.c.textMid),
+            child:
+                Icon(LucideIcons.keyboard, size: 19, color: context.c.textMid),
           ),
         ),
       ),

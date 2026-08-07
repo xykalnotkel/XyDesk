@@ -23,6 +23,8 @@ class AppTheme {
     final base = ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      // Inter di-bundle di assets — sama persis dengan mockup.
+      fontFamily: 'Inter',
       scaffoldBackgroundColor: p.bg,
       canvasColor: p.bg,
       colorScheme: ColorScheme.fromSeed(
@@ -37,7 +39,7 @@ class AppTheme {
 
     return base.copyWith(
       extensions: [p],
-      textTheme: _textTheme(base.textTheme, p),
+      textTheme: _textTheme(base.textTheme, p).apply(fontFamily: 'Inter'),
 
       // ── Seamless: topbar tanpa garis, tanpa tint ──
       appBarTheme: AppBarTheme(
@@ -48,6 +50,7 @@ class AppTheme {
         centerTitle: false,
         iconTheme: IconThemeData(color: p.textMid, size: 20),
         titleTextStyle: TextStyle(
+          fontFamily: 'Inter',
           fontSize: 18.5,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.3,
@@ -82,6 +85,7 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final on = states.contains(WidgetState.selected);
           return TextStyle(
+            fontFamily: 'Inter',
             fontSize: 10,
             fontWeight: FontWeight.w500,
             // Item aktif memakai textHi, BUKAN aksen — supaya tidak ada

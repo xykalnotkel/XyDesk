@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -121,9 +122,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
             errorText: _error,
             suffixIcon: IconButton(
               icon: Icon(
-                _obscure
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
+                _obscure ? LucideIcons.eye : LucideIcons.eyeOff,
                 size: 17,
                 color: c.textLow,
               ),
@@ -152,7 +151,8 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
                             color: const Color(0xFF3A3A3E), width: 1.5),
                   ),
                   child: _remember
-                      ? const Icon(Icons.check, size: 11, color: Colors.white)
+                      ? const Icon(LucideIcons.check,
+                          size: 11, color: Colors.white)
                       : null,
                 ),
                 const SizedBox(width: Gap.sm),
@@ -171,9 +171,9 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _ghost(context, Icons.qr_code_scanner_rounded, 'Pindai QR'),
+            _ghost(context, LucideIcons.scanLine, 'Pindai QR'),
             const SizedBox(width: Gap.h32),
-            _ghost(context, Icons.history_rounded, 'Riwayat'),
+            _ghost(context, LucideIcons.history, 'Riwayat'),
           ],
         ),
         const SizedBox(height: Gap.xxl),
@@ -216,12 +216,11 @@ class _SupportBlock extends StatelessWidget {
         const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _SocialTile(icon: Icons.send_rounded, label: 'Telegram'),
+            _SocialTile(icon: LucideIcons.send, label: 'Telegram'),
             SizedBox(width: 9),
-            _SocialTile(
-                icon: Icons.chat_bubble_outline_rounded, label: 'WhatsApp'),
+            _SocialTile(icon: LucideIcons.messageCircle, label: 'WhatsApp'),
             SizedBox(width: 9),
-            _SocialTile(icon: Icons.music_note_rounded, label: 'TikTok'),
+            _SocialTile(icon: LucideIcons.music2, label: 'TikTok'),
           ],
         ),
       ],

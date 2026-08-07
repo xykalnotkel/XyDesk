@@ -42,46 +42,9 @@ jobs:
           name: rel-android
           path: dist/*
 
-  windows:
-    name: Windows ZIP
-    runs-on: windows-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-
-      - run: flutter config --enable-windows-desktop
-      - run: flutter pub get
-      - run: flutter create --platforms=windows .
-      - run: flutter build windows --release
-
-      - name: Kemas ZIP
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          $src = "build/windows/x64/runner/Release"
-          @"
-          XyDesk - Windows Portable
-
-          Jalankan xydesk.exe untuk membuka aplikasi.
-          Tidak perlu instalasi. Seluruh isi folder harus tetap bersama.
-
-          Jika SmartScreen muncul: "More info" lalu "Run anyway".
-          "@ | Out-File -FilePath "$src/BACA-SAYA.txt" -Encoding utf8
-          Compress-Archive -Path "$src/*" -DestinationPath "dist/XyDesk-Windows-x64.zip" -Force
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rel-windows
-          path: dist/*
-
   publish:
     name: Terbitkan Release
-    needs: [android, windows]
+    needs: [android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -106,7 +69,6 @@ jobs:
             | Platform | Berkas | Cara pakai |
             |---|---|---|
             | Android | `XyDesk.apk` | Universal — jalan di semua HP Android 8.0+ |
-            | Windows | `XyDesk-Windows-x64.zip` | Ekstrak, jalankan `xydesk.exe` |
 
             Verifikasi unduhan dengan `SHA256SUMS.txt`.
 
