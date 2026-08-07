@@ -1,0 +1,115 @@
+name: Release
+
+# Jalan saat tag versi didorong:  git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.44.9'
+
+jobs:
+  android:
+    name: APK Universal
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+      - name: Siapkan artefak
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk dist/XyDesk.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rel-android
+          path: dist/*
+
+  windows:
+    name: Windows ZIP
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter config --enable-windows-desktop
+      - run: flutter pub get
+      - run: flutter create --platforms=windows .
+      - run: flutter build windows --release
+
+      - name: Kemas ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $src = "build/windows/x64/runner/Release"
+          @"
+          XyDesk - Windows Portable
+
+          Jalankan xydesk.exe untuk membuka aplikasi.
+          Tidak perlu instalasi. Seluruh isi folder harus tetap bersama.
+
+          Jika SmartScreen muncul: "More info" lalu "Run anyway".
+          "@ | Out-File -FilePath "$src/BACA-SAYA.txt" -Encoding utf8
+          Compress-Archive -Path "$src/*" -DestinationPath "dist/XyDesk-Windows-x64.zip" -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rel-windows
+          path: dist/*
+
+  publish:
+    name: Terbitkan Release
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Kumpulkan & buat checksum
+        run: |
+          mkdir -p dist
+          find artifacts -type f -exec cp {} dist/ \;
+          cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            ## XyDesk ${{ github.ref_name }}
+
+            Aplikasi remote desktop low-latency untuk gaming dan kerja.
+
+            | Platform | Berkas | Cara pakai |
+            |---|---|---|
+            | Android | `XyDesk.apk` | Universal — jalan di semua HP Android 8.0+ |
+            | Windows | `XyDesk-Windows-x64.zip` | Ekstrak, jalankan `xydesk.exe` |
+
+            Verifikasi unduhan dengan `SHA256SUMS.txt`.
+
+            > Build ini **belum ditandatangani**. Android akan menampilkan
+            > peringatan "sumber tidak dikenal", dan Windows SmartScreen akan
+            > meminta konfirmasi. Ini wajar untuk rilis tanpa sertifikat.
