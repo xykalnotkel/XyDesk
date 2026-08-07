@@ -6,16 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/devlog.dart';
+import 'core/responsive.dart';
+import 'core/store.dart';
 
 void main() {
   // runZonedGuarded menangkap error async yang lolos dari framework,
-  // sehingga tidak ada lagi kegagalan diam-diam yang berujung layar kosong.
-  runZonedGuarded(() {
+  // sehingga tidak ada kegagalan diam-diam yang berujung layar kosong.
+  runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
     DevLog.install();
-    DevLog.i('app', 'XyDesk mulai', 'versi 1.0.0+1');
+    DevLog.i('app', 'XyDesk mulai', 'versi 1.0.0+2');
 
-    // Edge-to-edge: background mengalir dari status bar sampai navigation bar.
+    // Edge-to-edge: background mengalir dari status bar sampai nav bar.
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -23,7 +25,17 @@ void main() {
       systemNavigationBarDividerColor: Colors.transparent,
     ));
 
-    runApp(const ProviderScope(child: XyDeskApp()));
+    await DisplayMode.useHighestRefreshRate();
+    DevLog.i('display', 'Refresh rate', '${DisplayMode.current.round()} Hz');
+
+    final store = await Store.open();
+
+    runApp(
+      ProviderScope(
+        overrides: [storeProvider.overrideWithValue(store)],
+        child: const XyDeskApp(),
+      ),
+    );
   }, (error, stack) {
     DevLog.fatal('zone', 'Error di luar framework', error, stack);
   });

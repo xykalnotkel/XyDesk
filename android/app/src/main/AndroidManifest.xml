@@ -14,12 +14,21 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
 
+    <!-- Berkas: memakai penyimpanan khusus aplikasi + SAF, sehingga tidak
+         perlu izin penyimpanan luas. Folder XyDesk dibuat di
+         Android/data/com.xystudio.xydesk/files/XyDesk/ -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"/>
+
     <!-- Semua perangkat keras opsional supaya jangkauan Play Store luas -->
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
     <uses-feature android:name="android.hardware.gamepad" android:required="false"/>
 
     <application
+        android:requestLegacyExternalStorage="false"
         android:label="XyDesk"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

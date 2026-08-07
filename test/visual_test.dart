@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:xydesk/app.dart';
+import 'helpers.dart';
 import 'package:xydesk/core/devlog.dart';
 import 'package:xydesk/core/theme.dart';
 import 'package:xydesk/features/session/session_page.dart';
@@ -20,7 +19,7 @@ void main() {
     });
 
     testWidgets('Ikon memakai Lucide, bukan Material', (tester) async {
-      await tester.pumpWidget(const ProviderScope(child: XyDeskApp()));
+      await tester.pumpWidget(await testApp());
       await tester.pumpAndSettle();
 
       final icons = tester
@@ -38,7 +37,7 @@ void main() {
     });
 
     testWidgets('Ikon nav aktif tidak berwarna aksen', (tester) async {
-      await tester.pumpWidget(const ProviderScope(child: XyDeskApp()));
+      await tester.pumpWidget(await testApp());
       await tester.pumpAndSettle();
       // Aturan desain: satu titik perhatian per layar.
       final theme = AppTheme.dark();
@@ -51,15 +50,8 @@ void main() {
   group('Bug layar putih saat masuk sesi', () {
     testWidgets('SessionPage menampilkan layar loading, bukan kosong',
         (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            theme: AppTheme.dark(),
-            home: const SessionPage(
-                deviceName: 'GAMING-RIG', deviceId: '123 456 789'),
-          ),
-        ),
-      );
+      await tester.pumpWidget(await testWrap(const SessionPage(
+          deviceName: 'GAMING-RIG', deviceId: '123 456 789')));
       await tester.pump();
 
       expect(find.textContaining('Menghubungkan'), findsOneWidget);
@@ -72,15 +64,8 @@ void main() {
     });
 
     testWidgets('Setelah loading, placeholder terbaca jelas', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            theme: AppTheme.dark(),
-            home: const SessionPage(
-                deviceName: 'GAMING-RIG', deviceId: '123 456 789'),
-          ),
-        ),
-      );
+      await tester.pumpWidget(await testWrap(const SessionPage(
+          deviceName: 'GAMING-RIG', deviceId: '123 456 789')));
       // Lewati simulasi koneksi 2,2 detik.
       await tester.pump(const Duration(milliseconds: 2400));
       await tester.pump();
@@ -92,15 +77,8 @@ void main() {
     });
 
     testWidgets('Tombol keyboard & panel bisa dibuka di sesi', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            theme: AppTheme.dark(),
-            home: const SessionPage(
-                deviceName: 'GAMING-RIG', deviceId: '123 456 789'),
-          ),
-        ),
-      );
+      await tester.pumpWidget(await testWrap(const SessionPage(
+          deviceName: 'GAMING-RIG', deviceId: '123 456 789')));
       await tester.pump(const Duration(milliseconds: 2400));
       await tester.pump();
 
@@ -139,7 +117,7 @@ void main() {
     });
 
     testWidgets('FAB DevLog tampil di layar utama', (tester) async {
-      await tester.pumpWidget(const ProviderScope(child: XyDeskApp()));
+      await tester.pumpWidget(await testApp());
       await tester.pumpAndSettle();
       expect(find.byType(DevLogFab), findsOneWidget);
     });

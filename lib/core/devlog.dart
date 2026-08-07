@@ -146,6 +146,33 @@ class DevLog {
     return b.toString();
   }
 
+  /// Buka DevLog sebagai halaman penuh — lebih nyaman untuk membaca
+  /// stack trace panjang daripada lembar setengah layar.
+  static Future<void> openPage(BuildContext context) {
+    return Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DevLogScreen()),
+    );
+  }
+
+  /// Ekspor hanya baris error & fatal — inilah yang biasanya perlu
+  /// dikirim ke pengembang saat melapor bug.
+  static String exportErrors() {
+    final errs = _entries.where(
+      (e) => e.level == LogLevel.error || e.level == LogLevel.fatal,
+    );
+    if (errs.isEmpty) return 'Tidak ada error tercatat.';
+    final b = StringBuffer()
+      ..writeln('===== XyDesk — Error Log =====')
+      ..writeln('Dibuat : ${DateTime.now()}')
+      ..writeln('Jumlah : ${errs.length}')
+      ..writeln('==============================');
+    for (final e in errs) {
+      b.writeln(e.toPlainText());
+      b.writeln('');
+    }
+    return b.toString();
+  }
+
   /// Pasang penangkap error global. Panggil sekali dari `main()`.
   static void install() {
     final prevFlutter = FlutterError.onError;
@@ -480,6 +507,198 @@ class DevLogFab extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// DevLog sebagai halaman penuh.
+///
+/// Dipakai dari menu Akun. Berbeda dari lembar bawah, halaman ini punya
+/// ruang cukup untuk membaca stack trace dan punya tombol khusus untuk
+/// menyalin **hanya error** — yang paling sering dibutuhkan saat melapor.
+class DevLogScreen extends StatefulWidget {
+  const DevLogScreen({super.key});
+
+  @override
+  State<DevLogScreen> createState() => _DevLogScreenState();
+}
+
+class _DevLogScreenState extends State<DevLogScreen> {
+  LogLevel? _filter;
+
+  Future<void> _copy(String text, String msg) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF131315),
+      appBar: AppBar(
+        title: const Text('Log pengembang'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          ValueListenableBuilder<int>(
+            valueListenable: DevLog.errorCount,
+            builder: (context, errors, _) => IconButton(
+              tooltip: 'Salin error saja',
+              icon: Badge(
+                isLabelVisible: errors > 0,
+                label: Text('$errors'),
+                backgroundColor: const Color(0xFFD9646E),
+                child: const Icon(Icons.bug_report_outlined, size: 19),
+              ),
+              onPressed: () => _copy(
+                DevLog.exportErrors(),
+                errors > 0
+                    ? '$errors error disalin'
+                    : 'Tidak ada error tercatat',
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Salin semua',
+            icon: const Icon(Icons.copy_rounded, size: 18),
+            onPressed: () => _copy(DevLog.export(), 'Semua log disalin'),
+          ),
+          IconButton(
+            tooltip: 'Bersihkan',
+            icon: const Icon(Icons.delete_outline_rounded, size: 19),
+            onPressed: () => setState(DevLog.clear),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: Column(
+        children: [
+          SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              children: [
+                for (final (label, lv) in <(String, LogLevel?)>[
+                  ('Semua', null),
+                  ('Error', LogLevel.error),
+                  ('Peringatan', LogLevel.warning),
+                  ('Info', LogLevel.info),
+                  ('Debug', LogLevel.debug),
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 7),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _filter = lv),
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: _filter == lv
+                              ? const Color(0x1F5B7FE8)
+                              : Colors.white.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _filter == lv
+                                ? const Color(0xFFEDEDEF)
+                                : const Color(0xFF6B6B73),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ValueListenableBuilder<int>(
+              valueListenable: DevLog.revision,
+              builder: (context, _, __) {
+                final list = DevLog.entries
+                    .where((e) => _filter == null || e.level == _filter)
+                    .toList()
+                    .reversed
+                    .toList();
+                if (list.isEmpty) {
+                  return const Center(
+                    child: Text('Belum ada catatan',
+                        style: TextStyle(
+                            color: Color(0xFF6B6B73), fontSize: 12.5)),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(14, 6, 14, 30),
+                  itemCount: list.length,
+                  itemBuilder: (context, i) {
+                    final e = list[i];
+                    return GestureDetector(
+                      onLongPress: () =>
+                          _copy(e.toPlainText(), 'Baris log disalin'),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 11, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.04),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(e.level.tag,
+                                    style: TextStyle(
+                                        color: e.level.color,
+                                        fontSize: 10,
+                                        fontFamily: 'monospace',
+                                        fontWeight: FontWeight.w700)),
+                                const SizedBox(width: 8),
+                                Text(e.clock,
+                                    style: const TextStyle(
+                                        color: Color(0xFF5C5C64),
+                                        fontSize: 10,
+                                        fontFamily: 'monospace')),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text('[${e.tag}]',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          color: Color(0xFF6B6B73),
+                                          fontSize: 10)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            SelectableText(e.message,
+                                style: const TextStyle(
+                                    color: Color(0xFFEDEDEF), fontSize: 12)),
+                            if (e.detail != null) ...[
+                              const SizedBox(height: 4),
+                              SelectableText(e.detail!,
+                                  style: const TextStyle(
+                                      color: Color(0xFF8A8A93),
+                                      fontSize: 10.5,
+                                      fontFamily: 'monospace')),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

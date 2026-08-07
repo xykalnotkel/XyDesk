@@ -248,3 +248,47 @@ class ListRow extends StatelessWidget {
     );
   }
 }
+
+/// Tombol sekunder bergaya "ghost" — latar input, tanpa border.
+class OutlinedButtonLike extends StatelessWidget {
+  const OutlinedButtonLike({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onTap,
+  });
+
+  final String label;
+  final IconData? icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Material(
+      color: c.input,
+      borderRadius: BorderRadius.circular(R.md),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.md),
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 16, color: c.textMid),
+                const SizedBox(width: Gap.sm),
+              ],
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: c.textHi)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

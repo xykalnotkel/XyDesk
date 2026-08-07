@@ -35,6 +35,7 @@ class _SessionPageState extends State<SessionPage> {
   PanelCat? _panel;
   Timer? _idle;
   SessionSettings _settings = const SessionSettings();
+  KbLayout _kbLayout = KbLayout.split;
 
   @override
   void initState() {
@@ -109,7 +110,11 @@ class _SessionPageState extends State<SessionPage> {
                   top: 6,
                   left: 6,
                   child: _OverlayIcon(
-                    icon: LucideIcons.chevronRight,
+                    icon: _leftRail
+                        ? LucideIcons.chevronLeft
+                        : LucideIcons.chevronRight,
+                    active: _leftRail,
+                    tooltip: 'Menu cepat',
                     onTap: () {
                       setState(() => _leftRail = !_leftRail);
                       _wake();
@@ -187,7 +192,11 @@ class _SessionPageState extends State<SessionPage> {
                   bottom: 0,
                   child: LeftRail(
                     active: _panel ?? PanelCat.info,
-                    onSelect: (cat) => setState(() => _panel = cat),
+                    onClose: () => setState(() => _leftRail = false),
+                    onSelect: (cat) => setState(() {
+                      // Ketuk kategori yang sama = tutup panel.
+                      _panel = (_panel == cat) ? null : cat;
+                    }),
                     onRestart: () {},
                     onBack: () => Navigator.of(context).maybePop(),
                     onDisconnect: _confirmDisconnect,
@@ -206,6 +215,11 @@ class _SessionPageState extends State<SessionPage> {
                     state: _settings,
                     onChanged: (s) => setState(() => _settings = s),
                     onBackToHub: () => setState(() => _panel = PanelCat.info),
+                    onSelectCat: (cat) => setState(() => _panel = cat),
+                    onClose: () {
+                      setState(() => _panel = null);
+                      _restartIdle();
+                    },
                   ),
                 ),
 
@@ -217,6 +231,8 @@ class _SessionPageState extends State<SessionPage> {
                   right: 0,
                   bottom: _keyboard ? 0 : -320,
                   child: VirtualKeyboard(
+                    layout: _kbLayout,
+                    onLayoutChanged: (l) => setState(() => _kbLayout = l),
                     onKey: (_) {},
                     onDismiss: () {
                       setState(() => _keyboard = false);
@@ -451,22 +467,43 @@ class _StatsOverlay extends StatelessWidget {
 }
 
 class _OverlayIcon extends StatelessWidget {
-  const _OverlayIcon({required this.icon, required this.onTap});
+  const _OverlayIcon({
+    required this.icon,
+    required this.onTap,
+    this.active = false,
+    this.tooltip,
+  });
+
   final IconData icon;
   final VoidCallback onTap;
+  final bool active;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.45,
-      child: InkWell(
-        onTap: onTap,
+    final c = context.c;
+    // Diberi latar kaca + kontras cukup. Versi sebelumnya hanya ikon
+    // telanjang opacity 0.45 sehingga hampir tidak terlihat di atas
+    // konten terang.
+    return Tooltip(
+      message: tooltip ?? '',
+      child: Material(
+        color: active
+            ? c.accent.withValues(alpha: 0.9)
+            : const Color(0xFF1B1B1E).withValues(alpha: 0.82),
         borderRadius: BorderRadius.circular(R.sm),
-        // Target sentuh 44dp meski ikonnya kecil.
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(icon, size: 18, color: context.c.textMid),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(R.sm),
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: Icon(
+              icon,
+              size: 20,
+              color: active ? Colors.white : c.textHi,
+            ),
+          ),
         ),
       ),
     );

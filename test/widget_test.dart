@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:xydesk/app.dart';
-import 'package:xydesk/core/theme.dart';
+
+import 'helpers.dart';
 import 'package:xydesk/features/connect/connect_page.dart';
 import 'package:xydesk/widgets/hud_glyphs.dart';
 
-Widget _wrap(Widget child) => ProviderScope(
-      child: MaterialApp(theme: AppTheme.dark(), home: Scaffold(body: child)),
-    );
-
 void main() {
   testWidgets('Aplikasi menyala dan menampilkan bottom-nav', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: XyDeskApp()));
+    await tester.pumpWidget(await testApp());
     await tester.pumpAndSettle();
 
     expect(find.text('Perangkat'), findsOneWidget);
@@ -21,7 +16,7 @@ void main() {
   });
 
   testWidgets('Tidak ada Divider di layar utama', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: XyDeskApp()));
+    await tester.pumpWidget(await testApp());
     await tester.pumpAndSettle();
 
     // Aturan "nol garis pemisah" diverifikasi otomatis, bukan sekadar niat.
@@ -30,10 +25,11 @@ void main() {
   });
 
   testWidgets('Pindah tab ke Connect', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: XyDeskApp()));
+    await tester.pumpWidget(await testApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Connect'));
+    // Label nav memakai bahasa aktif (bawaan: Indonesia).
+    await tester.tap(find.byType(NavigationDestination).at(1));
     await tester.pumpAndSettle();
 
     expect(find.text('Hubungkan ke perangkat'), findsOneWidget);
@@ -63,7 +59,7 @@ void main() {
   });
 
   testWidgets('Tombol Hubungkan nonaktif sampai form valid', (tester) async {
-    await tester.pumpWidget(_wrap(const ConnectPage()));
+    await tester.pumpWidget(await testWrap(const ConnectPage()));
     await tester.pumpAndSettle();
 
     final btn = tester.widget<FilledButton>(find.byType(FilledButton));
@@ -81,7 +77,8 @@ void main() {
   group('Glyph HUD', () {
     testWidgets('semua glyph tergambar tanpa error', (tester) async {
       for (final g in HudGlyph.values) {
-        await tester.pumpWidget(_wrap(Center(child: HudIcon(g, size: 40))));
+        await tester
+            .pumpWidget(await testWrap(Center(child: HudIcon(g, size: 40))));
         await tester.pump();
         expect(tester.takeException(), isNull,
             reason: 'Glyph $g gagal digambar');
@@ -91,7 +88,7 @@ void main() {
     testWidgets('HudButton menampilkan label dan bereaksi saat ditekan',
         (tester) async {
       var tapped = false;
-      await tester.pumpWidget(_wrap(Center(
+      await tester.pumpWidget(await testWrap(Center(
         child: HudButton(
           glyph: HudGlyph.mouseLeft,
           label: 'Kiri',
@@ -108,7 +105,7 @@ void main() {
 
     testWidgets('HudButton berlatar transparan saat diam (border-only)',
         (tester) async {
-      await tester.pumpWidget(_wrap(const Center(
+      await tester.pumpWidget(await testWrap(const Center(
         child: HudButton(glyph: HudGlyph.dpad, label: 'D-Pad'),
       )));
       await tester.pumpAndSettle();

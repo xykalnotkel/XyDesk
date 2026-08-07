@@ -107,7 +107,8 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
           decoration: const InputDecoration(
-            hintText: '123 456 789',
+            // Sengaja tanpa hintText: angka contoh membuat kolom terlihat
+            // sudah terisi dan mengganggu saat mengetik.
             contentPadding: EdgeInsets.symmetric(vertical: 15),
           ),
         ),
@@ -118,7 +119,6 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
           obscureText: _obscure,
           onSubmitted: (_) => _connect(),
           decoration: InputDecoration(
-            hintText: '••••••',
             errorText: _error,
             suffixIcon: IconButton(
               icon: Icon(

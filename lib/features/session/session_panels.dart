@@ -32,7 +32,11 @@ class LeftRail extends StatelessWidget {
     this.onRestart,
     this.onBack,
     this.onDisconnect,
+    this.onClose,
   });
+
+  /// Menyembunyikan bilah kiri.
+  final VoidCallback? onClose;
 
   final PanelCat active;
   final ValueChanged<PanelCat> onSelect;
@@ -51,7 +55,14 @@ class LeftRail extends StatelessWidget {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
+              if (onClose != null)
+                _RailItem(
+                  icon: Icons.keyboard_double_arrow_left_rounded,
+                  label: 'Tutup',
+                  onTap: onClose,
+                ),
+              const SizedBox(height: 2),
               for (final cat in PanelCat.values)
                 _RailItem(
                   icon: cat.icon,
@@ -140,12 +151,21 @@ class RightPanel extends StatelessWidget {
     required this.onBackToHub,
     required this.state,
     required this.onChanged,
+    this.onClose,
+    this.onSelectCat,
   });
 
   final PanelCat cat;
   final VoidCallback onBackToHub;
   final SessionSettings state;
   final ValueChanged<SessionSettings> onChanged;
+
+  /// Menutup panel sepenuhnya. Tanpa ini panel hanya bisa ditutup lewat
+  /// panah di pojok, yang mudah terlewat.
+  final VoidCallback? onClose;
+
+  /// Berpindah kategori dari tile di layar Info.
+  final ValueChanged<PanelCat>? onSelectCat;
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +231,7 @@ class RightPanel extends StatelessWidget {
       };
 
   Widget _content(BuildContext context) => switch (cat) {
-        PanelCat.info => _InfoPanel(onSelect: (_) {}),
+        PanelCat.info => _InfoPanel(onSelect: onSelectCat ?? (_) {}),
         PanelCat.video => _VideoPanel(state: state, onChanged: onChanged),
         PanelCat.mic => _MicPanel(state: state, onChanged: onChanged),
         PanelCat.pointer => _PointerPanel(state: state, onChanged: onChanged),

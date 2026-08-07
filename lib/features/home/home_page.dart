@@ -1,122 +1,186 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/l10n_bridge.dart';
+import '../../core/responsive.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
-import '../../widgets/seamless.dart';
-import '../session/session_page.dart';
+import '../devices/device_detail_page.dart';
+import '../devices/device_model.dart';
 
-class Device {
-  const Device(this.name, this.os, this.pingMs);
-  final String name;
-  final String os;
-  final int? pingMs;
-}
+/// Simulasi pemuatan awal supaya skeleton terlihat.
+final _loadingProvider = FutureProvider<void>((ref) async {
+  await Future<void>.delayed(const Duration(milliseconds: 650));
+});
 
-const _devices = [
-  Device('GAMING-RIG', 'Windows 11 · RTX 4070', 24),
-  Device('OFFICE-PC', 'Windows 10', null),
-  Device('LAPTOP-ASUS', 'Ubuntu 24.04', 18),
-  Device('MAC-STUDIO', 'macOS 15', 72),
-];
-
-class HomePage extends StatelessWidget {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    if (_devices.isEmpty) {
-      return const IllustrationState(
-        asset: Img.empty,
-        title: 'Belum ada perangkat',
-        message: 'Pasang XyDesk Host di PC kamu, lalu masukkan ID '
-            'yang muncul di sana.',
-      );
-    }
-    return ListView(
-      padding: EdgeInsets.only(
-        top: MediaQuery.paddingOf(context).top + 60,
-        bottom: 110,
-      ),
-      children: [
-        for (final d in _devices) ...[
-          _DeviceCard(device: d, primary: d == _devices.first),
-          const SizedBox(height: 10),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loading = ref.watch(_loadingProvider);
+    final devices = ref.watch(deviceRepoProvider);
+    final topPad = MediaQuery.paddingOf(context).top + 60;
+
+    return loading.when(
+      loading: () => ListView(
+        padding: EdgeInsets.only(top: topPad, bottom: 110),
+        children: const [
+          DeviceCardSkeleton(),
+          DeviceCardSkeleton(),
+          DeviceCardSkeleton(),
+          DeviceCardSkeleton(),
         ],
-      ],
+      ),
+      error: (e, _) => IllustrationState(
+        asset: Img.error,
+        title: 'Gagal memuat perangkat',
+        message: '$e',
+      ),
+      data: (_) {
+        if (devices.isEmpty) {
+          return IllustrationState(
+            asset: Img.empty,
+            title: context.tr('home_empty_title'),
+            message: context.tr('home_empty_msg'),
+          );
+        }
+
+        // Tablet mendapat dua kolom agar ruang tidak terbuang.
+        final cols = Responsive.isTablet(context) ? 2 : 1;
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(_loadingProvider);
+            await ref.read(_loadingProvider.future);
+          },
+          child: cols == 1
+              ? ListView.builder(
+                  padding: EdgeInsets.only(top: topPad, bottom: 110),
+                  itemCount: devices.length,
+                  itemBuilder: (_, i) => _DeviceCard(device: devices[i]),
+                )
+              : GridView.builder(
+                  padding: EdgeInsets.only(top: topPad, bottom: 110),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    mainAxisExtent: 116,
+                  ),
+                  itemCount: devices.length,
+                  itemBuilder: (_, i) => _DeviceCard(device: devices[i]),
+                ),
+        );
+      },
     );
   }
 }
 
+/// Kartu perangkat dengan ilustrasi status online / offline.
 class _DeviceCard extends StatelessWidget {
-  const _DeviceCard({required this.device, this.primary = false});
+  const _DeviceCard({required this.device});
 
   final Device device;
-  final bool primary;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final offline = device.pingMs == null;
+    final online = device.isOnline;
 
-    return SurfaceCard(
-      dim: offline,
-      onTap: offline
-          ? null
-          : () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SessionPage(
-                      deviceName: device.name, deviceId: '123 456 789'),
-                ),
-              ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(device.name,
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2,
-                            color: c.textHi)),
-                    const SizedBox(height: 3),
-                    Text(device.os,
-                        style: TextStyle(fontSize: 11.5, color: c.textLow)),
-                  ],
-                ),
-              ),
-              Row(
-                children: [
-                  StatusDot(pingMs: device.pingMs),
-                  const SizedBox(width: 6),
-                  Text(offline ? 'offline' : '${device.pingMs} ms',
-                      style: TextStyle(fontSize: 11, color: c.textMid)),
-                ],
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: c.raised,
+        borderRadius: BorderRadius.circular(R.lg),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => DeviceDetailPage(deviceId: device.id),
+            ),
           ),
-          if (primary) ...[
-            const SizedBox(height: Gap.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Padding(
+            padding: const EdgeInsets.all(13),
+            child: Row(
               children: [
-                Text('Lanjutkan sesi',
-                    style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
-                        color: c.accent)),
-                Icon(LucideIcons.arrowRight, size: 14, color: c.accent),
+                // Ilustrasi PC berbeda untuk online dan offline — lebih cepat
+                // dikenali daripada sekadar titik warna.
+                Opacity(
+                  opacity: online ? 1 : 0.45,
+                  child: Illus(
+                    online ? Img.pcOnline : Img.pcOffline,
+                    size: 48,
+                  ),
+                ),
+                const SizedBox(width: Gap.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        device.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                          color: online ? c.textHi : c.textMid,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        device.gpu == null
+                            ? device.os
+                            : '${device.os} · ${device.gpu}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11.5, color: c.textLow),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: Gap.sm),
+                _StatusPill(device: device),
               ],
             ),
-          ],
-        ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.device});
+
+  final Device device;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final (text, color) = switch (device.status) {
+      DeviceStatus.online => ('${device.pingMs} ms', AppColors.success),
+      DeviceStatus.busy => ('${device.pingMs} ms', AppColors.warning),
+      DeviceStatus.offline => (context.tr('status_offline'), c.textLow),
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(text, style: TextStyle(fontSize: 11, color: c.textMid)),
+        const SizedBox(width: 2),
+        Icon(LucideIcons.chevronRight, size: 15, color: c.textLow),
+      ],
     );
   }
 }
