@@ -36,8 +36,8 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Cek format
-        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Cek & rapikan format
+        run: dart format lib test
 
       - name: Analisis statis
         run: flutter analyze --fatal-infos
