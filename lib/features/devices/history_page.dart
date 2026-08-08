@@ -35,7 +35,7 @@ class HistoryPage extends ConsumerWidget {
         ],
       ),
       body: items.isEmpty
-          ? const IllustrationState(
+          ? IllustrationState(
               asset: Img.connect,
               title: context.tr('history_empty'),
               message: context.tr('history_empty_msg'),

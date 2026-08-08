@@ -846,7 +846,7 @@ const Map<String, Map<String, String>> kStrings = {
     'ar': 'إظهار زر عائم في جميع الشاشات',
     'ja': 'すべての画面にフローティングボタンを表示',
     'ko': '모든 화면에 플로팅 버튼 표시',
-    'fr': "Afficher un bouton flottant sur tous les écrans",
+    'fr': 'Afficher un bouton flottant sur tous les écrans',
     'de': 'Schaltfläche auf allen Bildschirmen anzeigen',
     'ru': 'Показывать плавающую кнопку на всех экранах',
     'hi': 'सभी स्क्रीन पर फ्लोटिंग बटन दिखाएं',

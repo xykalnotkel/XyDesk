@@ -76,7 +76,7 @@ class XyDeskApp extends ConsumerWidget {
 
 /// Tampilkan SplashPage sejenak, kemudian ganti dengan gate aplikasi.
 class _Boot extends ConsumerStatefulWidget {
-  const _Boot({super.key});
+  const _Boot();
 
   @override
   ConsumerState<_Boot> createState() => _BootState();

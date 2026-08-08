@@ -336,7 +336,7 @@ class _ConnectingView extends StatelessWidget {
               ),
               const SizedBox(height: Gap.md),
               Text(
-                context.tr('session_connecting') + ' $name',
+                '${context.tr('session_connecting')} $name',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,

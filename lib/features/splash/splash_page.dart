@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/tokens.dart';
-import '../widgets/brand.dart';
+import '../../core/tokens.dart';
+import '../../core/store.dart';
+import '../../widgets/brand.dart';
 
 /// Splash pembuka dengan efek "round logo ripple":
 /// cincin melingkar yang beriak keluar dari logo, bergaya Jitter
@@ -39,7 +40,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
       );
     }
     const rings = 3;
-    final slot = 1 / rings;
+    const slot = 1 / rings;
 
     return Scaffold(
       backgroundColor: c.bg,
