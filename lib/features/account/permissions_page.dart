@@ -84,7 +84,7 @@ class PermissionsPage extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: c.raised,
-              borderRadius: BorderRadius.circular(R.md),
+              borderRadius: BorderRadius.circular(R.lg),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,7 +132,7 @@ class PermissionsPage extends StatelessWidget {
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: c.raised,
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(R.lg),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

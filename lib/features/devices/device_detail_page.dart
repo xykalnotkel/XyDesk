@@ -33,7 +33,7 @@ class DeviceDetailPage extends ConsumerWidget {
           ),
         ),
         body: Center(
-          child: Text('Perangkat tidak ditemukan',
+          child: Text(context.tr('device_not_found'),
               style: TextStyle(color: c.textMid)),
         ),
       );

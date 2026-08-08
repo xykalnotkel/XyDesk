@@ -15,6 +15,7 @@ import 'features/connect/connect_page.dart';
 import 'features/control/control_page.dart';
 import 'features/devices/history_page.dart';
 import 'features/home/home_page.dart';
+import 'features/splash/splash_page.dart';
 import 'widgets/seamless.dart';
 
 class XyDeskApp extends ConsumerWidget {
@@ -67,8 +68,36 @@ class XyDeskApp extends ConsumerWidget {
         );
       },
 
-      home: const _Gate(),
+      // Splash animasi dulu, lalu lanjut ke gate (auth / shell).
+      home: const _Boot(),
     );
+  }
+}
+
+/// Tampilkan SplashPage sejenak, kemudian ganti dengan gate aplikasi.
+class _Boot extends ConsumerStatefulWidget {
+  const _Boot({super.key});
+
+  @override
+  ConsumerState<_Boot> createState() => _BootState();
+}
+
+class _BootState extends ConsumerState<_Boot> {
+  bool _revealed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // "Kurangi animasi" aktif -> langsung ke app, tanpa splash beriak.
+    final reduce = ref.read(settingsProvider).reduceMotion;
+    Future.delayed(Duration(milliseconds: reduce ? 0 : 1900), () {
+      if (mounted) setState(() => _revealed = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _revealed ? const _Gate() : const SplashPage();
   }
 }
 
@@ -125,19 +154,37 @@ class _AppShellState extends ConsumerState<AppShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: [
           NavigationDestination(
-            icon: const Icon(LucideIcons.house),
+            icon: Image.asset('assets/libraryicons/nav_home_inactive.png',
+                width: 26, height: 26),
+            selectedIcon: Image.asset('assets/libraryicons/nav_home_active.png',
+                width: 26, height: 26),
             label: context.tr('nav_home'),
           ),
           NavigationDestination(
-            icon: const Icon(LucideIcons.link2),
+            icon: Image.asset('assets/libraryicons/nav_connect_inactive.png',
+                width: 26, height: 26),
+            selectedIcon: Image.asset(
+                'assets/libraryicons/nav_connect_active.png',
+                width: 26,
+                height: 26),
             label: context.tr('nav_connect'),
           ),
           NavigationDestination(
-            icon: const Icon(LucideIcons.slidersHorizontal),
+            icon: Image.asset('assets/libraryicons/nav_control_inactive.png',
+                width: 26, height: 26),
+            selectedIcon: Image.asset(
+                'assets/libraryicons/nav_control_active.png',
+                width: 26,
+                height: 26),
             label: context.tr('nav_control'),
           ),
           NavigationDestination(
-            icon: const Icon(LucideIcons.user),
+            icon: Image.asset('assets/libraryicons/nav_account_inactive.png',
+                width: 26, height: 26),
+            selectedIcon: Image.asset(
+                'assets/libraryicons/nav_account_active.png',
+                width: 26,
+                height: 26),
             label: context.tr('nav_account'),
           ),
         ],

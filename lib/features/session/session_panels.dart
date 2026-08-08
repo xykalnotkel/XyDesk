@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/l10n_bridge.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/tokens.dart';
@@ -84,7 +85,7 @@ class LeftRail extends StatelessWidget {
                   icon: LucideIcons.arrowLeft, label: 'Kembali', onTap: onBack),
               _RailItem(
                 icon: LucideIcons.power,
-                label: 'Putus',
+                label: context.tr('session_disconnect_action'),
                 danger: true,
                 onTap: onDisconnect,
               ),
@@ -389,9 +390,9 @@ class _VideoPanel extends StatelessWidget {
         const PanelSegmented(items: ['Native', '1080', '720', '480'], index: 1),
         const PanelRow('Codec', 'H.264 ›'),
         PanelToggle(
-            label: 'Dekode perangkat keras', value: true, onChanged: (_) {}),
+            label: context.tr('session_hw_decode'), value: true, onChanged: (_) {}),
         PanelToggle(
-            label: 'Batasi ke 60 Hz layar', value: true, onChanged: (_) {}),
+            label: context.tr('session_limit_60hz'), value: true, onChanged: (_) {}),
       ],
     );
   }

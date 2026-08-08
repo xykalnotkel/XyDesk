@@ -238,7 +238,7 @@ Widget _warnBox(BuildContext c, String t) => Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.warning.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(R.lg),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

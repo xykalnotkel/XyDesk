@@ -267,10 +267,10 @@ class OutlinedButtonLike extends StatelessWidget {
     final c = context.c;
     return Material(
       color: c.input,
-      borderRadius: BorderRadius.circular(R.md),
+      borderRadius: BorderRadius.circular(R.lg),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(R.lg),
         child: SizedBox(
           height: 44,
           child: Row(

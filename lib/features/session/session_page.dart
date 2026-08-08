@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../core/l10n_bridge.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 
@@ -276,7 +277,8 @@ class _SessionPageState extends State<SessionPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title:
-            const Text('Putuskan sambungan?', style: TextStyle(fontSize: 14)),
+            Text(context.tr('session_disconnect_confirm'),
+                style: const TextStyle(fontSize: 14)),
         content: const Text(
           'Sesi akan diakhiri. PC host tetap menyala dan bisa dihubungi lagi '
           'kapan saja.',
@@ -288,8 +290,8 @@ class _SessionPageState extends State<SessionPage> {
               child: const Text('Batal')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Putuskan',
-                style: TextStyle(color: AppColors.danger)),
+            child: Text(context.tr('session_disconnect_action'),
+                style: const TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -320,7 +322,7 @@ class _ConnectingView extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2.2),
               ),
               const SizedBox(height: Gap.md),
-              Text('Menghubungkan ke $name',
+              Text(context.tr('session_connecting') + ' $name',
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -333,7 +335,7 @@ class _ConnectingView extends StatelessWidget {
               const _Step('Membangun jalur P2P', active: true),
               const _Step('Menerima aliran video'),
               const SizedBox(height: Gap.md),
-              Text('Layar sudah dikunci ke landscape',
+              Text(context.tr('session_landscape_locked'),
                   style: TextStyle(fontSize: 10, color: c.textLow)),
             ],
           ),

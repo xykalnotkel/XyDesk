@@ -113,7 +113,7 @@ class ControlPage extends ConsumerWidget {
         const SizedBox(height: Gap.sm),
         OutlinedButtonLike(
           icon: LucideIcons.plus,
-          label: 'Buat profil baru',
+          label: context.tr('control_new_profile'),
           onTap: () => _newProfile(context, ref),
         ),
         const SectionLabel('Elemen yang tersedia'),
@@ -138,7 +138,8 @@ class ControlPage extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Profil baru', style: TextStyle(fontSize: 15)),
+        title: Text(context.tr('control_new_profile_title'),
+            style: const TextStyle(fontSize: 15)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -214,7 +215,7 @@ class _GlyphGallery extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: c.raised,
-            borderRadius: BorderRadius.circular(R.md),
+            borderRadius: BorderRadius.circular(R.lg),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

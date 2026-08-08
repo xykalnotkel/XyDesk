@@ -125,23 +125,23 @@ class AppTheme {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(R.lg),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(R.lg),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(R.lg),
           borderSide: BorderSide(color: p.accent, width: 1),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(R.lg),
           borderSide: const BorderSide(color: AppColors.danger, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(R.lg),
           borderSide: const BorderSide(color: AppColors.danger, width: 1),
         ),
         errorStyle: const TextStyle(color: AppColors.danger, fontSize: 11.5),
@@ -156,10 +156,10 @@ class AppTheme {
           // terlihat seperti tombol aktif di layar OLED.
           disabledBackgroundColor: p.accent.withValues(alpha: 0.20),
           disabledForegroundColor: Colors.white.withValues(alpha: 0.45),
-          minimumSize: const Size.fromHeight(46),
+          minimumSize: const Size.fromHeight(50),
           elevation: 0,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.lg)),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
@@ -213,10 +213,13 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
         elevation: 0,
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.md)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.lg)),
       ),
 
-      splashFactory: InkSparkle.splashFactory,
+      splashFactory: NoSplash.splashFactory,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      hoverColor: Colors.transparent,
       pageTransitionsTheme: const PageTransitionsTheme(builders: {
         TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
         TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),

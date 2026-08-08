@@ -37,8 +37,8 @@ class HistoryPage extends ConsumerWidget {
       body: items.isEmpty
           ? const IllustrationState(
               asset: Img.connect,
-              title: 'Belum ada riwayat',
-              message: 'Sesi yang kamu jalankan akan tercatat di sini.',
+              title: context.tr('history_empty'),
+              message: context.tr('history_empty_msg'),
             )
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(

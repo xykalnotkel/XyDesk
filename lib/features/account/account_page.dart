@@ -50,7 +50,9 @@ class AccountPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user.isGuest ? 'Mode tamu' : (user.name ?? 'Pengguna'),
+                    user.isGuest
+                        ? context.tr('account_guest')
+                        : (user.name ?? context.tr('account_user')),
                     style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -58,7 +60,7 @@ class AccountPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    user.email ?? 'Data hanya tersimpan di perangkat ini',
+                    user.email ?? context.tr('account_local_data'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 11.5, color: c.textLow),
@@ -81,38 +83,39 @@ class AccountPage extends ConsumerWidget {
         ),
 
         // ── Perilaku ──
-        const SectionLabel('Perilaku'),
+        SectionLabel(context.tr('settings_behavior')),
         _SwitchRow(
-          title: 'Getaran saat menekan',
+          title: context.tr('behavior_vibration'),
           icon: LucideIcons.vibrate,
           value: s.haptics,
           onChanged: ref.read(settingsProvider.notifier).setHaptics,
         ),
         _SwitchRow(
-          title: 'Refresh rate tinggi',
-          subtitle: 'Pakai 90/120 Hz bila layar mendukung '
-              '(sekarang ${DisplayMode.current.round()} Hz)',
+          title: context.tr('behavior_high_refresh'),
+          subtitle: context
+              .tr('behavior_high_refresh_sub')
+              .replaceAll('{hz}', '${DisplayMode.current.round()}'),
           icon: LucideIcons.zap,
           value: s.highRefresh,
           onChanged: ref.read(settingsProvider.notifier).setHighRefresh,
         ),
         _SwitchRow(
-          title: 'Kurangi animasi',
-          subtitle: 'Untuk perangkat lambat atau sensitivitas gerak',
+          title: context.tr('behavior_reduce_motion'),
+          subtitle: context.tr('behavior_reduce_motion_sub'),
           icon: LucideIcons.accessibility,
           value: s.reduceMotion,
           onChanged: ref.read(settingsProvider.notifier).setReduceMotion,
         ),
         _SwitchRow(
-          title: 'Tombol log pengembang',
-          subtitle: 'Tampilkan tombol mengambang di semua layar',
+          title: context.tr('behavior_devlog'),
+          subtitle: context.tr('behavior_devlog_sub'),
           icon: LucideIcons.bug,
           value: s.showDevLog,
           onChanged: ref.read(settingsProvider.notifier).setShowDevLog,
         ),
 
         // ── Sistem ──
-        const SectionLabel('Sistem'),
+        SectionLabel(context.tr('settings_system')),
         ListRow(
           title: context.tr('settings_permissions'),
           icon: LucideIcons.shield,
@@ -129,7 +132,7 @@ class AccountPage extends ConsumerWidget {
         ),
 
         // ── Legal ──
-        const SectionLabel('Legal'),
+        SectionLabel(context.tr('settings_legal')),
         ListRow(
           title: context.tr('legal_terms'),
           icon: LucideIcons.scale,
@@ -236,7 +239,7 @@ class _ThemeSelector extends ConsumerWidget {
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: c.input,
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(R.lg),
       ),
       child: Row(
         children: [
@@ -361,15 +364,21 @@ class AboutPage extends StatelessWidget {
                 style: TextStyle(fontSize: 11.5, color: c.textLow)),
           ),
           const SizedBox(height: Gap.xl),
-          const ListRow(
-            title: 'Catatan rilis',
+          ListRow(
+            title: context.tr('about_release_notes'),
             subtitle: 'Apa yang baru di 1.0.0',
             icon: LucideIcons.list,
+            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Catatan rilis akan hadir.')),
+            ),
           ),
-          const ListRow(
-            title: 'Cek pembaruan',
+          ListRow(
+            title: context.tr('about_check_updates'),
             subtitle: 'Kamu memakai versi terbaru',
             icon: LucideIcons.refreshCw,
+            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Kamu memakai versi terbaru.')),
+            ),
           ),
           const SectionLabel('Diagnostik'),
           ListRow(

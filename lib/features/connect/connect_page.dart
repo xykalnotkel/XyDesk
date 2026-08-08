@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/l10n_bridge.dart';
 import '../../core/tokens.dart';
 import '../session/session_page.dart';
+import '../devices/history_page.dart';
 
 /// Memformat ID jadi "123 456 789" sambil user mengetik.
 class DeviceIdFormatter extends TextInputFormatter {
@@ -23,6 +26,18 @@ class DeviceIdFormatter extends TextInputFormatter {
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
     );
+  }
+}
+
+/// Link dukungan — ganti dengan akun/resmi XyDesk kamu.
+const _kTelegram = 'https://t.me/xydesk';
+const _kWhatsApp = 'https://wa.me/628000000000';
+const _kTikTok = 'https://tiktok.com/@xydesk';
+
+Future<void> _launchSocial(String url) async {
+  final uri = Uri.parse(url);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
 
@@ -74,6 +89,12 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     );
   }
 
+  void _scanQr() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Pindai QR akan hadir.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -85,7 +106,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
         bottom: 120,
       ),
       children: [
-        Text('Hubungkan ke perangkat', style: t.headlineMedium),
+        Text(context.tr('connect_title'), style: t.headlineMedium),
         const SizedBox(height: 7),
         Text(
           'Masukkan ID dan kata sandi dari aplikasi host di PC kamu.',
@@ -109,7 +130,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
           decoration: const InputDecoration(
             // Sengaja tanpa hintText: angka contoh membuat kolom terlihat
             // sudah terisi dan mengganggu saat mengetik.
-            contentPadding: EdgeInsets.symmetric(vertical: 15),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 15),
           ),
         ),
         const SizedBox(height: Gap.lg),
@@ -140,11 +161,11 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
               children: [
                 AnimatedContainer(
                   duration: D.fast,
-                  width: 16,
-                  height: 16,
+                  width: 18,
+                  height: 18,
                   decoration: BoxDecoration(
                     color: _remember ? c.accent : Colors.transparent,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(5),
                     border: _remember
                         ? null
                         : Border.all(
@@ -152,11 +173,11 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
                   ),
                   child: _remember
                       ? const Icon(LucideIcons.check,
-                          size: 11, color: Colors.white)
+                          size: 12, color: Colors.white)
                       : null,
                 ),
                 const SizedBox(width: Gap.sm),
-                Text('Ingat perangkat ini',
+                Text(context.tr('connect_remember'),
                     style: TextStyle(fontSize: 12, color: c.textMid)),
               ],
             ),
@@ -165,15 +186,22 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
         const SizedBox(height: Gap.lg),
         FilledButton(
           onPressed: _valid ? _connect : null,
-          child: const Text('Hubungkan'),
+          child: Text(context.tr('connect_btn')),
         ),
         const SizedBox(height: Gap.lg),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _ghost(context, LucideIcons.scanLine, 'Pindai QR'),
+            _pill(context, LucideIcons.scanLine, 'Pindai QR', _scanQr),
             const SizedBox(width: Gap.h32),
-            _ghost(context, LucideIcons.history, 'Riwayat'),
+            _pill(
+              context,
+              LucideIcons.history,
+              'Riwayat',
+              () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const HistoryPage()),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: Gap.xxl),
@@ -191,17 +219,32 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
                 color: context.c.textMid)),
       );
 
-  Widget _ghost(BuildContext context, IconData i, String s) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(i, size: 14, color: context.c.textMid),
-          const SizedBox(width: 6),
-          Text(s, style: TextStyle(fontSize: 12.5, color: context.c.textMid)),
-        ],
-      );
+  Widget _pill(
+          BuildContext context, IconData i, String s, VoidCallback? onTap) {
+    final c = context.c;
+    return Material(
+      color: c.input,
+      borderRadius: BorderRadius.circular(R.lg),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.lg),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(i, size: 15, color: c.textMid),
+              const SizedBox(width: 7),
+              Text(s, style: TextStyle(fontSize: 12.5, color: c.textMid)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-/// Blok "Dukung kami di" — Telegram, Saluran WhatsApp, TikTok.
+/// Blok "Dukung kami di" — Telegram, WhatsApp, TikTok (logo resmi).
 class _SupportBlock extends StatelessWidget {
   const _SupportBlock();
 
@@ -212,15 +255,24 @@ class _SupportBlock extends StatelessWidget {
       children: [
         Text('Dukung kami di',
             style: TextStyle(fontSize: 11.5, color: c.textLow)),
-        const SizedBox(height: 11),
+        const SizedBox(height: 12),
         const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _SocialTile(icon: LucideIcons.send, label: 'Telegram'),
-            SizedBox(width: 9),
-            _SocialTile(icon: LucideIcons.messageCircle, label: 'WhatsApp'),
-            SizedBox(width: 9),
-            _SocialTile(icon: LucideIcons.music2, label: 'TikTok'),
+            _SocialTile(
+                asset: 'assets/libraryicons/social_telegram.png',
+                url: _kTelegram,
+                label: 'Telegram'),
+            SizedBox(width: 12),
+            _SocialTile(
+                asset: 'assets/libraryicons/social_whatsapp.png',
+                url: _kWhatsApp,
+                label: 'WhatsApp'),
+            SizedBox(width: 12),
+            _SocialTile(
+                asset: 'assets/libraryicons/social_tiktok.png',
+                url: _kTikTok,
+                label: 'TikTok'),
           ],
         ),
       ],
@@ -229,28 +281,40 @@ class _SupportBlock extends StatelessWidget {
 }
 
 class _SocialTile extends StatelessWidget {
-  const _SocialTile({required this.icon, required this.label});
+  const _SocialTile({
+    required this.asset,
+    required this.url,
+    required this.label,
+  });
 
-  final IconData icon;
+  final String asset;
+  final String url;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     return Semantics(
       label: label,
       button: true,
-      child: Material(
-        color: c.input,
-        borderRadius: BorderRadius.circular(11),
-        child: InkWell(
-          onTap: () {},
-          borderRadius: BorderRadius.circular(11),
-          child: SizedBox(
-            width: 42,
-            height: 42,
-            // Ikon monokrom — tanpa warna brand, agar palet tetap tenang.
-            child: Icon(icon, size: 18, color: c.textMid),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(R.lg),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        ),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(R.lg),
+          child: InkWell(
+            onTap: () => _launchSocial(url),
+            borderRadius: BorderRadius.circular(R.lg),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: Padding(
+                padding: const EdgeInsets.all(11),
+                child: Image.asset(asset, fit: BoxFit.contain),
+              ),
+            ),
           ),
         ),
       ),

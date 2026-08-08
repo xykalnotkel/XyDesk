@@ -376,10 +376,10 @@ class _AuthButton extends StatelessWidget {
     final c = context.c;
     return Material(
       color: primary ? c.accent : c.input,
-      borderRadius: BorderRadius.circular(R.md),
+      borderRadius: BorderRadius.circular(R.lg),
       child: InkWell(
         onTap: busy ? null : onTap,
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(R.lg),
         child: SizedBox(
           height: 50,
           child: Row(

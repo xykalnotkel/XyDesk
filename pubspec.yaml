@@ -17,6 +17,7 @@ dependencies:
   # Ikon Lucide — stroke tipis konsisten, sesuai mockup.
   # Material Icons terlalu tebal/filled dan membuat UI terasa berbeda.
   lucide_icons_flutter: ^3.1.15
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
@@ -28,6 +29,7 @@ flutter:
 
   assets:
     - assets/img/
+    - assets/libraryicons/
 
   # Inter di-bundle langsung (bukan diunduh runtime) supaya tampilan
   # pasti sama di semua perangkat, termasuk tanpa internet.

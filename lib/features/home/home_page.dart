@@ -35,7 +35,7 @@ class HomePage extends ConsumerWidget {
       ),
       error: (e, _) => IllustrationState(
         asset: Img.error,
-        title: 'Gagal memuat perangkat',
+        title: context.tr('home_load_error'),
         message: '$e',
       ),
       data: (_) {
