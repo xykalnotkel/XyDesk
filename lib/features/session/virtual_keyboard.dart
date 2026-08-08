@@ -283,9 +283,9 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: _KeyboardCloseButton(onTap: widget.onDismiss),
+        _KeyboardHeader(
+          opacity: widget.opacity,
+          onClose: widget.onDismiss,
         ),
         switch (widget.layout) {
           KbLayout.split => _buildSplit(context),
@@ -389,12 +389,6 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
               ],
             ),
           ),
-          const SizedBox(height: 5),
-          _MiniBtn(
-            icon: LucideIcons.chevronDown,
-            tooltip: 'Tutup keyboard',
-            onTap: widget.onDismiss,
-          ),
           const SizedBox(height: 8),
           Container(
             width: 28,
@@ -471,8 +465,8 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
       bg = c.accentSoft;
       fg = c.textHi;
     } else {
-      bg = c.textHi.withValues(alpha: 0.055);
-      fg = c.textMid;
+      bg = c.input.withValues(alpha: 0.88);
+      fg = c.textHi;
     }
 
     return Semantics(
@@ -493,6 +487,44 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
                 height: 1),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _KeyboardHeader extends StatelessWidget {
+  const _KeyboardHeader({required this.opacity, required this.onClose});
+
+  final double opacity;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      height: 40,
+      color: c.overlay.withValues(alpha: 0.96),
+      padding: const EdgeInsets.only(left: 12),
+      child: Row(
+        children: [
+          Icon(LucideIcons.keyboard, size: 15, color: c.textMid),
+          const SizedBox(width: 7),
+          Text(
+            'Keyboard',
+            style: TextStyle(
+              color: c.textHi,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${(opacity * 100).round()}%',
+            style: TextStyle(color: c.textLow, fontSize: 10),
+          ),
+          const Spacer(),
+          _KeyboardCloseButton(onTap: onClose),
+        ],
       ),
     );
   }
@@ -594,7 +626,18 @@ class _PressableKeyState extends State<_PressableKey> {
             color: _down
                 ? context.c.textHi.withValues(alpha: 0.12)
                 : widget.background,
-            borderRadius: BorderRadius.circular(R.key),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: context.c.textLow.withValues(alpha: 0.16),
+              width: 0.7,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
           child: widget.child,
         ),

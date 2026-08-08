@@ -133,8 +133,9 @@ void main() {
       await tester.pump();
 
       // FAB keyboard ada
-      expect(find.byIcon(LucideIcons.keyboard), findsOneWidget);
-      await tester.tap(find.byIcon(LucideIcons.keyboard));
+      final keyboardIcons = find.byIcon(LucideIcons.keyboard);
+      expect(keyboardIcons, findsNWidgets(2));
+      await tester.tap(keyboardIcons.first);
       await tester.pumpAndSettle();
       // Beberapa tombol keyboard muncul
       expect(find.text('Esc'), findsOneWidget);
