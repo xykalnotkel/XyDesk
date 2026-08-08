@@ -62,7 +62,9 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.textContaining('Menghubungkan'), findsOneWidget);
+      // Teks koneksi dilokalisasi (context.tr), jadi cek nama device
+      // yang selalu tampil — assertion tetap valid di semua bahasa.
+      expect(find.textContaining('GAMING-RIG'), findsOneWidget);
       expect(find.textContaining('Menemukan host'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
