@@ -280,11 +280,20 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
 
   @override
   Widget build(BuildContext context) {
-    return switch (widget.layout) {
-      KbLayout.split => _buildSplit(context),
-      KbLayout.full => _buildFull(context),
-      KbLayout.compact => _buildCompact(context),
-    };
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: _KeyboardCloseButton(onTap: widget.onDismiss),
+        ),
+        switch (widget.layout) {
+          KbLayout.split => _buildSplit(context),
+          KbLayout.full => _buildFull(context),
+          KbLayout.compact => _buildCompact(context),
+        },
+      ],
+    );
   }
 
   // ── SPLIT: dua blok, tengah kosong ──
@@ -466,15 +475,55 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
       fg = c.textMid;
     }
 
-    return _PressableKey(
-      background: bg,
-      onTap: () => _press(k),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          k.label,
-          maxLines: 1,
-          style: TextStyle(fontSize: 9.5, color: fg, height: 1),
+    return Semantics(
+      button: true,
+      label: k.label,
+      child: _PressableKey(
+        background: bg,
+        onTap: () => _press(k),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            k.label,
+            maxLines: 1,
+            style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: fg,
+                height: 1),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _KeyboardCloseButton extends StatelessWidget {
+  const _KeyboardCloseButton({required this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Material(
+      color: c.overlay.withValues(alpha: 0.96),
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 38,
+          width: 86,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(LucideIcons.x, size: 16, color: c.textHi),
+              const SizedBox(width: 5),
+              Text(
+                'Tutup',
+                style: TextStyle(fontSize: 10, color: c.textMid),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -539,7 +588,7 @@ class _PressableKeyState extends State<_PressableKey> {
         scale: _down ? 0.95 : 1,
         duration: const Duration(milliseconds: 90),
         child: Container(
-          height: 24,
+          height: 36,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: _down

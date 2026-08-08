@@ -95,7 +95,7 @@ void main() {
       // Teks koneksi dilokalisasi (context.tr), jadi cek nama device
       // yang selalu tampil — assertion tetap valid di semua bahasa.
       expect(find.textContaining('GAMING-RIG'), findsOneWidget);
-      expect(find.textContaining('Menemukan host'), findsOneWidget);
+      expect(find.textContaining('Menyiapkan koneksi aman'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       // Tuntaskan Timer simulasi agar tidak ada timer menggantung.

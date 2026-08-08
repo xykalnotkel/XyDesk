@@ -137,14 +137,14 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                 // Statistik kiri atas
                 _fade(
                   top: 10,
-                  left: _leftRail ? 56 : 12,
+                  left: _leftRail ? 72 : 12,
                   child: _StatsOverlay(name: widget.deviceName),
                 ),
 
                 // Panah kiri-atas → buka bilah kiri
                 _fade(
                   top: 6,
-                  left: 6,
+                  left: 0,
                   child: _OverlayIcon(
                     icon: _leftRail
                         ? LucideIcons.chevronLeft
@@ -161,7 +161,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                 // Panah kanan-atas → buka panel kategori
                 _fade(
                   top: 6,
-                  right: 6,
+                  right: 0,
                   child: _OverlayIcon(
                     icon: _panel == null
                         ? LucideIcons.chevronLeft
@@ -228,7 +228,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                 AnimatedPositioned(
                   duration: D.panel,
                   curve: D.curve,
-                  left: _leftRail ? 0 : -56,
+                  left: _leftRail ? 0 : -72,
                   top: 0,
                   bottom: 0,
                   child: LeftRail(
@@ -360,37 +360,39 @@ class _ConnectingView extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      color: context.c.bg,
+      color: c.bg,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 330),
+          constraints: const BoxConstraints(maxWidth: 300),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2.2),
+                width: 30,
+                height: 30,
+                child: CircularProgressIndicator(strokeWidth: 2.4),
               ),
-              const SizedBox(height: Gap.md),
+              const SizedBox(height: Gap.lg),
               Text(
                 '${context.tr('session_connecting')} $name',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: c.textHi,
                 ),
               ),
-              const SizedBox(height: Gap.md),
-              const _Step('Menemukan host', done: true, time: '142 ms'),
-              const _Step(
-                'Verifikasi kata sandi (SRP)',
-                done: true,
-                time: '210 ms',
+              const SizedBox(height: Gap.sm),
+              Text(
+                'Menyiapkan koneksi aman',
+                style: TextStyle(fontSize: 11.5, color: c.textMid),
               ),
-              const _Step('Menukar kandidat ICE', done: true, time: '380 ms'),
-              const _Step('Membangun jalur P2P', active: true),
-              const _Step('Menerima aliran video'),
+              const SizedBox(height: Gap.lg),
+              LinearProgressIndicator(
+                minHeight: 3,
+                backgroundColor: c.textLow.withValues(alpha: 0.18),
+                color: c.accent,
+              ),
               const SizedBox(height: Gap.md),
               Text(
                 context.tr('session_landscape_locked'),
@@ -399,55 +401,6 @@ class _ConnectingView extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Step extends StatelessWidget {
-  const _Step(this.label, {this.done = false, this.active = false, this.time});
-
-  final String label;
-  final bool done, active;
-  final String? time;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final col = done ? c.textMid : (active ? c.textHi : c.textLow);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-      decoration: BoxDecoration(
-        color: active ? c.accentSoft : c.raised.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        children: [
-          if (done)
-            const Icon(LucideIcons.check, size: 12, color: AppColors.success)
-          else if (active)
-            const SizedBox(
-              width: 11,
-              height: 11,
-              child: CircularProgressIndicator(strokeWidth: 1.8),
-            )
-          else
-            Icon(LucideIcons.minus, size: 12, color: c.textLow),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(label, style: TextStyle(fontSize: 11, color: col)),
-          ),
-          if (time != null)
-            Text(
-              time!,
-              style: TextStyle(
-                fontSize: 9.5,
-                fontFamily: 'monospace',
-                color: c.textLow,
-              ),
-            ),
-        ],
       ),
     );
   }
@@ -605,22 +558,19 @@ class _KeyboardFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
     return Opacity(
-      opacity: 0.85,
+      opacity: 0.88,
       child: Material(
-        color: c.overlay.withValues(alpha: 0.92),
-        shape: const CircleBorder(),
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: SizedBox(
-            width: 44,
-            height: 44,
+          child: const SizedBox(
+            width: 50,
+            height: 50,
             child: Icon(
               LucideIcons.keyboard,
-              size: 19,
-              color: context.c.textHi,
+              size: 24,
+              color: Colors.white,
             ),
           ),
         ),

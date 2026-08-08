@@ -83,7 +83,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
               alignment: Alignment.center,
               children: [
                 for (var i = 0; i < 3; i++)
-                  _Ripple(
+                  _SnakeRipple(
                     phase: _phase(t, i * 0.14, 0.58),
                     opacity: rippleFade,
                     color: c.accent,
@@ -107,8 +107,8 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
 /// Ripple besar di belakang logo. Setiap ring dimulai sedikit bergeser agar
 /// gerakannya terasa mengalir, bukan tiga lingkaran yang membesar bersamaan.
-class _Ripple extends StatelessWidget {
-  const _Ripple({
+class _SnakeRipple extends StatelessWidget {
+  const _SnakeRipple({
     required this.phase,
     required this.opacity,
     required this.color,
@@ -120,22 +120,52 @@ class _Ripple extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = Curves.easeOutCubic.transform(phase);
     return Opacity(
-      opacity: (1 - p) * 0.42 * opacity,
-      child: Transform.scale(
-        scale: 0.72 + p * 1.35,
-        child: Container(
-          width: 118,
-          height: 118,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: color, width: 2),
-          ),
-        ),
+      opacity: opacity * 0.78,
+      child: CustomPaint(
+        size: const Size(150, 150),
+        painter: _SnakeRipplePainter(phase: phase, color: color),
       ),
     );
   }
+}
+
+class _SnakeRipplePainter extends CustomPainter {
+  const _SnakeRipplePainter({required this.phase, required this.color});
+
+  final double phase;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final base = size.shortestSide * 0.5;
+    final p = Curves.easeInOutCubic.transform(phase);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2.2;
+
+    for (var i = 0; i < 3; i++) {
+      final radius = base * (0.50 + i * 0.13 + p * 0.42);
+      final start = -1.15 + p * 5.7 + i * 2.1;
+      final sweep = 0.95 + (1 - p) * 0.55;
+      paint.color = color.withValues(
+        alpha: (0.22 - i * 0.035).clamp(0.06, 0.22),
+      );
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        start,
+        sweep,
+        false,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SnakeRipplePainter oldDelegate) =>
+      oldDelegate.phase != phase || oldDelegate.color != color;
 }
 
 /// Lockup horizontal untuk fase akhir splash.

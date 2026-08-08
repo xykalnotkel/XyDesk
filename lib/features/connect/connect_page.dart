@@ -35,13 +35,23 @@ class DeviceIdFormatter extends TextInputFormatter {
 
 /// Link dukungan — ganti dengan akun/resmi XyDesk kamu.
 const _kTelegram = 'https://t.me/xydesk';
+const _kTelegramApp = 'tg://resolve?domain=xydesk';
 const _kWhatsApp = 'https://wa.me/628000000000';
+const _kWhatsAppApp = 'whatsapp://send?phone=628000000000';
 const _kTikTok = 'https://tiktok.com/@xydesk';
+const _kTikTokApp = 'snssdk1233://user/profile/xydesk';
 
-Future<void> _launchSocial(String url) async {
-  final uri = Uri.parse(url);
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+Future<void> _launchSocial(String url, {String? appUrl}) async {
+  if (appUrl != null) {
+    final native = Uri.parse(appUrl);
+    if (await canLaunchUrl(native)) {
+      await launchUrl(native, mode: LaunchMode.externalApplication);
+      return;
+    }
+  }
+  final web = Uri.parse(url);
+  if (await canLaunchUrl(web)) {
+    await launchUrl(web, mode: LaunchMode.externalApplication);
   }
 }
 
@@ -80,9 +90,10 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     if (!_valid) return;
     // Demo: kata sandi "salah" memicu state error agar bisa dilihat di UI.
     if (_pw.text == 'salah') {
-      setState(
-        () => _error =
-            'Kata sandi salah. Sisa 3 percobaan sebelum dikunci 5 menit.',
+      setState(() => _error = null);
+      await _showConnectError(
+        'Koneksi gagal',
+        'Kata sandi salah. Sisa 3 percobaan sebelum dikunci 5 menit.',
       );
       return;
     }
@@ -98,6 +109,23 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
 
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => PairSuccessPage(device: device)),
+    );
+  }
+
+  Future<void> _showConnectError(String title, String message) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -434,18 +462,21 @@ class _SupportBlock extends StatelessWidget {
             _SocialTile(
               asset: 'assets/libraryicons/social_telegram.png',
               url: _kTelegram,
+              appUrl: _kTelegramApp,
               label: 'Telegram',
             ),
             SizedBox(width: 12),
             _SocialTile(
               asset: 'assets/libraryicons/social_whatsapp.png',
               url: _kWhatsApp,
+              appUrl: _kWhatsAppApp,
               label: 'WhatsApp',
             ),
             SizedBox(width: 12),
             _SocialTile(
               asset: 'assets/libraryicons/social_tiktok.png',
               url: _kTikTok,
+              appUrl: _kTikTokApp,
               label: 'TikTok',
             ),
           ],
@@ -459,11 +490,13 @@ class _SocialTile extends StatelessWidget {
   const _SocialTile({
     required this.asset,
     required this.url,
+    this.appUrl,
     required this.label,
   });
 
   final String asset;
   final String url;
+  final String? appUrl;
   final String label;
 
   @override
@@ -481,7 +514,7 @@ class _SocialTile extends StatelessWidget {
           color: c.raised,
           borderRadius: BorderRadius.circular(R.lg),
           child: InkWell(
-            onTap: () => _launchSocial(url),
+            onTap: () => _launchSocial(url, appUrl: appUrl),
             borderRadius: BorderRadius.circular(R.lg),
             child: SizedBox(
               width: 48,

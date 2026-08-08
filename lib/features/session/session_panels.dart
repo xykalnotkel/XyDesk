@@ -55,7 +55,7 @@ class LeftRail extends StatelessWidget {
         if ((details.primaryVelocity ?? 0) < -260) onClose?.call();
       },
       child: Container(
-        width: 48,
+        width: 72,
         color: c.overlay.withValues(alpha: 0.96),
         child: SafeArea(
           right: false,
@@ -142,11 +142,13 @@ class _RailItem extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 16, color: col),
-                const SizedBox(height: 1),
+                Icon(icon, size: 20, color: col),
+                const SizedBox(height: 2),
                 Text(
                   label,
-                  style: TextStyle(fontSize: 6.5, color: col, height: 1),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 7.5, color: col, height: 1),
                 ),
               ],
             ),
