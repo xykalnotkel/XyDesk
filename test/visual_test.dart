@@ -5,6 +5,8 @@ import 'helpers.dart';
 import 'package:xydesk/core/devlog.dart';
 import 'package:xydesk/core/theme.dart';
 import 'package:xydesk/features/session/session_page.dart';
+import 'package:xydesk/features/splash/splash_page.dart';
+import 'package:xydesk/widgets/brand.dart';
 
 /// Test yang memverifikasi keluhan nyata: "UI beda jauh dari mockup" dan
 /// "pas pencet lanjut sesi malah putih doang".
@@ -48,6 +50,34 @@ void main() {
         WidgetState.selected,
       })?.color;
       expect(sel, const Color(0xFFEDEDEF));
+    });
+  });
+
+  group('Splash screen', () {
+    testWidgets('Ripple selesai dengan logo bergeser dan wordmark muncul', (
+      tester,
+    ) async {
+      await tester.pumpWidget(await testWrap(const SplashPage()));
+      await tester.pump();
+
+      expect(find.byType(BrandLogo), findsOneWidget);
+      final initialOpacity = tester.widget<Opacity>(
+        find.ancestor(
+          of: find.text('XyDesk'),
+          matching: find.byType(Opacity),
+        ),
+      );
+      expect(initialOpacity.opacity, closeTo(0, 0.01));
+
+      await tester.pump(const Duration(milliseconds: 1500));
+      final finalOpacity = tester.widget<Opacity>(
+        find.ancestor(
+          of: find.text('XyDesk'),
+          matching: find.byType(Opacity),
+        ),
+      );
+      expect(finalOpacity.opacity, closeTo(1, 0.01));
+      expect(tester.takeException(), isNull);
     });
   });
 

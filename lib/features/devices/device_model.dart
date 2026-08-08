@@ -46,46 +46,47 @@ class Device {
     int? pingMs,
     DateTime? lastSeen,
     bool? remembered,
-  }) => Device(
-    id: id,
-    name: name ?? this.name,
-    os: os,
-    gpu: gpu,
-    status: status ?? this.status,
-    pingMs: pingMs ?? this.pingMs,
-    lastSeen: lastSeen ?? this.lastSeen,
-    resolution: resolution,
-    remembered: remembered ?? this.remembered,
-  );
+  }) =>
+      Device(
+        id: id,
+        name: name ?? this.name,
+        os: os,
+        gpu: gpu,
+        status: status ?? this.status,
+        pingMs: pingMs ?? this.pingMs,
+        lastSeen: lastSeen ?? this.lastSeen,
+        resolution: resolution,
+        remembered: remembered ?? this.remembered,
+      );
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'os': os,
-    'gpu': gpu,
-    'status': status.name,
-    'ping': pingMs,
-    'lastSeen': lastSeen?.toIso8601String(),
-    'res': resolution,
-    'remembered': remembered,
-  };
+        'id': id,
+        'name': name,
+        'os': os,
+        'gpu': gpu,
+        'status': status.name,
+        'ping': pingMs,
+        'lastSeen': lastSeen?.toIso8601String(),
+        'res': resolution,
+        'remembered': remembered,
+      };
 
   factory Device.fromJson(Map<String, dynamic> j) => Device(
-    id: j['id'] as String,
-    name: j['name'] as String,
-    os: j['os'] as String? ?? '',
-    gpu: j['gpu'] as String?,
-    status: DeviceStatus.values.firstWhere(
-      (s) => s.name == j['status'],
-      orElse: () => DeviceStatus.offline,
-    ),
-    pingMs: j['ping'] as int?,
-    lastSeen: j['lastSeen'] == null
-        ? null
-        : DateTime.tryParse(j['lastSeen'] as String),
-    resolution: j['res'] as String? ?? '1920×1080',
-    remembered: j['remembered'] as bool? ?? false,
-  );
+        id: j['id'] as String,
+        name: j['name'] as String,
+        os: j['os'] as String? ?? '',
+        gpu: j['gpu'] as String?,
+        status: DeviceStatus.values.firstWhere(
+          (s) => s.name == j['status'],
+          orElse: () => DeviceStatus.offline,
+        ),
+        pingMs: j['ping'] as int?,
+        lastSeen: j['lastSeen'] == null
+            ? null
+            : DateTime.tryParse(j['lastSeen'] as String),
+        resolution: j['res'] as String? ?? '1920×1080',
+        remembered: j['remembered'] as bool? ?? false,
+      );
 }
 
 /// Catatan satu sesi, untuk halaman Riwayat.
@@ -108,22 +109,22 @@ class SessionRecord {
   final String quality;
 
   Map<String, dynamic> toJson() => {
-    'id': deviceId,
-    'name': deviceName,
-    'at': at.toIso8601String(),
-    'dur': durationMin,
-    'path': path,
-    'q': quality,
-  };
+        'id': deviceId,
+        'name': deviceName,
+        'at': at.toIso8601String(),
+        'dur': durationMin,
+        'path': path,
+        'q': quality,
+      };
 
   factory SessionRecord.fromJson(Map<String, dynamic> j) => SessionRecord(
-    deviceId: j['id'] as String,
-    deviceName: j['name'] as String,
-    at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
-    durationMin: j['dur'] as int? ?? 0,
-    path: j['path'] as String? ?? 'P2P',
-    quality: j['q'] as String? ?? '1080p60',
-  );
+        deviceId: j['id'] as String,
+        deviceName: j['name'] as String,
+        at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
+        durationMin: j['dur'] as int? ?? 0,
+        path: j['path'] as String? ?? 'P2P',
+        quality: j['q'] as String? ?? '1080p60',
+      );
 }
 
 /// Daftar perangkat yang tersimpan di HP.
@@ -203,6 +204,39 @@ class DeviceRepo extends StateNotifier<List<Device>> {
     state = [...state, d];
     await _persist();
     DevLog.ok('devices', 'Perangkat ditambahkan', d.name);
+  }
+
+  /// Simulasi pairing lokal: perangkat baru disimpan, perangkat lama
+  /// diperbarui menjadi online. Nanti method ini bisa diganti repository API
+  /// tanpa mengubah layar Connect.
+  Future<Device> connect({
+    required String id,
+    required String name,
+    bool remembered = false,
+  }) async {
+    final current = byId(id);
+    final connected = (current ??
+            Device(
+              id: id,
+              name: name,
+              os: 'Windows 11',
+              status: DeviceStatus.offline,
+            ))
+        .copyWith(
+      status: DeviceStatus.online,
+      pingMs: 24,
+      lastSeen: DateTime.now(),
+      remembered: remembered || (current?.remembered ?? false),
+    );
+
+    state = [
+      for (final d in state)
+        if (d.id == id) connected else d,
+      if (current == null) connected,
+    ];
+    await _persist();
+    DevLog.ok('devices', 'Pairing demo berhasil', connected.name);
+    return connected;
   }
 
   Future<void> rename(String id, String name) async {

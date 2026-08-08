@@ -9,25 +9,24 @@ Xcode, atau Visual Studio di komputer kamu — semua dikerjakan runner GitHub.
 
 | Berkas | Pemicu | Hasil |
 |---|---|---|
-| `.github/workflows/build.yml` | push & PR ke `main` | APK universal + Windows ZIP |
-| `.github/workflows/release.yml` | tag `v*` | GitHub Release + checksum |
+| `.github/workflows/build.yml` | push & PR ke `main` | APK universal |
+| `.github/workflows/release.yml` | tag `v*` | Android Release + checksum |
 
 ### build.yml
 
 ```
-check ──┬─→ android   (XyDesk.apk — universal)
-        └─→ windows   (XyDesk-Windows-x64.zip — portable)
+check ──→ android   (XyDesk.apk — universal)
               ↓
            summary
 ```
 
-Job `check` jalan lebih dulu. Kalau gagal, kedua build dibatalkan — tidak ada
+Job `check` jalan lebih dulu. Kalau gagal, build Android dibatalkan — tidak ada
 gunanya membangun kode yang tidak lolos analisis.
 
 **Isi `check`:**
 1. `dart format --set-exit-if-changed` — format wajib konsisten
 2. `flutter analyze --fatal-infos` — bahkan peringatan `info` menggagalkan build
-3. `flutter test` — 27 test
+3. `flutter test` — seluruh test widget dan feature
 4. **Verifikasi aturan seamless** — CI mencari `Divider(` dan
    `scrolledUnderElevation: [1-9]` di `lib/`. Kalau ada, build gagal.
 
@@ -60,7 +59,6 @@ Actions → pilih run → gulir ke bawah ke **Artifacts**:
 | Artefak | Isi |
 |---|---|
 | `XyDesk-Android-APK` | `XyDesk.apk` — universal, semua arsitektur |
-| `XyDesk-Windows-ZIP` | `XyDesk-Windows-x64.zip` — portable |
 
 Artefak disimpan **30 hari**.
 
@@ -71,8 +69,9 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Workflow `release.yml` membangun semua platform, membuat `SHA256SUMS.txt`, dan
-menerbitkan GitHub Release dengan catatan rilis otomatis.
+Workflow `release.yml` saat ini membangun Android, membuat `SHA256SUMS.txt`, dan
+menerbitkan GitHub Release dengan catatan rilis otomatis. Windows dan iOS akan
+ditambahkan sebagai job release setelah backend siap.
 
 ---
 
@@ -134,22 +133,23 @@ Perkiraan durasi per push:
 
 | Job | Runner | Durasi |
 |---|---|---|
-| `check` | ubuntu | ~3 menit |
-| `android` | ubuntu | ~6 menit |
-| `windows` | windows | ~8 menit |
+| `check` | ubuntu | ~1–3 menit |
+| `android` | ubuntu | ~4–6 menit |
 
-Android dan Windows jalan paralel, jadi total sekitar **11 menit** per push.
+Pada fase mockup hanya Android yang berjalan, jadi total mengikuti job check lalu
+build Android. Windows dan iOS akan dipindahkan ke workflow release ketika
+backend siap.
 
 Yang tetap dibatasi walau repo publik: **penyimpanan artefak** (500 MB gratis).
-Karena itu retensi diset 30 hari, dan hanya dua berkas yang diunggah per run.
+Karena itu retensi diset 30 hari, dan hanya satu berkas yang diunggah per run.
 
 ## 5. Optimasi yang Sudah Dipasang
 
 - **`concurrency`** — push baru membatalkan run lama di branch yang sama.
 - **`cache: true`** pada `flutter-action` — menghemat ~2 menit per job.
 - **Cache Gradle** — menghemat ~3 menit pada build Android.
-- **`fail-fast: false`** pada matrix — kegagalan Windows tidak membatalkan
-  Linux dan macOS, jadi kamu melihat semua masalah sekaligus.
+- **Workflow terpisah per tahap** — fase mockup hanya menjalankan Android;
+  Windows dan iOS bisa diaktifkan nanti tanpa memperlambat setiap push.
 - **`timeout-minutes`** — mencegah job menggantung menghabiskan kuota.
 
 ---

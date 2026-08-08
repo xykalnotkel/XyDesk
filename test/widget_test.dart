@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
 import 'package:xydesk/features/connect/connect_page.dart';
+import 'package:xydesk/features/devices/device_model.dart';
 import 'package:xydesk/widgets/hud_glyphs.dart';
 
 void main() {
@@ -73,6 +75,35 @@ void main() {
 
     final btn2 = tester.widget<FilledButton>(find.byType(FilledButton));
     expect(btn2.onPressed, isNotNull);
+  });
+
+  testWidgets('Connect demo menyimpan device dan membuka session', (
+    tester,
+  ) async {
+    await tester.pumpWidget(await testWrap(const ConnectPage()));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField).first, '987654321');
+    await tester.enterText(find.byType(TextField).last, 'rahasia');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Hubungkan'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.textContaining('Menghubungkan ke PC-4321'), findsOneWidget);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ConnectPage)),
+    );
+    expect(
+      container.read(deviceRepoProvider).any((d) => d.id == '987654321'),
+      isTrue,
+    );
+
+    await tester.pump(const Duration(milliseconds: 2400));
+    await tester.pump();
+    // Lepaskan timer session tanpa mengandalkan AppBar back button.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
   });
 
   group('Glyph HUD', () {

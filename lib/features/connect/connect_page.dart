@@ -6,8 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/l10n_bridge.dart';
 import '../../core/tokens.dart';
-import '../session/session_page.dart';
+import '../devices/device_model.dart';
 import '../devices/history_page.dart';
+import '../session/session_page.dart';
 
 /// Memformat ID jadi "123 456 789" sambil user mengetik.
 class DeviceIdFormatter extends TextInputFormatter {
@@ -74,7 +75,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     super.dispose();
   }
 
-  void _connect() {
+  Future<void> _connect() async {
     if (!_valid) return;
     // Demo: kata sandi "salah" memicu state error agar bisa dilihat di UI.
     if (_pw.text == 'salah') {
@@ -85,12 +86,36 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
       return;
     }
     setState(() => _error = null);
+
+    final id = _id.text.replaceAll(' ', '');
+    final device = await ref.read(deviceRepoProvider.notifier).connect(
+          id: id,
+          name: _demoName(id),
+          remembered: _remember,
+        );
+    if (!mounted) return;
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) =>
-            SessionPage(deviceName: 'GAMING-RIG', deviceId: _id.text),
+            SessionPage(deviceName: device.name, deviceId: device.id),
       ),
     );
+  }
+
+  String _demoName(String id) {
+    switch (id) {
+      case '123456789':
+        return 'GAMING-RIG';
+      case '234567890':
+        return 'LAPTOP-ASUS';
+      case '345678901':
+        return 'OFFICE-PC';
+      case '456789012':
+        return 'MAC-STUDIO';
+      default:
+        return 'PC-${id.substring(id.length - 4)}';
+    }
   }
 
   void _scanQr() {
@@ -222,16 +247,16 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
   }
 
   Widget _label(String s) => Padding(
-    padding: const EdgeInsets.only(left: 2, bottom: 6),
-    child: Text(
-      s,
-      style: TextStyle(
-        fontSize: 11.5,
-        fontWeight: FontWeight.w500,
-        color: context.c.textMid,
-      ),
-    ),
-  );
+        padding: const EdgeInsets.only(left: 2, bottom: 6),
+        child: Text(
+          s,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w500,
+            color: context.c.textMid,
+          ),
+        ),
+      );
 
   Widget _pill(
     BuildContext context,

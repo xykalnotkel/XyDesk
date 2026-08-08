@@ -36,7 +36,7 @@ flutter run
 Butuh Flutter **3.44+** / Dart 3.5+.
 
 ```bash
-flutter test              # 27 test
+flutter test              # seluruh test widget & feature
 flutter analyze           # harus bersih
 dart format lib test      # sebelum push
 ```
@@ -105,15 +105,17 @@ langsung tahu macetnya di penemuan host, autentikasi, atau NAT.
 
 ## Build Otomatis
 
-Push ke GitHub, dan Actions membangun **APK universal** dan **Windows portable**.
-Tidak perlu Android Studio atau Visual Studio di komputer kamu.
+Pada fase mockup ini, push ke GitHub hanya membangun **APK universal**.
+Source Flutter tetap disiapkan untuk Windows dan iOS, tetapi job build kedua
+platform itu sengaja ditunda sampai backend dan server siap.
 
-| Target | Artefak | Keterangan |
+| Target | Artefak | Status |
 |---|---|---|
-| Android | `XyDesk.apk` | Universal — satu berkas untuk semua HP Android 8.0+ |
-| Windows | `XyDesk-Windows-x64.zip` | Portable — ekstrak lalu jalankan `xydesk.exe` |
+| Android | `XyDesk.apk` | Aktif — universal, satu berkas untuk semua HP Android 8.0+ |
+| Windows | — | Ditunda — source/platform build diaktifkan saat backend siap |
+| iOS | — | Ditunda — perlu runner macOS dan signing Apple |
 
-Unduh dari tab **Actions** → pilih run → bagian **Artifacts**.
+Unduh APK dari tab **Actions** → pilih run → bagian **Artifacts**.
 
 ```bash
 git tag v1.0.0 && git push origin v1.0.0   # buat rilis

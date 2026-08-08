@@ -72,6 +72,6 @@ jobs:
 
             Verifikasi unduhan dengan `SHA256SUMS.txt`.
 
-            > Build ini **belum ditandatangani**. Android akan menampilkan
-            > peringatan "sumber tidak dikenal", dan Windows SmartScreen akan
-            > meminta konfirmasi. Ini wajar untuk rilis tanpa sertifikat.
+            > Build Android ini **belum ditandatangani**. Android akan
+            > menampilkan peringatan "sumber tidak dikenal". Ini wajar untuk
+            > rilis mockup tanpa sertifikat produksi.

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:xydesk/core/l10n_bridge.dart';
 import 'package:xydesk/core/store.dart';
 import 'package:xydesk/features/auth/auth_screen.dart';
+import 'package:xydesk/features/devices/device_model.dart';
 import 'package:xydesk/features/session/virtual_keyboard.dart';
 
 import 'helpers.dart';
@@ -70,6 +71,48 @@ void main() {
     test('data rusak tidak membuat aplikasi mati', () async {
       final s = await testStore(seed: {'rusak': 'bukan json'});
       expect(s.getList('rusak'), isEmpty);
+    });
+  });
+
+  group('Demo flow lokal', () {
+    test('pairing menyimpan perangkat baru dan membuatnya online', () async {
+      final s = await testStore();
+      final repo = DeviceRepo(s);
+
+      final device = await repo.connect(
+        id: '987654321',
+        name: 'PC-DEMO',
+        remembered: true,
+      );
+
+      expect(device.isOnline, isTrue);
+      expect(device.remembered, isTrue);
+      expect(repo.state.any((d) => d.id == '987654321'), isTrue);
+      expect(
+        s.getList('devices').any((d) => d['id'] == '987654321'),
+        isTrue,
+      );
+    });
+
+    test('riwayat sesi tersimpan dan muncul paling baru', () async {
+      final s = await testStore();
+      final repo = HistoryRepo(s);
+      final at = DateTime(2026, 8, 8, 12);
+
+      await repo.add(
+        SessionRecord(
+          deviceId: '987654321',
+          deviceName: 'PC-DEMO',
+          at: at,
+          durationMin: 12,
+          path: 'P2P',
+          quality: '1080p60',
+        ),
+      );
+
+      expect(repo.state.single.deviceName, 'PC-DEMO');
+      expect(repo.state.single.durationMin, 12);
+      expect(s.getList('history').single['path'], 'P2P');
     });
   });
 

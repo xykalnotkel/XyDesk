@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/l10n_bridge.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +10,7 @@ import 'package:flutter/services.dart';
 import '../../core/devlog.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
+import '../devices/device_model.dart';
 import '../../widgets/hud_glyphs.dart';
 import 'session_panels.dart';
 import 'virtual_keyboard.dart';
@@ -17,7 +20,7 @@ import 'virtual_keyboard.dart';
 /// Urutan penting: orientasi dikunci ke landscape **lebih dulu**, baru layar
 /// loading ditampilkan. Kalau dibalik akan ada kedipan orientasi yang membuat
 /// aplikasi terasa murah.
-class SessionPage extends StatefulWidget {
+class SessionPage extends ConsumerStatefulWidget {
   const SessionPage({
     super.key,
     required this.deviceName,
@@ -28,10 +31,10 @@ class SessionPage extends StatefulWidget {
   final String deviceId;
 
   @override
-  State<SessionPage> createState() => _SessionPageState();
+  ConsumerState<SessionPage> createState() => _SessionPageState();
 }
 
-class _SessionPageState extends State<SessionPage> {
+class _SessionPageState extends ConsumerState<SessionPage> {
   bool _connecting = true;
   bool _overlayVisible = true;
   bool _keyboard = false;
@@ -40,10 +43,13 @@ class _SessionPageState extends State<SessionPage> {
   Timer? _idle;
   SessionSettings _settings = const SessionSettings();
   KbLayout _kbLayout = KbLayout.split;
+  late DateTime _startedAt;
+  bool _recorded = false;
 
   @override
   void initState() {
     super.initState();
+    _startedAt = DateTime.now();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -73,6 +79,28 @@ class _SessionPageState extends State<SessionPage> {
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
+  }
+
+  Future<void> _recordSession() async {
+    if (_recorded) return;
+    _recorded = true;
+    final elapsed = DateTime.now().difference(_startedAt);
+    final minutes = elapsed.inMinutes < 1 ? 1 : elapsed.inMinutes;
+    await ref.read(historyProvider.notifier).add(
+          SessionRecord(
+            deviceId: widget.deviceId,
+            deviceName: widget.deviceName,
+            at: _startedAt,
+            durationMin: minutes,
+            path: 'P2P',
+            quality: '1080p60',
+          ),
+        );
+  }
+
+  Future<void> _leaveSession() async {
+    await _recordSession();
+    if (mounted) Navigator.of(context).maybePop();
   }
 
   void _restartIdle() {
@@ -208,7 +236,7 @@ class _SessionPageState extends State<SessionPage> {
                       _panel = (_panel == cat) ? null : cat;
                     }),
                     onRestart: () {},
-                    onBack: () => Navigator.of(context).maybePop(),
+                    onBack: _leaveSession,
                     onDisconnect: _confirmDisconnect,
                   ),
                 ),
@@ -309,7 +337,10 @@ class _SessionPageState extends State<SessionPage> {
         ],
       ),
     );
-    if (ok == true && mounted) Navigator.of(context).pop();
+    if (ok == true && mounted) {
+      await _recordSession();
+      if (mounted) Navigator.of(context).pop();
+    }
   }
 }
 
