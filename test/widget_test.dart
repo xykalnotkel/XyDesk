@@ -90,7 +90,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.textContaining('Menghubungkan ke PC-4321'), findsOneWidget);
+    expect(find.text('Perangkat terhubung'), findsOneWidget);
     final container = ProviderScope.containerOf(
       tester.element(find.byType(ConnectPage)),
     );
@@ -98,6 +98,11 @@ void main() {
       container.read(deviceRepoProvider).any((d) => d.id == '987654321'),
       isTrue,
     );
+
+    await tester.tap(find.text('Mulai sesi'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Menghubungkan ke PC-4321'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 2400));
     await tester.pump();

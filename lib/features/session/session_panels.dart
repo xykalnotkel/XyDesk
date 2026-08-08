@@ -48,53 +48,60 @@ class LeftRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Container(
-      width: 48,
-      color: c.overlay.withValues(alpha: 0.96),
-      child: SafeArea(
-        right: false,
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(height: 4),
-              if (onClose != null)
-                _RailItem(
-                  icon: LucideIcons.chevronLeft,
-                  label: 'Tutup',
-                  onTap: onClose,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragEnd: (details) {
+        // Rail kiri ditutup dengan swipe ke kiri.
+        if ((details.primaryVelocity ?? 0) < -260) onClose?.call();
+      },
+      child: Container(
+        width: 48,
+        color: c.overlay.withValues(alpha: 0.96),
+        child: SafeArea(
+          right: false,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 4),
+                if (onClose != null)
+                  _RailItem(
+                    icon: LucideIcons.chevronLeft,
+                    label: 'Tutup',
+                    onTap: onClose,
+                  ),
+                const SizedBox(height: 2),
+                for (final cat in PanelCat.values)
+                  _RailItem(
+                    icon: cat.icon,
+                    label: cat.label,
+                    active: cat == active,
+                    onTap: () => onSelect(cat),
+                  ),
+                Container(
+                  width: 22,
+                  height: 1,
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  color: c.textLow.withValues(alpha: 0.22),
                 ),
-              const SizedBox(height: 2),
-              for (final cat in PanelCat.values)
                 _RailItem(
-                  icon: cat.icon,
-                  label: cat.label,
-                  active: cat == active,
-                  onTap: () => onSelect(cat),
+                  icon: LucideIcons.refreshCw,
+                  label: 'Restart',
+                  onTap: onRestart,
                 ),
-              Container(
-                width: 22,
-                height: 1,
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                color: c.textLow.withValues(alpha: 0.22),
-              ),
-              _RailItem(
-                icon: LucideIcons.refreshCw,
-                label: 'Restart',
-                onTap: onRestart,
-              ),
-              _RailItem(
-                icon: LucideIcons.arrowLeft,
-                label: 'Kembali',
-                onTap: onBack,
-              ),
-              _RailItem(
-                icon: LucideIcons.power,
-                label: context.tr('session_disconnect_action'),
-                danger: true,
-                onTap: onDisconnect,
-              ),
-              const SizedBox(height: 6),
-            ],
+                _RailItem(
+                  icon: LucideIcons.arrowLeft,
+                  label: 'Kembali',
+                  onTap: onBack,
+                ),
+                _RailItem(
+                  icon: LucideIcons.power,
+                  label: context.tr('session_disconnect_action'),
+                  danger: true,
+                  onTap: onDisconnect,
+                ),
+                const SizedBox(height: 6),
+              ],
+            ),
           ),
         ),
       ),
@@ -179,57 +186,65 @@ class RightPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Container(
-      width: 252,
-      color: c.overlay.withValues(alpha: 0.96),
-      child: SafeArea(
-        left: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (cat != PanelCat.info)
-                InkWell(
-                  onTap: onBackToHub,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 7),
-                    child: Row(
-                      children: [
-                        Icon(
-                          LucideIcons.chevronLeft,
-                          size: 13,
-                          color: c.textMid,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          'Kembali ke kategori',
-                          style: TextStyle(fontSize: 10, color: c.textMid),
-                        ),
-                      ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragEnd: (details) {
+        // Panel kanan ditutup dengan swipe ke kanan.
+        if ((details.primaryVelocity ?? 0) > 260) onClose?.call();
+      },
+      child: Container(
+        width: 252,
+        color: c.overlay.withValues(alpha: 0.96),
+        child: SafeArea(
+          left: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (cat != PanelCat.info)
+                  InkWell(
+                    onTap: onBackToHub,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 7),
+                      child: Row(
+                        children: [
+                          Icon(
+                            LucideIcons.chevronLeft,
+                            size: 13,
+                            color: c.textMid,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'Kembali ke kategori',
+                            style: TextStyle(fontSize: 10, color: c.textMid),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                Row(
+                  children: [
+                    Text(
+                      cat.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: c.textHi,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      _badge(),
+                      style: TextStyle(fontSize: 9.5, color: c.textLow),
+                    ),
+                  ],
                 ),
-              Row(
-                children: [
-                  Text(
-                    cat.label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: c.textHi,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    _badge(),
-                    style: TextStyle(fontSize: 9.5, color: c.textLow),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Expanded(child: SingleChildScrollView(child: _content(context))),
-            ],
+                const SizedBox(height: 8),
+                Expanded(
+                    child: SingleChildScrollView(child: _content(context))),
+              ],
+            ),
           ),
         ),
       ),

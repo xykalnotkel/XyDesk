@@ -238,6 +238,7 @@ class VirtualKeyboard extends StatefulWidget {
     this.onDismiss,
     this.layout = KbLayout.split,
     this.onLayoutChanged,
+    this.onOpacityChanged,
     this.opacity = 0.95,
   });
 
@@ -245,6 +246,7 @@ class VirtualKeyboard extends StatefulWidget {
   final VoidCallback? onDismiss;
   final KbLayout layout;
   final ValueChanged<KbLayout>? onLayoutChanged;
+  final ValueChanged<double>? onOpacityChanged;
   final double opacity;
 
   @override
@@ -358,7 +360,27 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
               widget.onLayoutChanged?.call(next);
             },
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
+          Semantics(
+            label: 'Opacity keyboard',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(LucideIcons.sun, size: 12, color: c.textLow),
+                SizedBox(
+                  width: 68,
+                  height: 22,
+                  child: Slider(
+                    min: 0.45,
+                    max: 0.98,
+                    value: widget.opacity.clamp(0.45, 0.98),
+                    onChanged: widget.onOpacityChanged,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 5),
           _MiniBtn(
             icon: LucideIcons.chevronDown,
             tooltip: 'Tutup keyboard',

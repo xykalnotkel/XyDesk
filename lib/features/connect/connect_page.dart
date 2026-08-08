@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/l10n_bridge.dart';
 import '../../core/tokens.dart';
+import '../../widgets/brand.dart';
 import '../devices/device_model.dart';
 import '../devices/history_page.dart';
 import '../session/session_page.dart';
@@ -96,10 +97,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     if (!mounted) return;
 
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            SessionPage(deviceName: device.name, deviceId: device.id),
-      ),
+      MaterialPageRoute(builder: (_) => PairSuccessPage(device: device)),
     );
   }
 
@@ -118,10 +116,15 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     }
   }
 
-  void _scanQr() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Pindai QR akan hadir.')));
+  Future<void> _scanQr() async {
+    final id = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const QrScanDemoPage()),
+    );
+    if (!mounted || id == null) return;
+    _id.text = id;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('QR berhasil dipindai.')),
+    );
   }
 
   @override
@@ -234,7 +237,12 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _pill(context, LucideIcons.scanLine, 'Pindai QR', _scanQr),
+            _pill(
+              context,
+              LucideIcons.scanLine,
+              'Pindai QR',
+              () => _scanQr(),
+            ),
             const SizedBox(width: Gap.h32),
             _pill(
               context,
@@ -287,6 +295,119 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
               Text(s, style: TextStyle(fontSize: 12.5, color: c.textMid)),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Layar scanner QR mockup. Kamera/server belum dibutuhkan di fase UI.
+class QrScanDemoPage extends StatelessWidget {
+  const QrScanDemoPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Scaffold(
+      backgroundColor: c.bg,
+      appBar: AppBar(
+        title: const Text('Pindai QR'),
+        leading: IconButton(
+          icon: Icon(LucideIcons.arrowLeft, color: c.textMid),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(Gap.screen, 8, Gap.screen, 32),
+        children: [
+          const SizedBox(height: Gap.lg),
+          const Center(child: Illus(Img.qrScan, size: 260)),
+          const SizedBox(height: Gap.lg),
+          Text(
+            'Arahkan kamera ke QR host',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: c.textHi,
+            ),
+          ),
+          const SizedBox(height: Gap.sm),
+          Text(
+            'Di versi demo, tombol di bawah mensimulasikan QR berhasil dibaca.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12.5, height: 1.5, color: c.textMid),
+          ),
+          const SizedBox(height: Gap.xxl),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, '987654321'),
+            icon: const Icon(LucideIcons.scanLine, size: 18),
+            label: const Text('Simulasikan QR berhasil'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Konfirmasi pairing sebelum masuk ke layar session.
+class PairSuccessPage extends StatelessWidget {
+  const PairSuccessPage({super.key, required this.device});
+
+  final Device device;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(Gap.screen, 24, Gap.screen, 32),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                icon: Icon(LucideIcons.arrowLeft, color: c.textMid),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            const SizedBox(height: Gap.lg),
+            const Center(child: Illus(Img.pairSuccess, size: 250)),
+            const SizedBox(height: Gap.lg),
+            Text(
+              'Perangkat terhubung',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                color: c.textHi,
+              ),
+            ),
+            const SizedBox(height: Gap.sm),
+            Text(
+              '${device.name} siap digunakan.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: c.textMid),
+            ),
+            const SizedBox(height: Gap.xxl),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => SessionPage(
+                    deviceName: device.name,
+                    deviceId: device.id,
+                  ),
+                ),
+              ),
+              child: const Text('Mulai sesi'),
+            ),
+            const SizedBox(height: Gap.md),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Nanti saja'),
+            ),
+          ],
         ),
       ),
     );

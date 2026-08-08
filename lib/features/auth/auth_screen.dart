@@ -234,9 +234,9 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
             icon: Icon(LucideIcons.arrowLeft, size: 20, color: c.textMid),
             onPressed: _otpSent
                 ? () => setState(() {
-                    _otpSent = false;
-                    _error = null;
-                  })
+                      _otpSent = false;
+                      _error = null;
+                    })
                 : widget.onBack,
           ),
         ),
@@ -279,9 +279,8 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
           const SizedBox(height: Gap.xl),
           FilledButton(
             onPressed: _busy ? null : _send,
-            child: _busy
-                ? const _Spinner()
-                : Text(context.tr('auth_send_code')),
+            child:
+                _busy ? const _Spinner() : Text(context.tr('auth_send_code')),
           ),
         ] else ...[
           _OtpBoxes(
@@ -437,10 +436,10 @@ class _Spinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox(
-    width: 16,
-    height: 16,
-    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-  );
+        width: 16,
+        height: 16,
+        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+      );
 }
 
 class _LegalNote extends StatelessWidget {

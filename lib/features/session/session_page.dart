@@ -43,6 +43,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   Timer? _idle;
   SessionSettings _settings = const SessionSettings();
   KbLayout _kbLayout = KbLayout.split;
+  double _keyboardOpacity = 0.95;
   late DateTime _startedAt;
   bool _recorded = false;
 
@@ -162,7 +163,9 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                   top: 6,
                   right: 6,
                   child: _OverlayIcon(
-                    icon: LucideIcons.chevronLeft,
+                    icon: _panel == null
+                        ? LucideIcons.chevronLeft
+                        : LucideIcons.chevronRight,
                     onTap: () {
                       setState(
                         () => _panel = _panel == null ? PanelCat.info : null,
@@ -271,7 +274,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                   bottom: _keyboard ? 0 : -320,
                   child: VirtualKeyboard(
                     layout: _kbLayout,
+                    opacity: _keyboardOpacity,
                     onLayoutChanged: (l) => setState(() => _kbLayout = l),
+                    onOpacityChanged: (v) =>
+                        setState(() => _keyboardOpacity = v),
                     onKey: (_) {},
                     onDismiss: () {
                       setState(() => _keyboard = false);
@@ -563,25 +569,27 @@ class _OverlayIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    // Diberi latar kaca + kontras cukup. Versi sebelumnya hanya ikon
-    // telanjang opacity 0.45 sehingga hampir tidak terlihat di atas
-    // konten terang.
+    final edge = active ? c.accent : c.textHi.withValues(alpha: 0.48);
+    // Kontrol buka/tutup panel sengaja kotak: lebih cepat terbaca di atas
+    // video remote dan tidak terlihat seperti tombol UI biasa.
     return Tooltip(
       message: tooltip ?? '',
       child: Material(
         color: active
-            ? c.accent.withValues(alpha: 0.9)
-            : c.overlay.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(R.sm),
+            ? c.accent.withValues(alpha: 0.88)
+            : c.overlay.withValues(alpha: 0.94),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(R.sm),
-          child: SizedBox(
-            width: 40,
-            height: 40,
+          child: Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              border: Border.all(color: edge, width: active ? 1.4 : 1),
+            ),
             child: Icon(
               icon,
-              size: 20,
+              size: 25,
               color: active ? Colors.white : c.textHi,
             ),
           ),

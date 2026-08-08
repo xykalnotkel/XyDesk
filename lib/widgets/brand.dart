@@ -12,6 +12,13 @@ class Img {
   const Img._();
   static const logo = 'assets/img/logo.png';
 
+  // ilustrasi flow mockup baru (background transparan)
+  static const onboarding = 'assets/img/onboarding.png';
+  static const pairSuccess = 'assets/img/pair_success.png';
+  static const qrScan = 'assets/img/qr_scan.png';
+  static const sessionControls = 'assets/img/session_controls.png';
+  static const emptyDevices = 'assets/img/empty_devices.png';
+
   // status perangkat
   static const pcOnline = 'assets/img/pc_online.webp';
   static const pcOffline = 'assets/img/pc_offline.webp';
@@ -39,7 +46,8 @@ class BrandLogo extends StatelessWidget {
       Img.logo,
       width: size,
       height: size,
-      filterQuality: FilterQuality.medium,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
       // Kalau aset gagal dimuat, jangan sampai layar jadi kosong —
       // tampilkan bentuk pengganti yang tetap rapi.
       errorBuilder: (context, _, __) => Container(
@@ -111,7 +119,8 @@ class Illus extends StatelessWidget {
         asset,
         width: size,
         height: size,
-        filterQuality: FilterQuality.medium,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
         errorBuilder: (_, __, ___) => SizedBox(width: size, height: size),
       ),
     );
