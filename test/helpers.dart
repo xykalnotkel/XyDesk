@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xydesk/app.dart';
+import 'package:xydesk/core/l10n_bridge.dart';
 import 'package:xydesk/core/store.dart';
 import 'package:xydesk/core/theme.dart';
 
@@ -34,6 +36,14 @@ Future<Widget> testWrap(
   return ProviderScope(
     overrides: [storeProvider.overrideWithValue(store)],
     child: MaterialApp(
+      locale: const Locale('id'),
+      localizationsDelegates: const [
+        LDelegate(AppLang.id),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('id')],
       theme: AppTheme.dark(),
       home: Scaffold(body: child),
     ),

@@ -77,6 +77,8 @@ void main() {
           const SessionPage(deviceName: 'GAMING-RIG', deviceId: '123 456 789'),
         ),
       );
+      // Pastikan delegate localization selesai sebelum waktu simulasi dimajukan.
+      await tester.pump();
       // Lewati simulasi koneksi 2,2 detik.
       await tester.pump(const Duration(milliseconds: 2400));
       await tester.pump();
@@ -93,6 +95,8 @@ void main() {
           const SessionPage(deviceName: 'GAMING-RIG', deviceId: '123 456 789'),
         ),
       );
+      // Pastikan delegate localization selesai sebelum waktu simulasi dimajukan.
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 2400));
       await tester.pump();
 
