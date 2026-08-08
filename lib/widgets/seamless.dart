@@ -212,8 +212,11 @@ class ListRow extends StatelessWidget {
                   color: c.raised,
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child:
-                    Icon(icon, size: 16, color: danger ? c.danger : c.textMid),
+                child: Icon(
+                  icon,
+                  size: 16,
+                  color: danger ? c.danger : c.textMid,
+                ),
               ),
               const SizedBox(width: Gap.md),
             ],
@@ -221,16 +224,21 @@ class ListRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: fg)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: fg,
+                    ),
+                  ),
                   if (subtitle != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
-                      child: Text(subtitle!,
-                          style: TextStyle(fontSize: 11, color: c.textLow)),
+                      child: Text(
+                        subtitle!,
+                        style: TextStyle(fontSize: 11, color: c.textLow),
+                      ),
                     ),
                 ],
               ),
@@ -238,8 +246,10 @@ class ListRow extends StatelessWidget {
             if (value != null)
               Padding(
                 padding: const EdgeInsets.only(right: 6),
-                child: Text(value!,
-                    style: TextStyle(fontSize: 11.5, color: c.textLow)),
+                child: Text(
+                  value!,
+                  style: TextStyle(fontSize: 11.5, color: c.textLow),
+                ),
               ),
             if (trailing != null) trailing!,
           ],
@@ -280,11 +290,14 @@ class OutlinedButtonLike extends StatelessWidget {
                 Icon(icon, size: 16, color: c.textMid),
                 const SizedBox(width: Gap.sm),
               ],
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: c.textHi)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: c.textHi,
+                ),
+              ),
             ],
           ),
         ),

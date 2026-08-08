@@ -36,13 +36,18 @@ class AccountPage extends ConsumerWidget {
               width: 46,
               height: 46,
               alignment: Alignment.center,
-              decoration:
-                  BoxDecoration(color: c.raised, shape: BoxShape.circle),
-              child: Text(user.initial,
-                  style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: c.textMid)),
+              decoration: BoxDecoration(
+                color: c.raised,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                user.initial,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: c.textMid,
+                ),
+              ),
             ),
             const SizedBox(width: Gap.md),
             Expanded(
@@ -54,9 +59,10 @@ class AccountPage extends ConsumerWidget {
                         ? context.tr('account_guest')
                         : (user.name ?? context.tr('account_user')),
                     style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: c.textHi),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: c.textHi,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -120,9 +126,9 @@ class AccountPage extends ConsumerWidget {
           title: context.tr('settings_permissions'),
           icon: LucideIcons.shield,
           trailing: Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const PermissionsPage()),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const PermissionsPage())),
         ),
         ListRow(
           title: context.tr('settings_devlog'),
@@ -156,9 +162,9 @@ class AccountPage extends ConsumerWidget {
           icon: LucideIcons.info,
           value: 'v1.0.0',
           trailing: Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const AboutPage()),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const AboutPage())),
         ),
 
         const SizedBox(height: Gap.md),
@@ -186,19 +192,26 @@ class AccountPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: Gap.md),
-            Text(ctx.tr('settings_language'),
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: c.textHi)),
+            Text(
+              ctx.tr('settings_language'),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: c.textHi,
+              ),
+            ),
             const SizedBox(height: Gap.sm),
             for (final l in AppLang.all)
               ListTile(
                 dense: true,
-                title: Text(l.nativeName,
-                    style: TextStyle(fontSize: 14, color: c.textHi)),
-                subtitle: Text(l.name,
-                    style: TextStyle(fontSize: 11, color: c.textLow)),
+                title: Text(
+                  l.nativeName,
+                  style: TextStyle(fontSize: 14, color: c.textHi),
+                ),
+                subtitle: Text(
+                  l.name,
+                  style: TextStyle(fontSize: 11, color: c.textLow),
+                ),
                 trailing: l.code == current
                     ? Icon(LucideIcons.check, size: 17, color: c.accent)
                     : null,
@@ -230,7 +243,7 @@ class _ThemeSelector extends ConsumerWidget {
       (
         ThemeMode.system,
         context.tr('settings_theme_system'),
-        LucideIcons.smartphone
+        LucideIcons.smartphone,
       ),
     ];
 
@@ -257,15 +270,19 @@ class _ThemeSelector extends ConsumerWidget {
                   ),
                   child: Column(
                     children: [
-                      Icon(icon,
-                          size: 16,
-                          color: current == mode ? c.textHi : c.textLow),
+                      Icon(
+                        icon,
+                        size: 16,
+                        color: current == mode ? c.textHi : c.textLow,
+                      ),
                       const SizedBox(height: 4),
-                      Text(label,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: current == mode ? c.textHi : c.textLow,
-                          )),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: current == mode ? c.textHi : c.textLow,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -313,16 +330,24 @@ class _SwitchRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: c.textHi)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: c.textHi,
+                  ),
+                ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),
-                  Text(subtitle!,
-                      style: TextStyle(
-                          fontSize: 11, height: 1.35, color: c.textLow)),
+                  Text(
+                    subtitle!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.35,
+                      color: c.textLow,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -354,14 +379,20 @@ class AboutPage extends StatelessWidget {
         ),
       ),
       body: ListView(
-        padding:
-            const EdgeInsets.fromLTRB(Gap.screen, Gap.xl, Gap.screen, Gap.h40),
+        padding: const EdgeInsets.fromLTRB(
+          Gap.screen,
+          Gap.xl,
+          Gap.screen,
+          Gap.h40,
+        ),
         children: [
           const Center(child: BrandLockup(size: 72)),
           const SizedBox(height: Gap.md),
           Center(
-            child: Text('Versi 1.0.0 · Build 2',
-                style: TextStyle(fontSize: 11.5, color: c.textLow)),
+            child: Text(
+              'Versi 1.0.0 · Build 2',
+              style: TextStyle(fontSize: 11.5, color: c.textLow),
+            ),
           ),
           const SizedBox(height: Gap.xl),
           ListRow(
@@ -388,16 +419,19 @@ class AboutPage extends StatelessWidget {
             trailing: Icon(LucideIcons.copy, size: 15, color: c.textLow),
             onTap: () {
               Clipboard.setData(const ClipboardData(text: 'a7f3-9c21-4e88'));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.tr('copied'))),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(context.tr('copied'))));
             },
           ),
           ListRow(
             title: context.tr('settings_devlog'),
             icon: LucideIcons.bug,
-            trailing:
-                Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
+            trailing: Icon(
+              LucideIcons.chevronRight,
+              size: 16,
+              color: c.textLow,
+            ),
             onTap: () => DevLog.openPage(context),
           ),
         ],

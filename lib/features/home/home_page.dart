@@ -109,10 +109,7 @@ class _DeviceCard extends StatelessWidget {
                 // dikenali daripada sekadar titik warna.
                 Opacity(
                   opacity: online ? 1 : 0.45,
-                  child: Illus(
-                    online ? Img.pcOnline : Img.pcOffline,
-                    size: 48,
-                  ),
+                  child: Illus(online ? Img.pcOnline : Img.pcOffline, size: 48),
                 ),
                 const SizedBox(width: Gap.md),
                 Expanded(

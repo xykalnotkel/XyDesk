@@ -23,34 +23,48 @@ class PermissionsPage extends StatelessWidget {
   const PermissionsPage({super.key});
 
   static const _items = <_Perm>[
-    _Perm(LucideIcons.wifi, 'Jaringan', 'Menghubungkan ke PC kamu.',
-        'Otomatis, tanpa dialog', true),
     _Perm(
-        LucideIcons.mic,
-        'Mikrofon',
-        'Mengirim suaramu ke PC saat sesi berlangsung.',
-        'Saat kamu menyalakan mik pertama kali',
-        false),
+      LucideIcons.wifi,
+      'Jaringan',
+      'Menghubungkan ke PC kamu.',
+      'Otomatis, tanpa dialog',
+      true,
+    ),
     _Perm(
-        LucideIcons.camera,
-        'Kamera',
-        'Memindai kode QR koneksi dari aplikasi host.',
-        'Saat membuka pemindai QR',
-        false),
+      LucideIcons.mic,
+      'Mikrofon',
+      'Mengirim suaramu ke PC saat sesi berlangsung.',
+      'Saat kamu menyalakan mik pertama kali',
+      false,
+    ),
     _Perm(
-        LucideIcons.bell,
-        'Notifikasi',
-        'Status sesi dan peringatan koneksi terputus.',
-        'Setelah sesi pertama selesai',
-        false),
+      LucideIcons.camera,
+      'Kamera',
+      'Memindai kode QR koneksi dari aplikasi host.',
+      'Saat membuka pemindai QR',
+      false,
+    ),
     _Perm(
-        LucideIcons.folder,
-        'Penyimpanan & berkas',
-        'Menyimpan berkas hasil transfer ke folder XyDesk di Dokumen.',
-        'Saat kamu mentransfer berkas',
-        false),
-    _Perm(LucideIcons.bluetooth, 'Bluetooth', 'Menyambungkan gamepad nirkabel.',
-        'Saat memilih pakai stik fisik', false),
+      LucideIcons.bell,
+      'Notifikasi',
+      'Status sesi dan peringatan koneksi terputus.',
+      'Setelah sesi pertama selesai',
+      false,
+    ),
+    _Perm(
+      LucideIcons.folder,
+      'Penyimpanan & berkas',
+      'Menyimpan berkas hasil transfer ke folder XyDesk di Dokumen.',
+      'Saat kamu mentransfer berkas',
+      false,
+    ),
+    _Perm(
+      LucideIcons.bluetooth,
+      'Bluetooth',
+      'Menyambungkan gamepad nirkabel.',
+      'Saat memilih pakai stik fisik',
+      false,
+    ),
   ];
 
   @override
@@ -66,8 +80,12 @@ class PermissionsPage extends StatelessWidget {
         ),
       ),
       body: ListView(
-        padding:
-            const EdgeInsets.fromLTRB(Gap.screen, Gap.sm, Gap.screen, Gap.h40),
+        padding: const EdgeInsets.fromLTRB(
+          Gap.screen,
+          Gap.sm,
+          Gap.screen,
+          Gap.h40,
+        ),
         children: [
           const Center(child: Illus(Img.secure, size: 132, opacity: 0.9)),
           const SizedBox(height: Gap.lg),
@@ -93,29 +111,36 @@ class PermissionsPage extends StatelessWidget {
                   children: [
                     Icon(LucideIcons.folderOpen, size: 16, color: c.accent),
                     const SizedBox(width: Gap.sm),
-                    Text('Lokasi berkas',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: c.textHi)),
+                    Text(
+                      'Lokasi berkas',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: c.textHi,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: Gap.sm),
                 SelectableText(
                   'Android/data/com.xystudio.xydesk/files/XyDesk/',
                   style: TextStyle(
-                      fontSize: 11.5,
-                      fontFamily: 'monospace',
-                      height: 1.5,
-                      color: c.textMid),
+                    fontSize: 11.5,
+                    fontFamily: 'monospace',
+                    height: 1.5,
+                    color: c.textMid,
+                  ),
                 ),
                 const SizedBox(height: Gap.sm),
                 Text(
                   'Berkas hasil transfer, tangkapan layar, dan ekspor profil '
                   'disimpan di sini. Folder ini ikut terhapus saat aplikasi '
                   'dicopot, sehingga tidak meninggalkan sampah.',
-                  style:
-                      TextStyle(fontSize: 11.5, height: 1.55, color: c.textLow),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.55,
+                    color: c.textLow,
+                  ),
                 ),
               ],
             ),
@@ -145,15 +170,20 @@ class PermissionsPage extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(p.name,
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: c.textHi)),
+                    Text(
+                      p.name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: c.textHi,
+                      ),
+                    ),
                     const SizedBox(width: Gap.sm),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2),
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: (p.required_ ? AppColors.success : c.textLow)
                             .withValues(alpha: 0.14),
@@ -170,12 +200,19 @@ class PermissionsPage extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(p.why,
-                    style: TextStyle(
-                        fontSize: 11.5, height: 1.45, color: c.textMid)),
+                Text(
+                  p.why,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.45,
+                    color: c.textMid,
+                  ),
+                ),
                 const SizedBox(height: 3),
-                Text('Diminta: ${p.when}',
-                    style: TextStyle(fontSize: 10.5, color: c.textLow)),
+                Text(
+                  'Diminta: ${p.when}',
+                  style: TextStyle(fontSize: 10.5, color: c.textLow),
+                ),
               ],
             ),
           ),

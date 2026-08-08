@@ -18,8 +18,11 @@ import 'virtual_keyboard.dart';
 /// loading ditampilkan. Kalau dibalik akan ada kedipan orientasi yang membuat
 /// aplikasi terasa murah.
 class SessionPage extends StatefulWidget {
-  const SessionPage(
-      {super.key, required this.deviceName, required this.deviceId});
+  const SessionPage({
+    super.key,
+    required this.deviceName,
+    required this.deviceId,
+  });
 
   final String deviceName;
   final String deviceId;
@@ -49,8 +52,11 @@ class _SessionPageState extends State<SessionPage> {
     // bar lalu memunculkannya lagi saat disentuh, membuat tata letak
     // melompat-lompat dan sempat terlihat kosong.
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    DevLog.i('sesi', 'Membuka sesi ke ${widget.deviceName}',
-        'id=${widget.deviceId}');
+    DevLog.i(
+      'sesi',
+      'Membuka sesi ke ${widget.deviceName}',
+      'id=${widget.deviceId}',
+    );
     // Simulasi tahap koneksi.
     Timer(const Duration(milliseconds: 2200), () {
       if (!mounted) return;
@@ -131,7 +137,8 @@ class _SessionPageState extends State<SessionPage> {
                     icon: LucideIcons.chevronLeft,
                     onTap: () {
                       setState(
-                          () => _panel = _panel == null ? PanelCat.info : null);
+                        () => _panel = _panel == null ? PanelCat.info : null,
+                      );
                       _wake();
                     },
                   ),
@@ -178,10 +185,12 @@ class _SessionPageState extends State<SessionPage> {
                   _fade(
                     right: 12,
                     bottom: 12,
-                    child: _KeyboardFab(onTap: () {
-                      setState(() => _keyboard = true);
-                      _idle?.cancel();
-                    }),
+                    child: _KeyboardFab(
+                      onTap: () {
+                        setState(() => _keyboard = true);
+                        _idle?.cancel();
+                      },
+                    ),
                   ),
 
                 // Bilah ikon kiri
@@ -276,9 +285,10 @@ class _SessionPageState extends State<SessionPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title:
-            Text(context.tr('session_disconnect_confirm'),
-                style: const TextStyle(fontSize: 14)),
+        title: Text(
+          context.tr('session_disconnect_confirm'),
+          style: const TextStyle(fontSize: 14),
+        ),
         content: const Text(
           'Sesi akan diakhiri. PC host tetap menyala dan bisa dihubungi lagi '
           'kapan saja.',
@@ -286,12 +296,15 @@ class _SessionPageState extends State<SessionPage> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(context.tr('session_disconnect_action'),
-                style: const TextStyle(color: AppColors.danger)),
+            child: Text(
+              context.tr('session_disconnect_action'),
+              style: const TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -322,21 +335,29 @@ class _ConnectingView extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2.2),
               ),
               const SizedBox(height: Gap.md),
-              Text(context.tr('session_connecting') + ' $name',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: c.textHi)),
+              Text(
+                context.tr('session_connecting') + ' $name',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: c.textHi,
+                ),
+              ),
               const SizedBox(height: Gap.md),
               const _Step('Menemukan host', done: true, time: '142 ms'),
-              const _Step('Verifikasi kata sandi (SRP)',
-                  done: true, time: '210 ms'),
+              const _Step(
+                'Verifikasi kata sandi (SRP)',
+                done: true,
+                time: '210 ms',
+              ),
               const _Step('Menukar kandidat ICE', done: true, time: '380 ms'),
               const _Step('Membangun jalur P2P', active: true),
               const _Step('Menerima aliran video'),
               const SizedBox(height: Gap.md),
-              Text(context.tr('session_landscape_locked'),
-                  style: TextStyle(fontSize: 10, color: c.textLow)),
+              Text(
+                context.tr('session_landscape_locked'),
+                style: TextStyle(fontSize: 10, color: c.textLow),
+              ),
             ],
           ),
         ),
@@ -369,18 +390,25 @@ class _Step extends StatelessWidget {
             const Icon(LucideIcons.check, size: 12, color: AppColors.success)
           else if (active)
             const SizedBox(
-                width: 11,
-                height: 11,
-                child: CircularProgressIndicator(strokeWidth: 1.8))
+              width: 11,
+              height: 11,
+              child: CircularProgressIndicator(strokeWidth: 1.8),
+            )
           else
             Icon(LucideIcons.minus, size: 12, color: c.textLow),
           const SizedBox(width: 9),
           Expanded(
-              child: Text(label, style: TextStyle(fontSize: 11, color: col))),
+            child: Text(label, style: TextStyle(fontSize: 11, color: col)),
+          ),
           if (time != null)
-            Text(time!,
-                style: TextStyle(
-                    fontSize: 9.5, fontFamily: 'monospace', color: c.textLow)),
+            Text(
+              time!,
+              style: TextStyle(
+                fontSize: 9.5,
+                fontFamily: 'monospace',
+                color: c.textLow,
+              ),
+            ),
         ],
       ),
     );
@@ -408,11 +436,13 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
           children: [
             Opacity(
               opacity: 0.55,
-              child: Image.asset(Img.gaming,
-                  width: 96,
-                  height: 96,
-                  filterQuality: FilterQuality.medium,
-                  errorBuilder: (_, __, ___) => const SizedBox(height: 96)),
+              child: Image.asset(
+                Img.gaming,
+                width: 96,
+                height: 96,
+                filterQuality: FilterQuality.medium,
+                errorBuilder: (_, __, ___) => const SizedBox(height: 96),
+              ),
             ),
             const SizedBox(height: 12),
             Text(
@@ -454,14 +484,19 @@ class _StatsOverlay extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: const BoxDecoration(
-                color: AppColors.success, shape: BoxShape.circle),
+              color: AppColors.success,
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 7),
-          Text('24 ms  60 fps  12 Mbps',
-              style: TextStyle(
-                  fontSize: 9.5,
-                  fontFamily: 'monospace',
-                  color: context.c.textLow)),
+          Text(
+            '24 ms  60 fps  12 Mbps',
+            style: TextStyle(
+              fontSize: 9.5,
+              fontFamily: 'monospace',
+              color: context.c.textLow,
+            ),
+          ),
         ],
       ),
     );
@@ -529,8 +564,11 @@ class _KeyboardFab extends StatelessWidget {
           child: SizedBox(
             width: 44,
             height: 44,
-            child:
-                Icon(LucideIcons.keyboard, size: 19, color: context.c.textMid),
+            child: Icon(
+              LucideIcons.keyboard,
+              size: 19,
+              color: context.c.textMid,
+            ),
           ),
         ),
       ),

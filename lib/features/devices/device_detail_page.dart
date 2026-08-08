@@ -19,9 +19,11 @@ class DeviceDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
-    final device = ref.watch(deviceRepoProvider.select(
-      (list) => list.where((d) => d.id == deviceId).firstOrNull,
-    ));
+    final device = ref.watch(
+      deviceRepoProvider.select(
+        (list) => list.where((d) => d.id == deviceId).firstOrNull,
+      ),
+    );
 
     if (device == null) {
       return Scaffold(
@@ -33,8 +35,10 @@ class DeviceDetailPage extends ConsumerWidget {
           ),
         ),
         body: Center(
-          child: Text(context.tr('device_not_found'),
-              style: TextStyle(color: c.textMid)),
+          child: Text(
+            context.tr('device_not_found'),
+            style: TextStyle(color: c.textMid),
+          ),
         ),
       );
     }
@@ -49,8 +53,11 @@ class DeviceDetailPage extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon:
-                Icon(LucideIcons.ellipsisVertical, size: 19, color: c.textMid),
+            icon: Icon(
+              LucideIcons.ellipsisVertical,
+              size: 19,
+              color: c.textMid,
+            ),
             onPressed: () => _menu(context, ref, device),
           ),
           const SizedBox(width: 6),
@@ -69,11 +76,19 @@ class DeviceDetailPage extends ConsumerWidget {
           if (device.gpu != null)
             _spec(context, LucideIcons.cpu, 'GPU', device.gpu!),
           _spec(context, LucideIcons.maximize, 'Resolusi', device.resolution),
-          _spec(context, LucideIcons.clock, 'Terakhir aktif',
-              _ago(context, device.lastSeen)),
+          _spec(
+            context,
+            LucideIcons.clock,
+            'Terakhir aktif',
+            _ago(context, device.lastSeen),
+          ),
           if (device.pingMs != null)
-            _spec(context, LucideIcons.activity, 'Latensi',
-                '${device.pingMs} ms'),
+            _spec(
+              context,
+              LucideIcons.activity,
+              'Latensi',
+              '${device.pingMs} ms',
+            ),
           _spec(
             context,
             LucideIcons.shieldCheck,
@@ -86,8 +101,13 @@ class DeviceDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _spec(BuildContext context, IconData icon, String label, String value,
-      {bool copy = false}) {
+  Widget _spec(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value, {
+    bool copy = false,
+  }) {
     final c = context.c;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -96,25 +116,29 @@ class DeviceDetailPage extends ConsumerWidget {
           Icon(icon, size: 16, color: c.textLow),
           const SizedBox(width: Gap.md),
           Expanded(
-            child:
-                Text(label, style: TextStyle(fontSize: 13, color: c.textMid)),
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 13, color: c.textMid),
+            ),
           ),
-          Text(value,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: c.textHi,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              )),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: c.textHi,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
           if (copy) ...[
             const SizedBox(width: Gap.sm),
             InkWell(
               borderRadius: BorderRadius.circular(6),
               onTap: () {
                 Clipboard.setData(ClipboardData(text: value));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(context.tr('copied'))),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(context.tr('copied'))));
               },
               child: Padding(
                 padding: const EdgeInsets.all(4),
@@ -160,8 +184,10 @@ class DeviceDetailPage extends ConsumerWidget {
             const SizedBox(height: Gap.md),
             ListTile(
               leading: Icon(LucideIcons.pencil, size: 18, color: c.textMid),
-              title: Text(ctx.tr('device_rename'),
-                  style: TextStyle(fontSize: 14, color: c.textHi)),
+              title: Text(
+                ctx.tr('device_rename'),
+                style: TextStyle(fontSize: 14, color: c.textHi),
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 _rename(context, ref, d);
@@ -169,8 +195,10 @@ class DeviceDetailPage extends ConsumerWidget {
             ),
             ListTile(
               leading: Icon(LucideIcons.trash2, size: 18, color: c.danger),
-              title: Text(ctx.tr('device_remove'),
-                  style: TextStyle(fontSize: 14, color: c.danger)),
+              title: Text(
+                ctx.tr('device_remove'),
+                style: TextStyle(fontSize: 14, color: c.danger),
+              ),
               onTap: () async {
                 Navigator.pop(ctx);
                 await ref.read(deviceRepoProvider.notifier).remove(d.id);
@@ -189,13 +217,16 @@ class DeviceDetailPage extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title:
-            Text(ctx.tr('device_rename'), style: const TextStyle(fontSize: 15)),
+        title: Text(
+          ctx.tr('device_rename'),
+          style: const TextStyle(fontSize: 15),
+        ),
         content: TextField(controller: ctrl, autofocus: true),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(ctx.tr('cancel'))),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(ctx.tr('cancel')),
+          ),
           TextButton(
             onPressed: () async {
               await ref
@@ -284,9 +315,14 @@ class _Chip extends StatelessWidget {
         color: Colors.black.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(text,
-          style: TextStyle(
-              fontSize: 10, fontWeight: FontWeight.w500, color: color)),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: color,
+        ),
+      ),
     );
   }
 }
@@ -313,13 +349,20 @@ class _StatusBar extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: Gap.sm),
-        Text(label,
-            style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w500, color: c.textHi)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: c.textHi,
+          ),
+        ),
         const Spacer(),
         if (device.pingMs != null)
-          Text('${device.pingMs} ms',
-              style: TextStyle(fontSize: 12, color: c.textMid)),
+          Text(
+            '${device.pingMs} ms',
+            style: TextStyle(fontSize: 12, color: c.textMid),
+          ),
       ],
     );
   }
@@ -351,17 +394,17 @@ class _BottomActions extends StatelessWidget {
       child: FilledButton(
         onPressed: device.isOnline
             ? () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SessionPage(
-                      deviceName: device.name,
-                      deviceId: device.id,
-                    ),
-                  ),
-                )
+                MaterialPageRoute(
+                  builder: (_) =>
+                      SessionPage(deviceName: device.name, deviceId: device.id),
+                ),
+              )
             : null,
-        child: Text(device.isOnline
-            ? context.tr('device_connect')
-            : context.tr('status_offline')),
+        child: Text(
+          device.isOnline
+              ? context.tr('device_connect')
+              : context.tr('status_offline'),
+        ),
       ),
     );
   }

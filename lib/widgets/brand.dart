@@ -49,8 +49,11 @@ class BrandLogo extends StatelessWidget {
           color: context.c.raised,
           borderRadius: BorderRadius.circular(size * 0.26),
         ),
-        child: Icon(LucideIcons.monitor,
-            size: size * 0.5, color: context.c.textMid),
+        child: Icon(
+          LucideIcons.monitor,
+          size: size * 0.5,
+          color: context.c.textMid,
+        ),
       ),
     );
   }
@@ -82,8 +85,10 @@ class BrandLockup extends StatelessWidget {
         ),
         if (showTagline) ...[
           const SizedBox(height: 5),
-          Text('PC kamu, di tangan kamu',
-              style: TextStyle(fontSize: 12.5, color: c.textMid)),
+          Text(
+            'PC kamu, di tangan kamu',
+            style: TextStyle(fontSize: 12.5, color: c.textMid),
+          ),
         ],
       ],
     );
@@ -145,19 +150,20 @@ class IllustrationState extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 14.5, fontWeight: FontWeight.w600, color: c.textHi),
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: c.textHi,
+              ),
             ),
             if (message != null) ...[
               const SizedBox(height: 7),
-              Text(message!,
-                  textAlign: TextAlign.center,
-                  style:
-                      TextStyle(fontSize: 12, height: 1.55, color: c.textLow)),
+              Text(
+                message!,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, height: 1.55, color: c.textLow),
+              ),
             ],
-            if (action != null) ...[
-              const SizedBox(height: Gap.lg),
-              action!,
-            ],
+            if (action != null) ...[const SizedBox(height: Gap.lg), action!],
           ],
         ),
       ),
@@ -170,12 +176,7 @@ class IllustrationState extends StatelessWidget {
 /// Dipakai saat data sedang dimuat. Bentuknya meniru konten asli supaya
 /// tidak ada lompatan tata letak ketika data akhirnya tampil.
 class Skeleton extends StatefulWidget {
-  const Skeleton({
-    super.key,
-    this.width,
-    this.height = 12,
-    this.radius = 6,
-  });
+  const Skeleton({super.key, this.width, this.height = 12, this.radius = 6});
 
   final double? width;
   final double height;

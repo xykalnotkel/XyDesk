@@ -39,10 +39,8 @@ void main() {
   group('DeviceIdFormatter', () {
     final f = DeviceIdFormatter();
 
-    TextEditingValue apply(String s) => f.formatEditUpdate(
-          TextEditingValue.empty,
-          TextEditingValue(text: s),
-        );
+    TextEditingValue apply(String s) =>
+        f.formatEditUpdate(TextEditingValue.empty, TextEditingValue(text: s));
 
     test('menyisipkan spasi setelah digit ke-3 dan ke-6', () {
       expect(apply('123456789').text, '123 456 789');
@@ -63,8 +61,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final btn = tester.widget<FilledButton>(find.byType(FilledButton));
-    expect(btn.onPressed, isNull,
-        reason: 'Form kosong harus menonaktifkan tombol');
+    expect(
+      btn.onPressed,
+      isNull,
+      reason: 'Form kosong harus menonaktifkan tombol',
+    );
 
     await tester.enterText(find.byType(TextField).first, '123456789');
     await tester.enterText(find.byType(TextField).last, 'rahasia');
@@ -77,24 +78,33 @@ void main() {
   group('Glyph HUD', () {
     testWidgets('semua glyph tergambar tanpa error', (tester) async {
       for (final g in HudGlyph.values) {
-        await tester
-            .pumpWidget(await testWrap(Center(child: HudIcon(g, size: 40))));
+        await tester.pumpWidget(
+          await testWrap(Center(child: HudIcon(g, size: 40))),
+        );
         await tester.pump();
-        expect(tester.takeException(), isNull,
-            reason: 'Glyph $g gagal digambar');
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Glyph $g gagal digambar',
+        );
       }
     });
 
-    testWidgets('HudButton menampilkan label dan bereaksi saat ditekan',
-        (tester) async {
+    testWidgets('HudButton menampilkan label dan bereaksi saat ditekan', (
+      tester,
+    ) async {
       var tapped = false;
-      await tester.pumpWidget(await testWrap(Center(
-        child: HudButton(
-          glyph: HudGlyph.mouseLeft,
-          label: 'Kiri',
-          onTap: () => tapped = true,
+      await tester.pumpWidget(
+        await testWrap(
+          Center(
+            child: HudButton(
+              glyph: HudGlyph.mouseLeft,
+              label: 'Kiri',
+              onTap: () => tapped = true,
+            ),
+          ),
         ),
-      )));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Kiri'), findsOneWidget);
@@ -103,11 +113,16 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('HudButton berlatar transparan saat diam (border-only)',
-        (tester) async {
-      await tester.pumpWidget(await testWrap(const Center(
-        child: HudButton(glyph: HudGlyph.dpad, label: 'D-Pad'),
-      )));
+    testWidgets('HudButton berlatar transparan saat diam (border-only)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        await testWrap(
+          const Center(
+            child: HudButton(glyph: HudGlyph.dpad, label: 'D-Pad'),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final box = tester.widget<Container>(

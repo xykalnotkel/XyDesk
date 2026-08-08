@@ -154,37 +154,55 @@ class _AppShellState extends ConsumerState<AppShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: [
           NavigationDestination(
-            icon: Image.asset('assets/libraryicons/nav_home_inactive.png',
-                width: 26, height: 26),
-            selectedIcon: Image.asset('assets/libraryicons/nav_home_active.png',
-                width: 26, height: 26),
+            icon: Image.asset(
+              'assets/libraryicons/nav_home_inactive.png',
+              width: 26,
+              height: 26,
+            ),
+            selectedIcon: Image.asset(
+              'assets/libraryicons/nav_home_active.png',
+              width: 26,
+              height: 26,
+            ),
             label: context.tr('nav_home'),
           ),
           NavigationDestination(
-            icon: Image.asset('assets/libraryicons/nav_connect_inactive.png',
-                width: 26, height: 26),
+            icon: Image.asset(
+              'assets/libraryicons/nav_connect_inactive.png',
+              width: 26,
+              height: 26,
+            ),
             selectedIcon: Image.asset(
-                'assets/libraryicons/nav_connect_active.png',
-                width: 26,
-                height: 26),
+              'assets/libraryicons/nav_connect_active.png',
+              width: 26,
+              height: 26,
+            ),
             label: context.tr('nav_connect'),
           ),
           NavigationDestination(
-            icon: Image.asset('assets/libraryicons/nav_control_inactive.png',
-                width: 26, height: 26),
+            icon: Image.asset(
+              'assets/libraryicons/nav_control_inactive.png',
+              width: 26,
+              height: 26,
+            ),
             selectedIcon: Image.asset(
-                'assets/libraryicons/nav_control_active.png',
-                width: 26,
-                height: 26),
+              'assets/libraryicons/nav_control_active.png',
+              width: 26,
+              height: 26,
+            ),
             label: context.tr('nav_control'),
           ),
           NavigationDestination(
-            icon: Image.asset('assets/libraryicons/nav_account_inactive.png',
-                width: 26, height: 26),
+            icon: Image.asset(
+              'assets/libraryicons/nav_account_inactive.png',
+              width: 26,
+              height: 26,
+            ),
             selectedIcon: Image.asset(
-                'assets/libraryicons/nav_account_active.png',
-                width: 26,
-                height: 26),
+              'assets/libraryicons/nav_account_active.png',
+              width: 26,
+              height: 26,
+            ),
             label: context.tr('nav_account'),
           ),
         ],
@@ -205,9 +223,9 @@ class _AppShellState extends ConsumerState<AppShell> {
           IconButton(
             tooltip: context.tr('connect_history'),
             icon: Icon(LucideIcons.history, size: 19, color: c.textMid),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const HistoryPage()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
           ),
         ];
       case 3:

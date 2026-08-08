@@ -13,7 +13,9 @@ import '../devices/history_page.dart';
 class DeviceIdFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue old, TextEditingValue neu) {
+    TextEditingValue old,
+    TextEditingValue neu,
+  ) {
     final digits = neu.text.replaceAll(RegExp(r'\D'), '');
     final capped = digits.length > 9 ? digits.substring(0, 9) : digits;
     final buf = StringBuffer();
@@ -76,8 +78,10 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     if (!_valid) return;
     // Demo: kata sandi "salah" memicu state error agar bisa dilihat di UI.
     if (_pw.text == 'salah') {
-      setState(() => _error =
-          'Kata sandi salah. Sisa 3 percobaan sebelum dikunci 5 menit.');
+      setState(
+        () => _error =
+            'Kata sandi salah. Sisa 3 percobaan sebelum dikunci 5 menit.',
+      );
       return;
     }
     setState(() => _error = null);
@@ -90,9 +94,9 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
   }
 
   void _scanQr() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pindai QR akan hadir.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Pindai QR akan hadir.')));
   }
 
   @override
@@ -169,16 +173,23 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
                     border: _remember
                         ? null
                         : Border.all(
-                            color: const Color(0xFF3A3A3E), width: 1.5),
+                            color: const Color(0xFF3A3A3E),
+                            width: 1.5,
+                          ),
                   ),
                   child: _remember
-                      ? const Icon(LucideIcons.check,
-                          size: 12, color: Colors.white)
+                      ? const Icon(
+                          LucideIcons.check,
+                          size: 12,
+                          color: Colors.white,
+                        )
                       : null,
                 ),
                 const SizedBox(width: Gap.sm),
-                Text(context.tr('connect_remember'),
-                    style: TextStyle(fontSize: 12, color: c.textMid)),
+                Text(
+                  context.tr('connect_remember'),
+                  style: TextStyle(fontSize: 12, color: c.textMid),
+                ),
               ],
             ),
           ),
@@ -198,9 +209,9 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
               context,
               LucideIcons.history,
               'Riwayat',
-              () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const HistoryPage()),
-              ),
+              () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
             ),
           ],
         ),
@@ -211,16 +222,23 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
   }
 
   Widget _label(String s) => Padding(
-        padding: const EdgeInsets.only(left: 2, bottom: 6),
-        child: Text(s,
-            style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                color: context.c.textMid)),
-      );
+    padding: const EdgeInsets.only(left: 2, bottom: 6),
+    child: Text(
+      s,
+      style: TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w500,
+        color: context.c.textMid,
+      ),
+    ),
+  );
 
   Widget _pill(
-          BuildContext context, IconData i, String s, VoidCallback? onTap) {
+    BuildContext context,
+    IconData i,
+    String s,
+    VoidCallback? onTap,
+  ) {
     final c = context.c;
     return Material(
       color: c.input,
@@ -253,26 +271,31 @@ class _SupportBlock extends StatelessWidget {
     final c = context.c;
     return Column(
       children: [
-        Text('Dukung kami di',
-            style: TextStyle(fontSize: 11.5, color: c.textLow)),
+        Text(
+          'Dukung kami di',
+          style: TextStyle(fontSize: 11.5, color: c.textLow),
+        ),
         const SizedBox(height: 12),
         const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _SocialTile(
-                asset: 'assets/libraryicons/social_telegram.png',
-                url: _kTelegram,
-                label: 'Telegram'),
+              asset: 'assets/libraryicons/social_telegram.png',
+              url: _kTelegram,
+              label: 'Telegram',
+            ),
             SizedBox(width: 12),
             _SocialTile(
-                asset: 'assets/libraryicons/social_whatsapp.png',
-                url: _kWhatsApp,
-                label: 'WhatsApp'),
+              asset: 'assets/libraryicons/social_whatsapp.png',
+              url: _kWhatsApp,
+              label: 'WhatsApp',
+            ),
             SizedBox(width: 12),
             _SocialTile(
-                asset: 'assets/libraryicons/social_tiktok.png',
-                url: _kTikTok,
-                label: 'TikTok'),
+              asset: 'assets/libraryicons/social_tiktok.png',
+              url: _kTikTok,
+              label: 'TikTok',
+            ),
           ],
         ),
       ],

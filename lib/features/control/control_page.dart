@@ -25,20 +25,20 @@ class ControlProfile {
   final String? gameHint;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'el': elements,
-        'auto': autoSwitch,
-        'hint': gameHint,
-      };
+    'id': id,
+    'name': name,
+    'el': elements,
+    'auto': autoSwitch,
+    'hint': gameHint,
+  };
 
   factory ControlProfile.fromJson(Map<String, dynamic> j) => ControlProfile(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        elements: j['el'] as int? ?? 0,
-        autoSwitch: j['auto'] as bool? ?? false,
-        gameHint: j['hint'] as String?,
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    elements: j['el'] as int? ?? 0,
+    autoSwitch: j['auto'] as bool? ?? false,
+    gameHint: j['hint'] as String?,
+  );
 }
 
 class ProfileRepo extends StateNotifier<List<ControlProfile>> {
@@ -53,17 +53,19 @@ class ProfileRepo extends StateNotifier<List<ControlProfile>> {
 
   static const _seed = [
     ControlProfile(
-        id: 'p1',
-        name: 'Valorant',
-        elements: 18,
-        autoSwitch: true,
-        gameHint: 'VALORANT.exe'),
+      id: 'p1',
+      name: 'Valorant',
+      elements: 18,
+      autoSwitch: true,
+      gameHint: 'VALORANT.exe',
+    ),
     ControlProfile(
-        id: 'p2',
-        name: 'Photoshop',
-        elements: 12,
-        autoSwitch: true,
-        gameHint: 'Photoshop.exe'),
+      id: 'p2',
+      name: 'Photoshop',
+      elements: 12,
+      autoSwitch: true,
+      gameHint: 'Photoshop.exe',
+    ),
     ControlProfile(id: 'p3', name: 'Desktop umum', elements: 6),
   ];
 
@@ -83,8 +85,8 @@ class ProfileRepo extends StateNotifier<List<ControlProfile>> {
 
 final profileRepoProvider =
     StateNotifierProvider<ProfileRepo, List<ControlProfile>>((ref) {
-  return ProfileRepo(ref.watch(storeProvider));
-});
+      return ProfileRepo(ref.watch(storeProvider));
+    });
 
 /// Halaman Kontrol: daftar profil + galeri elemen HUD.
 class ControlPage extends ConsumerWidget {
@@ -103,11 +105,15 @@ class ControlPage extends ConsumerWidget {
         for (final p in profiles)
           ListRow(
             title: p.name,
-            subtitle: '${p.elements} elemen'
+            subtitle:
+                '${p.elements} elemen'
                 '${p.autoSwitch ? " · ganti otomatis" : ""}',
             icon: LucideIcons.gamepad2,
-            trailing:
-                Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
+            trailing: Icon(
+              LucideIcons.chevronRight,
+              size: 16,
+              color: c.textLow,
+            ),
             onTap: () => _openEditor(context, p),
           ),
         const SizedBox(height: Gap.sm),
@@ -138,8 +144,10 @@ class ControlPage extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(context.tr('control_new_profile_title'),
-            style: const TextStyle(fontSize: 15)),
+        title: Text(
+          context.tr('control_new_profile_title'),
+          style: const TextStyle(fontSize: 15),
+        ),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -147,13 +155,16 @@ class ControlPage extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(ctx.tr('cancel'))),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(ctx.tr('cancel')),
+          ),
           TextButton(
             onPressed: () async {
               final name = ctrl.text.trim();
               if (name.isEmpty) return;
-              await ref.read(profileRepoProvider.notifier).add(
+              await ref
+                  .read(profileRepoProvider.notifier)
+                  .add(
                     ControlProfile(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       name: name,

@@ -30,11 +30,7 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: p.accent,
         brightness: brightness,
-      ).copyWith(
-        surface: p.bg,
-        primary: p.accent,
-        error: AppColors.danger,
-      ),
+      ).copyWith(surface: p.bg, primary: p.accent, error: AppColors.danger),
     );
 
     return base.copyWith(
@@ -113,8 +109,9 @@ class AppTheme {
         color: p.raised,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.lg)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(R.lg),
+        ),
       ),
 
       // ── Input: tanpa border; fokus = ring 1px, bukan glow ──
@@ -122,8 +119,10 @@ class AppTheme {
         filled: true,
         fillColor: p.input,
         hintStyle: TextStyle(color: p.textLow, fontSize: 14),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 13,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(R.lg),
           borderSide: BorderSide.none,
@@ -158,8 +157,9 @@ class AppTheme {
           disabledForegroundColor: Colors.white.withValues(alpha: 0.45),
           minimumSize: const Size.fromHeight(50),
           elevation: 0,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.lg)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(R.lg),
+          ),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
@@ -172,10 +172,11 @@ class AppTheme {
 
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.all(Colors.white),
-        trackColor: WidgetStateProperty.resolveWith((s) =>
-            s.contains(WidgetState.selected)
-                ? p.accent
-                : const Color(0xFF3A3A3E)),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? p.accent
+              : const Color(0xFF3A3A3E),
+        ),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
         trackOutlineWidth: WidgetStateProperty.all(0),
       ),
@@ -203,8 +204,9 @@ class AppTheme {
         backgroundColor: p.overlay,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.lg)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(R.lg),
+        ),
       ),
 
       snackBarTheme: SnackBarThemeData(
@@ -212,45 +214,57 @@ class AppTheme {
         contentTextStyle: TextStyle(color: p.textHi, fontSize: 12.5),
         behavior: SnackBarBehavior.floating,
         elevation: 0,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.lg)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(R.lg),
+        ),
       ),
 
       splashFactory: NoSplash.splashFactory,
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
       hoverColor: Colors.transparent,
-      pageTransitionsTheme: const PageTransitionsTheme(builders: {
-        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-      }),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
     );
   }
 
   static TextTheme _textTheme(TextTheme base, AppPalette p) {
     return base.copyWith(
       headlineLarge: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.5,
-          color: p.textHi),
+        fontSize: 24,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.5,
+        color: p.textHi,
+      ),
       headlineMedium: TextStyle(
-          fontSize: 21,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.5,
-          color: p.textHi),
+        fontSize: 21,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.5,
+        color: p.textHi,
+      ),
       titleMedium: TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.2,
-          color: p.textHi),
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.2,
+        color: p.textHi,
+      ),
       bodyLarge: TextStyle(fontSize: 15, color: p.textHi),
       bodyMedium: TextStyle(fontSize: 14, color: p.textMid),
       bodySmall: TextStyle(fontSize: 12, color: p.textLow),
-      labelLarge:
-          TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: p.textHi),
+      labelLarge: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: p.textHi,
+      ),
       labelSmall: TextStyle(
-          fontSize: 11.5, fontWeight: FontWeight.w500, color: p.textMid),
+        fontSize: 11.5,
+        fontWeight: FontWeight.w500,
+        color: p.textMid,
+      ),
     );
   }
 }

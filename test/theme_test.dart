@@ -5,20 +5,28 @@ import 'package:xydesk/core/tokens.dart';
 
 void main() {
   group('Aturan seamless — nol garis pemisah', () {
-    for (final entry
-        in {'dark': AppTheme.dark(), 'light': AppTheme.light()}.entries) {
+    for (final entry in {
+      'dark': AppTheme.dark(),
+      'light': AppTheme.light(),
+    }.entries) {
       final name = entry.key;
       final theme = entry.value;
 
       test('[$name] AppBar tidak memunculkan garis saat konten discroll', () {
-        expect(theme.appBarTheme.scrolledUnderElevation, 0,
-            reason:
-                'scrolledUnderElevation > 0 menghasilkan garis di bawah topbar');
+        expect(
+          theme.appBarTheme.scrolledUnderElevation,
+          0,
+          reason:
+              'scrolledUnderElevation > 0 menghasilkan garis di bawah topbar',
+        );
         expect(theme.appBarTheme.elevation, 0);
         expect(theme.appBarTheme.backgroundColor, Colors.transparent);
-        expect(theme.appBarTheme.surfaceTintColor, Colors.transparent,
-            reason:
-                'surfaceTintColor M3 memunculkan warna tint yang terlihat seperti garis');
+        expect(
+          theme.appBarTheme.surfaceTintColor,
+          Colors.transparent,
+          reason:
+              'surfaceTintColor M3 memunculkan warna tint yang terlihat seperti garis',
+        );
       });
 
       test('[$name] NavigationBar transparan tanpa elevasi', () {
@@ -35,11 +43,16 @@ void main() {
 
       test('[$name] Input tanpa border; fokus memakai ring 1px', () {
         final dec = theme.inputDecorationTheme;
-        expect((dec.enabledBorder as OutlineInputBorder).borderSide,
-            BorderSide.none);
+        expect(
+          (dec.enabledBorder as OutlineInputBorder).borderSide,
+          BorderSide.none,
+        );
         final focused = dec.focusedBorder as OutlineInputBorder;
-        expect(focused.borderSide.width, 1,
-            reason: 'Fokus harus ring tipis 1px, bukan glow tebal');
+        expect(
+          focused.borderSide.width,
+          1,
+          reason: 'Fokus harus ring tipis 1px, bukan glow tebal',
+        );
       });
 
       test('[$name] Card tanpa elevasi', () {
@@ -75,10 +88,14 @@ void main() {
         return (hi + 0.05) / (lo + 0.05);
       }
 
-      expect(ratio(AppPalette.dark.textMid, AppPalette.dark.bg),
-          greaterThanOrEqualTo(4.5));
-      expect(ratio(AppPalette.light.textMid, AppPalette.light.bg),
-          greaterThanOrEqualTo(4.5));
+      expect(
+        ratio(AppPalette.dark.textMid, AppPalette.dark.bg),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        ratio(AppPalette.light.textMid, AppPalette.light.bg),
+        greaterThanOrEqualTo(4.5),
+      );
     });
   });
 

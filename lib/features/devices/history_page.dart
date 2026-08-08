@@ -42,7 +42,11 @@ class HistoryPage extends ConsumerWidget {
             )
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(
-                  Gap.screen, Gap.sm, Gap.screen, Gap.h40),
+                Gap.screen,
+                Gap.sm,
+                Gap.screen,
+                Gap.h40,
+              ),
               itemCount: items.length,
               itemBuilder: (context, i) {
                 final r = items[i];

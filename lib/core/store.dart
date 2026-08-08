@@ -85,15 +85,14 @@ class AppSettings {
     bool? highRefresh,
     bool? showDevLog,
     bool? reduceMotion,
-  }) =>
-      AppSettings(
-        themeMode: themeMode ?? this.themeMode,
-        langCode: langCode ?? this.langCode,
-        haptics: haptics ?? this.haptics,
-        highRefresh: highRefresh ?? this.highRefresh,
-        showDevLog: showDevLog ?? this.showDevLog,
-        reduceMotion: reduceMotion ?? this.reduceMotion,
-      );
+  }) => AppSettings(
+    themeMode: themeMode ?? this.themeMode,
+    langCode: langCode ?? this.langCode,
+    haptics: haptics ?? this.haptics,
+    highRefresh: highRefresh ?? this.highRefresh,
+    showDevLog: showDevLog ?? this.showDevLog,
+    reduceMotion: reduceMotion ?? this.reduceMotion,
+  );
 }
 
 class SettingsNotifier extends StateNotifier<AppSettings> {
@@ -112,8 +111,11 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       showDevLog: _s.getBool('show_devlog', def: true),
       reduceMotion: _s.getBool('reduce_motion'),
     );
-    DevLog.i('settings', 'Dimuat',
-        'tema=${state.themeMode.name} bahasa=${state.langCode}');
+    DevLog.i(
+      'settings',
+      'Dimuat',
+      'tema=${state.themeMode.name} bahasa=${state.langCode}',
+    );
   }
 
   Future<void> setTheme(ThemeMode m) async {
@@ -149,8 +151,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   }
 }
 
-final settingsProvider =
-    StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
+final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((
+  ref,
+) {
   return SettingsNotifier(ref.watch(storeProvider));
 });
 

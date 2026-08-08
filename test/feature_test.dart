@@ -11,8 +11,11 @@ void main() {
   group('Multi-bahasa', () {
     test('semua kunci punya terjemahan Inggris sebagai cadangan', () {
       for (final e in kStrings.entries) {
-        expect(e.value['en'], isNotNull,
-            reason: 'Kunci "${e.key}" tidak punya nilai en');
+        expect(
+          e.value['en'],
+          isNotNull,
+          reason: 'Kunci "${e.key}" tidak punya nilai en',
+        );
         expect(e.value['en'], isNotEmpty);
       }
     });
@@ -72,9 +75,9 @@ void main() {
 
   group('Keyboard virtual', () {
     testWidgets('mode split menampilkan dua panel terpisah', (tester) async {
-      await tester.pumpWidget(await testWrap(
-        const VirtualKeyboard(layout: KbLayout.split),
-      ));
+      await tester.pumpWidget(
+        await testWrap(const VirtualKeyboard(layout: KbLayout.split)),
+      );
       await tester.pumpAndSettle();
 
       // Belahan kiri punya Esc, belahan kanan punya Backspace.
@@ -84,18 +87,18 @@ void main() {
     });
 
     testWidgets('mode full menampilkan satu blok', (tester) async {
-      await tester.pumpWidget(await testWrap(
-        const VirtualKeyboard(layout: KbLayout.full),
-      ));
+      await tester.pumpWidget(
+        await testWrap(const VirtualKeyboard(layout: KbLayout.full)),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Esc'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('modifier sticky bisa ditekan', (tester) async {
-      await tester.pumpWidget(await testWrap(
-        const VirtualKeyboard(layout: KbLayout.split),
-      ));
+      await tester.pumpWidget(
+        await testWrap(const VirtualKeyboard(layout: KbLayout.split)),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Ctrl'));
       await tester.pumpAndSettle();

@@ -31,8 +31,11 @@ void main() {
       expect(icons, isNotEmpty);
       // Semua ikon harus berasal dari font Lucide.
       for (final i in icons) {
-        expect(i.fontFamily, contains('Lucide'),
-            reason: 'Ikon $i bukan Lucide — tampilan akan beda dari mockup');
+        expect(
+          i.fontFamily,
+          contains('Lucide'),
+          reason: 'Ikon $i bukan Lucide — tampilan akan beda dari mockup',
+        );
       }
     });
 
@@ -41,17 +44,22 @@ void main() {
       await tester.pumpAndSettle();
       // Aturan desain: satu titik perhatian per layar.
       final theme = AppTheme.dark();
-      final sel = theme.navigationBarTheme.iconTheme
-          ?.resolve({WidgetState.selected})?.color;
+      final sel = theme.navigationBarTheme.iconTheme?.resolve({
+        WidgetState.selected,
+      })?.color;
       expect(sel, const Color(0xFFEDEDEF));
     });
   });
 
   group('Bug layar putih saat masuk sesi', () {
-    testWidgets('SessionPage menampilkan layar loading, bukan kosong',
-        (tester) async {
-      await tester.pumpWidget(await testWrap(const SessionPage(
-          deviceName: 'GAMING-RIG', deviceId: '123 456 789')));
+    testWidgets('SessionPage menampilkan layar loading, bukan kosong', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        await testWrap(
+          const SessionPage(deviceName: 'GAMING-RIG', deviceId: '123 456 789'),
+        ),
+      );
       await tester.pump();
 
       expect(find.textContaining('Menghubungkan'), findsOneWidget);
@@ -64,8 +72,11 @@ void main() {
     });
 
     testWidgets('Setelah loading, placeholder terbaca jelas', (tester) async {
-      await tester.pumpWidget(await testWrap(const SessionPage(
-          deviceName: 'GAMING-RIG', deviceId: '123 456 789')));
+      await tester.pumpWidget(
+        await testWrap(
+          const SessionPage(deviceName: 'GAMING-RIG', deviceId: '123 456 789'),
+        ),
+      );
       // Lewati simulasi koneksi 2,2 detik.
       await tester.pump(const Duration(milliseconds: 2400));
       await tester.pump();
@@ -77,8 +88,11 @@ void main() {
     });
 
     testWidgets('Tombol keyboard & panel bisa dibuka di sesi', (tester) async {
-      await tester.pumpWidget(await testWrap(const SessionPage(
-          deviceName: 'GAMING-RIG', deviceId: '123 456 789')));
+      await tester.pumpWidget(
+        await testWrap(
+          const SessionPage(deviceName: 'GAMING-RIG', deviceId: '123 456 789'),
+        ),
+      );
       await tester.pump(const Duration(milliseconds: 2400));
       await tester.pump();
 

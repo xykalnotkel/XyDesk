@@ -28,20 +28,7 @@ class AppLang {
   static const ru = AppLang('ru', 'Russian', 'Русский');
   static const hi = AppLang('hi', 'Hindi', 'हिन्दी');
 
-  static const all = <AppLang>[
-    id,
-    en,
-    zh,
-    es,
-    pt,
-    ar,
-    ja,
-    ko,
-    fr,
-    de,
-    ru,
-    hi
-  ];
+  static const all = <AppLang>[id, en, zh, es, pt, ar, ja, ko, fr, de, ru, hi];
 
   static AppLang byCode(String c) =>
       all.firstWhere((l) => l.code == c, orElse: () => en);
@@ -414,7 +401,8 @@ const Map<String, Map<String, String>> kStrings = {
     'ar': 'أدخل المعرّف وكلمة المرور من تطبيق المضيف.',
     'ja': 'PCのホストアプリに表示されたIDとパスワードを入力してください。',
     'ko': 'PC의 호스트 앱에 표시된 ID와 비밀번호를 입력하세요.',
-    'fr': "Saisissez l'ID et le mot de passe de l'application hôte sur votre PC.",
+    'fr':
+        "Saisissez l'ID et le mot de passe de l'application hôte sur votre PC.",
     'de': 'Gib die ID und das Passwort aus der Host-App auf deinem PC ein.',
     'ru': 'Введите ID и пароль из хост-приложения на вашем ПК.',
     'hi': 'अपने PC पर होस्ट ऐप में दिखाया गया ID और पासवर्ड दर्ज करें।',

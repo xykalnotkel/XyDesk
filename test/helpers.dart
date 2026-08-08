@@ -26,8 +26,10 @@ Future<Widget> testApp({Map<String, Object> seed = const {}}) async {
 }
 
 /// Membungkus satu widget dengan tema dan Store tiruan.
-Future<Widget> testWrap(Widget child,
-    {Map<String, Object> seed = const {}}) async {
+Future<Widget> testWrap(
+  Widget child, {
+  Map<String, Object> seed = const {},
+}) async {
   final store = await testStore(seed: seed);
   return ProviderScope(
     overrides: [storeProvider.overrideWithValue(store)],

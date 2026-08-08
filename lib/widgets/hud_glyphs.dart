@@ -49,7 +49,8 @@ class HudIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Badan mouse memakai proporsi 32:40, sisanya bujur sangkar.
-    final isMouse = glyph == HudGlyph.mouseLeft ||
+    final isMouse =
+        glyph == HudGlyph.mouseLeft ||
         glyph == HudGlyph.mouseRight ||
         glyph == HudGlyph.mouseMiddle;
     final h = isMouse ? size * 40 / 32 : size;
@@ -57,9 +58,7 @@ class HudIcon extends StatelessWidget {
     return SizedBox(
       width: size,
       height: h,
-      child: CustomPaint(
-        painter: _HudPainter(glyph, color, strokeWidth),
-      ),
+      child: CustomPaint(painter: _HudPainter(glyph, color, strokeWidth)),
     );
   }
 }
@@ -182,15 +181,17 @@ class _HudPainter extends CustomPainter {
 
     if (up) {
       c.drawRRect(
-          RRect.fromLTRBR(8 * u, 9 * u, 16 * u, 23 * u, Radius.circular(4 * u)),
-          st);
+        RRect.fromLTRBR(8 * u, 9 * u, 16 * u, 23 * u, Radius.circular(4 * u)),
+        st,
+      );
       c.drawLine(Offset(12 * u, 12 * u), Offset(12 * u, 16 * u), st);
       _chevron(c, st, Offset(12 * u, 1 * u), 5.5 * u, up: true);
       _chevron(c, faint, Offset(12 * u, 6 * u), 3.5 * u, up: true);
     } else {
       c.drawRRect(
-          RRect.fromLTRBR(8 * u, 1 * u, 16 * u, 15 * u, Radius.circular(4 * u)),
-          st);
+        RRect.fromLTRBR(8 * u, 1 * u, 16 * u, 15 * u, Radius.circular(4 * u)),
+        st,
+      );
       c.drawLine(Offset(12 * u, 4 * u), Offset(12 * u, 8 * u), st);
       _chevron(c, st, Offset(12 * u, 23 * u), 5.5 * u, up: false);
       _chevron(c, faint, Offset(12 * u, 18 * u), 3.5 * u, up: false);
@@ -200,8 +201,9 @@ class _HudPainter extends CustomPainter {
   void _scrollBoth(Canvas c, Size s, Paint st) {
     final u = s.width / 24;
     c.drawRRect(
-        RRect.fromLTRBR(8 * u, 5 * u, 16 * u, 19 * u, Radius.circular(4 * u)),
-        st);
+      RRect.fromLTRBR(8 * u, 5 * u, 16 * u, 19 * u, Radius.circular(4 * u)),
+      st,
+    );
     c.drawLine(Offset(12 * u, 8.5 * u), Offset(12 * u, 11.5 * u), st);
     _chevron(c, st, Offset(12 * u, 0.5 * u), 3.5 * u, up: true);
     _chevron(c, st, Offset(12 * u, 23.5 * u), 3.5 * u, up: false);
@@ -220,8 +222,9 @@ class _HudPainter extends CustomPainter {
   void _switchHold(Canvas c, Size s, Paint st) {
     final u = s.width / 34;
     c.drawRRect(
-        RRect.fromLTRBR(1 * u, 1 * u, 33 * u, 19 * u, Radius.circular(9 * u)),
-        st);
+      RRect.fromLTRBR(1 * u, 1 * u, 33 * u, 19 * u, Radius.circular(9 * u)),
+      st,
+    );
     // panah ke kanan (atas)
     c.drawLine(Offset(11 * u, 7.5 * u), Offset(23 * u, 7.5 * u), st);
     c.drawPath(
@@ -244,9 +247,9 @@ class _HudPainter extends CustomPainter {
   void _dropdown(Canvas c, Size s, Paint st) {
     final u = s.width / 24;
     c.drawRRect(
-        RRect.fromLTRBR(
-            2.5 * u, 8 * u, 15.5 * u, 16 * u, Radius.circular(2 * u)),
-        st);
+      RRect.fromLTRBR(2.5 * u, 8 * u, 15.5 * u, 16 * u, Radius.circular(2 * u)),
+      st,
+    );
     c.drawLine(Offset(20 * u, 10.5 * u), Offset(20 * u, 4 * u), st);
     _chevron(c, st, Offset(20 * u, 4 * u), 2.5 * u, up: true);
     c.drawLine(Offset(20 * u, 13.5 * u), Offset(20 * u, 20 * u), st);
@@ -270,7 +273,9 @@ class _HudPainter extends CustomPainter {
     final u = s.width / 60;
     final r = Radius.circular(3 * u);
     void box(double l, double t) => c.drawRRect(
-        RRect.fromLTRBR(l * u, t * u, (l + 18) * u, (t + 18) * u, r), st);
+      RRect.fromLTRBR(l * u, t * u, (l + 18) * u, (t + 18) * u, r),
+      st,
+    );
     box(21, 1);
     box(21, 41);
     box(1, 21);
@@ -305,8 +310,13 @@ class _HudPainter extends CustomPainter {
     c.drawLine(Offset(47.5 * u, 30 * u), Offset(53.5 * u, 30 * u), thin);
   }
 
-  void _hChevron(Canvas c, Paint p, Offset tip, double r,
-      {required bool left}) {
+  void _hChevron(
+    Canvas c,
+    Paint p,
+    Offset tip,
+    double r, {
+    required bool left,
+  }) {
     final dx = left ? r : -r;
     c.drawPath(
       Path()
@@ -317,8 +327,13 @@ class _HudPainter extends CustomPainter {
     );
   }
 
-  void _dashedRRect(Canvas c, RRect rr, Paint p,
-      {required double dash, required double gap}) {
+  void _dashedRRect(
+    Canvas c,
+    RRect rr,
+    Paint p, {
+    required double dash,
+    required double gap,
+  }) {
     final path = Path()..addRRect(rr);
     for (final m in path.computeMetrics()) {
       double d = 0;
@@ -355,7 +370,9 @@ class _HudPainter extends CustomPainter {
     final u = s.width / 62;
     final r = Radius.circular(3 * u);
     void box(double l, double t) => c.drawRRect(
-        RRect.fromLTRBR(l * u, t * u, (l + 18) * u, (t + 18) * u, r), st);
+      RRect.fromLTRBR(l * u, t * u, (l + 18) * u, (t + 18) * u, r),
+      st,
+    );
     box(21, 1);
     box(1, 21);
     box(21, 21);
@@ -404,8 +421,11 @@ class _HudPainter extends CustomPainter {
         ..cubicTo(9.5 * u, 11 * u, 12 * u, 9.5 * u, 17 * u, 9 * u),
       trail,
     );
-    c.drawCircle(Offset(17 * u, 9 * u), 2 * u,
-        Paint()..color = color.withValues(alpha: 0.7));
+    c.drawCircle(
+      Offset(17 * u, 9 * u),
+      2 * u,
+      Paint()..color = color.withValues(alpha: 0.7),
+    );
   }
 
   void _keypad(Canvas c, Size s, Paint st) {
@@ -429,11 +449,22 @@ class _HudPainter extends CustomPainter {
   void _ptt(Canvas c, Size s, Paint st) {
     final u = s.width / 24;
     c.drawRRect(
-        RRect.fromLTRBR(
-            8.5 * u, 2 * u, 15.5 * u, 13 * u, Radius.circular(3.5 * u)),
-        st);
+      RRect.fromLTRBR(
+        8.5 * u,
+        2 * u,
+        15.5 * u,
+        13 * u,
+        Radius.circular(3.5 * u),
+      ),
+      st,
+    );
     c.drawArc(
-        Rect.fromLTRB(5 * u, 4.5 * u, 19 * u, 17.5 * u), 0, math.pi, false, st);
+      Rect.fromLTRB(5 * u, 4.5 * u, 19 * u, 17.5 * u),
+      0,
+      math.pi,
+      false,
+      st,
+    );
     c.drawLine(Offset(12 * u, 17.5 * u), Offset(12 * u, 21 * u), st);
     final faint = Paint()
       ..style = PaintingStyle.stroke
@@ -447,8 +478,9 @@ class _HudPainter extends CustomPainter {
   void _keycap(Canvas c, Size s, Paint st) {
     final u = s.width / 24;
     c.drawRRect(
-        RRect.fromLTRBR(3 * u, 5 * u, 21 * u, 19 * u, Radius.circular(2.5 * u)),
-        st);
+      RRect.fromLTRBR(3 * u, 5 * u, 21 * u, 19 * u, Radius.circular(2.5 * u)),
+      st,
+    );
     final faint = Paint()
       ..style = PaintingStyle.stroke
       ..color = color.withValues(alpha: 0.55)
@@ -546,8 +578,11 @@ class _HudButtonState extends State<HudButton> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                HudIcon(widget.glyph,
-                    size: 17, strokeWidth: widget.strokeWidth),
+                HudIcon(
+                  widget.glyph,
+                  size: 17,
+                  strokeWidth: widget.strokeWidth,
+                ),
                 const SizedBox(height: 3),
                 Text(
                   widget.label,

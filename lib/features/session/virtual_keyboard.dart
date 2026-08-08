@@ -124,7 +124,7 @@ const _rowsLeft = <List<KeySpec>>[
     KeySpec('F2'),
     KeySpec('F3'),
     KeySpec('F4'),
-    KeySpec('F5')
+    KeySpec('F5'),
   ],
   [
     KeySpec('`'),
@@ -132,7 +132,7 @@ const _rowsLeft = <List<KeySpec>>[
     KeySpec('2'),
     KeySpec('3'),
     KeySpec('4'),
-    KeySpec('5')
+    KeySpec('5'),
   ],
   [
     KeySpec('Tab', flex: 2),
@@ -140,7 +140,7 @@ const _rowsLeft = <List<KeySpec>>[
     KeySpec('W'),
     KeySpec('E'),
     KeySpec('R'),
-    KeySpec('T')
+    KeySpec('T'),
   ],
   [
     KeySpec('Caps', flex: 2, modifier: true),
@@ -148,7 +148,7 @@ const _rowsLeft = <List<KeySpec>>[
     KeySpec('S'),
     KeySpec('D'),
     KeySpec('F'),
-    KeySpec('G')
+    KeySpec('G'),
   ],
   [
     KeySpec('Shift', flex: 2, modifier: true),
@@ -156,13 +156,13 @@ const _rowsLeft = <List<KeySpec>>[
     KeySpec('X'),
     KeySpec('C'),
     KeySpec('V'),
-    KeySpec('B')
+    KeySpec('B'),
   ],
   [
     KeySpec('Ctrl', flex: 2, modifier: true),
     KeySpec('Win', modifier: true),
     KeySpec('Alt', modifier: true),
-    KeySpec(' ', flex: 3)
+    KeySpec(' ', flex: 3),
   ],
 ];
 
@@ -176,7 +176,7 @@ const _rowsRight = <List<KeySpec>>[
     KeySpec('F10'),
     KeySpec('F11'),
     KeySpec('F12'),
-    KeySpec('⌫', flex: 2)
+    KeySpec('⌫', flex: 2),
   ],
   [
     KeySpec('6'),
@@ -186,7 +186,7 @@ const _rowsRight = <List<KeySpec>>[
     KeySpec('0'),
     KeySpec('-'),
     KeySpec('='),
-    KeySpec('Del', flex: 2)
+    KeySpec('Del', flex: 2),
   ],
   [
     KeySpec('Y'),
@@ -196,7 +196,7 @@ const _rowsRight = <List<KeySpec>>[
     KeySpec('P'),
     KeySpec('['),
     KeySpec(']'),
-    KeySpec(r'\')
+    KeySpec(r'\'),
   ],
   [
     KeySpec('H'),
@@ -205,7 +205,7 @@ const _rowsRight = <List<KeySpec>>[
     KeySpec('L'),
     KeySpec(';'),
     KeySpec("'"),
-    KeySpec('Enter', flex: 3)
+    KeySpec('Enter', flex: 3),
   ],
   [
     KeySpec('N'),
@@ -214,7 +214,7 @@ const _rowsRight = <List<KeySpec>>[
     KeySpec('.'),
     KeySpec('/'),
     KeySpec('Shift', flex: 2, modifier: true),
-    KeySpec('↑')
+    KeySpec('↑'),
   ],
   [
     KeySpec(' ', flex: 3),
@@ -222,7 +222,7 @@ const _rowsRight = <List<KeySpec>>[
     KeySpec('Fn'),
     KeySpec('←'),
     KeySpec('↓'),
-    KeySpec('→')
+    KeySpec('→'),
   ],
 ];
 
@@ -306,9 +306,9 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
   }
 
   Widget _buildFull(BuildContext context) => SafeArea(
-        top: false,
-        child: _pane(_rowsFull, left: true, fullWidth: true),
-      );
+    top: false,
+    child: _pane(_rowsFull, left: true, fullWidth: true),
+  );
 
   Widget _buildCompact(BuildContext context) {
     final w = MediaQuery.sizeOf(context).width;
@@ -364,8 +364,11 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
     );
   }
 
-  Widget _pane(List<List<KeySpec>> rows,
-      {required bool left, bool fullWidth = false}) {
+  Widget _pane(
+    List<List<KeySpec>> rows, {
+    required bool left,
+    bool fullWidth = false,
+  }) {
     final radius = fullWidth
         ? const BorderRadius.vertical(top: Radius.circular(6))
         : BorderRadius.only(

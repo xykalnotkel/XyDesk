@@ -78,11 +78,15 @@ class LeftRail extends StatelessWidget {
                 color: c.textLow.withValues(alpha: 0.22),
               ),
               _RailItem(
-                  icon: LucideIcons.refreshCw,
-                  label: 'Restart',
-                  onTap: onRestart),
+                icon: LucideIcons.refreshCw,
+                label: 'Restart',
+                onTap: onRestart,
+              ),
               _RailItem(
-                  icon: LucideIcons.arrowLeft, label: 'Kembali', onTap: onBack),
+                icon: LucideIcons.arrowLeft,
+                label: 'Kembali',
+                onTap: onBack,
+              ),
               _RailItem(
                 icon: LucideIcons.power,
                 label: context.tr('session_disconnect_action'),
@@ -133,8 +137,10 @@ class _RailItem extends StatelessWidget {
               children: [
                 Icon(icon, size: 16, color: col),
                 const SizedBox(height: 1),
-                Text(label,
-                    style: TextStyle(fontSize: 6.5, color: col, height: 1)),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 6.5, color: col, height: 1),
+                ),
               ],
             ),
           ),
@@ -188,33 +194,39 @@ class RightPanel extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 7),
                     child: Row(
                       children: [
-                        Icon(LucideIcons.chevronLeft,
-                            size: 13, color: c.textMid),
+                        Icon(
+                          LucideIcons.chevronLeft,
+                          size: 13,
+                          color: c.textMid,
+                        ),
                         const SizedBox(width: 5),
-                        Text('Kembali ke kategori',
-                            style: TextStyle(fontSize: 10, color: c.textMid)),
+                        Text(
+                          'Kembali ke kategori',
+                          style: TextStyle(fontSize: 10, color: c.textMid),
+                        ),
                       ],
                     ),
                   ),
                 ),
               Row(
                 children: [
-                  Text(cat.label,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: c.textHi)),
+                  Text(
+                    cat.label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: c.textHi,
+                    ),
+                  ),
                   const Spacer(),
-                  Text(_badge(),
-                      style: TextStyle(fontSize: 9.5, color: c.textLow)),
+                  Text(
+                    _badge(),
+                    style: TextStyle(fontSize: 9.5, color: c.textLow),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: _content(context),
-                ),
-              ),
+              Expanded(child: SingleChildScrollView(child: _content(context))),
             ],
           ),
         ),
@@ -223,22 +235,22 @@ class RightPanel extends StatelessWidget {
   }
 
   String _badge() => switch (cat) {
-        PanelCat.info => 'GAMING-RIG',
-        PanelCat.video => 'H.264',
-        PanelCat.mic => state.micOn ? 'Aktif' : 'Mati',
-        PanelCat.pointer => 'Touchpad',
-        PanelCat.network => 'P2P',
-        _ => '',
-      };
+    PanelCat.info => 'GAMING-RIG',
+    PanelCat.video => 'H.264',
+    PanelCat.mic => state.micOn ? 'Aktif' : 'Mati',
+    PanelCat.pointer => 'Touchpad',
+    PanelCat.network => 'P2P',
+    _ => '',
+  };
 
   Widget _content(BuildContext context) => switch (cat) {
-        PanelCat.info => _InfoPanel(onSelect: onSelectCat ?? (_) {}),
-        PanelCat.video => _VideoPanel(state: state, onChanged: onChanged),
-        PanelCat.mic => _MicPanel(state: state, onChanged: onChanged),
-        PanelCat.pointer => _PointerPanel(state: state, onChanged: onChanged),
-        PanelCat.network => const _NetworkPanel(),
-        _ => _Placeholder(cat: cat),
-      };
+    PanelCat.info => _InfoPanel(onSelect: onSelectCat ?? (_) {}),
+    PanelCat.video => _VideoPanel(state: state, onChanged: onChanged),
+    PanelCat.mic => _MicPanel(state: state, onChanged: onChanged),
+    PanelCat.pointer => _PointerPanel(state: state, onChanged: onChanged),
+    PanelCat.network => const _NetworkPanel(),
+    _ => _Placeholder(cat: cat),
+  };
 }
 
 /// Nilai pengaturan sesi yang bisa diubah live tanpa reconnect.
@@ -277,21 +289,20 @@ class SessionSettings {
     bool? invertScroll,
     bool? tapToClick,
     bool? pointerLock,
-  }) =>
-      SessionSettings(
-        bitrate: bitrate ?? this.bitrate,
-        fps: fps ?? this.fps,
-        micOn: micOn ?? this.micOn,
-        noiseSuppression: noiseSuppression ?? this.noiseSuppression,
-        aec: aec ?? this.aec,
-        agc: agc ?? this.agc,
-        micGain: micGain ?? this.micGain,
-        micVolume: micVolume ?? this.micVolume,
-        sensitivity: sensitivity ?? this.sensitivity,
-        invertScroll: invertScroll ?? this.invertScroll,
-        tapToClick: tapToClick ?? this.tapToClick,
-        pointerLock: pointerLock ?? this.pointerLock,
-      );
+  }) => SessionSettings(
+    bitrate: bitrate ?? this.bitrate,
+    fps: fps ?? this.fps,
+    micOn: micOn ?? this.micOn,
+    noiseSuppression: noiseSuppression ?? this.noiseSuppression,
+    aec: aec ?? this.aec,
+    agc: agc ?? this.agc,
+    micGain: micGain ?? this.micGain,
+    micVolume: micVolume ?? this.micVolume,
+    sensitivity: sensitivity ?? this.sensitivity,
+    invertScroll: invertScroll ?? this.invertScroll,
+    tapToClick: tapToClick ?? this.tapToClick,
+    pointerLock: pointerLock ?? this.pointerLock,
+  );
 }
 
 // ── Bagian isi panel ──────────────────────────────────────────────
@@ -352,11 +363,14 @@ class _CatTile extends StatelessWidget {
             children: [
               Icon(cat.icon, size: 15, color: c.textMid),
               const SizedBox(height: 4),
-              Text(cat.label,
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: c.textHi)),
+              Text(
+                cat.label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: c.textHi,
+                ),
+              ),
             ],
           ),
         ),
@@ -377,7 +391,9 @@ class _VideoPanel extends StatelessWidget {
       children: [
         const PanelSub('Preset'),
         const PanelSegmented(
-            items: ['Auto', 'Ultra', 'Seimbang', 'HD'], index: 1),
+          items: ['Auto', 'Ultra', 'Seimbang', 'HD'],
+          index: 1,
+        ),
         PanelSlider(
           label: 'Bitrate',
           value: '${state.bitrate.round()} Mbps',
@@ -390,9 +406,15 @@ class _VideoPanel extends StatelessWidget {
         const PanelSegmented(items: ['Native', '1080', '720', '480'], index: 1),
         const PanelRow('Codec', 'H.264 ›'),
         PanelToggle(
-            label: context.tr('session_hw_decode'), value: true, onChanged: (_) {}),
+          label: context.tr('session_hw_decode'),
+          value: true,
+          onChanged: (_) {},
+        ),
         PanelToggle(
-            label: context.tr('session_limit_60hz'), value: true, onChanged: (_) {}),
+          label: context.tr('session_limit_60hz'),
+          value: true,
+          onChanged: (_) {},
+        ),
       ],
     );
   }
@@ -509,9 +531,15 @@ class _NetworkPanel extends StatelessWidget {
         const PanelSub('Penyesuaian'),
         PanelToggle(label: 'Bitrate adaptif', value: true, onChanged: (_) {}),
         PanelToggle(
-            label: 'FEC saat paket hilang', value: true, onChanged: (_) {}),
+          label: 'FEC saat paket hilang',
+          value: true,
+          onChanged: (_) {},
+        ),
         PanelToggle(
-            label: 'Paksa lewat relay', value: false, onChanged: (_) {}),
+          label: 'Paksa lewat relay',
+          value: false,
+          onChanged: (_) {},
+        ),
         PanelToggle(label: 'Utamakan IPv6', value: true, onChanged: (_) {}),
       ],
     );
@@ -526,9 +554,10 @@ class _Placeholder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 20),
-      child: Text('Panel ${cat.label} — belum diisi di demo ini.',
-          style:
-              TextStyle(fontSize: 10.5, color: context.c.textLow, height: 1.5)),
+      child: Text(
+        'Panel ${cat.label} — belum diisi di demo ini.',
+        style: TextStyle(fontSize: 10.5, color: context.c.textLow, height: 1.5),
+      ),
     );
   }
 }
@@ -547,13 +576,20 @@ class PanelRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label,
-                style: TextStyle(fontSize: 10, color: c.textMid),
-                overflow: TextOverflow.ellipsis),
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 10, color: c.textMid),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 10, fontWeight: FontWeight.w500, color: c.textHi)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: c.textHi,
+            ),
+          ),
         ],
       ),
     );
@@ -568,9 +604,14 @@ class PanelSub extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 7, bottom: 4),
-      child: Text(text.toUpperCase(),
-          style: TextStyle(
-              fontSize: 8.5, letterSpacing: 0.4, color: context.c.textLow)),
+      child: Text(
+        text.toUpperCase(),
+        style: TextStyle(
+          fontSize: 8.5,
+          letterSpacing: 0.4,
+          color: context.c.textLow,
+        ),
+      ),
     );
   }
 }
@@ -595,9 +636,11 @@ class PanelToggle extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label,
-                style: TextStyle(fontSize: 10, color: c.textMid),
-                overflow: TextOverflow.ellipsis),
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 10, color: c.textMid),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           Transform.scale(
             scale: 0.62,
@@ -634,14 +677,19 @@ class PanelSlider extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(label,
-                    style: TextStyle(fontSize: 10, color: c.textMid)),
+                child: Text(
+                  label,
+                  style: TextStyle(fontSize: 10, color: c.textMid),
+                ),
               ),
-              Text(value,
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: c.textHi)),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: c.textHi,
+                ),
+              ),
             ],
           ),
         ),

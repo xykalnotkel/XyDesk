@@ -55,20 +55,29 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       children: [
         const SizedBox(height: Gap.h32),
         Center(
-          child: Image.asset(Img.auth,
-              width: 168,
-              height: 168,
-              errorBuilder: (_, __, ___) => const SizedBox(height: 168)),
+          child: Image.asset(
+            Img.auth,
+            width: 168,
+            height: 168,
+            errorBuilder: (_, __, ___) => const SizedBox(height: 168),
+          ),
         ),
         const SizedBox(height: Gap.xl),
-        Text(context.tr('auth_welcome'),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: 24, fontWeight: FontWeight.w600, color: c.textHi)),
+        Text(
+          context.tr('auth_welcome'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: c.textHi,
+          ),
+        ),
         const SizedBox(height: Gap.sm),
-        Text(context.tr('auth_subtitle'),
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, height: 1.55, color: c.textMid)),
+        Text(
+          context.tr('auth_subtitle'),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, height: 1.55, color: c.textMid),
+        ),
         const SizedBox(height: Gap.h32),
         _AuthButton(
           icon: LucideIcons.globe,
@@ -107,8 +116,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     await ref
         .read(authProvider.notifier)
         .signInEmail('pengguna@gmail.com', name: 'Pengguna XyDesk');
-    DevLog.w('auth', 'Google Sign-In masih tiruan',
-        'Sambungkan google_sign_in + Firebase untuk produksi');
+    DevLog.w(
+      'auth',
+      'Google Sign-In masih tiruan',
+      'Sambungkan google_sign_in + Firebase untuk produksi',
+    );
   }
 }
 
@@ -222,9 +234,9 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
             icon: Icon(LucideIcons.arrowLeft, size: 20, color: c.textMid),
             onPressed: _otpSent
                 ? () => setState(() {
-                      _otpSent = false;
-                      _error = null;
-                    })
+                    _otpSent = false;
+                    _error = null;
+                  })
                 : widget.onBack,
           ),
         ),
@@ -232,7 +244,10 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
         Text(
           _otpSent ? context.tr('auth_otp_title') : context.tr('auth_email'),
           style: TextStyle(
-              fontSize: 22, fontWeight: FontWeight.w600, color: c.textHi),
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: c.textHi,
+          ),
         ),
         const SizedBox(height: Gap.sm),
         Text(
@@ -243,11 +258,14 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
         ),
         const SizedBox(height: Gap.xxl),
         if (!_otpSent) ...[
-          Text(context.tr('auth_email_label'),
-              style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: c.textMid)),
+          Text(
+            context.tr('auth_email_label'),
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: c.textMid,
+            ),
+          ),
           const SizedBox(height: 6),
           TextField(
             controller: _email,
@@ -261,17 +279,23 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
           const SizedBox(height: Gap.xl),
           FilledButton(
             onPressed: _busy ? null : _send,
-            child:
-                _busy ? const _Spinner() : Text(context.tr('auth_send_code')),
+            child: _busy
+                ? const _Spinner()
+                : Text(context.tr('auth_send_code')),
           ),
         ] else ...[
           _OtpBoxes(
-              controllers: _otp, focusNodes: _otpFocus, onFilled: _verify),
+            controllers: _otp,
+            focusNodes: _otpFocus,
+            onFilled: _verify,
+          ),
           if (_error != null) ...[
             const SizedBox(height: Gap.md),
-            Text(_error!,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11.5, color: c.danger)),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11.5, color: c.danger),
+            ),
           ],
           const SizedBox(height: Gap.xl),
           FilledButton(
@@ -282,9 +306,11 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
           Center(
             child: TextButton(
               onPressed: _cooldown > 0 ? null : _send,
-              child: Text(_cooldown > 0
-                  ? '${context.tr('auth_resend_in')} ${_cooldown}s'
-                  : context.tr('auth_resend')),
+              child: Text(
+                _cooldown > 0
+                    ? '${context.tr('auth_resend_in')} ${_cooldown}s'
+                    : context.tr('auth_resend'),
+              ),
             ),
           ),
         ],
@@ -390,12 +416,14 @@ class _AuthButton extends StatelessWidget {
               else
                 Icon(icon, size: 18, color: primary ? Colors.white : c.textMid),
               const SizedBox(width: Gap.md),
-              Text(label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: primary ? Colors.white : c.textHi,
-                  )),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: primary ? Colors.white : c.textHi,
+                ),
+              ),
             ],
           ),
         ),
@@ -409,10 +437,10 @@ class _Spinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox(
-        width: 16,
-        height: 16,
-        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-      );
+    width: 16,
+    height: 16,
+    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+  );
 }
 
 class _LegalNote extends StatelessWidget {
@@ -426,8 +454,11 @@ class _LegalNote extends StatelessWidget {
 
     return Column(
       children: [
-        Text(context.tr('auth_legal'),
-            style: style, textAlign: TextAlign.center),
+        Text(
+          context.tr('auth_legal'),
+          style: style,
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 4),
         Wrap(
           alignment: WrapAlignment.center,

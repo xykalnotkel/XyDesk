@@ -38,7 +38,8 @@ class LogEntry {
   final StackTrace? stack;
   final DateTime time;
 
-  String get clock => '${time.hour.toString().padLeft(2, '0')}:'
+  String get clock =>
+      '${time.hour.toString().padLeft(2, '0')}:'
       '${time.minute.toString().padLeft(2, '0')}:'
       '${time.second.toString().padLeft(2, '0')}.'
       '${time.millisecond.toString().padLeft(3, '0')}';
@@ -92,26 +93,30 @@ class DevLog {
   }
 
   static void d(String tag, String msg, [String? detail]) => _add(
-      LogEntry(level: LogLevel.debug, tag: tag, message: msg, detail: detail));
+    LogEntry(level: LogLevel.debug, tag: tag, message: msg, detail: detail),
+  );
 
   static void i(String tag, String msg, [String? detail]) => _add(
-      LogEntry(level: LogLevel.info, tag: tag, message: msg, detail: detail));
+    LogEntry(level: LogLevel.info, tag: tag, message: msg, detail: detail),
+  );
 
-  static void ok(String tag, String msg, [String? detail]) => _add(LogEntry(
-      level: LogLevel.success, tag: tag, message: msg, detail: detail));
+  static void ok(String tag, String msg, [String? detail]) => _add(
+    LogEntry(level: LogLevel.success, tag: tag, message: msg, detail: detail),
+  );
 
-  static void w(String tag, String msg, [String? detail]) => _add(LogEntry(
-      level: LogLevel.warning, tag: tag, message: msg, detail: detail));
+  static void w(String tag, String msg, [String? detail]) => _add(
+    LogEntry(level: LogLevel.warning, tag: tag, message: msg, detail: detail),
+  );
 
   static void e(String tag, String msg, [Object? err, StackTrace? st]) => _add(
-        LogEntry(
-          level: LogLevel.error,
-          tag: tag,
-          message: msg,
-          detail: err?.toString(),
-          stack: st,
-        ),
-      );
+    LogEntry(
+      level: LogLevel.error,
+      tag: tag,
+      message: msg,
+      detail: err?.toString(),
+      stack: st,
+    ),
+  );
 
   static void fatal(String tag, String msg, [Object? err, StackTrace? st]) =>
       _add(
@@ -136,7 +141,12 @@ class DevLog {
       ..writeln('===== XyDesk DevLog =====')
       ..writeln('Dibuat : ${DateTime.now()}')
       ..writeln(
-          'Mode   : ${kReleaseMode ? "release" : kProfileMode ? "profile" : "debug"}')
+        'Mode   : ${kReleaseMode
+            ? "release"
+            : kProfileMode
+            ? "profile"
+            : "debug"}',
+      )
       ..writeln('Baris  : ${_entries.length}  (error: ${errorCount.value})');
     if (deviceInfo != null) b.writeln(deviceInfo);
     b.writeln('=========================');
@@ -149,9 +159,9 @@ class DevLog {
   /// Buka DevLog sebagai halaman penuh — lebih nyaman untuk membaca
   /// stack trace panjang daripada lembar setengah layar.
   static Future<void> openPage(BuildContext context) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const DevLogScreen()),
-    );
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const DevLogScreen()));
   }
 
   /// Ekspor hanya baris error & fatal — inilah yang biasanya perlu
@@ -213,15 +223,19 @@ class _ErrorBox extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(LucideIcons.alertTriangle,
-                  color: Color(0xFFC9963F), size: 28),
+              const Icon(
+                LucideIcons.alertTriangle,
+                color: Color(0xFFC9963F),
+                size: 28,
+              ),
               const SizedBox(height: 10),
               const Text(
                 'Bagian ini gagal ditampilkan',
                 style: TextStyle(
-                    color: Color(0xFFEDEDEF),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600),
+                  color: Color(0xFFEDEDEF),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -229,12 +243,16 @@ class _ErrorBox extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
-                style:
-                    const TextStyle(color: Color(0xFF6B6B73), fontSize: 10.5),
+                style: const TextStyle(
+                  color: Color(0xFF6B6B73),
+                  fontSize: 10.5,
+                ),
               ),
               const SizedBox(height: 8),
-              const Text('Detail tercatat di DevLog',
-                  style: TextStyle(color: Color(0xFF5B7FE8), fontSize: 10)),
+              const Text(
+                'Detail tercatat di DevLog',
+                style: TextStyle(color: Color(0xFF5B7FE8), fontSize: 10),
+              ),
             ],
           ),
         ),
@@ -300,9 +318,13 @@ class _DevLogPanelState extends State<DevLogPanel> {
                         .toList();
                     if (list.isEmpty) {
                       return const Center(
-                        child: Text('Belum ada catatan',
-                            style: TextStyle(
-                                color: Color(0xFF6B6B73), fontSize: 12)),
+                        child: Text(
+                          'Belum ada catatan',
+                          style: TextStyle(
+                            color: Color(0xFF6B6B73),
+                            fontSize: 12,
+                          ),
+                        ),
                       );
                     }
                     return ListView.builder(
@@ -326,11 +348,14 @@ class _DevLogPanelState extends State<DevLogPanel> {
       padding: const EdgeInsets.fromLTRB(16, 10, 8, 6),
       child: Row(
         children: [
-          const Text('DevLog',
-              style: TextStyle(
-                  color: Color(0xFFEDEDEF),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600)),
+          const Text(
+            'DevLog',
+            style: TextStyle(
+              color: Color(0xFFEDEDEF),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(width: 8),
           ValueListenableBuilder<int>(
             valueListenable: DevLog.revision,
@@ -342,8 +367,11 @@ class _DevLogPanelState extends State<DevLogPanel> {
           const Spacer(),
           IconButton(
             tooltip: 'Salin semua',
-            icon: const Icon(LucideIcons.copy,
-                size: 17, color: Color(0xFFA0A0A8)),
+            icon: const Icon(
+              LucideIcons.copy,
+              size: 17,
+              color: Color(0xFFA0A0A8),
+            ),
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: DevLog.export()));
               if (!mounted) return;
@@ -354,8 +382,11 @@ class _DevLogPanelState extends State<DevLogPanel> {
           ),
           IconButton(
             tooltip: 'Bersihkan',
-            icon: const Icon(LucideIcons.trash2,
-                size: 17, color: Color(0xFFA0A0A8)),
+            icon: const Icon(
+              LucideIcons.trash2,
+              size: 17,
+              color: Color(0xFFA0A0A8),
+            ),
             onPressed: () => setState(DevLog.clear),
           ),
         ],
@@ -421,38 +452,53 @@ class _DevLogPanelState extends State<DevLogPanel> {
         children: [
           Row(
             children: [
-              Text(e.level.tag,
-                  style: TextStyle(
-                      color: e.level.color,
-                      fontSize: 9.5,
-                      fontFamily: 'monospace',
-                      fontWeight: FontWeight.w700)),
+              Text(
+                e.level.tag,
+                style: TextStyle(
+                  color: e.level.color,
+                  fontSize: 9.5,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(width: 7),
-              Text(e.clock,
-                  style: const TextStyle(
-                      color: Color(0xFF5C5C64),
-                      fontSize: 9.5,
-                      fontFamily: 'monospace')),
+              Text(
+                e.clock,
+                style: const TextStyle(
+                  color: Color(0xFF5C5C64),
+                  fontSize: 9.5,
+                  fontFamily: 'monospace',
+                ),
+              ),
               const SizedBox(width: 7),
               Flexible(
-                child: Text('[${e.tag}]',
-                    style: const TextStyle(
-                        color: Color(0xFF6B6B73), fontSize: 9.5)),
+                child: Text(
+                  '[${e.tag}]',
+                  style: const TextStyle(
+                    color: Color(0xFF6B6B73),
+                    fontSize: 9.5,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 3),
-          Text(e.message,
-              style: const TextStyle(color: Color(0xFFEDEDEF), fontSize: 11.5)),
+          Text(
+            e.message,
+            style: const TextStyle(color: Color(0xFFEDEDEF), fontSize: 11.5),
+          ),
           if (e.detail != null) ...[
             const SizedBox(height: 3),
-            Text(e.detail!,
-                maxLines: 6,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: Color(0xFF8A8A93),
-                    fontSize: 10,
-                    fontFamily: 'monospace')),
+            Text(
+              e.detail!,
+              maxLines: 6,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF8A8A93),
+                fontSize: 10,
+                fontFamily: 'monospace',
+              ),
+            ),
           ],
         ],
       ),
@@ -483,11 +529,13 @@ class DevLogFab extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Icon(LucideIcons.bug,
-                      size: 17,
-                      color: errors > 0
-                          ? const Color(0xFFD9646E)
-                          : const Color(0xFF8A8A93)),
+                  Icon(
+                    LucideIcons.bug,
+                    size: 17,
+                    color: errors > 0
+                        ? const Color(0xFFD9646E)
+                        : const Color(0xFF8A8A93),
+                  ),
                   if (errors > 0)
                     Positioned(
                       top: 6,
@@ -628,9 +676,13 @@ class _DevLogScreenState extends State<DevLogScreen> {
                     .toList();
                 if (list.isEmpty) {
                   return const Center(
-                    child: Text('Belum ada catatan',
-                        style: TextStyle(
-                            color: Color(0xFF6B6B73), fontSize: 12.5)),
+                    child: Text(
+                      'Belum ada catatan',
+                      style: TextStyle(
+                        color: Color(0xFF6B6B73),
+                        fontSize: 12.5,
+                      ),
+                    ),
                   );
                 }
                 return ListView.builder(
@@ -644,7 +696,9 @@ class _DevLogScreenState extends State<DevLogScreen> {
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 5),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 11, vertical: 9),
+                          horizontal: 11,
+                          vertical: 9,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.04),
                           borderRadius: BorderRadius.circular(8),
@@ -654,39 +708,55 @@ class _DevLogScreenState extends State<DevLogScreen> {
                           children: [
                             Row(
                               children: [
-                                Text(e.level.tag,
-                                    style: TextStyle(
-                                        color: e.level.color,
-                                        fontSize: 10,
-                                        fontFamily: 'monospace',
-                                        fontWeight: FontWeight.w700)),
+                                Text(
+                                  e.level.tag,
+                                  style: TextStyle(
+                                    color: e.level.color,
+                                    fontSize: 10,
+                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
-                                Text(e.clock,
-                                    style: const TextStyle(
-                                        color: Color(0xFF5C5C64),
-                                        fontSize: 10,
-                                        fontFamily: 'monospace')),
+                                Text(
+                                  e.clock,
+                                  style: const TextStyle(
+                                    color: Color(0xFF5C5C64),
+                                    fontSize: 10,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
                                 const SizedBox(width: 8),
                                 Flexible(
-                                  child: Text('[${e.tag}]',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          color: Color(0xFF6B6B73),
-                                          fontSize: 10)),
+                                  child: Text(
+                                    '[${e.tag}]',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Color(0xFF6B6B73),
+                                      fontSize: 10,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 4),
-                            SelectableText(e.message,
-                                style: const TextStyle(
-                                    color: Color(0xFFEDEDEF), fontSize: 12)),
+                            SelectableText(
+                              e.message,
+                              style: const TextStyle(
+                                color: Color(0xFFEDEDEF),
+                                fontSize: 12,
+                              ),
+                            ),
                             if (e.detail != null) ...[
                               const SizedBox(height: 4),
-                              SelectableText(e.detail!,
-                                  style: const TextStyle(
-                                      color: Color(0xFF8A8A93),
-                                      fontSize: 10.5,
-                                      fontFamily: 'monospace')),
+                              SelectableText(
+                                e.detail!,
+                                style: const TextStyle(
+                                  color: Color(0xFF8A8A93),
+                                  fontSize: 10.5,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
                             ],
                           ],
                         ),
