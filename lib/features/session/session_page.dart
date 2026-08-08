@@ -143,9 +143,11 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
                 // Panah kiri-atas → buka bilah kiri
                 _fade(
-                  top: 6,
+                  top: MediaQuery.paddingOf(context).top + 8,
                   left: 0,
                   child: _OverlayIcon(
+                    leftEdge: true,
+                    label: 'MENU',
                     icon: _leftRail
                         ? LucideIcons.chevronLeft
                         : LucideIcons.chevronRight,
@@ -160,9 +162,11 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
                 // Panah kanan-atas → buka panel kategori
                 _fade(
-                  top: 6,
+                  top: MediaQuery.paddingOf(context).top + 8,
                   right: 0,
                   child: _OverlayIcon(
+                    leftEdge: false,
+                    label: 'PANEL',
                     icon: _panel == null
                         ? LucideIcons.chevronLeft
                         : LucideIcons.chevronRight,
@@ -510,23 +514,28 @@ class _OverlayIcon extends StatelessWidget {
   const _OverlayIcon({
     required this.icon,
     required this.onTap,
+    required this.leftEdge,
+    required this.label,
     this.active = false,
     this.tooltip,
   });
 
   final IconData icon;
   final VoidCallback onTap;
+  final bool leftEdge;
+  final String label;
   final bool active;
   final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final edge = active ? c.accent : c.textHi.withValues(alpha: 0.48);
-    // Kontrol buka/tutup panel sengaja kotak: lebih cepat terbaca di atas
-    // video remote dan tidak terlihat seperti tombol UI biasa.
+    final edgeColor = active ? c.accent : c.textHi.withValues(alpha: 0.46);
+    final border = leftEdge
+        ? Border(right: BorderSide(color: edgeColor, width: active ? 2 : 1))
+        : Border(left: BorderSide(color: edgeColor, width: active ? 2 : 1));
     return Tooltip(
-      message: tooltip ?? '',
+      message: tooltip ?? label,
       child: Material(
         color: active
             ? c.accent.withValues(alpha: 0.88)
@@ -535,15 +544,34 @@ class _OverlayIcon extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Container(
-            width: 46,
-            height: 46,
+            width: 50,
+            height: 64,
             decoration: BoxDecoration(
-              border: Border.all(color: edge, width: active ? 1.4 : 1),
+              border: border,
+              gradient: LinearGradient(
+                begin: leftEdge ? Alignment.centerLeft : Alignment.centerRight,
+                end: leftEdge ? Alignment.centerRight : Alignment.centerLeft,
+                colors: [
+                  c.textHi.withValues(alpha: active ? 0.10 : 0.04),
+                  Colors.transparent,
+                ],
+              ),
             ),
-            child: Icon(
-              icon,
-              size: 25,
-              color: active ? Colors.white : c.textHi,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 25, color: active ? Colors.white : c.textHi),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: active ? Colors.white : c.textMid,
+                    fontSize: 7,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
