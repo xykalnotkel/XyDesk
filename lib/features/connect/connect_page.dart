@@ -143,40 +143,46 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
         ),
         const SizedBox(height: Gap.xxl),
         _label('ID Perangkat'),
-        TextField(
-          controller: _id,
-          keyboardType: TextInputType.number,
-          inputFormatters: [DeviceIdFormatter()],
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 25,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1,
-            color: c.textHi,
-            // Angka tabular supaya digit tidak bergoyang saat diketik.
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-          decoration: const InputDecoration(
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
+          child: TextField(
+            controller: _id,
+            keyboardType: TextInputType.number,
+            inputFormatters: [DeviceIdFormatter()],
+            textAlign: TextAlign.center,
+            textAlignVertical: TextAlignVertical.center,
+            style: TextStyle(
+              fontSize: 25,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1,
+              color: c.textHi,
+              // Angka tabular supaya digit tidak bergoyang saat diketik.
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
             // Sengaja tanpa hintText: angka contoh membuat kolom terlihat
             // sudah terisi dan mengganggu saat mengetik.
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            decoration: const InputDecoration(),
           ),
         ),
         const SizedBox(height: Gap.lg),
         _label('Kata sandi'),
-        TextField(
-          controller: _pw,
-          obscureText: _obscure,
-          onSubmitted: (_) => _connect(),
-          decoration: InputDecoration(
-            errorText: _error,
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscure ? LucideIcons.eye : LucideIcons.eyeOff,
-                size: 17,
-                color: c.textLow,
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
+          child: TextField(
+            controller: _pw,
+            obscureText: _obscure,
+            textAlignVertical: TextAlignVertical.center,
+            onSubmitted: (_) => _connect(),
+            decoration: InputDecoration(
+              errorText: _error,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscure ? LucideIcons.eye : LucideIcons.eyeOff,
+                  size: 17,
+                  color: c.textLow,
+                ),
+                onPressed: () => setState(() => _obscure = !_obscure),
               ),
-              onPressed: () => setState(() => _obscure = !_obscure),
             ),
           ),
         ),
@@ -198,7 +204,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
                     border: _remember
                         ? null
                         : Border.all(
-                            color: const Color(0xFF3A3A3E),
+                            color: c.textLow.withValues(alpha: 0.55),
                             width: 1.5,
                           ),
                   ),
@@ -341,16 +347,17 @@ class _SocialTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return Semantics(
       label: label,
       button: true,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(R.lg),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+          border: Border.all(color: c.textLow.withValues(alpha: 0.16)),
         ),
         child: Material(
-          color: Colors.white,
+          color: c.raised,
           borderRadius: BorderRadius.circular(R.lg),
           child: InkWell(
             onTap: () => _launchSocial(url),

@@ -295,20 +295,31 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          SizedBox(width: half, child: _pane(_rowsLeft, left: true)),
+          SizedBox(
+            width: half,
+            child: _pane(_rowsLeft, left: true, context: context),
+          ),
           // Celah tengah dibiarkan transparan agar layar remote tetap terlihat
           // dan bisa disentuh untuk menggerakkan pointer.
           Expanded(child: _centerBar(context)),
-          SizedBox(width: half, child: _pane(_rowsRight, left: false)),
+          SizedBox(
+            width: half,
+            child: _pane(_rowsRight, left: false, context: context),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildFull(BuildContext context) => SafeArea(
-    top: false,
-    child: _pane(_rowsFull, left: true, fullWidth: true),
-  );
+        top: false,
+        child: _pane(
+          _rowsFull,
+          left: true,
+          fullWidth: true,
+          context: context,
+        ),
+      );
 
   Widget _buildCompact(BuildContext context) {
     final w = MediaQuery.sizeOf(context).width;
@@ -317,7 +328,10 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
       child: Row(
         children: [
           const Spacer(),
-          SizedBox(width: w * 0.62, child: _pane(_rowsFull, left: false)),
+          SizedBox(
+            width: w * 0.62,
+            child: _pane(_rowsFull, left: false, context: context),
+          ),
         ],
       ),
     );
@@ -367,8 +381,10 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
   Widget _pane(
     List<List<KeySpec>> rows, {
     required bool left,
+    required BuildContext context,
     bool fullWidth = false,
   }) {
+    final c = context.c;
     final radius = fullWidth
         ? const BorderRadius.vertical(top: Radius.circular(6))
         : BorderRadius.only(
@@ -384,7 +400,7 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
         opacity: widget.opacity,
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF18181B).withValues(alpha: 0.95),
+            color: c.overlay.withValues(alpha: 0.96),
             borderRadius: radius,
           ),
           padding: const EdgeInsets.fromLTRB(5, 6, 5, 6),
@@ -424,7 +440,7 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
       bg = c.accentSoft;
       fg = c.textHi;
     } else {
-      bg = Colors.white.withValues(alpha: 0.055);
+      bg = c.textHi.withValues(alpha: 0.055);
       fg = c.textMid;
     }
 
@@ -456,7 +472,7 @@ class _MiniBtn extends StatelessWidget {
     return Tooltip(
       message: tooltip ?? '',
       child: Material(
-        color: const Color(0xFF18181B).withValues(alpha: 0.9),
+        color: c.overlay.withValues(alpha: 0.92),
         shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
@@ -505,7 +521,7 @@ class _PressableKeyState extends State<_PressableKey> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: _down
-                ? Colors.white.withValues(alpha: 0.12)
+                ? context.c.textHi.withValues(alpha: 0.12)
                 : widget.background,
             borderRadius: BorderRadius.circular(R.key),
           ),

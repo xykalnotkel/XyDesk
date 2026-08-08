@@ -50,7 +50,7 @@ class LeftRail extends StatelessWidget {
     final c = context.c;
     return Container(
       width: 48,
-      color: const Color(0xFF141417).withValues(alpha: 0.95),
+      color: c.overlay.withValues(alpha: 0.96),
       child: SafeArea(
         right: false,
         child: SingleChildScrollView(
@@ -59,7 +59,7 @@ class LeftRail extends StatelessWidget {
               const SizedBox(height: 4),
               if (onClose != null)
                 _RailItem(
-                  icon: Icons.keyboard_double_arrow_left_rounded,
+                  icon: LucideIcons.chevronLeft,
                   label: 'Tutup',
                   onTap: onClose,
                 ),
@@ -155,6 +155,7 @@ class RightPanel extends StatelessWidget {
   const RightPanel({
     super.key,
     required this.cat,
+    required this.deviceName,
     required this.onBackToHub,
     required this.state,
     required this.onChanged,
@@ -163,6 +164,7 @@ class RightPanel extends StatelessWidget {
   });
 
   final PanelCat cat;
+  final String deviceName;
   final VoidCallback onBackToHub;
   final SessionSettings state;
   final ValueChanged<SessionSettings> onChanged;
@@ -179,7 +181,7 @@ class RightPanel extends StatelessWidget {
     final c = context.c;
     return Container(
       width: 252,
-      color: const Color(0xFF141417).withValues(alpha: 0.95),
+      color: c.overlay.withValues(alpha: 0.96),
       child: SafeArea(
         left: false,
         child: Padding(
@@ -235,22 +237,29 @@ class RightPanel extends StatelessWidget {
   }
 
   String _badge() => switch (cat) {
-    PanelCat.info => 'GAMING-RIG',
-    PanelCat.video => 'H.264',
-    PanelCat.mic => state.micOn ? 'Aktif' : 'Mati',
-    PanelCat.pointer => 'Touchpad',
-    PanelCat.network => 'P2P',
-    _ => '',
-  };
+        PanelCat.info => deviceName,
+        PanelCat.video => 'H.264',
+        PanelCat.audio => 'Stereo',
+        PanelCat.mic => state.micOn ? 'Aktif' : 'Mati',
+        PanelCat.control => 'Gaming',
+        PanelCat.pointer => 'Touchpad',
+        PanelCat.network => 'P2P',
+        PanelCat.other => 'Demo',
+      };
 
   Widget _content(BuildContext context) => switch (cat) {
-    PanelCat.info => _InfoPanel(onSelect: onSelectCat ?? (_) {}),
-    PanelCat.video => _VideoPanel(state: state, onChanged: onChanged),
-    PanelCat.mic => _MicPanel(state: state, onChanged: onChanged),
-    PanelCat.pointer => _PointerPanel(state: state, onChanged: onChanged),
-    PanelCat.network => const _NetworkPanel(),
-    _ => _Placeholder(cat: cat),
-  };
+        PanelCat.info => _InfoPanel(
+            name: deviceName,
+            onSelect: onSelectCat ?? (_) {},
+          ),
+        PanelCat.video => _VideoPanel(state: state, onChanged: onChanged),
+        PanelCat.audio => const _AudioPanel(),
+        PanelCat.mic => _MicPanel(state: state, onChanged: onChanged),
+        PanelCat.control => const _ControlPanel(),
+        PanelCat.pointer => _PointerPanel(state: state, onChanged: onChanged),
+        PanelCat.network => const _NetworkPanel(),
+        PanelCat.other => const _OtherPanel(),
+      };
 }
 
 /// Nilai pengaturan sesi yang bisa diubah live tanpa reconnect.
@@ -289,26 +298,29 @@ class SessionSettings {
     bool? invertScroll,
     bool? tapToClick,
     bool? pointerLock,
-  }) => SessionSettings(
-    bitrate: bitrate ?? this.bitrate,
-    fps: fps ?? this.fps,
-    micOn: micOn ?? this.micOn,
-    noiseSuppression: noiseSuppression ?? this.noiseSuppression,
-    aec: aec ?? this.aec,
-    agc: agc ?? this.agc,
-    micGain: micGain ?? this.micGain,
-    micVolume: micVolume ?? this.micVolume,
-    sensitivity: sensitivity ?? this.sensitivity,
-    invertScroll: invertScroll ?? this.invertScroll,
-    tapToClick: tapToClick ?? this.tapToClick,
-    pointerLock: pointerLock ?? this.pointerLock,
-  );
+  }) =>
+      SessionSettings(
+        bitrate: bitrate ?? this.bitrate,
+        fps: fps ?? this.fps,
+        micOn: micOn ?? this.micOn,
+        noiseSuppression: noiseSuppression ?? this.noiseSuppression,
+        aec: aec ?? this.aec,
+        agc: agc ?? this.agc,
+        micGain: micGain ?? this.micGain,
+        micVolume: micVolume ?? this.micVolume,
+        sensitivity: sensitivity ?? this.sensitivity,
+        invertScroll: invertScroll ?? this.invertScroll,
+        tapToClick: tapToClick ?? this.tapToClick,
+        pointerLock: pointerLock ?? this.pointerLock,
+      );
 }
 
 // ── Bagian isi panel ──────────────────────────────────────────────
 
 class _InfoPanel extends StatelessWidget {
-  const _InfoPanel({required this.onSelect});
+  const _InfoPanel({required this.name, required this.onSelect});
+
+  final String name;
   final ValueChanged<PanelCat> onSelect;
 
   @override
@@ -316,6 +328,7 @@ class _InfoPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        PanelRow('Perangkat', name),
         const PanelRow('Waktu', '24 mnt'),
         const PanelRow('Jalur', 'P2P langsung'),
         const PanelRow('Ping', '24 ms'),
@@ -332,6 +345,7 @@ class _InfoPanel extends StatelessWidget {
               PanelCat.control,
               PanelCat.pointer,
               PanelCat.network,
+              PanelCat.other,
             ])
               _CatTile(cat: cat, onTap: () => onSelect(cat)),
           ],
@@ -350,7 +364,7 @@ class _CatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Material(
-      color: Colors.white.withValues(alpha: 0.05),
+      color: c.input.withValues(alpha: 0.72),
       borderRadius: BorderRadius.circular(6),
       child: InkWell(
         onTap: onTap,
@@ -546,18 +560,72 @@ class _NetworkPanel extends StatelessWidget {
   }
 }
 
-class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.cat});
-  final PanelCat cat;
+class _AudioPanel extends StatelessWidget {
+  const _AudioPanel();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 20),
-      child: Text(
-        'Panel ${cat.label} — belum diisi di demo ini.',
-        style: TextStyle(fontSize: 10.5, color: context.c.textLow, height: 1.5),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const PanelRow('Output', 'Speaker HP ›'),
+        const PanelSub('Volume'),
+        const PanelSlider(label: 'Suara remote', value: '78 %', fraction: 0.78),
+        PanelToggle(label: 'Suara sistem', value: true, onChanged: (_) {}),
+        PanelToggle(label: 'Audio adaptif', value: true, onChanged: (_) {}),
+        PanelToggle(
+            label: 'Turunkan saat notifikasi', value: false, onChanged: (_) {}),
+        const PanelSub('Mode'),
+        const PanelSegmented(items: ['Stereo', 'Mono'], index: 0),
+      ],
+    );
+  }
+}
+
+class _ControlPanel extends StatelessWidget {
+  const _ControlPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const PanelSub('Profil kontrol'),
+        const PanelSegmented(
+          items: ['Gaming', 'Desktop', 'Custom'],
+          index: 0,
+        ),
+        const PanelRow('Mapping', 'Gaming default ›'),
+        PanelToggle(label: 'Tombol virtual', value: true, onChanged: (_) {}),
+        PanelToggle(label: 'Getaran saat tap', value: true, onChanged: (_) {}),
+        PanelToggle(
+            label: 'Tampilkan titik sentuh', value: false, onChanged: (_) {}),
+        const PanelSub('Layout'),
+        const PanelRow('Keyboard', 'Split ›'),
+        const PanelRow('Pointer', 'Touchpad ›'),
+      ],
+    );
+  }
+}
+
+class _OtherPanel extends StatelessWidget {
+  const _OtherPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PanelToggle(label: 'Overlay performa', value: true, onChanged: (_) {}),
+        PanelToggle(
+            label: 'Jaga layar tetap aktif', value: true, onChanged: (_) {}),
+        PanelToggle(
+            label: 'Kunci orientasi landscape', value: true, onChanged: (_) {}),
+        const PanelSub('Tentang sesi'),
+        const PanelRow('Mode', 'Demo UI'),
+        const PanelRow('Versi aplikasi', '1.0.0+2'),
+        const PanelRow('WebRTC', 'Belum tersambung'),
+      ],
     );
   }
 }
@@ -772,7 +840,7 @@ class VuMeter extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: i < level
                       ? (i >= total - 2 ? AppColors.warning : AppColors.success)
-                      : Colors.white.withValues(alpha: 0.08),
+                      : context.c.textLow.withValues(alpha: 0.20),
                   borderRadius: BorderRadius.circular(1),
                 ),
               ),

@@ -7,10 +7,10 @@ import '../../widgets/brand.dart';
 
 /// Splash pembuka XyDesk.
 ///
-/// Urutannya sengaja dibuat seperti identitas produk:
-/// 1. logo muncul bersama ripple melingkar,
-/// 2. logo bergeser ke kiri,
-/// 3. wordmark "XyDesk" masuk dari kanan.
+/// Urutannya dibuat seperti identitas produk:
+/// 1. logo dirakit dari skala kecil bersama ripple,
+/// 2. logo meluncur ke kanan sebentar,
+/// 3. logo swipe kembali ke kiri sambil wordmark "XyDesk" muncul halus.
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
@@ -35,6 +35,14 @@ class _SplashPageState extends ConsumerState<SplashPage>
     return ((value - start) / (end - start)).clamp(0.0, 1.0).toDouble();
   }
 
+  double _logoX(double value) {
+    // Logo dirakit di tengah, bergerak sedikit ke kanan, lalu swipe ke kiri
+    // untuk membuka ruang wordmark.
+    final right = Curves.easeOutCubic.transform(_phase(value, 0.36, 0.54));
+    final left = Curves.easeInOutCubic.transform(_phase(value, 0.54, 0.80));
+    return right * 42 - left * 100;
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -45,7 +53,10 @@ class _SplashPageState extends ConsumerState<SplashPage>
         backgroundColor: c.bg,
         body: const Center(
           child: _SplashLockup(
-            logoSlide: 1,
+            logoX: -58,
+            logoScale: 1,
+            logoOpacity: 1,
+            logoRotation: 0,
             wordmarkOpacity: 1,
             wordmarkSlide: 0,
           ),
@@ -60,13 +71,12 @@ class _SplashPageState extends ConsumerState<SplashPage>
           animation: _ctrl,
           builder: (context, _) {
             final t = _ctrl.value;
-            final logoSlide = Curves.easeOutCubic.transform(
-              _phase(t, 0.38, 0.70),
+            final assembled = Curves.easeOutCubic.transform(
+              _phase(t, 0.02, 0.36),
             );
             final wordmarkOpacity = Curves.easeOutCubic.transform(
-              _phase(t, 0.50, 0.78),
+              _phase(t, 0.58, 0.86),
             );
-            final wordmarkSlide = 18 * (1 - wordmarkOpacity);
             final rippleFade = 1 - _phase(t, 0.58, 0.86);
 
             return Stack(
@@ -79,9 +89,12 @@ class _SplashPageState extends ConsumerState<SplashPage>
                     color: c.accent,
                   ),
                 _SplashLockup(
-                  logoSlide: logoSlide,
+                  logoX: _logoX(t),
+                  logoScale: 0.72 + assembled * 0.28,
+                  logoOpacity: assembled,
+                  logoRotation: 0.04 * (1 - assembled),
                   wordmarkOpacity: wordmarkOpacity,
-                  wordmarkSlide: wordmarkSlide,
+                  wordmarkSlide: 18 * (1 - wordmarkOpacity),
                 ),
               ],
             );
@@ -117,10 +130,7 @@ class _Ripple extends StatelessWidget {
           height: 118,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(
-              color: color,
-              width: 2,
-            ),
+            border: Border.all(color: color, width: 2),
           ),
         ),
       ),
@@ -131,12 +141,18 @@ class _Ripple extends StatelessWidget {
 /// Lockup horizontal untuk fase akhir splash.
 class _SplashLockup extends StatelessWidget {
   const _SplashLockup({
-    required this.logoSlide,
+    required this.logoX,
+    required this.logoScale,
+    required this.logoOpacity,
+    required this.logoRotation,
     required this.wordmarkOpacity,
     required this.wordmarkSlide,
   });
 
-  final double logoSlide;
+  final double logoX;
+  final double logoScale;
+  final double logoOpacity;
+  final double logoRotation;
   final double wordmarkOpacity;
   final double wordmarkSlide;
 
@@ -150,8 +166,17 @@ class _SplashLockup extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Transform.translate(
-            offset: Offset(-58 * logoSlide, 0),
-            child: const BrandLogo(size: 84),
+            offset: Offset(logoX, 0),
+            child: Transform.rotate(
+              angle: logoRotation,
+              child: Opacity(
+                opacity: logoOpacity,
+                child: Transform.scale(
+                  scale: logoScale,
+                  child: const BrandLogo(size: 84),
+                ),
+              ),
+            ),
           ),
           Positioned(
             left: 130,

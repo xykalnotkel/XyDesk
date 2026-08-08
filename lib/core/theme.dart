@@ -119,9 +119,10 @@ class AppTheme {
         filled: true,
         fillColor: p.input,
         hintStyle: TextStyle(color: p.textLow, fontSize: 14),
+        constraints: const BoxConstraints(minHeight: 56),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 13,
+          horizontal: 16,
+          vertical: 0,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(R.lg),
@@ -166,7 +167,35 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: p.accent,
+          minimumSize: const Size(48, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(R.md),
+          ),
           textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(50),
+          foregroundColor: p.textHi,
+          side: BorderSide(color: p.textLow.withValues(alpha: 0.30)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(R.lg),
+          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(R.md),
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(R.lg),
         ),
       ),
 

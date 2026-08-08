@@ -120,7 +120,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: context.c.bg,
       body: _connecting
           ? _ConnectingView(name: widget.deviceName)
           : Stack(
@@ -137,7 +137,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                 _fade(
                   top: 10,
                   left: _leftRail ? 56 : 12,
-                  child: const _StatsOverlay(),
+                  child: _StatsOverlay(name: widget.deviceName),
                 ),
 
                 // Panah kiri-atas → buka bilah kiri
@@ -250,6 +250,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                   bottom: 0,
                   child: RightPanel(
                     cat: _panel ?? PanelCat.info,
+                    deviceName: widget.deviceName,
                     state: _settings,
                     onChanged: (s) => setState(() => _settings = s),
                     onBackToHub: () => setState(() => _panel = PanelCat.info),
@@ -353,7 +354,7 @@ class _ConnectingView extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      color: const Color(0xFF131315),
+      color: context.c.bg,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 330),
@@ -412,7 +413,7 @@ class _Step extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: active ? c.accentSoft : Colors.white.withValues(alpha: 0.04),
+        color: active ? c.accentSoft : c.raised.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -503,12 +504,15 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
 }
 
 class _StatsOverlay extends StatelessWidget {
-  const _StatsOverlay();
+  const _StatsOverlay({required this.name});
+
+  final String name;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return Opacity(
-      opacity: 0.6,
+      opacity: 0.72,
       child: Row(
         children: [
           Container(
@@ -521,11 +525,20 @@ class _StatsOverlay extends StatelessWidget {
           ),
           const SizedBox(width: 7),
           Text(
+            name,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w600,
+              color: c.textHi,
+            ),
+          ),
+          const SizedBox(width: 9),
+          Text(
             '24 ms  60 fps  12 Mbps',
             style: TextStyle(
               fontSize: 9.5,
               fontFamily: 'monospace',
-              color: context.c.textLow,
+              color: c.textMid,
             ),
           ),
         ],
@@ -558,7 +571,7 @@ class _OverlayIcon extends StatelessWidget {
       child: Material(
         color: active
             ? c.accent.withValues(alpha: 0.9)
-            : const Color(0xFF1B1B1E).withValues(alpha: 0.82),
+            : c.overlay.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(R.sm),
         child: InkWell(
           onTap: onTap,
@@ -584,10 +597,11 @@ class _KeyboardFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return Opacity(
       opacity: 0.85,
       child: Material(
-        color: const Color(0xFF1B1B1E).withValues(alpha: 0.86),
+        color: c.overlay.withValues(alpha: 0.92),
         shape: const CircleBorder(),
         child: InkWell(
           onTap: onTap,
@@ -598,7 +612,7 @@ class _KeyboardFab extends StatelessWidget {
             child: Icon(
               LucideIcons.keyboard,
               size: 19,
-              color: context.c.textMid,
+              color: context.c.textHi,
             ),
           ),
         ),
