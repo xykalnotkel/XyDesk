@@ -9,6 +9,7 @@ import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
 import '../devices/device_model.dart';
 import '../devices/history_page.dart';
+import 'guide_page.dart';
 import '../session/session_page.dart';
 
 /// Memformat ID jadi "123 456 789" sambil user mengetik.
@@ -283,6 +284,25 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
           ],
         ),
         const SizedBox(height: Gap.xxl),
+        Center(
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'Belum tahu caranya?',
+                style: TextStyle(fontSize: 11.5, color: c.textLow),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const GuidePage()),
+                ),
+                child: const Text('Ke sini'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: Gap.lg),
         const _SupportBlock(),
       ],
     );

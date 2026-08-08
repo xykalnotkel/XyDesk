@@ -18,6 +18,10 @@ class Img {
   static const qrScan = 'assets/img/qr_scan.png';
   static const sessionControls = 'assets/img/session_controls.png';
   static const emptyDevices = 'assets/img/empty_devices.png';
+  static const billing = 'assets/img/billing.png';
+  static const guideOverview = 'assets/img/guide_overview.png';
+  static const guideClient = 'assets/img/guide_client.png';
+  static const guideHost = 'assets/img/guide_host.png';
 
   // status perangkat
   static const pcOnline = 'assets/img/pc_online.webp';

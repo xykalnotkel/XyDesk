@@ -11,6 +11,7 @@ import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
 import '../../widgets/seamless.dart';
 import '../auth/legal_page.dart';
+import 'billing_page.dart';
 import 'permissions_page.dart';
 
 class AccountPage extends ConsumerWidget {
@@ -118,6 +119,19 @@ class AccountPage extends ConsumerWidget {
           icon: LucideIcons.bug,
           value: s.showDevLog,
           onChanged: ref.read(settingsProvider.notifier).setShowDevLog,
+        ),
+
+        // ── Langganan ──
+        const SectionLabel('Langganan'),
+        ListRow(
+          title: 'XyDesk Premium',
+          subtitle: 'Paket, benefit, dan billing',
+          icon: LucideIcons.crown,
+          value: 'Free',
+          trailing: Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const BillingPage()),
+          ),
         ),
 
         // ── Sistem ──
