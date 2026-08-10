@@ -58,3 +58,4 @@ ios/Runner/GoogleService-Info.plist
 /macos/
 /ios/
 /web/
+.flutter-plugins

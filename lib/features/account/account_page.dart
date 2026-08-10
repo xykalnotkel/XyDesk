@@ -134,6 +134,61 @@ class AccountPage extends ConsumerWidget {
           ),
         ),
 
+        // ── Mesin Streaming & Kualitas (DXGI + NVENC / AMF) ──
+        const SectionLabel('Mesin Streaming (DXGI + NVENC / AMF)'),
+        ListRow(
+          title: 'Codec Video (GPU Hardware)',
+          subtitle: 'Pengodean akselerasi perangkat keras',
+          icon: LucideIcons.cpu,
+          value: s.codec,
+          trailing: Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
+          onTap: () => _pickCodec(context, ref),
+        ),
+        ListRow(
+          title: 'Resolusi & Target FPS',
+          subtitle: 'Kualitas video stream dari Host',
+          icon: LucideIcons.monitor,
+          value: s.resolution,
+          trailing: Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
+          onTap: () => _pickResolution(context, ref),
+        ),
+        ListRow(
+          title: 'Bitrate Maksimal',
+          subtitle: 'Alokasi bandwidth jaringan',
+          icon: LucideIcons.gauge,
+          value: '${s.bitrateMbps} Mbps',
+          trailing: Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
+          onTap: () => _pickBitrate(context, ref),
+        ),
+        _SwitchRow(
+          title: 'Mode FPS / Trackpad Relatif',
+          subtitle: 'Kunci kursor mouse di tengah untuk game FPS',
+          icon: LucideIcons.crosshair,
+          value: s.relativeMouseMode,
+          onChanged: ref.read(settingsProvider.notifier).setRelativeMouseMode,
+        ),
+        _SwitchRow(
+          title: 'Audio PC Host Streaming',
+          subtitle: 'Putar suara komputer remote di perangkat ini',
+          icon: LucideIcons.volume2,
+          value: s.audioEnabled,
+          onChanged: ref.read(settingsProvider.notifier).setAudioEnabled,
+        ),
+        _SwitchRow(
+          title: 'Microphone Passthrough',
+          subtitle: 'Kirim audio mikrofon untuk voice-chat di PC',
+          icon: LucideIcons.mic,
+          value: s.micPassthrough,
+          onChanged: ref.read(settingsProvider.notifier).setMicPassthrough,
+        ),
+        _SwitchRow(
+          title: 'Sinkronisasi Papan Klip',
+          subtitle: 'Copy-paste teks & gambar lintas perangkat',
+          icon: LucideIcons.clipboard,
+          value: s.clipboardSync,
+          onChanged: ref.read(settingsProvider.notifier).setClipboardSync,
+        ),
+
         // ── Sistem ──
         SectionLabel(context.tr('settings_system')),
         ListRow(
@@ -231,6 +286,169 @@ class AccountPage extends ConsumerWidget {
                     : null,
                 onTap: () {
                   ref.read(settingsProvider.notifier).setLang(l.code);
+                  Navigator.pop(ctx);
+                },
+              ),
+            const SizedBox(height: Gap.sm),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _pickCodec(BuildContext context, WidgetRef ref) {
+    final c = context.c;
+    final current = ref.read(settingsProvider).codec;
+    final options = [
+      ('AV1 (NVENC / AMF GPU)', 'Latensi Terendah & Bandwidth Efisien (Rekomendasi Gaming)'),
+      ('HEVC / H.265 (10-bit)', 'Warna Visual & HDR'),
+      ('H.264 (AVC Universal)', 'Kompatibilitas Maksimal Semua GPU'),
+    ];
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: c.overlay,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: Gap.md),
+            Text(
+              'Codec Video Engine',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: c.textHi,
+              ),
+            ),
+            const SizedBox(height: Gap.sm),
+            for (final opt in options)
+              ListTile(
+                dense: true,
+                title: Text(
+                  opt.$1,
+                  style: TextStyle(fontSize: 14, color: c.textHi),
+                ),
+                subtitle: Text(
+                  opt.$2,
+                  style: TextStyle(fontSize: 11, color: c.textLow),
+                ),
+                trailing: opt.$1 == current
+                    ? Icon(LucideIcons.check, size: 17, color: c.accent)
+                    : null,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).setCodec(opt.$1);
+                  Navigator.pop(ctx);
+                },
+              ),
+            const SizedBox(height: Gap.sm),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _pickResolution(BuildContext context, WidgetRef ref) {
+    final c = context.c;
+    final current = ref.read(settingsProvider).resolution;
+    final options = [
+      ('720p60 (HD)', '1280×720 • 60 FPS • Hemat Data'),
+      ('1080p60 (FHD)', '1920×1080 • 60 FPS • Rekomendasi Gaming'),
+      ('1440p120 (QHD 2K)', '2560×1440 • 120 FPS • Esport Low Latency'),
+      ('4K60 (UHD)', '3840×2160 • 60 FPS • Kualitas Studio'),
+    ];
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: c.overlay,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: Gap.md),
+            Text(
+              'Resolusi & Target FPS',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: c.textHi,
+              ),
+            ),
+            const SizedBox(height: Gap.sm),
+            for (final opt in options)
+              ListTile(
+                dense: true,
+                title: Text(
+                  opt.$1,
+                  style: TextStyle(fontSize: 14, color: c.textHi),
+                ),
+                subtitle: Text(
+                  opt.$2,
+                  style: TextStyle(fontSize: 11, color: c.textLow),
+                ),
+                trailing: opt.$1 == current
+                    ? Icon(LucideIcons.check, size: 17, color: c.accent)
+                    : null,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).setResolution(opt.$1);
+                  Navigator.pop(ctx);
+                },
+              ),
+            const SizedBox(height: Gap.sm),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _pickBitrate(BuildContext context, WidgetRef ref) {
+    final c = context.c;
+    final current = ref.read(settingsProvider).bitrateMbps;
+    final options = [
+      (10, '10 Mbps', 'Hemat Bandwidth (LAN / Wi-Fi Standar)'),
+      (25, '25 Mbps', 'Kualitas Seimbang (Rekomendasi)'),
+      (50, '50 Mbps', 'Tanpa Kompresi (LAN Gigabit)'),
+    ];
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: c.overlay,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: Gap.md),
+            Text(
+              'Bitrate Maksimal',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: c.textHi,
+              ),
+            ),
+            const SizedBox(height: Gap.sm),
+            for (final opt in options)
+              ListTile(
+                dense: true,
+                title: Text(
+                  opt.$2,
+                  style: TextStyle(fontSize: 14, color: c.textHi),
+                ),
+                subtitle: Text(
+                  opt.$3,
+                  style: TextStyle(fontSize: 11, color: c.textLow),
+                ),
+                trailing: opt.$1 == current
+                    ? Icon(LucideIcons.check, size: 17, color: c.accent)
+                    : null,
+                onTap: () {
+                  ref.read(settingsProvider.notifier).setBitrateMbps(opt.$1);
                   Navigator.pop(ctx);
                 },
               ),

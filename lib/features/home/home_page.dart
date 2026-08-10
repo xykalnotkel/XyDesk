@@ -8,6 +8,7 @@ import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
 import '../devices/device_detail_page.dart';
 import '../devices/device_model.dart';
+import '../session/session_page.dart';
 
 /// Simulasi pemuatan awal supaya skeleton terlihat.
 final _loadingProvider = FutureProvider<void>((ref) async {
@@ -142,6 +143,21 @@ class _DeviceCard extends StatelessWidget {
                 ),
                 const SizedBox(width: Gap.sm),
                 _StatusPill(device: device),
+                if (online) ...[
+                  const SizedBox(width: Gap.sm),
+                  IconButton(
+                    icon: Icon(LucideIcons.play, size: 18, color: c.accent),
+                    tooltip: 'Mulai Sesi Langsung',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SessionPage(
+                          deviceName: device.name,
+                          deviceId: device.id,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

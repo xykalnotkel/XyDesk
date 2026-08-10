@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n_bridge.dart';
+import '../../core/store.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 
@@ -466,16 +467,19 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
   }
 }
 
-class _StatsOverlay extends StatelessWidget {
+class _StatsOverlay extends ConsumerWidget {
   const _StatsOverlay({required this.name});
 
   final String name;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
+    final s = ref.watch(settingsProvider);
+    final codecShort = s.codec.split(' ')[0];
+    final resShort = s.resolution.split(' ')[0];
     return Opacity(
-      opacity: 0.72,
+      opacity: 0.85,
       child: Row(
         children: [
           Container(
@@ -497,7 +501,7 @@ class _StatsOverlay extends StatelessWidget {
           ),
           const SizedBox(width: 9),
           Text(
-            '24 ms  60 fps  12 Mbps',
+            '8 ms  $resShort  $codecShort (NVENC)  ${s.bitrateMbps} Mbps',
             style: TextStyle(
               fontSize: 9.5,
               fontFamily: 'monospace',

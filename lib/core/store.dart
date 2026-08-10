@@ -57,7 +57,7 @@ class Store {
 final storeProvider = Provider<Store>((_) => throw UnimplementedError());
 
 // ══════════════════════════════════════════════════════════
-//  Pengaturan aplikasi
+//  Pengaturan aplikasi (termasuk Mesin Streaming & Kualitas Audio/Video)
 // ══════════════════════════════════════════════════════════
 
 @immutable
@@ -69,6 +69,13 @@ class AppSettings {
     this.highRefresh = true,
     this.showDevLog = true,
     this.reduceMotion = false,
+    this.codec = 'AV1 (NVENC / AMF GPU)',
+    this.resolution = '1080p60 (FHD)',
+    this.bitrateMbps = 25,
+    this.relativeMouseMode = false,
+    this.audioEnabled = true,
+    this.micPassthrough = false,
+    this.clipboardSync = true,
   });
 
   final ThemeMode themeMode;
@@ -77,6 +84,13 @@ class AppSettings {
   final bool highRefresh;
   final bool showDevLog;
   final bool reduceMotion;
+  final String codec;
+  final String resolution;
+  final int bitrateMbps;
+  final bool relativeMouseMode;
+  final bool audioEnabled;
+  final bool micPassthrough;
+  final bool clipboardSync;
 
   AppSettings copyWith({
     ThemeMode? themeMode,
@@ -85,6 +99,13 @@ class AppSettings {
     bool? highRefresh,
     bool? showDevLog,
     bool? reduceMotion,
+    String? codec,
+    String? resolution,
+    int? bitrateMbps,
+    bool? relativeMouseMode,
+    bool? audioEnabled,
+    bool? micPassthrough,
+    bool? clipboardSync,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     langCode: langCode ?? this.langCode,
@@ -92,6 +113,13 @@ class AppSettings {
     highRefresh: highRefresh ?? this.highRefresh,
     showDevLog: showDevLog ?? this.showDevLog,
     reduceMotion: reduceMotion ?? this.reduceMotion,
+    codec: codec ?? this.codec,
+    resolution: resolution ?? this.resolution,
+    bitrateMbps: bitrateMbps ?? this.bitrateMbps,
+    relativeMouseMode: relativeMouseMode ?? this.relativeMouseMode,
+    audioEnabled: audioEnabled ?? this.audioEnabled,
+    micPassthrough: micPassthrough ?? this.micPassthrough,
+    clipboardSync: clipboardSync ?? this.clipboardSync,
   );
 }
 
@@ -110,11 +138,18 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       highRefresh: _s.getBool('high_refresh', def: true),
       showDevLog: _s.getBool('show_devlog', def: true),
       reduceMotion: _s.getBool('reduce_motion'),
+      codec: _s.getStr('stream_codec') ?? 'AV1 (NVENC / AMF GPU)',
+      resolution: _s.getStr('stream_res') ?? '1080p60 (FHD)',
+      bitrateMbps: _s.getI('stream_bitrate', def: 25),
+      relativeMouseMode: _s.getBool('stream_relative_mouse', def: false),
+      audioEnabled: _s.getBool('stream_audio', def: true),
+      micPassthrough: _s.getBool('stream_mic', def: false),
+      clipboardSync: _s.getBool('stream_clipboard', def: true),
     );
     DevLog.i(
       'settings',
       'Dimuat',
-      'tema=${state.themeMode.name} bahasa=${state.langCode}',
+      'tema=${state.themeMode.name} bahasa=${state.langCode} codec=${state.codec}',
     );
   }
 
@@ -148,6 +183,45 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> setReduceMotion(bool v) async {
     state = state.copyWith(reduceMotion: v);
     await _s.setBool('reduce_motion', v);
+  }
+
+  Future<void> setCodec(String c) async {
+    state = state.copyWith(codec: c);
+    await _s.setStr('stream_codec', c);
+    DevLog.i('settings', 'Codec diubah', c);
+  }
+
+  Future<void> setResolution(String r) async {
+    state = state.copyWith(resolution: r);
+    await _s.setStr('stream_res', r);
+    DevLog.i('settings', 'Resolusi diubah', r);
+  }
+
+  Future<void> setBitrateMbps(int b) async {
+    state = state.copyWith(bitrateMbps: b);
+    await _s.setI('stream_bitrate', b);
+    DevLog.i('settings', 'Bitrate diubah', '$b Mbps');
+  }
+
+  Future<void> setRelativeMouseMode(bool v) async {
+    state = state.copyWith(relativeMouseMode: v);
+    await _s.setBool('stream_relative_mouse', v);
+    DevLog.i('settings', 'Relative mouse', '$v');
+  }
+
+  Future<void> setAudioEnabled(bool v) async {
+    state = state.copyWith(audioEnabled: v);
+    await _s.setBool('stream_audio', v);
+  }
+
+  Future<void> setMicPassthrough(bool v) async {
+    state = state.copyWith(micPassthrough: v);
+    await _s.setBool('stream_mic', v);
+  }
+
+  Future<void> setClipboardSync(bool v) async {
+    state = state.copyWith(clipboardSync: v);
+    await _s.setBool('stream_clipboard', v);
   }
 }
 

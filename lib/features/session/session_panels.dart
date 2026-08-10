@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/l10n_bridge.dart';
+import '../../core/store.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/tokens.dart';
@@ -160,7 +162,7 @@ class _RailItem extends StatelessWidget {
 }
 
 /// Panel kanan — isi berganti sesuai kategori terpilih.
-class RightPanel extends StatelessWidget {
+class RightPanel extends ConsumerWidget {
   const RightPanel({
     super.key,
     required this.cat,
@@ -186,7 +188,7 @@ class RightPanel extends StatelessWidget {
   final ValueChanged<PanelCat>? onSelectCat;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -237,7 +239,7 @@ class RightPanel extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      _badge(),
+                      _badge(ref),
                       style: TextStyle(fontSize: 9.5, color: c.textLow),
                     ),
                   ],
@@ -253,16 +255,19 @@ class RightPanel extends StatelessWidget {
     );
   }
 
-  String _badge() => switch (cat) {
-        PanelCat.info => deviceName,
-        PanelCat.video => 'H.264',
-        PanelCat.audio => 'Stereo',
-        PanelCat.mic => state.micOn ? 'Aktif' : 'Mati',
-        PanelCat.control => 'Gaming',
-        PanelCat.pointer => 'Touchpad',
-        PanelCat.network => 'P2P',
-        PanelCat.other => 'Demo',
-      };
+  String _badge(WidgetRef ref) {
+    final s = ref.watch(settingsProvider);
+    return switch (cat) {
+      PanelCat.info => deviceName,
+      PanelCat.video => s.codec.split(' ')[0],
+      PanelCat.audio => s.audioEnabled ? 'Aktif' : 'Mute',
+      PanelCat.mic => s.micPassthrough ? 'Aktif' : 'Mati',
+      PanelCat.control => 'Gaming',
+      PanelCat.pointer => s.relativeMouseMode ? 'FPS Lock' : 'Touch',
+      PanelCat.network => 'P2P',
+      PanelCat.other => 'Demo',
+    };
+  }
 
   Widget _content(BuildContext context) => switch (cat) {
         PanelCat.info => _InfoPanel(
@@ -410,13 +415,15 @@ class _CatTile extends StatelessWidget {
   }
 }
 
-class _VideoPanel extends StatelessWidget {
+class _VideoPanel extends ConsumerWidget {
   const _VideoPanel({required this.state, required this.onChanged});
   final SessionSettings state;
   final ValueChanged<SessionSettings> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(settingsProvider);
+    final codecShort = s.codec.split(' ')[0];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -427,15 +434,17 @@ class _VideoPanel extends StatelessWidget {
         ),
         PanelSlider(
           label: 'Bitrate',
-          value: '${state.bitrate.round()} Mbps',
-          fraction: state.bitrate / 50,
-          onChanged: (v) => onChanged(state.copyWith(bitrate: v * 50)),
+          value: '${s.bitrateMbps} Mbps',
+          fraction: s.bitrateMbps / 50,
+          onChanged: (v) => ref
+              .read(settingsProvider.notifier)
+              .setBitrateMbps((v * 50).clamp(5, 50).round()),
         ),
         const PanelSub('FPS'),
         const PanelSegmented(items: ['30', '60', '120'], index: 1),
         const PanelSub('Resolusi'),
         const PanelSegmented(items: ['Native', '1080', '720', '480'], index: 1),
-        const PanelRow('Codec', 'H.264 ›'),
+        PanelRow('Codec', '$codecShort ›'),
         PanelToggle(
           label: context.tr('session_hw_decode'),
           value: true,

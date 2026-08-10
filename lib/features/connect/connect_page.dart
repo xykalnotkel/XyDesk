@@ -16,10 +16,10 @@ import '../session/session_page.dart';
 class DeviceIdFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue old,
-    TextEditingValue neu,
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
   ) {
-    final digits = neu.text.replaceAll(RegExp(r'\D'), '');
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
     final capped = digits.length > 9 ? digits.substring(0, 9) : digits;
     final buf = StringBuffer();
     for (var i = 0; i < capped.length; i++) {
