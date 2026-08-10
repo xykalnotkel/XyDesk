@@ -58,7 +58,23 @@ class LeftRail extends StatelessWidget {
       },
       child: Container(
         width: 72,
-        color: c.overlay.withValues(alpha: 0.96),
+        decoration: BoxDecoration(
+          color: c.overlay.withValues(alpha: 0.92),
+          borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
+          border: Border(
+            right: BorderSide(
+              color: c.textLow.withValues(alpha: 0.18),
+              width: 0.8,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(4, 0),
+            ),
+          ],
+        ),
         child: SafeArea(
           right: false,
           child: SingleChildScrollView(
@@ -197,31 +213,52 @@ class RightPanel extends ConsumerWidget {
         if ((details.primaryVelocity ?? 0) > 260) onClose?.call();
       },
       child: Container(
-        width: 252,
-        color: c.overlay.withValues(alpha: 0.96),
+        width: 220,
+        decoration: BoxDecoration(
+          color: c.overlay.withValues(alpha: 0.92),
+          borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+          border: Border(
+            left: BorderSide(
+              color: c.textLow.withValues(alpha: 0.18),
+              width: 0.8,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(-4, 0),
+            ),
+          ],
+        ),
         child: SafeArea(
           left: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+            padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (cat != PanelCat.info)
                   InkWell(
                     onTap: onBackToHub,
+                    borderRadius: BorderRadius.circular(6),
                     child: Padding(
-                      padding: const EdgeInsets.only(bottom: 7),
+                      padding: const EdgeInsets.only(bottom: 8),
                       child: Row(
                         children: [
                           Icon(
                             LucideIcons.chevronLeft,
                             size: 13,
-                            color: c.textMid,
+                            color: c.accent,
                           ),
                           const SizedBox(width: 5),
                           Text(
                             'Kembali ke kategori',
-                            style: TextStyle(fontSize: 10, color: c.textMid),
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w500,
+                              color: c.accent,
+                            ),
                           ),
                         ],
                       ),
@@ -229,24 +266,48 @@ class RightPanel extends ConsumerWidget {
                   ),
                 Row(
                   children: [
+                    Container(
+                      width: 3,
+                      height: 12,
+                      margin: const EdgeInsets.only(right: 7),
+                      decoration: BoxDecoration(
+                        color: c.accent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                     Text(
                       cat.label,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w600,
                         color: c.textHi,
                       ),
                     ),
                     const Spacer(),
-                    Text(
-                      _badge(ref),
-                      style: TextStyle(fontSize: 9.5, color: c.textLow),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: c.textHi.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _badge(ref),
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
+                          color: c.textMid,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Expanded(
-                    child: SingleChildScrollView(child: _content(context))),
+                  child: SingleChildScrollView(child: _content(context)),
+                ),
               ],
             ),
           ),

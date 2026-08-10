@@ -133,13 +133,13 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
   String _demoName(String id) {
     switch (id) {
       case '123456789':
-        return 'GAMING-RIG';
+        return 'XYCLOUD-RTX4090-01';
       case '234567890':
-        return 'LAPTOP-ASUS';
+        return 'XYCLOUD-RTX4080-02';
       case '345678901':
-        return 'OFFICE-PC';
+        return 'XYCLOUD-PRO-WORK-01';
       case '456789012':
-        return 'MAC-STUDIO';
+        return 'XYCLOUD-ESPORT-360HZ';
       default:
         return 'PC-${id.substring(id.length - 4)}';
     }

@@ -571,34 +571,45 @@ class _PressableKey extends StatefulWidget {
 class _PressableKeyState extends State<_PressableKey> {
   bool _down = false;
 
+  void _trigger() {
+    HapticFeedback.lightImpact();
+    widget.onTap();
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => setState(() => _down = true),
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) {
+        setState(() => _down = true);
+        _trigger();
+      },
       onTapUp: (_) => setState(() => _down = false),
       onTapCancel: () => setState(() => _down = false),
-      onTap: widget.onTap,
       child: AnimatedScale(
-        scale: _down ? 0.95 : 1,
-        duration: const Duration(milliseconds: 90),
+        scale: _down ? 0.94 : 1,
+        duration: const Duration(milliseconds: 45),
         child: Container(
           height: 40,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: _down
-                ? context.c.textHi.withValues(alpha: 0.16)
+                ? context.c.accent.withValues(alpha: 0.35)
                 : widget.background,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
-              color: context.c.textLow.withValues(alpha: 0.20),
-              width: 0.7,
+              color: _down
+                  ? context.c.accent
+                  : context.c.textLow.withValues(alpha: 0.22),
+              width: _down ? 1.2 : 0.7,
             ),
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
+              if (!_down)
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.22),
+                  blurRadius: 3,
+                  offset: const Offset(0, 1.5),
+                ),
             ],
           ),
           child: widget.child,
