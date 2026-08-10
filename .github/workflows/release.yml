@@ -30,7 +30,7 @@ jobs:
           cache: true
 
       - run: flutter pub get
-      - run: flutter build apk --release
+      - run: flutter build apk --release --target-platform=android-arm,android-arm64
 
       - name: Siapkan artefak
         run: |

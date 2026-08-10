@@ -13,15 +13,15 @@ class Img {
   static const logo = 'assets/img/logo.png';
 
   // ilustrasi flow mockup baru (background transparan)
-  static const onboarding = 'assets/img/onboarding.png';
-  static const pairSuccess = 'assets/img/pair_success.png';
-  static const qrScan = 'assets/img/qr_scan.png';
-  static const sessionControls = 'assets/img/session_controls.png';
-  static const emptyDevices = 'assets/img/empty_devices.png';
-  static const billing = 'assets/img/billing.png';
-  static const guideOverview = 'assets/img/guide_overview.png';
-  static const guideClient = 'assets/img/guide_client.png';
-  static const guideHost = 'assets/img/guide_host.png';
+  static const onboarding = 'assets/img/onboarding.webp';
+  static const pairSuccess = 'assets/img/pair_success.webp';
+  static const qrScan = 'assets/img/qr_scan.webp';
+  static const sessionControls = 'assets/img/session_controls.webp';
+  static const emptyDevices = 'assets/img/empty_devices.webp';
+  static const billing = 'assets/img/billing.webp';
+  static const guideOverview = 'assets/img/guide_overview.webp';
+  static const guideClient = 'assets/img/guide_client.webp';
+  static const guideHost = 'assets/img/guide_host.webp';
 
   // status perangkat
   static const pcOnline = 'assets/img/pc_online.webp';

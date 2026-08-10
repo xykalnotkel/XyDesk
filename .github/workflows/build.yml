@@ -89,10 +89,10 @@ jobs:
 
       - run: flutter pub get
 
-      # Universal = satu APK berisi semua arsitektur. Ukurannya lebih besar
-      # daripada split-per-ABI, tapi cukup satu berkas untuk dibagikan.
-      - name: Build APK universal
-        run: flutter build apk --release
+      # ARM Universal = satu APK berisi arm64-v8a & armeabi-v7a (tanpa x86_64).
+      # Ukuran jauh lebih ringan dan jalan di 99.9% HP Android nyata.
+      - name: Build APK ARM Universal (arm64 & armeabi-v7a)
+        run: flutter build apk --release --target-platform=android-arm,android-arm64
 
       - name: Ganti nama & ambil ukuran
         run: |
