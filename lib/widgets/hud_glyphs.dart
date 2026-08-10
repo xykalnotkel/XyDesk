@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../core/tokens.dart';
 
 /// Glyph HUD XyDesk — versi Flutter dari `hudsvg.py`.
 ///
@@ -550,46 +552,79 @@ class HudButton extends StatefulWidget {
 class _HudButtonState extends State<HudButton> {
   bool _down = false;
 
+  bool get _isMouseBtn =>
+      widget.glyph == HudGlyph.mouseLeft ||
+      widget.glyph == HudGlyph.mouseRight ||
+      widget.glyph == HudGlyph.mouseMiddle ||
+      widget.glyph == HudGlyph.scrollUp ||
+      widget.glyph == HudGlyph.scrollDown ||
+      widget.glyph == HudGlyph.scrollBoth;
+
+  void _trigger() {
+    HapticFeedback.lightImpact();
+    widget.onTap?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
+    final isMouse = _isMouseBtn;
+
     return Opacity(
       opacity: widget.opacity,
       child: GestureDetector(
-        onTapDown: (_) => setState(() => _down = true),
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) {
+          setState(() => _down = true);
+          _trigger();
+        },
         onTapUp: (_) => setState(() => _down = false),
         onTapCancel: () => setState(() => _down = false),
-        onTap: widget.onTap,
         child: AnimatedScale(
-          scale: _down ? 0.96 : 1,
-          duration: const Duration(milliseconds: 100),
+          scale: _down ? 0.92 : 1,
+          duration: const Duration(milliseconds: 55),
           child: Container(
             width: widget.size.width,
             height: widget.size.height,
-            decoration: BoxDecoration(
-              color: _down
-                  ? Colors.white.withValues(alpha: 0.14)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.34),
-                width: widget.strokeWidth,
-              ),
-            ),
+            alignment: Alignment.center,
+            decoration: isMouse
+                ? null // Gaperlu bulat atau kotak, cukup UI icon & teks saja
+                : BoxDecoration(
+                    color: _down
+                        ? c.accent.withValues(alpha: 0.35)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999), // HARUS BULAT, Gada yang kotak!
+                    border: Border.all(
+                      color: _down
+                          ? c.accent
+                          : Colors.white.withValues(alpha: 0.38),
+                      width: widget.strokeWidth,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.30),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 HudIcon(
                   widget.glyph,
-                  size: 17,
+                  size: isMouse ? 20 : 17,
+                  color: _down ? c.accent : Colors.white,
                   strokeWidth: widget.strokeWidth,
                 ),
                 const SizedBox(height: 3),
                 Text(
                   widget.label,
-                  style: const TextStyle(
-                    fontSize: 7.5,
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w600,
                     height: 1,
-                    color: Color(0xFFA0A0A8),
+                    color: _down ? c.accent : const Color(0xFFC0C0C8),
                   ),
                 ),
               ],

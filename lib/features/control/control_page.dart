@@ -7,6 +7,7 @@ import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/hud_glyphs.dart';
 import '../../widgets/seamless.dart';
+import 'control_editor_page.dart';
 
 /// Profil pemetaan kontrol yang tersimpan.
 class ControlProfile {
@@ -134,8 +135,10 @@ class ControlPage extends ConsumerWidget {
   }
 
   void _openEditor(BuildContext context, ControlProfile p) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Editor "${p.name}" — segera hadir')),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ControlMappingEditorPage(profile: p),
+      ),
     );
   }
 

@@ -36,11 +36,11 @@ class _SplashPageState extends ConsumerState<SplashPage>
   }
 
   double _logoX(double value) {
-    // Logo dirakit di tengah, bergerak sedikit ke kanan, lalu swipe ke kiri
-    // untuk membuka ruang wordmark.
-    final right = Curves.easeOutCubic.transform(_phase(value, 0.36, 0.54));
-    final left = Curves.easeInOutCubic.transform(_phase(value, 0.54, 0.80));
-    return right * 42 - left * 100;
+    // Logo dirakit di tengah, geser jauh ke kanan (+85px), lalu usap ke kiri
+    // secara dramatis (-60px) untuk membuka dan 'menyapu' wordmark XyDesk.
+    final right = Curves.easeOutCubic.transform(_phase(value, 0.32, 0.54));
+    final left = Curves.easeInOutCubic.transform(_phase(value, 0.54, 0.82));
+    return right * 85 - left * 145;
   }
 
   @override
@@ -53,7 +53,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
         backgroundColor: c.bg,
         body: const Center(
           child: _SplashLockup(
-            logoX: -58,
+            logoX: -60,
             logoScale: 1,
             logoOpacity: 1,
             logoRotation: 0,
@@ -72,19 +72,21 @@ class _SplashPageState extends ConsumerState<SplashPage>
           builder: (context, _) {
             final t = _ctrl.value;
             final assembled = Curves.easeOutCubic.transform(
-              _phase(t, 0.02, 0.36),
+              _phase(t, 0.02, 0.32),
             );
+            // Teks muncul persis BERSAMAAN dengan usapan logo ke kiri (0.54 - 0.82)
+            // sehingga seolah-olah teks dibuka/disapu oleh gerakan logo.
             final wordmarkOpacity = Curves.easeOutCubic.transform(
-              _phase(t, 0.58, 0.86),
+              _phase(t, 0.54, 0.82),
             );
-            final rippleFade = 1 - _phase(t, 0.58, 0.86);
+            final rippleFade = 1 - _phase(t, 0.56, 0.84);
 
             return Stack(
               alignment: Alignment.center,
               children: [
                 for (var i = 0; i < 3; i++)
                   _SnakeRipple(
-                    phase: _phase(t, i * 0.14, 0.58),
+                    phase: _phase(t, i * 0.14, 0.56),
                     opacity: rippleFade,
                     color: c.accent,
                   ),
