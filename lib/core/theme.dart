@@ -125,29 +125,29 @@ class AppTheme {
           vertical: 0,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.lg),
+          borderRadius: BorderRadius.circular(999),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.lg),
+          borderRadius: BorderRadius.circular(999),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.lg),
+          borderRadius: BorderRadius.circular(999),
           borderSide: BorderSide(color: p.accent, width: 1),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.lg),
+          borderRadius: BorderRadius.circular(999),
           borderSide: const BorderSide(color: AppColors.danger, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.lg),
+          borderRadius: BorderRadius.circular(999),
           borderSide: const BorderSide(color: AppColors.danger, width: 1),
         ),
         errorStyle: const TextStyle(color: AppColors.danger, fontSize: 11.5),
       ),
 
-      // ── Tombol: solid, TANPA gradient ──
+      // ── Tombol: solid, TANPA gradient, FULLY ROUNDED ──
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: p.accent,
@@ -159,7 +159,7 @@ class AppTheme {
           minimumSize: const Size.fromHeight(50),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.lg),
+            borderRadius: BorderRadius.circular(999),
           ),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
@@ -170,7 +170,7 @@ class AppTheme {
           minimumSize: const Size(48, 44),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.md),
+            borderRadius: BorderRadius.circular(999),
           ),
           textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
         ),
@@ -181,7 +181,7 @@ class AppTheme {
           foregroundColor: p.textHi,
           side: BorderSide(color: p.textLow.withValues(alpha: 0.30)),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.lg),
+            borderRadius: BorderRadius.circular(999),
           ),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
@@ -189,13 +189,13 @@ class AppTheme {
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.md),
+            borderRadius: BorderRadius.circular(999),
           ),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(R.lg),
+          borderRadius: BorderRadius.circular(999),
         ),
       ),
 

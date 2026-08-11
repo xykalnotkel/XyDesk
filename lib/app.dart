@@ -155,12 +155,12 @@ class _AppShellState extends ConsumerState<AppShell> {
         destinations: [
           NavigationDestination(
             icon: Image.asset(
-              'assets/libraryicons/nav_home_inactive.png',
+              'assets/libraryicons/nav_home_inactive.webp',
               width: 26,
               height: 26,
             ),
             selectedIcon: Image.asset(
-              'assets/libraryicons/nav_home_active.png',
+              'assets/libraryicons/nav_home_active.webp',
               width: 26,
               height: 26,
             ),
@@ -168,12 +168,12 @@ class _AppShellState extends ConsumerState<AppShell> {
           ),
           NavigationDestination(
             icon: Image.asset(
-              'assets/libraryicons/nav_connect_inactive.png',
+              'assets/libraryicons/nav_connect_inactive.webp',
               width: 26,
               height: 26,
             ),
             selectedIcon: Image.asset(
-              'assets/libraryicons/nav_connect_active.png',
+              'assets/libraryicons/nav_connect_active.webp',
               width: 26,
               height: 26,
             ),
@@ -181,12 +181,12 @@ class _AppShellState extends ConsumerState<AppShell> {
           ),
           NavigationDestination(
             icon: Image.asset(
-              'assets/libraryicons/nav_control_inactive.png',
+              'assets/libraryicons/nav_control_inactive.webp',
               width: 26,
               height: 26,
             ),
             selectedIcon: Image.asset(
-              'assets/libraryicons/nav_control_active.png',
+              'assets/libraryicons/nav_control_active.webp',
               width: 26,
               height: 26,
             ),
@@ -194,12 +194,12 @@ class _AppShellState extends ConsumerState<AppShell> {
           ),
           NavigationDestination(
             icon: Image.asset(
-              'assets/libraryicons/nav_account_inactive.png',
+              'assets/libraryicons/nav_account_inactive.webp',
               width: 26,
               height: 26,
             ),
             selectedIcon: Image.asset(
-              'assets/libraryicons/nav_account_active.png',
+              'assets/libraryicons/nav_account_active.webp',
               width: 26,
               height: 26,
             ),

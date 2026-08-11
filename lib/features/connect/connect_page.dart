@@ -480,21 +480,21 @@ class _SupportBlock extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _SocialTile(
-              asset: 'assets/libraryicons/social_telegram.png',
+              asset: 'assets/libraryicons/social_telegram.webp',
               url: _kTelegram,
               appUrl: _kTelegramApp,
               label: 'Telegram',
             ),
             SizedBox(width: 12),
             _SocialTile(
-              asset: 'assets/libraryicons/social_whatsapp.png',
+              asset: 'assets/libraryicons/social_whatsapp.webp',
               url: _kWhatsApp,
               appUrl: _kWhatsAppApp,
               label: 'WhatsApp',
             ),
             SizedBox(width: 12),
             _SocialTile(
-              asset: 'assets/libraryicons/social_tiktok.png',
+              asset: 'assets/libraryicons/social_tiktok.webp',
               url: _kTikTok,
               appUrl: _kTikTokApp,
               label: 'TikTok',

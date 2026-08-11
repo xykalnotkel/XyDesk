@@ -80,7 +80,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         ),
         const SizedBox(height: Gap.h32),
         _AuthButton(
-          icon: LucideIcons.globe,
+          leading: const GoogleBrandIcon(size: 22),
           label: context.tr('auth_google'),
           primary: true,
           busy: _busy,
@@ -88,18 +88,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         ),
         const SizedBox(height: Gap.md),
         _AuthButton(
-          icon: LucideIcons.mail,
+          leading: const EmailBrandIcon(size: 22),
           label: context.tr('auth_email'),
           onTap: () => setState(() => _emailMode = true),
         ),
-        const SizedBox(height: Gap.lg),
-        Center(
-          child: TextButton(
-            onPressed: () async {
-              await ref.read(authProvider.notifier).signInGuest();
-            },
-            child: Text(context.tr('auth_guest')),
-          ),
+        const SizedBox(height: Gap.md),
+        _AuthButton(
+          leading: const GuestBrandIcon(size: 22),
+          label: context.tr('auth_guest'),
+          onTap: () async {
+            await ref.read(authProvider.notifier).signInGuest();
+          },
         ),
         const SizedBox(height: Gap.xxl),
         const _LegalNote(),
@@ -383,14 +382,14 @@ class _OtpBoxes extends StatelessWidget {
 
 class _AuthButton extends StatelessWidget {
   const _AuthButton({
-    required this.icon,
+    this.leading,
     required this.label,
     required this.onTap,
     this.primary = false,
     this.busy = false,
   });
 
-  final IconData icon;
+  final Widget? leading;
   final String label;
   final VoidCallback onTap;
   final bool primary;
@@ -401,10 +400,10 @@ class _AuthButton extends StatelessWidget {
     final c = context.c;
     return Material(
       color: primary ? c.accent : c.input,
-      borderRadius: BorderRadius.circular(R.lg),
+      borderRadius: BorderRadius.circular(999), // HARUS FULLY ROUNDED
       child: InkWell(
         onTap: busy ? null : onTap,
-        borderRadius: BorderRadius.circular(R.lg),
+        borderRadius: BorderRadius.circular(999),
         child: SizedBox(
           height: 50,
           child: Row(
@@ -412,8 +411,8 @@ class _AuthButton extends StatelessWidget {
             children: [
               if (busy)
                 const _Spinner()
-              else
-                Icon(icon, size: 18, color: primary ? Colors.white : c.textMid),
+              else if (leading != null)
+                leading!,
               const SizedBox(width: Gap.md),
               Text(
                 label,
@@ -427,6 +426,116 @@ class _AuthButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class GoogleBrandIcon extends StatelessWidget {
+  const GoogleBrandIcon({super.key, this.size = 22});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(painter: _GoogleLogoPainter()),
+    );
+  }
+}
+
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final strokeWidth = size.width * 0.22;
+    final rect = Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
+
+    final blue = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+    final red = Paint()
+      ..color = const Color(0xFFEA4335)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+    final yellow = Paint()
+      ..color = const Color(0xFFFBBC05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+    final green = Paint()
+      ..color = const Color(0xFF34A853)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    // 4 bagian arc warna resmi Google
+    canvas.drawArc(rect, -0.78, 1.35, false, red);
+    canvas.drawArc(rect, 2.35, 1.15, false, yellow);
+    canvas.drawArc(rect, 0.78, 1.57, false, green);
+    canvas.drawArc(rect, -0.78, -1.05, false, blue);
+
+    // Crossbar horizontal biru G
+    final barPaint = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(
+      Rect.fromLTRB(
+        center.dx,
+        center.dy - strokeWidth / 2,
+        center.dx + radius * 0.95,
+        center.dy + strokeWidth / 2,
+      ),
+      barPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class EmailBrandIcon extends StatelessWidget {
+  const EmailBrandIcon({super.key, this.size = 22});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [Color(0xFF5B7FE8), Color(0xFF3D63D8)],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Icon(LucideIcons.mail, size: size * 0.58, color: Colors.white),
+    );
+  }
+}
+
+class GuestBrandIcon extends StatelessWidget {
+  const GuestBrandIcon({super.key, this.size = 22});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [Color(0xFF10B981), Color(0xFF059669)],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Icon(LucideIcons.userCheck, size: size * 0.58, color: Colors.white),
     );
   }
 }
