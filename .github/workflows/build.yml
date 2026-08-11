@@ -109,20 +109,116 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+  # ── 3. Windows Native Desktop (EXE) ──
+  windows:
+    name: Windows Desktop (EXE)
+    needs: check
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build Windows EXE
+        run: flutter build windows --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-Windows-EXE
+          path: build/windows/x64/runner/Release/*
+          retention-days: 30
+
+  # ── 4. iOS App Bundle (Unsigned untuk AltStore / Simulator) ──
+  ios:
+    name: iOS App Bundle (Unsigned)
+    needs: check
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build iOS Unsigned App
+        run: flutter build ios --no-codesign --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-iOS-App
+          path: build/ios/iphoneos/Runner.app/
+          retention-days: 30
+
+  # ── 5. Web Application Bundle ──
+  web:
+    name: Web Application
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build Web Release
+        run: flutter build web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-Web
+          path: build/web/*
+          retention-days: 30
+
+  # ── 6. Linux Native Desktop ──
+  linux:
+    name: Linux Desktop (x64)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux Build Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang cmake ninja-build libgtk-3-dev pkg-config
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build Linux Desktop
+        run: flutter build linux --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-Linux-x64
+          path: build/linux/x64/release/bundle/*
+          retention-days: 30
+
   summary:
     name: Ringkasan
-    needs: [android]
+    needs: [android, windows, ios, web, linux]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Tulis ringkasan
         run: |
           {
-            echo "## Hasil Build XyDesk"
+            echo "## Hasil Build Multi-Platform XyDesk"
             echo ""
             echo "| Target | Status | Artefak |"
             echo "|---|---|---|"
-            echo "| Android APK universal | ${{ needs.android.result }} | \`XyDesk-APK\` |"
+            echo "| Android APK (ARM Universal) | ${{ needs.android.result }} | \`XyDesk-Android-APK\` |"
+            echo "| Windows Desktop (EXE)       | ${{ needs.windows.result }} | \`XyDesk-Windows-EXE\` |"
+            echo "| iOS App (Unsigned App)      | ${{ needs.ios.result }}     | \`XyDesk-iOS-App\`     |"
+            echo "| Web Application             | ${{ needs.web.result }}     | \`XyDesk-Web\`         |"
+            echo "| Linux Desktop (x64)         | ${{ needs.linux.result }}   | \`XyDesk-Linux-x64\`   |"
             echo ""
-            echo "Unduh dari bagian **Artifacts** di bawah halaman ini."
+            echo "Unduh seluruh artefak dari bagian **Artifacts** di bawah halaman ini."
           } >> $GITHUB_STEP_SUMMARY
