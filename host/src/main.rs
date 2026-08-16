@@ -240,9 +240,25 @@ async fn main() -> Result<()> {
                                     }
                                     Box::pin(async {})
                                 }));
+                                // Injeksi di thread blocking terpisah: SendInput
+                                // adalah syscall sinkron — jangan blokir runtime
+                                // async yang juga melayani video/ICE.
+                                let (inj_tx, inj_rx) =
+                                    std::sync::mpsc::channel::<xydesk_host::input::InputEvent>();
+                                std::thread::spawn(move || {
+                                    let injector = xydesk_host::input::Injector::new();
+                                    while let Ok(ev) = inj_rx.recv() {
+                                        if !injector.inject(&ev) {
+                                            eprintln!("[xydesk-host] inject gagal: {ev:?}");
+                                        }
+                                    }
+                                });
                                 while let Some(data) = rx.recv().await {
-                                    // TODO(Fase 0): teruskan ke injector (SendInput).
-                                    println!("[xydesk-host] input {} byte", data.len());
+                                    // Pesan rusak dibuang diam-diam (decode → None):
+                                    // input korup tidak boleh mematikan sesi.
+                                    if let Some(ev) = xydesk_host::input::decode(&data) {
+                                        let _ = inj_tx.send(ev);
+                                    }
                                 }
                             }
                             Err(e) => eprintln!("[xydesk-host] input channel gagal: {e:#}"),
@@ -264,7 +280,7 @@ async fn main() -> Result<()> {
                         };
                         println!("[xydesk-host] track video siap — streaming");
 
-                        let mut frames = xydesk_host::screen::spawn_frame_source();
+                        let frames = xydesk_host::screen::spawn_frame_source();
                         while let Ok(data) = frames.recv() {
                             let sample = webrtc::media::Sample {
                                 data: bytes::Bytes::from(data),

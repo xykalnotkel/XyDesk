@@ -9,6 +9,7 @@ import {
   signJwt, verifyJwt, validateEmail, generateOtp, hashOtp, timingSafeEqual,
   verifyGoogleIdToken, authConstants,
 } from './auth.js';
+import { otpEmailHtml, otpEmailText } from './email_otp.js';
 
 const { OTP_TTL, OTP_RESEND_COOLDOWN, OTP_MAX_ATTEMPTS } = authConstants;
 
@@ -86,6 +87,7 @@ export class AuthStore {
       return;
     }
     const from = this.env.RESEND_FROM || 'XyDesk <onboarding@resend.dev>';
+    const validMinutes = Math.round(OTP_TTL / 60);
     try {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -96,11 +98,9 @@ export class AuthStore {
         body: JSON.stringify({
           from,
           to: [email],
-          subject: 'Kode verifikasi XyDesk',
-          html: `<p>Halo,</p>
-                 <p>Kode verifikasi XyDesk kamu:</p>
-                 <h2 style="letter-spacing:4px">${otp}</h2>
-                 <p>Berlaku 10 menit. Jangan bagikan kode ini ke siapa pun.</p>`,
+          subject: `${otp} — kode verifikasi XyDesk`,
+          html: otpEmailHtml({ otp, validMinutes }),
+          text: otpEmailText({ otp, validMinutes }),
         }),
       });
       if (!res.ok) console.error(`[auth] gagal kirim email: ${res.status}`);

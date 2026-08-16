@@ -25,6 +25,8 @@ openh264 = "0.9.8"
 # ── Capture layar (Windows-only) — DXGI Desktop Duplication ──
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-capture = "2.0"
+# Injeksi input via SendInput (user-mode, tanpa driver) — lihat src/input.rs
+windows = { version = "0.61", features = ["Win32_UI_Input_KeyboardAndMouse"] }
 
 # ── Fase capture/encode (Windows-only) — aktifkan saat implementasi ──
 # windows-capture = "1"              # DXGI Desktop Duplication

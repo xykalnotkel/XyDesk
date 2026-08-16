@@ -5,5 +5,6 @@
 //! (sumber video).
 
 pub mod identity;
+pub mod input;
 pub mod screen;
 pub mod session;

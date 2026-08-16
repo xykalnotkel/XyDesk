@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
@@ -181,10 +182,15 @@ class RtcService {
     }
   }
 
-  /// Kirim event input ke host lewat data channel.
-  void sendInput(String event) {
-    if (_inputChannel?.state == RTCDataChannelState.RTCDataChannelOpen) {
-      _inputChannel?.send(RTCDataChannelMessage(jsonEncode(event)));
+  /// Kirim event input BINER ke host (encode via [InputCodec]).
+  ///
+  /// Protokol 8-byte little-endian — lihat `input_codec.dart` &
+  /// `host/src/input.rs`. Dipanggil sangat sering (mouse move >100/dtk):
+  /// tanpa JSON, tanpa alokasi string.
+  void sendInput(Uint8List event) {
+    final ch = _inputChannel;
+    if (ch?.state == RTCDataChannelState.RTCDataChannelOpen) {
+      ch?.send(RTCDataChannelMessage.fromBinary(event));
     }
   }
 

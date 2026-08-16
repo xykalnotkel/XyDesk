@@ -77,8 +77,19 @@ export function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').toLowerCase());
 }
 
+// OTP 6 digit — HARUS CSPRNG (crypto), bukan Math.random() yang bisa
+// diprediksi. Rejection sampling agar distribusi 000000-999999 seragam
+// (tanpa modulo bias).
 export function generateOtp() {
-  return String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
+  const range = 1_000_000;
+  const limit = Math.floor(0x100000000 / range) * range; // 4294000000
+  const buf = new Uint32Array(1);
+  let v;
+  do {
+    crypto.getRandomValues(buf);
+    v = buf[0];
+  } while (v >= limit);
+  return String(v % range).padStart(6, '0');
 }
 
 // Hash OTP agar tidak tersimpan polos (bocor storage ≠ bocor kode).
