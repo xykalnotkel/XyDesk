@@ -11,6 +11,7 @@ import 'core/theme.dart';
 import 'core/tokens.dart';
 import 'features/account/account_page.dart';
 import 'features/auth/auth_screen.dart';
+import 'features/auth/auth_service.dart';
 import 'features/connect/connect_page.dart';
 import 'features/control/control_page.dart';
 import 'features/devices/history_page.dart';
@@ -83,21 +84,59 @@ class _Boot extends ConsumerStatefulWidget {
 }
 
 class _BootState extends ConsumerState<_Boot> {
-  bool _revealed = false;
+  bool _splashDone = false;
+  bool _sessionChecked = false;
 
   @override
   void initState() {
     super.initState();
-    // "Kurangi animasi" aktif -> langsung ke app, tanpa splash beriak.
+    // "Kurangi animasi" aktif -> tanpa jeda splash, tetapi validasi sesi tetap
+    // diselesaikan agar token invalid tidak sempat membuka shell aplikasi.
     final reduce = ref.read(settingsProvider).reduceMotion;
-    Future.delayed(Duration(milliseconds: reduce ? 0 : 1900), () {
-      if (mounted) setState(() => _revealed = true);
+    Future<void>.delayed(Duration(milliseconds: reduce ? 0 : 1900), () {
+      _splashDone = true;
+      _revealWhenReady();
     });
+    _validateRestoredSession();
+  }
+
+  Future<void> _validateRestoredSession() async {
+    final session = ref.read(authProvider);
+    final token = session.token;
+    if (!session.isGuest && token != null) {
+      try {
+        final user = await ref.read(authServiceProvider).me(token);
+        await ref
+            .read(authProvider.notifier)
+            .refreshAuthenticatedProfile(email: user.email, name: user.name);
+        DevLog.ok('auth', 'Sesi dipastikan oleh server', user.email);
+      } on AuthException catch (error) {
+        if (error.statusCode == 401 || error.statusCode == 404) {
+          // Token kedaluwarsa/tidak dikenali bersifat definitif.
+          await ref.read(authProvider.notifier).signOut();
+          DevLog.w('auth', 'Sesi tersimpan dibuang', error.code);
+        } else {
+          // Timeout, jaringan putus, dan 5xx tidak boleh mengeluarkan pengguna.
+          DevLog.w('auth', 'Validasi sesi ditunda', error.code);
+        }
+      } catch (error, stack) {
+        // Error platform/jaringan yang tidak terduga juga dianggap sementara.
+        DevLog.e('auth', 'Validasi sesi gagal sementara', error, stack);
+      }
+    }
+    _sessionChecked = true;
+    _revealWhenReady();
+  }
+
+  void _revealWhenReady() {
+    if (mounted && _splashDone && _sessionChecked) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    return _revealed ? const _Gate() : const SplashPage();
+    return _splashDone && _sessionChecked
+        ? const _Gate()
+        : const SplashPage();
   }
 }
 

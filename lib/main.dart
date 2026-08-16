@@ -8,6 +8,7 @@ import 'app.dart';
 import 'core/devlog.dart';
 import 'core/responsive.dart';
 import 'core/store.dart';
+import 'features/auth/session_vault.dart';
 
 void main() {
   // runZonedGuarded menangkap error async yang lolos dari framework,
@@ -32,10 +33,23 @@ void main() {
       DevLog.i('display', 'Refresh rate', '${DisplayMode.current.round()} Hz');
 
       final store = await Store.open();
+      final sessionVault = SecureSessionVault();
+      String? initialToken;
+      try {
+        initialToken = await sessionVault.readToken();
+      } catch (error, stack) {
+        // Secure storage dapat gagal bila OS belum siap/penyimpanan rusak.
+        // Aplikasi tetap dibuka, tetapi meminta pengguna masuk kembali.
+        DevLog.e('auth', 'Gagal membaca sesi aman', error, stack);
+      }
 
       runApp(
         ProviderScope(
-          overrides: [storeProvider.overrideWithValue(store)],
+          overrides: [
+            storeProvider.overrideWithValue(store),
+            sessionVaultProvider.overrideWithValue(sessionVault),
+            initialAuthTokenProvider.overrideWithValue(initialToken),
+          ],
           child: const XyDeskApp(),
         ),
       );

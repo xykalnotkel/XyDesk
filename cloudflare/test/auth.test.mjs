@@ -48,6 +48,21 @@ async function main() {
     if (r.status !== 400 || r.body.error !== 'invalid-email') throw new Error(`ingin 400, dapat ${r.status}`);
   });
 
+  await test('CORS preflight auth -> 204 + header', async () => {
+    const r = await fetch(`${BASE}/auth/request-otp`, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://app.xystudio.my.id',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type',
+      },
+    });
+    if (r.status !== 204) throw new Error(`ingin 204, dapat ${r.status}`);
+    if (r.headers.get('access-control-allow-origin') !== '*') {
+      throw new Error('header Access-Control-Allow-Origin tidak ada');
+    }
+  });
+
   await test('request-otp: email valid -> 200 + dev_otp', async () => {
     const r = await post('/auth/request-otp', { email: uniq('a') });
     if (r.status !== 200 || !r.body.dev_otp || !/^\d{6}$/.test(r.body.dev_otp)) {

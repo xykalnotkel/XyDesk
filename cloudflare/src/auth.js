@@ -156,5 +156,9 @@ export async function verifyGoogleIdToken(env, idToken) {
 
   const email = (claims.email || '').toLowerCase();
   if (!email) return { ok: false, status: 401, error: 'no-email' };
-  return { ok: true, email, name: claims.name || null };
+  if (claims.email_verified !== true && claims.email_verified !== 'true') {
+    return { ok: false, status: 401, error: 'email-not-verified' };
+  }
+  if (!claims.sub) return { ok: false, status: 401, error: 'missing-sub' };
+  return { ok: true, email, name: claims.name || null, sub: String(claims.sub) };
 }

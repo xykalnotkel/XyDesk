@@ -22,6 +22,11 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Flutter Web mengirim preflight sebelum POST JSON/Authorization.
+    if (request.method === 'OPTIONS' && path.startsWith('/auth/')) {
+      return corsResponse(new Response(null, { status: 204 }), request, env);
+    }
+
     if (path === '/healthz') {
       return new Response('ok', { status: 200 });
     }
@@ -36,7 +41,8 @@ export default {
 
     if (path.startsWith('/auth/')) {
       const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'));
-      return stub.fetch(request);
+      const response = await stub.fetch(request);
+      return corsResponse(response, request, env);
     }
 
     if (path !== '/ws') {
@@ -64,6 +70,34 @@ export default {
     return stub.fetch(request, { headers });
   },
 };
+
+// ── CORS untuk aplikasi Web ─────────────────────────────────────────────
+// CORS_ORIGINS dapat berisi daftar origin dipisah koma. Default `*` aman untuk
+// API bearer-token ini karena Worker tidak memakai cookie/credentials browser.
+function corsResponse(response, request, env) {
+  const origin = request.headers.get('Origin') || '';
+  const configured = String(env.CORS_ORIGINS || '*')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+  const allowOrigin = configured.includes('*')
+    ? '*'
+    : configured.includes(origin)
+      ? origin
+      : '';
+
+  const headers = new Headers(response.headers);
+  if (allowOrigin) headers.set('Access-Control-Allow-Origin', allowOrigin);
+  headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  headers.set('Access-Control-Max-Age', '86400');
+  headers.append('Vary', 'Origin');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 // ── Token helpers ────────────────────────────────────────────────────────
 

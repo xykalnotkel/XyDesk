@@ -18,6 +18,7 @@ permissions:
 
 env:
   FLUTTER_VERSION: '3.44.9'
+  GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
 
 jobs:
   # ── 1. Gerbang mutu: kalau gagal, build tidak dijalankan sama sekali ──
@@ -35,6 +36,13 @@ jobs:
           cache: true
 
       - run: flutter pub get
+
+      - name: Simpan dependency lock hasil resolusi
+        uses: actions/upload-artifact@v4
+        with:
+          name: resolved-pubspec-lock
+          path: pubspec.lock
+          retention-days: 3
 
       - name: Cek & rapikan format
         run: dart format lib test
@@ -112,7 +120,10 @@ jobs:
       # ARM Universal = satu APK berisi arm64-v8a & armeabi-v7a (tanpa x86_64).
       # Ukuran jauh lebih ringan dan jalan di 99.9% HP Android nyata.
       - name: Build APK ARM Universal (arm64 & armeabi-v7a)
-        run: flutter build apk --release --target-platform=android-arm,android-arm64
+        run: >-
+          flutter build apk --release
+          --target-platform=android-arm,android-arm64
+          --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
 
       - name: Ganti nama & ambil ukuran
         run: |
@@ -146,7 +157,7 @@ jobs:
       - name: Configure Windows Platform
         run: flutter create . --platforms=windows
       - name: Build Windows EXE
-        run: flutter build windows --release
+        run: flutter build windows --release --dart-define=GOOGLE_CLIENT_ID="${{ vars.GOOGLE_CLIENT_ID }}"
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Windows-EXE
@@ -170,7 +181,7 @@ jobs:
       - name: Configure Web Platform
         run: flutter create . --platforms=web
       - name: Build Web Release
-        run: flutter build web --release
+        run: flutter build web --release --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Web

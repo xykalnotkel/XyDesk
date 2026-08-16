@@ -30,6 +30,11 @@ export class AuthStore {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    if (!this.secret()) {
+      console.error('[auth] AUTH_SECRET/XYDESK_SECRET belum dikonfigurasi');
+      return json({ error: 'auth-not-configured' }, 503);
+    }
+
     if (path === '/auth/request-otp' && request.method === 'POST') {
       return this.requestOtp(request);
     }
@@ -73,8 +78,13 @@ export class AuthStore {
     const body = { ok: true, expires_in: OTP_TTL, resend_in: OTP_RESEND_COOLDOWN };
     if (this.env.XYDESK_DEV === 'true' || this.env.DEV === 'true') body.dev_otp = otp;
 
-    // Kirim OTP via email (Resend). Bila belum dikonfigurasi, lewati (mode dev).
-    await this.sendOtpEmail(email, otp);
+    // Kirim OTP via email. Produksi tidak boleh mengaku berhasil bila Resend
+    // belum dikonfigurasi/gagal, karena pengguna akan menunggu kode yang tak ada.
+    const delivery = await this.sendOtpEmail(email, otp);
+    if (!delivery.ok) {
+      await this.ctx.storage.delete(`otp:${email}`);
+      return json({ error: delivery.error }, delivery.status);
+    }
 
     return json(body, 200);
   }
@@ -83,8 +93,12 @@ export class AuthStore {
   // Butuh secret RESEND_API_KEY; RESEND_FROM opsional (default onboarding@resend.dev).
   async sendOtpEmail(email, otp) {
     if (!this.env.RESEND_API_KEY) {
-      if (this.env.XYDESK_DEV === 'true') console.log(`[auth] (dev) OTP ${email}: ${otp}`);
-      return;
+      if (this.env.XYDESK_DEV === 'true' || this.env.DEV === 'true') {
+        console.log(`[auth] (dev) OTP ${email}: ${otp}`);
+        return { ok: true };
+      }
+      console.error('[auth] RESEND_API_KEY belum dikonfigurasi');
+      return { ok: false, status: 503, error: 'email-not-configured' };
     }
     const from = this.env.RESEND_FROM || 'XyDesk <onboarding@resend.dev>';
     const validMinutes = Math.round(OTP_TTL / 60);
@@ -103,9 +117,14 @@ export class AuthStore {
           text: otpEmailText({ otp, validMinutes }),
         }),
       });
-      if (!res.ok) console.error(`[auth] gagal kirim email: ${res.status}`);
+      if (!res.ok) {
+        console.error(`[auth] gagal kirim email: ${res.status}`);
+        return { ok: false, status: 502, error: 'email-send-failed' };
+      }
+      return { ok: true };
     } catch (e) {
       console.error(`[auth] error kirim email: ${e}`);
+      return { ok: false, status: 502, error: 'email-send-failed' };
     }
   }
 
@@ -159,11 +178,28 @@ export class AuthStore {
     const now = Math.floor(Date.now() / 1000);
     let user = await this.ctx.storage.get(`user:${email}`);
     if (!user) {
-      user = { id: crypto.randomUUID(), email, name: r.name || null, created_at: now };
+      user = {
+        id: crypto.randomUUID(),
+        email,
+        name: r.name || null,
+        google_sub: r.sub,
+        created_at: now,
+      };
       await this.ctx.storage.put(`user:${email}`, user);
-    } else if (r.name && !user.name) {
-      user.name = r.name;
-      await this.ctx.storage.put(`user:${email}`, user);
+    } else {
+      if (user.google_sub && user.google_sub !== r.sub) {
+        return json({ error: 'identity-conflict' }, 409);
+      }
+      let changed = false;
+      if (!user.google_sub) {
+        user.google_sub = r.sub;
+        changed = true;
+      }
+      if (r.name && !user.name) {
+        user.name = r.name;
+        changed = true;
+      }
+      if (changed) await this.ctx.storage.put(`user:${email}`, user);
     }
 
     const token = await signJwt({ sub: user.id, email: user.email }, this.secret());

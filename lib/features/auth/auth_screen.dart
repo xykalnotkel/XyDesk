@@ -10,13 +10,10 @@ import '../../core/l10n_bridge.dart';
 import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
+import 'auth_service.dart';
 import 'legal_page.dart';
 
-/// Layar masuk: Google atau Email + OTP.
-///
-/// Verifikasi OTP di sini masih tiruan (kode apa pun 6 digit diterima,
-/// dan kode contoh dicetak ke DevLog). Alurnya sudah lengkap sehingga
-/// tinggal menyambungkan ke backend nanti tanpa mengubah UI.
+/// Layar masuk asli: Google ID token atau Email + OTP melalui Cloudflare.
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
@@ -27,6 +24,7 @@ class AuthScreen extends ConsumerStatefulWidget {
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _emailMode = false;
   bool _busy = false;
+  String? _error;
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +84,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           busy: _busy,
           onTap: _signInGoogle,
         ),
+        if (_error != null) ...[
+          const SizedBox(height: Gap.sm),
+          Text(
+            _error!,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11.5, color: c.danger),
+          ),
+        ],
         const SizedBox(height: Gap.md),
         _AuthButton(
           leading: const EmailBrandIcon(size: 22),
@@ -107,19 +113,34 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> _signInGoogle() async {
-    setState(() => _busy = true);
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     DevLog.i('auth', 'Mulai masuk dengan Google');
-    // Tiruan: penundaan singkat agar keadaan sibuk terlihat.
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    await ref
-        .read(authProvider.notifier)
-        .signInEmail('pengguna@gmail.com', name: 'Pengguna XyDesk');
-    DevLog.w(
-      'auth',
-      'Google Sign-In masih tiruan',
-      'Sambungkan google_sign_in + Firebase untuk produksi',
-    );
+    try {
+      final session = await ref.read(googleAuthServiceProvider).signIn();
+      if (!mounted) return;
+      await ref
+          .read(authProvider.notifier)
+          .signInAuthenticated(
+            email: session.user.email,
+            name: session.user.name,
+            token: session.token,
+          );
+      DevLog.ok('auth', 'Google Sign-In berhasil', session.user.email);
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message);
+      DevLog.w('auth', 'Google Sign-In gagal', error.code);
+    } catch (error, stack) {
+      if (!mounted) return;
+      setState(() => _error = 'Google Sign-In gagal. Coba lagi.');
+      DevLog.e('auth', 'Google Sign-In gagal', error, stack);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }
 
@@ -143,7 +164,6 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
   String? _error;
   int _cooldown = 0;
   Timer? _timer;
-  String _sentCode = '';
 
   static final _emailRe = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$');
 
@@ -160,8 +180,8 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
     super.dispose();
   }
 
-  void _startCooldown() {
-    setState(() => _cooldown = 60);
+  void _startCooldown(int seconds) {
+    setState(() => _cooldown = seconds);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return t.cancel();
@@ -171,8 +191,9 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
   }
 
   Future<void> _send() async {
-    final e = _email.text.trim();
-    if (!_emailRe.hasMatch(e)) {
+    if (_busy) return;
+    final email = _email.text.trim();
+    if (!_emailRe.hasMatch(email)) {
       setState(() => _error = context.tr('auth_invalid_email'));
       return;
     }
@@ -180,44 +201,66 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
       _busy = true;
       _error = null;
     });
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
 
-    // Kode tiruan; dicetak ke DevLog supaya bisa diuji tanpa email nyata.
-    _sentCode = '123456';
-    DevLog.ok('auth', 'Kode OTP dikirim (tiruan)', 'ke $e — kode: $_sentCode');
-
-    setState(() {
-      _busy = false;
-      _otpSent = true;
-    });
-    _startCooldown();
-    _otpFocus.first.requestFocus();
+    try {
+      final result = await ref.read(authServiceProvider).requestOtp(email);
+      if (!mounted) return;
+      setState(() => _otpSent = true);
+      _startCooldown(result.resendIn);
+      _otpFocus.first.requestFocus();
+      DevLog.ok('auth', 'Kode OTP dikirim', email);
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message);
+      DevLog.w('auth', 'Gagal meminta OTP', error.code);
+    } catch (error, stack) {
+      if (!mounted) return;
+      setState(() => _error = 'Kode OTP gagal dikirim. Coba lagi.');
+      DevLog.e('auth', 'Gagal meminta OTP', error, stack);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _verify() async {
+    if (_busy) return;
     final code = _otp.map((c) => c.text).join();
     if (code.length < 6) return;
     setState(() {
       _busy = true;
       _error = null;
     });
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
 
-    if (code != _sentCode) {
-      setState(() {
-        _busy = false;
-        _error = context.tr('auth_invalid_otp');
-      });
-      DevLog.w('auth', 'Kode OTP salah', 'dimasukkan: $code');
-      for (final c in _otp) {
-        c.clear();
+    try {
+      final session = await ref
+          .read(authServiceProvider)
+          .verifyOtp(_email.text.trim(), code);
+      if (!mounted) return;
+      await ref
+          .read(authProvider.notifier)
+          .signInAuthenticated(
+            email: session.user.email,
+            name: session.user.name,
+            token: session.token,
+          );
+      DevLog.ok('auth', 'OTP berhasil diverifikasi', session.user.email);
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message);
+      DevLog.w('auth', 'Verifikasi OTP gagal', error.code);
+      if (error.code == 'wrong-otp' || error.code == 'otp-expired') {
+        for (final controller in _otp) {
+          controller.clear();
+        }
+        _otpFocus.first.requestFocus();
       }
-      _otpFocus.first.requestFocus();
-      return;
+    } catch (error, stack) {
+      if (!mounted) return;
+      setState(() => _error = 'Verifikasi gagal. Coba lagi.');
+      DevLog.e('auth', 'Verifikasi OTP gagal', error, stack);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
-    await ref.read(authProvider.notifier).signInEmail(_email.text.trim());
   }
 
   @override

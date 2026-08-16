@@ -175,13 +175,38 @@ void main() {
       expect(s.getBool('user_guest'), isTrue);
     });
 
-    test('keluar menghapus sesi', () async {
-      final s = await testStore(seed: {'user_email': 'a@b.c'});
-      final n = AuthNotifier(s);
+    test('sesi backend membutuhkan JWT dan keluar menghapus sesi', () async {
+      final s = await testStore(
+        seed: {'user_guest': false, 'user_email': 'a@b.c'},
+      );
+      final tanpaToken = AuthNotifier(s);
+      expect(tanpaToken.state.signedIn, isFalse);
+
+      await s.setStr('user_email', 'a@b.c');
+      final n = AuthNotifier(s, initialToken: 'jwt-test');
       expect(n.state.signedIn, isTrue);
+      expect(n.state.token, 'jwt-test');
       await n.signOut();
       expect(n.state.signedIn, isFalse);
       expect(s.getStr('user_email'), isNull);
+    });
+
+    test('profil /auth/me dapat memulihkan metadata dari JWT saja', () async {
+      final s = await testStore(seed: {'user_guest': false});
+      final n = AuthNotifier(s, initialToken: 'restored-jwt');
+      expect(n.state.signedIn, isFalse);
+      expect(n.state.token, 'restored-jwt');
+
+      await n.refreshAuthenticatedProfile(
+        email: 'pulih@example.com',
+        name: 'Pulih',
+      );
+
+      expect(n.state.signedIn, isTrue);
+      expect(n.state.email, 'pulih@example.com');
+      expect(n.state.name, 'Pulih');
+      expect(n.state.token, 'restored-jwt');
+      expect(s.getStr('user_email'), 'pulih@example.com');
     });
   });
 }

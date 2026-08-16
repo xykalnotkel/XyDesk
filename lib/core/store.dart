@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../features/auth/session_vault.dart';
 import 'devlog.dart';
 import 'l10n_bridge.dart';
 
@@ -242,13 +243,21 @@ final langProvider = Provider<AppLang>((ref) {
 
 @immutable
 class UserSession {
-  const UserSession({this.email, this.name, this.isGuest = false});
+  const UserSession({
+    this.email,
+    this.name,
+    this.token,
+    this.isGuest = false,
+  });
 
   final String? email;
   final String? name;
+
+  /// JWT sesi backend. Tidak pernah ditulis ke SharedPreferences/log.
+  final String? token;
   final bool isGuest;
 
-  bool get signedIn => email != null || isGuest;
+  bool get signedIn => isGuest || (email != null && token != null);
 
   String get initial {
     if (name != null && name!.isNotEmpty) return name![0].toUpperCase();
@@ -258,44 +267,97 @@ class UserSession {
 }
 
 class AuthNotifier extends StateNotifier<UserSession> {
-  AuthNotifier(this._s) : super(const UserSession()) {
+  AuthNotifier(
+    this._s, {
+    this.initialToken,
+    SessionVault vault = const NoopSessionVault(),
+  }) : _vault = vault,
+       super(const UserSession()) {
     final email = _s.getStr('user_email');
     final guest = _s.getBool('user_guest');
-    if (email != null || guest) {
+    if (guest) {
+      state = const UserSession(isGuest: true);
+      DevLog.i('auth', 'Sesi dipulihkan', 'tamu');
+    } else if (initialToken != null) {
+      // Email hanyalah cache metadata. JWT secure storage adalah sumber sesi;
+      // `/auth/me` akan memulihkan profil bila cache SharedPreferences hilang.
       state = UserSession(
         email: email,
         name: _s.getStr('user_name'),
-        isGuest: guest,
+        token: initialToken,
       );
-      DevLog.i('auth', 'Sesi dipulihkan', email ?? 'tamu');
+      DevLog.i('auth', 'JWT backend dipulihkan', email ?? 'menunggu profil');
+    } else if (email != null) {
+      // Versi lama hanya menyimpan email tanpa JWT. Jangan mempercayai sesi
+      // lokal tersebut; bersihkan agar pengguna melakukan auth asli.
+      _s.remove('user_email');
+      _s.remove('user_name');
+      DevLog.w('auth', 'Sesi lokal lama dibuang', 'JWT tidak ditemukan');
     }
   }
 
   final Store _s;
+  final SessionVault _vault;
+  final String? initialToken;
 
-  Future<void> signInEmail(String email, {String? name}) async {
-    state = UserSession(email: email, name: name);
+  Future<void> signInAuthenticated({
+    required String email,
+    required String token,
+    String? name,
+  }) async {
+    // Simpan token lebih dahulu; jangan buka shell bila secure storage gagal.
+    await _vault.writeToken(token);
     await _s.setStr('user_email', email);
-    if (name != null) await _s.setStr('user_name', name);
+    if (name != null) {
+      await _s.setStr('user_name', name);
+    } else {
+      await _s.remove('user_name');
+    }
     await _s.setBool('user_guest', false);
-    DevLog.ok('auth', 'Masuk dengan email', email);
+    state = UserSession(email: email, name: name, token: token);
+    DevLog.ok('auth', 'Sesi backend aktif', email);
+  }
+
+  /// Memperbarui metadata dari `/auth/me` tanpa menulis ulang JWT.
+  Future<void> refreshAuthenticatedProfile({
+    required String email,
+    String? name,
+  }) async {
+    final token = state.token;
+    if (token == null) return;
+    await _s.setStr('user_email', email);
+    if (name != null) {
+      await _s.setStr('user_name', name);
+    } else {
+      await _s.remove('user_name');
+    }
+    await _s.setBool('user_guest', false);
+    state = UserSession(email: email, name: name, token: token);
   }
 
   Future<void> signInGuest() async {
-    state = const UserSession(isGuest: true);
+    await _vault.deleteToken();
+    await _s.remove('user_email');
+    await _s.remove('user_name');
     await _s.setBool('user_guest', true);
+    state = const UserSession(isGuest: true);
     DevLog.ok('auth', 'Masuk sebagai tamu');
   }
 
   Future<void> signOut() async {
-    state = const UserSession();
+    await _vault.deleteToken();
     await _s.remove('user_email');
     await _s.remove('user_name');
     await _s.setBool('user_guest', false);
+    state = const UserSession();
     DevLog.i('auth', 'Keluar');
   }
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, UserSession>((ref) {
-  return AuthNotifier(ref.watch(storeProvider));
+  return AuthNotifier(
+    ref.watch(storeProvider),
+    initialToken: ref.watch(initialAuthTokenProvider),
+    vault: ref.watch(sessionVaultProvider),
+  );
 });

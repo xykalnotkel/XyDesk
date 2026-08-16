@@ -10,6 +10,7 @@ import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
 import '../../widgets/seamless.dart';
+import '../auth/auth_service.dart';
 import '../auth/legal_page.dart';
 import 'billing_page.dart';
 import 'permissions_page.dart';
@@ -241,7 +242,10 @@ class AccountPage extends ConsumerWidget {
           title: context.tr('sign_out'),
           icon: LucideIcons.logOut,
           danger: true,
-          onTap: () => ref.read(authProvider.notifier).signOut(),
+          onTap: () async {
+            await ref.read(googleAuthServiceProvider).signOut();
+            await ref.read(authProvider.notifier).signOut();
+          },
         ),
       ],
     );
