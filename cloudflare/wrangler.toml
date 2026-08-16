@@ -15,6 +15,10 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["Hub"]
 
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["AuthStore"]
+
 # ── Variabel environment (rahasia ditaruh di wrangler secret, BUKAN di sini) ──
 #   npx wrangler secret put XYDESK_SECRET   # rahasia bersama HMAC
 #   npx wrangler secret put ADMIN_SECRET    # kunci endpoint /issue
