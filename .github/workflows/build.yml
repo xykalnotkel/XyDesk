@@ -89,6 +89,22 @@ jobs:
 
       - run: flutter pub get
 
+      # Siapkan keystore rilis (dari GitHub Secrets) + key.properties.
+      - name: Siapkan signing APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/xydesk-release.keystore
+          cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=xydesk-release.keystore
+          EOF
+
       # ARM Universal = satu APK berisi arm64-v8a & armeabi-v7a (tanpa x86_64).
       # Ukuran jauh lebih ringan dan jalan di 99.9% HP Android nyata.
       - name: Build APK ARM Universal (arm64 & armeabi-v7a)

@@ -33,6 +33,20 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Siapkan signing APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/xydesk-release.keystore
+          cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=xydesk-release.keystore
+          EOF
       - run: flutter build apk --release --target-platform=android-arm,android-arm64
       - name: Siapkan artefak
         run: |
@@ -126,5 +140,5 @@ jobs:
 
             Verifikasi unduhan dengan `SHA256SUMS.txt`.
 
-            > Build belum ditandatangani (signing menyusul). Android akan
-            > menampilkan peringatan "sumber tidak dikenal".
+            > APK ditandatangani (keystore rilis). Windows EXE belum code-signed
+            > (SmartScreen akan menampilkan peringatan "penerbit tidak dikenal").
