@@ -1,35 +1,45 @@
-// XyDesk signaling — Worker entry point.
+// XyDesk — Worker entry point (signaling + auth).
 //
 // Rute:
-//   GET /ws?id=<deviceId>&role=host|client&token=<token>   -> WebSocket ke hub
-//   GET /healthz                                            -> liveness
-//   GET /issue?purpose=<id>  (header X-Admin)               -> terbitkan token
-//   GET /turn-ice            (header X-Admin)               -> kredensial TURN (ICE servers)
+//   GET  /ws?id=<deviceId>&role=host|client&token=<token>  -> WebSocket ke hub
+//   GET  /healthz                                          -> liveness
+//   GET  /issue?purpose=<id>  (header X-Admin)             -> terbitkan token
+//   GET  /turn-ice            (header X-Admin)             -> kredensial TURN
+//   POST /auth/request-otp { email }                        -> kirim OTP
+//   POST /auth/verify-otp  { email, otp }                   -> { token } (JWT)
+//   POST /auth/google      { id_token }                     -> { token } (JWT)
+//   GET  /auth/me          (Bearer JWT)                     -> { user }
 //
-// Auth: token HMAC-SHA256 berumur 5 menit (format ts.purpose.sig), identik
-// dengan versi Go — sehingga host Rust & client Flutter TIDAK perlu diubah.
+// Auth signaling: token HMAC-SHA256 berumur 5 menit (format ts.purpose.sig).
 import { Hub } from './hub.js';
+import { AuthStore } from './authstore.js';
 
 // Wrangler mewajibkan kelas Durable Object diekspor dari entrypoint.
-export { Hub };
+export { Hub, AuthStore };
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const path = url.pathname;
 
-    if (url.pathname === '/healthz') {
+    if (path === '/healthz') {
       return new Response('ok', { status: 200 });
     }
 
-    if (url.pathname === '/issue') {
+    if (path === '/issue') {
       return handleIssue(request, url, env);
     }
 
-    if (url.pathname === '/turn-ice') {
+    if (path === '/turn-ice') {
       return handleTurnIce(request, url, env);
     }
 
-    if (url.pathname !== '/ws') {
+    if (path.startsWith('/auth/')) {
+      const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'));
+      return stub.fetch(request);
+    }
+
+    if (path !== '/ws') {
       return new Response('not found', { status: 404 });
     }
 
