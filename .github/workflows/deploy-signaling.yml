@@ -87,5 +87,5 @@ jobs:
           set_secret AUTH_SECRET "$AUTH_SECRET"
           set_secret RESEND_API_KEY "$RESEND_API_KEY"
           set_secret GOOGLE_CLIENT_ID "$GOOGLE_CLIENT_ID"
-          set_secret RESEND_FROM "$RESEND_FROM"
-          npx wrangler deploy
+          # Sender address adalah konfigurasi publik/Worker var, bukan secret.
+          npx wrangler deploy --var RESEND_FROM:"$RESEND_FROM"
