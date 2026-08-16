@@ -4,5 +4,6 @@
 //! integration test (`tests/`). Lihat `session.rs` (WebRTC) dan `screen.rs`
 //! (sumber video).
 
+pub mod identity;
 pub mod screen;
 pub mod session;

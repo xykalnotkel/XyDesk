@@ -71,9 +71,9 @@ struct Args {
     /// URL signaling server (mis. wss://signal.xystudio.my.id/ws)
     #[arg(long, default_value = "ws://localhost:8787/ws")]
     url: String,
-    /// DeviceId host ini
+    /// DeviceId host ini (opsional — otomatis digenerasi & disimpan bila kosong)
     #[arg(long)]
-    id: String,
+    id: Option<String>,
     /// Nama tampilan host
     #[arg(long, default_value = "XyDesk Host")]
     name: String,
@@ -89,12 +89,28 @@ struct Args {
 async fn main() -> Result<()> {
     let args = Args::parse();
 
+    // ── Identitas: ID perangkat (stabil) + PIN pairing (per sesi) ──
+    let device_id = args
+        .id
+        .clone()
+        .unwrap_or_else(xydesk_host::identity::load_or_create_device_id);
+    let pin = xydesk_host::identity::generate_pin();
+
     println!(
         "[xydesk-host] sumber video: {}",
         xydesk_host::screen::capture_status()
     );
+    println!();
+    println!("  ╔══════════════════════════════════════════╗");
+    println!("  ║   XyDesk Host — siap menerima koneksi    ║");
+    println!("  ╠══════════════════════════════════════════╣");
+    println!("  ║   ID perangkat : {:<24}║", device_id);
+    println!("  ║   PIN pairing  : {:<24}║", pin);
+    println!("  ╚══════════════════════════════════════════╝");
+    println!();
+    println!("  Masukkan ID + PIN ini di aplikasi XyDesk client.");
 
-    let mut req = format!("{}?id={}&role=host", args.url, args.id)
+    let mut req = format!("{}?id={}&role=host", args.url, device_id)
         .into_client_request()
         .context("URL tidak valid")?;
     req.headers_mut().insert(
@@ -109,7 +125,7 @@ async fn main() -> Result<()> {
         &mut ws,
         &Msg {
             kind: "hello".into(),
-            to: Some(args.id.clone()),
+            to: Some(device_id.clone()),
             from: Some(args.name.clone()),
             reason: Some("host".into()),
             ..Default::default()
@@ -130,18 +146,22 @@ async fn main() -> Result<()> {
         };
 
         match msg.kind.as_str() {
-            "welcome" => println!("[xydesk-host] terdaftar sebagai {}", args.id),
+            "welcome" => println!("[xydesk-host] terdaftar sebagai {}", device_id),
 
             "pair" => {
                 let from = msg.from.unwrap_or_default();
-                println!("[xydesk-host] permintaan pairing dari {from}");
-                // TODO(Fase 1): verifikasi PIN host-side (jangan auto-terima).
+                // Verifikasi PIN yang dikirim client terhadap PIN sesi ini.
+                let ok = msg.pin.as_deref() == Some(pin.as_str());
+                println!(
+                    "[xydesk-host] permintaan pairing dari {from} (PIN {})",
+                    if ok { "COCOK" } else { "SALAH" }
+                );
                 send_msg(
                     &mut ws,
                     &Msg {
                         kind: "pair-response".into(),
                         to: Some(from),
-                        accepted: Some(true),
+                        accepted: Some(ok),
                         ..Default::default()
                     },
                 )

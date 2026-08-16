@@ -2616,6 +2616,7 @@ dependencies = [
  "clap",
  "futures-util",
  "openh264",
+ "rand",
  "serde",
  "serde_json",
  "tokio",
