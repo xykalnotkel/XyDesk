@@ -22,7 +22,12 @@ placeholder sebagai ganti `RTCVideoView`.
 | Keyboard virtual (modifier sticky) | Selesai |
 | Glyph HUD (mouse, gulir, arah, switch) | Selesai |
 | CI/CD GitHub Actions | Selesai |
-| WebRTC, signaling, host app | Belum |
+| Signaling server (Cloudflare Workers + DO) | Live — `signal.xystudio.my.id` |
+| Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker |
+| TURN (kredensial Cloudflare ber-TTL) | Selesai |
+| Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Media plane terbukti (e2e encode→RTP→decode) |
+| Wiring `RTCVideoView` di client Flutter | Belum — drop-in ada di `client/`, belum disambung |
+| Benchmark latency end-to-end di jaringan nyata | Belum — prioritas berikutnya |
 
 ---
 
