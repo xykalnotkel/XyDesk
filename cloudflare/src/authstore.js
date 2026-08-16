@@ -71,8 +71,42 @@ export class AuthStore {
 
     const body = { ok: true, expires_in: OTP_TTL, resend_in: OTP_RESEND_COOLDOWN };
     if (this.env.XYDESK_DEV === 'true' || this.env.DEV === 'true') body.dev_otp = otp;
-    console.log(`[auth] OTP untuk ${email}`);
+
+    // Kirim OTP via email (Resend). Bila belum dikonfigurasi, lewati (mode dev).
+    await this.sendOtpEmail(email, otp);
+
     return json(body, 200);
+  }
+
+  // Kirim email OTP lewat Resend (gratis 3.000 email/bln, tanpa kartu).
+  // Butuh secret RESEND_API_KEY; RESEND_FROM opsional (default onboarding@resend.dev).
+  async sendOtpEmail(email, otp) {
+    if (!this.env.RESEND_API_KEY) {
+      if (this.env.XYDESK_DEV === 'true') console.log(`[auth] (dev) OTP ${email}: ${otp}`);
+      return;
+    }
+    const from = this.env.RESEND_FROM || 'XyDesk <onboarding@resend.dev>';
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from,
+          to: [email],
+          subject: 'Kode verifikasi XyDesk',
+          html: `<p>Halo,</p>
+                 <p>Kode verifikasi XyDesk kamu:</p>
+                 <h2 style="letter-spacing:4px">${otp}</h2>
+                 <p>Berlaku 10 menit. Jangan bagikan kode ini ke siapa pun.</p>`,
+        }),
+      });
+      if (!res.ok) console.error(`[auth] gagal kirim email: ${res.status}`);
+    } catch (e) {
+      console.error(`[auth] error kirim email: ${e}`);
+    }
   }
 
   async verifyOtp(request) {
