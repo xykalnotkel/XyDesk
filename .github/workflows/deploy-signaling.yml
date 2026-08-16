@@ -34,8 +34,13 @@ jobs:
 
       - name: Uji signaling (end-to-end) sebelum deploy
         working-directory: cloudflare
+        env:
+          XYDESK_SECRET: ${{ secrets.XYDESK_SECRET }}
         run: |
-          npx wrangler dev --port 8787 --ip 127.0.0.1 &
+          # .dev.vars tidak di-commit, jadi secret dipasok via --var.
+          npx wrangler dev --port 8787 --ip 127.0.0.1 \
+            --var XYDESK_SECRET:"$XYDESK_SECRET" \
+            --var ADMIN_SECRET:test-admin &
           # tunggu server siap
           for i in $(seq 1 30); do
             curl -s http://127.0.0.1:8787/healthz >/dev/null && break

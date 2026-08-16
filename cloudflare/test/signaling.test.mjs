@@ -3,7 +3,9 @@
 import { WebSocket } from 'ws';
 import { createHmac } from 'node:crypto';
 
-const SECRET = 'test-secret'; // cocok dengan .dev.vars
+// Secret dibaca dari env (di CI dipasok lewat secrets.XYDESK_SECRET, selaras
+// dengan `wrangler dev --var`). Default 'test-secret' cocok dengan .dev.vars lokal.
+const SECRET = process.env.XYDESK_SECRET || 'test-secret';
 const BASE = process.env.XYDESK_BASE || 'ws://127.0.0.1:8787';
 
 // Replika penerbit token (identik dengan /issue di worker).
