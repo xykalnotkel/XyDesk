@@ -162,10 +162,12 @@ mod windows {
             frame: &mut Frame,
             _capture_control: InternalCaptureControl,
         ) -> Result<(), Self::Error> {
-            let buffer = frame.buffer()?; // FrameBuffer (RGBA, ColorFormat::Rgba8)
-            let raw = buffer.as_raw_buffer(); // &[u8]
+            // Baca dimensi SEBELUM buffer() (buffer meminjam frame secara mut).
             let width = frame.width() as usize;
             let height = frame.height() as usize;
+
+            let mut buffer = frame.buffer()?; // FrameBuffer (RGBA, ColorFormat::Rgba8)
+            let raw = buffer.as_raw_buffer(); // &[u8]
             // Catatan: bila buffer.has_padding() true (row_pitch > width*4),
             // perlu strip padding per baris. Untuk PoC resolusi umum padding
             // biasanya nol. Lihat TODO di bawah.
