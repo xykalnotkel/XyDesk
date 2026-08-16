@@ -1,0 +1,19 @@
+# XyDesk signaling — Cloudflare Worker + Durable Object
+# Tanpa VM/VPS. Deploy: `npx wrangler deploy` (gratis, tanpa kartu kredit).
+name = "xydesk-signaling"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+# ── Durable Object: hub global (registri host + relay SDP/ICE) ──
+[durable_objects]
+bindings = [{ name = "HUB", class_name = "Hub" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hub"]
+
+# ── Variabel environment (rahasia ditaruh di wrangler secret, BUKAN di sini) ──
+#   npx wrangler secret put XYDESK_SECRET   # rahasia bersama HMAC
+#   npx wrangler secret put ADMIN_SECRET    # kunci endpoint /issue
+[vars]
+# Nama perangkat default bila klien tak mengirim nama.

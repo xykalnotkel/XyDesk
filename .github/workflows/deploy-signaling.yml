@@ -1,0 +1,55 @@
+name: Deploy Signaling (Cloudflare Workers)
+
+# Build & deploy backend signaling ke Cloudflare — tanpa VM/VPS, gratis.
+# Trigger: push ke cloudflare/** atau manual. Secret yang dibutuhkan:
+#   CLOUDFLARE_API_TOKEN  → isi dari file "CloudflareApiToken (1).txt"
+#   CLOUDFLARE_ACCOUNT_ID → ID akun Cloudflare (dashboard → Workers)
+#   XYDESK_SECRET         → openssl rand -hex 32
+#   ADMIN_SECRET          → kata sandi untuk endpoint /issue
+
+on:
+  push:
+    paths:
+      - 'cloudflare/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Worker + Durable Object
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Pasang dependensi
+        working-directory: cloudflare
+        run: npm ci
+
+      - name: Uji signaling (end-to-end) sebelum deploy
+        working-directory: cloudflare
+        run: |
+          npx wrangler dev --port 8787 --ip 127.0.0.1 &
+          # tunggu server siap
+          for i in $(seq 1 30); do
+            curl -s http://127.0.0.1:8787/healthz >/dev/null && break
+            sleep 1
+          done
+          node test/signaling.test.mjs
+
+      - name: Deploy ke Cloudflare
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # rahasia dipasang dari GitHub Secrets, TIDAK dari file .dev.vars
+          printf '%s' "${{ secrets.XYDESK_SECRET }}" | npx wrangler secret put XYDESK_SECRET
+          printf '%s' "${{ secrets.ADMIN_SECRET }}"  | npx wrangler secret put ADMIN_SECRET
+          npx wrangler deploy

@@ -1,0 +1,51 @@
+name: Build Host (Windows)
+
+# Build aplikasi host (Rust) untuk Windows. Capture/encode (DXGI + NVENC)
+# hanya bisa di-build di runner Windows. Artifact: xydesk-host.exe.
+#
+# CATATAN: saat ini host adalah scaffolding — screen.rs belum diimplementasi,
+# jadi yang di-build adalah signaling client (lintas platform). Workflow ini
+# tetap memastikan `cargo build` tidak regress setiap push.
+
+on:
+  push:
+    paths:
+      - 'host/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Host EXE (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            host/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build release
+        working-directory: host
+        run: cargo build --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xydesk-host-windows
+          path: host/target/release/xydesk-host.exe
+          if-no-files-found: error
+          retention-days: 30
