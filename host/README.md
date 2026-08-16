@@ -18,20 +18,40 @@ hanya menukar sumber frame dari pola uji ke **capture layar DXGI + NVENC**
 di Windows (GPU). Alur kode sudah disiapkan agar penggantian sumber itu
 cukup menukar implementasi `encode_next()`.
 
-## Bangun & uji
+## Identitas (ID + Password) — dipakai untuk connect dari HP
 
-```bash
-cargo build              # compile (lintas platform)
-cargo test               # e2e: dua peer WebRTC + data channel (loopback)
+Saat host dibuka, dia otomatis menampilkan:
+
 ```
+╔══════════════════════════════════════════╗
+║   ID       : 123 456 789                  ║
+║   Password : AB2CDE7F                     ║
+╚══════════════════════════════════════════╝
+```
+
+- **ID**: 9 digit acak, unik per perangkat, disimpan permanen (`~/.xydesk/device_id`).
+- **Password**: acak saat pertama dibuka, disimpan permanen (`~/.xydesk/password`).
+- **Customize password**:
+  ```bash
+  xydesk-host --set-password Rahasia123   # ganti password (min 6 karakter)
+  xydesk-host --new-password              # generasi ulang password acak
+  ```
+- ID + password inilah yang diketik pengguna di aplikasi **client (HP)** untuk pairing.
 
 ## Jalankan
 
 ```bash
-cargo run -- \
+xydesk-host \
   --url wss://signal.xystudio.my.id/ws \
-  --id gaming-pc-01 \
   --token <TOKEN>        # dari /issue
+# --id opsional: otomatis digenerasi & disimpan bila tidak diberikan
+```
+
+## Bangun & uji (dijalankan di GitHub Actions)
+
+```bash
+cargo build              # compile (lintas platform)
+cargo test               # identity + e2e dua peer WebRTC (media plane)
 ```
 
 ## Rencana implementasi sumber video (Windows)
@@ -52,8 +72,9 @@ cargo run -- \
 host/
 ├── Cargo.toml
 ├── src/
-│   ├── lib.rs       # pub mod session; pub mod screen;
+│   ├── lib.rs       # pub mod identity; pub mod screen; pub mod session;
 │   ├── main.rs      # CLI + signaling client + wiring sesi
+│   ├── identity.rs  # ID 9 digit + password pairing (persisten, customizable)
 │   ├── session.rs   # WebRTC answerer + data channel input (teruji)
 │   └── screen.rs    # sumber video (Windows DXGI — TODO)
 └── tests/

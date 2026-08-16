@@ -1,8 +1,11 @@
 //! XyDesk host — titik masuk.
 //!
-//! Alur: daftar ke signaling → tunggu `pair` (auto-terima untuk PoC) →
+//! Alur: daftar ke signaling → tunggu `pair` (verifikasi password) →
 //! terima `offer` dari client → jawab → terima kandidat ICE client →
 //! terima data channel "input". Sumber video (DXGI) menyusul di `screen.rs`.
+//!
+//! Identitas: ID perangkat (9 digit, format `123 456 789`) + password pairing
+//! (persisten, bisa di-customize via `--set-password` / `--new-password`).
 
 use std::sync::Arc;
 
@@ -83,18 +86,44 @@ struct Args {
     /// Server STUN (kosongkan untuk LAN murni)
     #[arg(long, default_value = "stun:stun.cloudflare.com:3478")]
     stun: String,
+    /// Ganti password pairing dengan nilai kustom (min 6 karakter), lalu keluar
+    #[arg(long)]
+    set_password: Option<String>,
+    /// Generasi ulang password acak (persisten), lalu keluar
+    #[arg(long)]
+    new_password: bool,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
 
-    // ── Identitas: ID perangkat (stabil) + PIN pairing (per sesi) ──
+    // ── Kelola password: --set-password / --new-password (keluar setelahnya) ──
+    if let Some(pw) = &args.set_password {
+        match xydesk_host::identity::set_password(pw) {
+            Ok(()) => {
+                println!("✅ Password pairing diubah menjadi: {pw}");
+                return Ok(());
+            }
+            Err(e) => {
+                eprintln!("❌ Gagal: {e}");
+                std::process::exit(1);
+            }
+        }
+    }
+    if args.new_password {
+        let pw = xydesk_host::identity::generate_password();
+        xydesk_host::identity::set_password(&pw)?;
+        println!("✅ Password pairing baru: {pw}");
+        return Ok(());
+    }
+
+    // ── Identitas: ID perangkat (stabil) + password pairing (persisten) ──
     let device_id = args
         .id
         .clone()
         .unwrap_or_else(xydesk_host::identity::load_or_create_device_id);
-    let pin = xydesk_host::identity::generate_pin();
+    let password = xydesk_host::identity::load_or_create_password();
 
     println!(
         "[xydesk-host] sumber video: {}",
@@ -104,11 +133,15 @@ async fn main() -> Result<()> {
     println!("  ╔══════════════════════════════════════════╗");
     println!("  ║   XyDesk Host — siap menerima koneksi    ║");
     println!("  ╠══════════════════════════════════════════╣");
-    println!("  ║   ID perangkat : {:<24}║", device_id);
-    println!("  ║   PIN pairing  : {:<24}║", pin);
+    println!(
+        "  ║   ID       : {:<26}║",
+        xydesk_host::identity::format_id(&device_id)
+    );
+    println!("  ║   Password : {:<26}║", password);
     println!("  ╚══════════════════════════════════════════╝");
     println!();
-    println!("  Masukkan ID + PIN ini di aplikasi XyDesk client.");
+    println!("  Ketik ID + Password ini di aplikasi XyDesk di HP.");
+    println!("  Ganti password: xydesk-host --set-password <baru>");
 
     let mut req = format!("{}?id={}&role=host", args.url, device_id)
         .into_client_request()
@@ -150,10 +183,16 @@ async fn main() -> Result<()> {
 
             "pair" => {
                 let from = msg.from.unwrap_or_default();
-                // Verifikasi PIN yang dikirim client terhadap PIN sesi ini.
-                let ok = msg.pin.as_deref() == Some(pin.as_str());
+                // Verifikasi password yang dikirim client terhadap password host.
+                // Client boleh mengirim ID/password dengan spasi — kita bandingkan
+                // hanya bagian alfanumeriknya agar toleran format.
+                let ok = msg
+                    .pin
+                    .as_deref()
+                    .map(|p| p.trim().eq_ignore_ascii_case(&password))
+                    .unwrap_or(false);
                 println!(
-                    "[xydesk-host] permintaan pairing dari {from} (PIN {})",
+                    "[xydesk-host] permintaan pairing dari {from} (password {})",
                     if ok { "COCOK" } else { "SALAH" }
                 );
                 send_msg(

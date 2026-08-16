@@ -104,11 +104,15 @@ class SignalingClient {
     _send(SignalMessage(type: 'hello', to: deviceId, reason: 'client'));
   }
 
+  /// Normalisasi ID perangkat: buang spasi & tanda hubung, sehingga
+  /// "123 456 789" / "123-456-789" → "123456789" (cocok dgn ID host).
+  static String normalizeId(String id) => id.replaceAll(RegExp(r'[\s\-]'), '');
+
   void sendPair(String hostId, String pin) =>
-      _send(SignalMessage(type: 'pair', to: hostId, pin: pin));
+      _send(SignalMessage(type: 'pair', to: normalizeId(hostId), pin: pin));
 
   void sendOffer(String hostId, Map<String, dynamic> sdp) =>
-      _send(SignalMessage(type: 'offer', to: hostId, sdp: sdp));
+      _send(SignalMessage(type: 'offer', to: normalizeId(hostId), sdp: sdp));
 
   void sendAnswer(String clientId, Map<String, dynamic> sdp) =>
       _send(SignalMessage(type: 'answer', to: clientId, sdp: sdp));

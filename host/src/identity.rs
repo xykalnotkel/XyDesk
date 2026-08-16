@@ -1,35 +1,99 @@
-//! Identitas host — ID perangkat stabil + PIN pairing per sesi.
+//! Identitas host — ID perangkat (9 digit) + password pairing.
 //!
-//! - **Device ID** digenerasi sekali (acak), disimpan ke `~/.xydesk/device_id`
-//!   (Windows: `%USERPROFILE%\.xydesk\device_id`). ID ini stabil antar-run,
-//!   sehingga perangkat dikenali konsisten oleh client & server signaling.
-//! - **PIN** (6 digit) digenerasi baru setiap aplikasi host dibuka. PIN ini
-//!   yang diketik pengguna di app client untuk pairing (atau discan via QR
-//!   di Fase berikutnya). PIN bersifat sesi, bukan rahasia permanen.
+//! - **Device ID**: 9 digit acak, unik per perangkat, disimpan permanen ke
+//!   `~/.xydesk/device_id` (Windows: `%USERPROFILE%\.xydesk\device_id`).
+//!   Ditampilkan berkelompok `123 456 789` agar mudah diketik di HP.
+//!   Nilai kanonik (tanpa spasi) dipakai sebagai id di signaling.
+//! - **Password**: acak saat pertama kali host dibuka, disimpan permanen ke
+//!   `~/.xydesk/password`. Bisa diganti kapan saja (customize) lewat
+//!   `--set-password` atau digenerasi ulang lewat `--new-password`.
+//!
+//! ID + password inilah yang diketik pengguna di aplikasi client (HP) untuk
+//! pairing.
 
 use std::fs;
 use std::path::PathBuf;
 
 use rand::Rng;
 
+/// Panjang ID perangkat (digit).
+pub const ID_LEN: usize = 9;
+/// Panjang minimum password.
+pub const PW_MIN_LEN: usize = 6;
+
+// Charset password: tanpa karakter yang mudah tertukar (I/O/0/1).
+const PW_CHARS: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
 /// Muat ID perangkat yang sudah ada, atau buat + simpan yang baru.
+/// Mengembalikan 9 digit (tanpa spasi).
 pub fn load_or_create_device_id() -> String {
     let path = config_dir().join("device_id");
     if let Ok(raw) = fs::read_to_string(&path) {
-        let id = raw.trim().to_string();
-        if !id.is_empty() {
+        let id: String = raw.chars().filter(|c| c.is_ascii_digit()).collect();
+        if id.len() == ID_LEN {
             return id;
         }
     }
-    let id = format!("xydesk-{:08x}", rand::thread_rng().gen::<u32>());
+    let id = generate_id();
     let _ = fs::create_dir_all(config_dir());
     let _ = fs::write(&path, &id);
     id
 }
 
-/// Generate PIN pairing 6 digit (baru setiap sesi host dibuka).
-pub fn generate_pin() -> String {
-    format!("{:06}", rand::thread_rng().gen_range(0..1_000_000))
+/// Generate ID perangkat 9 digit acak.
+pub fn generate_id() -> String {
+    let mut rng = rand::thread_rng();
+    let mut s = String::with_capacity(ID_LEN);
+    for _ in 0..ID_LEN {
+        s.push(char::from(b'0' + rng.gen_range(0..10)));
+    }
+    s
+}
+
+/// Format "123456789" → "123 456 789" (untuk ditampilkan).
+pub fn format_id(id: &str) -> String {
+    let digits: String = id.chars().filter(|c| c.is_ascii_digit()).collect();
+    digits
+        .as_bytes()
+        .chunks(3)
+        .map(|c| std::str::from_utf8(c).unwrap_or("").to_string())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Muat password yang sudah ada, atau buat + simpan yang baru.
+pub fn load_or_create_password() -> String {
+    let path = config_dir().join("password");
+    if let Ok(raw) = fs::read_to_string(&path) {
+        let pw = raw.trim().to_string();
+        if pw.len() >= PW_MIN_LEN {
+            return pw;
+        }
+    }
+    let pw = generate_password();
+    let _ = fs::create_dir_all(config_dir());
+    let _ = fs::write(&path, &pw);
+    pw
+}
+
+/// Generate password acak (8 karakter, tanpa karakter membingungkan).
+pub fn generate_password() -> String {
+    let mut rng = rand::thread_rng();
+    (0..8)
+        .map(|_| PW_CHARS[rng.gen_range(0..PW_CHARS.len())] as char)
+        .collect()
+}
+
+/// Set password kustom (persisten). Gagal bila < 6 karakter.
+pub fn set_password(pw: &str) -> std::io::Result<()> {
+    if pw.len() < PW_MIN_LEN {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("password minimal {PW_MIN_LEN} karakter"),
+        ));
+    }
+    fs::create_dir_all(config_dir())?;
+    fs::write(config_dir().join("password"), pw)
 }
 
 /// Direktori konfigurasi host (lintas platform, tanpa crate tambahan).
@@ -45,17 +109,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn pin_is_six_digits() {
+    fn id_is_nine_digits() {
         for _ in 0..100 {
-            let pin = generate_pin();
-            assert_eq!(pin.len(), 6, "PIN harus 6 digit");
-            assert!(pin.chars().all(|c| c.is_ascii_digit()), "PIN harus angka");
+            let id = generate_id();
+            assert_eq!(id.len(), ID_LEN, "ID harus 9 digit");
+            assert!(id.chars().all(|c| c.is_ascii_digit()), "ID harus angka");
         }
     }
 
     #[test]
-    fn device_id_format() {
-        let id = load_or_create_device_id();
-        assert!(id.starts_with("xydesk-"), "ID harus berawalan xydesk-");
+    fn id_format_groups_three() {
+        assert_eq!(format_id("123456789"), "123 456 789");
+        assert_eq!(format_id("123 456 789"), "123 456 789"); // toleran spasi
+    }
+
+    #[test]
+    fn password_min_length_and_charset() {
+        for _ in 0..100 {
+            let pw = generate_password();
+            assert!(pw.len() >= PW_MIN_LEN, "password minimal 6 karakter");
+            assert!(
+                pw.chars().all(|c| c.is_ascii_alphanumeric()),
+                "password harus alfanumerik"
+            );
+        }
+    }
+
+    #[test]
+    fn set_password_rejects_short() {
+        assert!(set_password("12345").is_err(), "5 karakter harus ditolak");
+        assert!(set_password("abc123").is_ok(), "6 karakter harus diterima");
     }
 }
