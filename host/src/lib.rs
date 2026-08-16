@@ -1,8 +1,7 @@
 //! XyDesk host — library publik.
 //!
-//! Modul dipisah dari binary (`main.rs`) agar bisa diuji lewat
-//! integration test (`tests/`). Lihat `session.rs` (WebRTC) dan `screen.rs`
-//! (sumber video).
+//! Modul dipisah dari binary (`main.rs`) agar komponen sesi WebRTC, input,
+//! identitas perangkat, dan sumber video tetap terstruktur.
 
 pub mod identity;
 pub mod input;

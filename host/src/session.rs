@@ -3,8 +3,7 @@
 //! track video.
 //!
 //! Modul ini sengaja tidak menyentuh WebSocket — SDP/ICE masuk-keluar lewat
-//! pemanggil (main.rs), sehingga logika WebRTC bisa diuji langsung (lihat
-//! `tests/e2e.rs`) tanpa server signaling.
+//! pemanggil (`main.rs`) agar logika WebRTC terpisah dari server signaling.
 
 use std::sync::Arc;
 

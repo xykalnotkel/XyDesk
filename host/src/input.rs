@@ -23,9 +23,9 @@
 //!                                               diinject sbg KEYEVENTF_UNICODE)
 //! ```
 //!
-//! Parser lintas platform (bisa diuji di CI Linux); injeksi nyata hanya di
-//! Windows via `SendInput` — API user-mode resmi, **tanpa driver**. Latensi
-//! inject < 1 ms; total budget input path < 5 ms (lihat ARCHITECTURE.md).
+//! Parser lintas platform; injeksi nyata hanya di Windows via `SendInput` —
+//! API user-mode resmi, **tanpa driver**. Latensi inject < 1 ms; total budget
+//! input path < 5 ms (lihat ARCHITECTURE.md).
 
 /// Event input hasil dekode dari data channel.
 #[derive(Clone, Debug, PartialEq)]
@@ -94,8 +94,9 @@ impl Injector {
         Self
     }
 
-    /// Eksekusi event pada OS. Di non-Windows hanya no-op (dipakai saat uji
-    /// jalur di Linux). Return `false` bila OS menolak injeksi.
+    /// Eksekusi event pada OS. Di non-Windows hanya no-op untuk menjaga
+    /// kompatibilitas kompilasi lintas platform. Return `false` bila OS
+    /// menolak injeksi.
     pub fn inject(&self, ev: &InputEvent) -> bool {
         #[cfg(target_os = "windows")]
         {
@@ -125,8 +126,12 @@ mod windows_inject {
         MOUSEEVENTF_HWHEEL, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEDOWN,
         MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP,
         MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT, MOUSE_EVENT_FLAGS,
-        MAPVK_VK_TO_VSC, MapVirtualKeyW, VIRTUAL_KEY, XBUTTON1, XBUTTON2,
+        MAPVK_VK_TO_VSC, MapVirtualKeyW, VIRTUAL_KEY,
     };
+
+    // Nilai resmi Win32 untuk field mouseData pada event tombol X.
+    const XBUTTON1_DATA: i32 = 0x0001;
+    const XBUTTON2_DATA: i32 = 0x0002;
 
     fn send(inputs: &[INPUT]) -> bool {
         // SAFETY: struct INPUT diisi lengkap; SendInput menyalin, tidak
@@ -184,10 +189,10 @@ mod windows_inject {
                     (1, false) => (MOUSEEVENTF_RIGHTUP, 0),
                     (2, true) => (MOUSEEVENTF_MIDDLEDOWN, 0),
                     (2, false) => (MOUSEEVENTF_MIDDLEUP, 0),
-                    (3, true) => (MOUSEEVENTF_XDOWN, XBUTTON1.0 as i32),
-                    (3, false) => (MOUSEEVENTF_XUP, XBUTTON1.0 as i32),
-                    (4, true) => (MOUSEEVENTF_XDOWN, XBUTTON2.0 as i32),
-                    (4, false) => (MOUSEEVENTF_XUP, XBUTTON2.0 as i32),
+                    (3, true) => (MOUSEEVENTF_XDOWN, XBUTTON1_DATA),
+                    (3, false) => (MOUSEEVENTF_XUP, XBUTTON1_DATA),
+                    (4, true) => (MOUSEEVENTF_XDOWN, XBUTTON2_DATA),
+                    (4, false) => (MOUSEEVENTF_XUP, XBUTTON2_DATA),
                     _ => return false,
                 };
                 send(&[mouse(flags, 0, 0, data)])

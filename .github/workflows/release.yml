@@ -1,7 +1,7 @@
 name: Release
 
-# Jalan saat tag versi didorong:  git tag v0.1.0 && git push origin v0.1.0
-# ATAU manual (workflow_dispatch). Menghasilkan rilis multi-platform:
+# Jalan saat tag versi didorong: git tag v1.0.0 && git push origin v1.0.0.
+# Dapat pula dijalankan manual dengan tag rilis yang eksplisit. Menghasilkan:
 #   - Android APK (universal)
 #   - Windows EXE (host — dipasang di PC yang dikendalikan)
 #   - Web (untuk user iPhone / yang tak mau install — client via browser)
@@ -9,6 +9,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag rilis yang akan dibuat/diperbarui (contoh v1.0.0)
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -64,6 +69,7 @@ jobs:
         with:
           name: XyDesk-Android-APK
           path: dist/XyDesk.apk
+          if-no-files-found: error
 
   windows-host:
     name: Host EXE (Windows)
@@ -90,6 +96,7 @@ jobs:
         with:
           name: XyDesk-Host-Windows
           path: host/target/release/xydesk-host.exe
+          if-no-files-found: error
 
   web:
     name: Web Client (browser)
@@ -112,6 +119,7 @@ jobs:
         with:
           name: XyDesk-Web
           path: XyDesk-Web.zip
+          if-no-files-found: error
 
   publish:
     name: Terbitkan Release
@@ -124,18 +132,27 @@ jobs:
 
       - name: Kumpulkan & buat checksum
         run: |
+          set -euo pipefail
           mkdir -p dist
-          cp artifacts/XyDesk-Android-APK/XyDesk.apk dist/XyDesk.apk 2>/dev/null || true
-          cp artifacts/XyDesk-Host-Windows/xydesk-host.exe dist/XyDesk-Host.exe 2>/dev/null || true
-          cp artifacts/XyDesk-Web/XyDesk-Web.zip dist/XyDesk-Web.zip 2>/dev/null || true
-          cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+          cp artifacts/XyDesk-Android-APK/XyDesk.apk dist/XyDesk.apk
+          cp artifacts/XyDesk-Host-Windows/xydesk-host.exe dist/XyDesk-Host.exe
+          cp artifacts/XyDesk-Web/XyDesk-Web.zip dist/XyDesk-Web.zip
+          test -s dist/XyDesk.apk
+          test -s dist/XyDesk-Host.exe
+          test -s dist/XyDesk-Web.zip
+          cd dist
+          sha256sum XyDesk.apk XyDesk-Host.exe XyDesk-Web.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           files: dist/*
+          fail_on_unmatched_files: true
           generate_release_notes: true
           body: |
-            ## XyDesk ${{ github.ref_name }}
+            ## XyDesk ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
             Aplikasi remote desktop low-latency untuk gaming dan kerja.
             Tanpa VM/VPS, backend di Cloudflare (gratis).

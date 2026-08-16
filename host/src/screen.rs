@@ -4,8 +4,8 @@
 //!   - **Windows**: [windows] — DXGI Desktop Duplication (Graphics Capture API)
 //!     via crate `windows-capture`, lalu di-encode H264. (Encode software
 //!     openh264 untuk PoC; ganti NVENC untuk produksi.)
-//!   - **Non-Windows / test**: [TestPatternEncoder] — pola uji untuk menguji
-//!     jalur `capture → encode → RTP` tanpa GPU.
+//!   - **Non-Windows / fallback**: [TestPatternEncoder] — pola visual untuk
+//!     menjalankan jalur `capture → encode → RTP` tanpa GPU.
 
 use std::sync::mpsc;
 

@@ -26,7 +26,7 @@ class SecureSessionVault implements SessionVault {
   Future<void> deleteToken() => _storage.delete(key: _tokenKey);
 }
 
-/// Default aman untuk test/widget preview yang tidak memiliki plugin platform.
+/// Default aman untuk lingkungan yang tidak memiliki plugin platform.
 class NoopSessionVault implements SessionVault {
   const NoopSessionVault();
 
