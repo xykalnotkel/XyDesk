@@ -1,6 +1,10 @@
 name: Release
 
-# Jalan saat tag versi didorong:  git tag v1.0.0 && git push origin v1.0.0
+# Jalan saat tag versi didorong:  git tag v0.1.0 && git push origin v0.1.0
+# ATAU manual (workflow_dispatch). Menghasilkan rilis multi-platform:
+#   - Android APK (universal)
+#   - Windows EXE (host — dipasang di PC yang dikendalikan)
+#   - Web (untuk user iPhone / yang tak mau install — client via browser)
 on:
   push:
     tags: ['v*']
@@ -14,7 +18,7 @@ env:
 
 jobs:
   android:
-    name: APK Universal
+    name: APK Universal (Android)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -28,23 +32,68 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-
       - run: flutter pub get
       - run: flutter build apk --release --target-platform=android-arm,android-arm64
-
       - name: Siapkan artefak
         run: |
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-release.apk dist/XyDesk.apk
-
       - uses: actions/upload-artifact@v4
         with:
-          name: rel-android
-          path: dist/*
+          name: XyDesk-Android-APK
+          path: dist/XyDesk.apk
+
+  windows-host:
+    name: Host EXE (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            host/target
+          key: ${{ runner.os }}-cargo-rel-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-rel-
+      - name: Build release
+        working-directory: host
+        run: cargo build --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-Host-Windows
+          path: host/target/release/xydesk-host.exe
+
+  web:
+    name: Web Client (browser)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter create . --platforms=web
+      - run: flutter pub get
+      - run: flutter build web --release
+      - name: Arsipkan web
+        run: |
+          cd build/web && zip -r ../../XyDesk-Web.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-Web
+          path: XyDesk-Web.zip
 
   publish:
     name: Terbitkan Release
-    needs: [android]
+    needs: [android, windows-host, web]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -54,7 +103,9 @@ jobs:
       - name: Kumpulkan & buat checksum
         run: |
           mkdir -p dist
-          find artifacts -type f -exec cp {} dist/ \;
+          cp artifacts/XyDesk-Android-APK/XyDesk.apk dist/XyDesk.apk 2>/dev/null || true
+          cp artifacts/XyDesk-Host-Windows/xydesk-host.exe dist/XyDesk-Host.exe 2>/dev/null || true
+          cp artifacts/XyDesk-Web/XyDesk-Web.zip dist/XyDesk-Web.zip 2>/dev/null || true
           cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
 
       - uses: softprops/action-gh-release@v2
@@ -65,13 +116,15 @@ jobs:
             ## XyDesk ${{ github.ref_name }}
 
             Aplikasi remote desktop low-latency untuk gaming dan kerja.
+            Tanpa VM/VPS, backend di Cloudflare (gratis).
 
-            | Platform | Berkas | Cara pakai |
+            | Platform | Berkas | Keterangan |
             |---|---|---|
-            | Android | `XyDesk.apk` | Universal — jalan di semua HP Android 8.0+ |
+            | Android | `XyDesk.apk` | Universal — HP Android 8.0+ |
+            | Windows | `XyDesk-Host.exe` | Host — dipasang di PC yang dikendalikan |
+            | Web | `XyDesk-Web.zip` | Client browser (iPhone / tanpa install) |
 
             Verifikasi unduhan dengan `SHA256SUMS.txt`.
 
-            > Build Android ini **belum ditandatangani**. Android akan
-            > menampilkan peringatan "sumber tidak dikenal". Ini wajar untuk
-            > rilis mockup tanpa sertifikat produksi.
+            > Build belum ditandatangani (signing menyusul). Android akan
+            > menampilkan peringatan "sumber tidak dikenal".
