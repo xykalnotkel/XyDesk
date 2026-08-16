@@ -19,6 +19,10 @@ webrtc = "0.11"
 bytes = "1"
 # ID perangkat + PIN pairing (generasi acak)
 rand = "0.8"
+
+# ── Capture layar (Windows-only) — DXGI Desktop Duplication ──
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-capture = "2.0"
 openh264 = "0.9.8"
 
 # ── Fase capture/encode (Windows-only) — aktifkan saat implementasi ──

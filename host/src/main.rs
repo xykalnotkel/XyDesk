@@ -250,8 +250,8 @@ async fn main() -> Result<()> {
                     });
                 }
 
-                // Sumber video: test pattern (openh264) atau DXGI di Windows.
-                // Encode + kirim frame ke track video WebRTC.
+                // Sumber video: capture layar (Windows DXGI) atau pola uji.
+                // Frame H264 ter-encode diambil dari channel, ditulis ke track.
                 {
                     let session = session.clone();
                     tokio::spawn(async move {
@@ -262,28 +262,10 @@ async fn main() -> Result<()> {
                                 return;
                             }
                         };
-                        println!("[xydesk-host] track video siap — streaming pola uji");
+                        println!("[xydesk-host] track video siap — streaming");
 
-                        let mut encoder = match xydesk_host::screen::TestPatternEncoder::new() {
-                            Ok(e) => e,
-                            Err(e) => {
-                                eprintln!("[xydesk-host] gagal buat encoder: {e}");
-                                return;
-                            }
-                        };
-
-                        let frame_interval = tokio::time::Duration::from_millis(33); // ~30 fps
-                        loop {
-                            let data = match encoder.encode_next(
-                                xydesk_host::screen::TEST_WIDTH,
-                                xydesk_host::screen::TEST_HEIGHT,
-                            ) {
-                                Ok(d) => d,
-                                Err(e) => {
-                                    eprintln!("[xydesk-host] encode gagal: {e}");
-                                    break;
-                                }
-                            };
+                        let mut frames = xydesk_host::screen::spawn_frame_source();
+                        while let Ok(data) = frames.recv() {
                             let sample = webrtc::media::Sample {
                                 data: bytes::Bytes::from(data),
                                 timestamp: std::time::SystemTime::now(),
@@ -296,7 +278,6 @@ async fn main() -> Result<()> {
                                 eprintln!("[xydesk-host] kirim frame gagal: {e}");
                                 break;
                             }
-                            tokio::time::sleep(frame_interval).await;
                         }
                     });
                 }
