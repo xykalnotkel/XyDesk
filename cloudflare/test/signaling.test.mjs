@@ -6,7 +6,9 @@ import { createHmac } from 'node:crypto';
 // Secret dibaca dari env (di CI dipasok lewat secrets.XYDESK_SECRET, selaras
 // dengan `wrangler dev --var`). Default 'test-secret' cocok dengan .dev.vars lokal.
 const SECRET = process.env.XYDESK_SECRET || 'test-secret';
+const ADMIN = process.env.ADMIN_SECRET || 'admin-secret';
 const BASE = process.env.XYDESK_BASE || 'ws://127.0.0.1:8787';
+const HTTP = BASE.replace(/^ws/, 'http');
 
 // Replika penerbit token (identik dengan /issue di worker).
 function issue(purpose, secret = SECRET, nowSec = Math.floor(Date.now() / 1000)) {
@@ -151,6 +153,34 @@ async function main() {
     const m = await bc.waitFor('error');
     if (m.error !== 'id sudah online') throw new Error(`ingin duplikat, dapat ${m.error}`);
     a.close(); b.close();
+  });
+
+  await test('healthz -> ok', async () => {
+    const res = await fetch(`${HTTP}/healthz`);
+    if (res.status !== 200 || (await res.text()) !== 'ok') throw new Error('healthz gagal');
+  });
+
+  await test('/turn-ice tanpa admin -> 403', async () => {
+    const res = await fetch(`${HTTP}/turn-ice`);
+    if (res.status !== 403) throw new Error(`ingin 403, dapat ${res.status}`);
+  });
+
+  await test('/turn-ice tanpa TURN key -> 503 turn-not-configured', async () => {
+    const res = await fetch(`${HTTP}/turn-ice`, { headers: { 'X-Admin': ADMIN } });
+    const body = await res.json();
+    if (res.status !== 503 || body.error !== 'turn-not-configured') {
+      throw new Error(`ingin 503 turn-not-configured, dapat ${res.status} ${JSON.stringify(body)}`);
+    }
+  });
+
+  await test('/turn-ice via token signaling (bukan admin) -> 503', async () => {
+    // Client memakai token perangkat (sama seperti /ws) — harus lolos auth
+    // (bukan 403) lalu 503 karena TURN belum dikonfigurasi.
+    const res = await fetch(`${HTTP}/turn-ice?id=dev1&token=${issue('dev1')}`);
+    const body = await res.json();
+    if (res.status !== 503 || body.error !== 'turn-not-configured') {
+      throw new Error(`ingin 503 via token, dapat ${res.status} ${JSON.stringify(body)}`);
+    }
   });
 
   await sleep(200);

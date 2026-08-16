@@ -10,7 +10,7 @@ tanpa VM/VPS, tanpa API berbayar, tanpa kartu kredit.
 | Signaling server | **Cloudflare Worker + Durable Object** (`cloudflare/`) | Rp 0 (100K req/hari) | ❌ |
 | STUN | `stun.cloudflare.com` (publik, anycast) | gratis tanpa batas | ❌ |
 | TURN (NAT ketat) | `turn.cloudflare.com` | **1.000 GB/bulan gratis** | ❌ |
-| TLS | otomatis workers.dev / custom domain | Rp 0 | ❌ |
+| TLS | otomatis (custom domain) | Rp 0 | ❌ |
 | Auth | Firebase **Spark** / Supabase free / HMAC self-host | Rp 0 | ❌ |
 | Encode/decode | NVENC/AMF/QuickSync (GPU onboard) | Rp 0 | ❌ |
 | Library | flutter_webrtc, webrtc-rs, str0m, ws | Rp 0 (MIT/Apache/BSD) | ❌ |

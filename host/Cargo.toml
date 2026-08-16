@@ -5,7 +5,7 @@ edition = "2021"
 description = "XyDesk host — capture & stream layar Windows via WebRTC"
 
 [dependencies]
-# Signaling client (lintas platform, sudah dipakai di main.rs)
+# Signaling client
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = { version = "0.23", features = ["rustls-tls-native-roots"] }
 futures-util = "0.3"
@@ -14,11 +14,14 @@ serde_json = "1"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 
-# ── Fase capture/encode/webrtc (Windows) — aktifkan saat implementasi ──
+# WebRTC (host = answerer: terima offer dari client, kirim video + terima input)
+webrtc = "0.11"
+bytes = "1"
+openh264 = "0.9.8"
+
+# ── Fase capture/encode (Windows-only) — aktifkan saat implementasi ──
 # windows-capture = "1"              # DXGI Desktop Duplication
 # ffmpeg-next = "6"                  # encode NVENC/AMF/QuickSync (jalur cepat PoC)
-# webrtc = "0.10"                    # WebRTC track + data channel
-# openh264 = "0.5"                   # encoder software cadangan (tanpa GPU)
 
 [profile.release]
 opt-level = 3

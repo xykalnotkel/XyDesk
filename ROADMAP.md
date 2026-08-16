@@ -72,7 +72,7 @@ dengan TURN, stabil 30 menit tanpa re-buffer.
 | Signaling | **Cloudflare Worker + Durable Object** (`cloudflare/`, sudah jadi & teruji) | Rp 0 |
 | STUN | `stun.cloudflare.com` (publik) | Rp 0 tanpa batas |
 | TURN | `turn.cloudflare.com` | 1.000 GB/bln gratis |
-| TLS | otomatis (workers.dev) | Rp 0 |
+| TLS | otomatis (custom domain signal.xystudio.my.id) | Rp 0 |
 | Auth | Firebase **Spark** / Supabase free / HMAC self-host | Rp 0 |
 | Encode | NVENC/AMF/QuickSync (GPU onboard) | Rp 0 |
 | Libraries | flutter_webrtc, webrtc-rs, str0m — MIT/Apache | Rp 0 |

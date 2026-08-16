@@ -3,7 +3,8 @@
 // Rute:
 //   GET /ws?id=<deviceId>&role=host|client&token=<token>   -> WebSocket ke hub
 //   GET /healthz                                            -> liveness
-//   GET /issue?purpose=<id>  (header X-Admin: <ADMIN_SECRET>) -> terbitkan token
+//   GET /issue?purpose=<id>  (header X-Admin)               -> terbitkan token
+//   GET /turn-ice            (header X-Admin)               -> kredensial TURN (ICE servers)
 //
 // Auth: token HMAC-SHA256 berumur 5 menit (format ts.purpose.sig), identik
 // dengan versi Go — sehingga host Rust & client Flutter TIDAK perlu diubah.
@@ -22,6 +23,10 @@ export default {
 
     if (url.pathname === '/issue') {
       return handleIssue(request, url, env);
+    }
+
+    if (url.pathname === '/turn-ice') {
+      return handleTurnIce(request, url, env);
     }
 
     if (url.pathname !== '/ws') {
@@ -96,4 +101,65 @@ async function handleIssue(request, url, env) {
   const ts = String(Math.floor(Date.now() / 1000));
   const sig = await hmacHex(env.XYDESK_SECRET, `${purpose}\x00${ts}`);
   return new Response(`${ts}.${purpose}.${sig}`, { status: 200 });
+}
+
+// ── Endpoint kredensial TURN ─────────────────────────────────────────────
+//
+// Menghasilkan ICE servers (kredensial TURN ber-TTL) dari Cloudflare Realtime.
+// Auth: header X-Admin (operator) ATAU token signaling yang valid (client app
+// memakai token yang sama seperti saat connect /ws). Ini penting: client tidak
+// boleh memegang ADMIN_SECRET, cukup token perangkatnya.
+//
+// Memerlukan TURN key yang dibuat di dashboard (gratis, tanpa kartu kredit):
+//   Cloudflare dashboard → Realtime → TURN → "Create TURN key"
+// lalu simpan hasilnya sebagai secret Worker:
+//   npx wrangler secret put TURN_KEY_ID
+//   npx wrangler secret put TURN_KEY_TOKEN
+//
+// Tanpa kedua secret itu, endpoint mengembalikan 503 dengan pesan jelas
+// (bukan crash), sehingga sisa sistem tetap berjalan pakai STUN saja.
+async function handleTurnIce(request, url, env) {
+  const authorized = await (async () => {
+    if (request.headers.get('X-Admin') === env.ADMIN_SECRET) return true;
+    const id = url.searchParams.get('id') || 'client';
+    const token = url.searchParams.get('token') || '';
+    return token && (await verifyToken(token, id, env.XYDESK_SECRET));
+  })();
+  if (!authorized) {
+    return new Response('forbidden', { status: 403 });
+  }
+
+  if (!env.TURN_KEY_ID || !env.TURN_KEY_TOKEN) {
+    return new Response(
+      JSON.stringify({
+        error: 'turn-not-configured',
+        hint: 'Buat TURN key di dashboard Cloudflare (Realtime → TURN), lalu set secret TURN_KEY_ID & TURN_KEY_TOKEN.',
+      }),
+      { status: 503, headers: { 'content-type': 'application/json' } },
+    );
+  }
+
+  const ttl = Number(url.searchParams.get('ttl') || 86400); // default 1 hari
+  const resp = await fetch(
+    `https://rtc.live.cloudflare.com/v1/turn/keys/${env.TURN_KEY_ID}/credentials/generate-ice-servers`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.TURN_KEY_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ttl }),
+    },
+  );
+
+  if (!resp.ok) {
+    return new Response(
+      JSON.stringify({ error: 'turn-upstream-failed', status: resp.status }),
+      { status: 502, headers: { 'content-type': 'application/json' } },
+    );
+  }
+  return new Response(await resp.text(), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
 }

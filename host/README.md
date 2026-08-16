@@ -1,61 +1,61 @@
-# XyDesk Host (Rust) — scaffolding
+# XyDesk Host (Rust)
 
 Aplikasi sisi PC yang ditanam di komputer yang dikendalikan. Menangkap layar,
 meng-encode, dan mengirim via WebRTC ke client.
 
-> **Status: scaffolding.** `src/main.rs` (signaling client) adalah kode nyata
-> lintas-platform yang bisa jalan dan diuji. `src/screen.rs` adalah kerangka
-> capture/encode Windows yang harus diisi — **belum diimplementasi**. Ini
-> sengaja: jangan percaya klaim "siap pakai" sampai diuji di Windows sungguhan.
+## Status (jujur)
 
-## Target (harus dibuktikan)
+| Bagian | Status |
+|---|---|
+| Signaling client (daftar, pair, negosiasi) | ✅ jadi, lintas platform |
+| Sesi WebRTC (answerer) + data channel "input" | ✅ jadi + teruji (`tests/e2e.rs`) |
+| **Media plane: track video H264 + encode → RTP → decode** | ✅ **jadi + teruji** (openh264, pola uji) |
+| Sumber video: capture layar (DXGI) + encode (NVENC) | ⏳ Windows-only, belum diimplementasi |
 
-- 1080p60, encode < 10 ms (NVENC/AMF/QuickSync), glass-to-glass < 40 ms LAN.
+Artinya: jalur media **sudah terbukti end-to-end** — host meng-encode frame
+(openh264) → kirim lewat RTP → client menerima & men-decode. Yang tersisa
+hanya menukar sumber frame dari pola uji ke **capture layar DXGI + NVENC**
+di Windows (GPU). Alur kode sudah disiapkan agar penggantian sumber itu
+cukup menukar implementasi `encode_next()`.
 
-## Rencana implementasi (urutan)
-
-### 1. Signaling client (✅ kerangka ada di `main.rs`)
-Hubungkan ke server Go, daftar sebagai `role=host`, terima `pair`, jawab, lalu
-negosiasi SDP/ICE. Pakai `tokio-tungstenite` + `serde`.
-
-### 2. Capture layar — Desktop Duplication API
-Crate yang direkomendasikan: **`windows-capture`** (DXGI Desktop Duplication,
-aktif-maintained, contoh lengkap). Alternatif: `d3d11` + `dxgi` langsung.
-- `AcquireNextFrame` di thread terpisah, budget ≤ 8 ms per frame.
-- Dapatkan texture `ID3D11Texture2D`, teruskan ke encoder **tanpa** copy ke CPU.
-
-### 3. Encode — NVENC (lalu AMF, QuickSync)
-Dua jalur:
-- **Cepat untuk PoC:** FFmpeg via `ffmpeg-next` (flag `-c:v h264_nvenc`,
-  `-preset p1 -tune ll`). Satu malam kerja, hasil terukur.
-- **Produksi:** NVIDIA Video Codec SDK via binding, atau `nv-codec-rs`.
-  Zero-copy CUDA → NVENC → webrtc.
-
-Ukur dulu dengan FFmpeg; optimasi SDK belakangan.
-
-### 4. WebRTC — webrtc-rs
-`webrtc-rs` punya track video + data channel lengkap. Alur:
-`encode → SampleBuilder → VideoTrack.WriteSample → RTP`.
-
-### 5. Input balik — data channel (reliable)
-`SendInput` / raw input untuk mouse & keyboard dari client. Latency < 5 ms.
-
-## Bangun
+## Bangun & uji
 
 ```bash
-# di Windows (perlu: Rust + Visual Studio Build Tools + driver GPU)
-cargo build --release
+cargo build              # compile (lintas platform)
+cargo test               # e2e: dua peer WebRTC + data channel (loopback)
 ```
 
-Cross-compile dari Linux **tidak** didukung untuk bagian capture (butuh Win32).
-Uji di Windows langsung.
+## Jalankan
+
+```bash
+cargo run -- \
+  --url wss://signal.xystudio.my.id/ws \
+  --id gaming-pc-01 \
+  --token <TOKEN>        # dari /issue
+```
+
+## Rencana implementasi sumber video (Windows)
+
+1. **Capture** — `windows-capture` crate (DXGI Desktop Duplication),
+   `AcquireNextFrame` di thread terpisah, budget ≤ 8 ms/frame.
+2. **Encode** — jalur cepat PoC: FFmpeg (`ffmpeg-next`) `h264_nvenc -preset p1 -tune ll`;
+   produksi: NVIDIA Video Codec SDK (zero-copy CUDA→NVENC).
+3. **Kirim** — dorong frame ter-encode ke `TrackLocalStaticSample`
+   (SampleBuilder → WriteSample → RTP) di `src/session.rs`.
+
+> Cross-compile dari Linux **tidak** didukung untuk bagian capture (butuh
+> Win32). Uji langsung di Windows.
 
 ## Struktur
 
 ```
 host/
 ├── Cargo.toml
-└── src/
-    ├── main.rs      # CLI + signaling client (lintas platform, nyata)
-    └── screen.rs    # capture + encode (Windows, kerangka TODO)
+├── src/
+│   ├── lib.rs       # pub mod session; pub mod screen;
+│   ├── main.rs      # CLI + signaling client + wiring sesi
+│   ├── session.rs   # WebRTC answerer + data channel input (teruji)
+│   └── screen.rs    # sumber video (Windows DXGI — TODO)
+└── tests/
+    └── e2e.rs       # dua peer WebRTC loopback — membuktikan jalur WebRTC
 ```

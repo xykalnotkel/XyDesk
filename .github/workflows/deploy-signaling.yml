@@ -36,6 +36,7 @@ jobs:
         working-directory: cloudflare
         env:
           XYDESK_SECRET: ${{ secrets.XYDESK_SECRET }}
+          ADMIN_SECRET: test-admin
         run: |
           # .dev.vars tidak di-commit, jadi secret dipasok via --var.
           npx wrangler dev --port 8787 --ip 127.0.0.1 \

@@ -10,7 +10,7 @@ tanpa kartu kredit, tanpa server sendiri. Pengganti total versi Go/VM.
 | WebSocket persisten | Worker + Durable Object (Hibernation API) | Rp 0 |
 | STUN | `stun.cloudflare.com` | gratis tanpa batas |
 | TURN (NAT ketat) | `turn.cloudflare.com` | 1.000 GB/bulan gratis |
-| TLS | otomatis (workers.dev / custom domain) | Rp 0 |
+| TLS | otomatis (custom domain signal.xystudio.my.id) | Rp 0 |
 
 Free tier Workers: **100K request/hari**. Signaling hanya KB per sesi, jadi
 cukup untuk pemakaian personal + komunitas kecil. Media TIDAK lewat sini
@@ -23,14 +23,14 @@ npm install
 npx wrangler login                  # browser, akun Cloudflare gratis (tanpa kartu)
 npx wrangler secret put XYDESK_SECRET   # isi: openssl rand -hex 32
 npx wrangler secret put ADMIN_SECRET    # isi: kata sandi admin /issue
-npx wrangler deploy                    # → https://xydesk-signaling.<kamu>.workers.dev
+npx wrangler deploy                    # → https://signal.xystudio.my.id
 ```
 
 ## Terbitkan token (host & client)
 
 ```bash
 curl -H "X-Admin: $ADMIN_SECRET" \
-  "https://xydesk-signaling.<kamu>.workers.dev/issue?purpose=gaming-pc-01"
+  "https://signal.xystudio.my.id/issue?purpose=gaming-pc-01"
 # → 1786843937.gaming-pc-01.<sig>   (berlaku 5 menit)
 ```
 
