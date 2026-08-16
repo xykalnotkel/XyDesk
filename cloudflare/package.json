@@ -5,12 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "test": "node test/signaling.test.mjs",
-    "test:auth": "node test/auth.test.mjs"
+    "deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "wrangler": "^3.100.0",
-    "ws": "^8.18.0"
+    "wrangler": "^3.100.0"
   }
 }

@@ -38,12 +38,13 @@ Host pakai `purpose = deviceId`-nya; client pakai `purpose = deviceId`-nya juga.
 Token dibawa sebagai `?token=` (client Flutter) atau header `Authorization:
 Bearer` (host Rust).
 
-## Uji lokal
+## Jalankan lokal
 
 ```bash
 npm run dev    # wrangler dev di :8787
-npm test       # 7 skenario end-to-end (butuh server dev jalan)
 ```
+
+Validasi fungsi dilakukan manual terhadap Worker lokal atau deployment produksi.
 
 ## Struktur
 
@@ -52,7 +53,6 @@ cloudflare/
 ├── wrangler.toml        # binding DO + migrasi
 ├── src/worker.js        # entrypoint: rute + auth HMAC + /issue
 ├── src/hub.js           # Durable Object: registri + relay (hibernation)
-├── test/signaling.test.mjs
 └── .dev.vars            # secret lokal SAJA (jangan commit)
 ```
 

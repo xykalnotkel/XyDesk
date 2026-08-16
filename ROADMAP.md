@@ -37,7 +37,7 @@ demi gengsi.
    encode NVENC, kirim via WebRTC. Lihat `host/`.
 2. **Client (Flutter)**: terima via `flutter_webrtc`, render ke `RTCVideoView`,
    kirim input (mouse/keyboard) balik lewat data channel. Lihat `client/`.
-3. **Signaling**: sudah DIBANGUN di `signaling/` (Go, self-host, gratis) — lulus test.
+3. **Signaling**: sudah DIBANGUN di `signaling/` (Go, self-host, gratis).
 4. **Uji latency** dengan overlay timestamp di layar (cara paling jujur: foto
    layar host + layar client berjejer, baca selisih jam di frame).
 
@@ -69,7 +69,7 @@ dengan TURN, stabil 30 menit tanpa re-buffer.
 
 | Komponen | Pilihan | Biaya |
 |---|---|---|
-| Signaling | **Cloudflare Worker + Durable Object** (`cloudflare/`, sudah jadi & teruji) | Rp 0 |
+| Signaling | **Cloudflare Worker + Durable Object** (`cloudflare/`, sudah jadi) | Rp 0 |
 | STUN | `stun.cloudflare.com` (publik) | Rp 0 tanpa batas |
 | TURN | `turn.cloudflare.com` | 1.000 GB/bln gratis |
 | TLS | otomatis (custom domain signal.xystudio.my.id) | Rp 0 |

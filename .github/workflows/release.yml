@@ -15,6 +15,7 @@ permissions:
 
 env:
   FLUTTER_VERSION: '3.44.9'
+  GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
 
 jobs:
   android:
@@ -51,7 +52,10 @@ jobs:
           keyAlias=$KEY_ALIAS
           storeFile=xydesk-release.keystore
           EOF
-      - run: flutter build apk --release --target-platform=android-arm,android-arm64
+      - run: >-
+          flutter build apk --release
+          --target-platform=android-arm,android-arm64
+          --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
       - name: Siapkan artefak
         run: |
           mkdir -p dist
@@ -100,7 +104,7 @@ jobs:
           cache: true
       - run: flutter create . --platforms=web
       - run: flutter pub get
-      - run: flutter build web --release
+      - run: flutter build web --release --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
       - name: Arsipkan web
         run: |
           cd build/web && zip -r ../../XyDesk-Web.zip .

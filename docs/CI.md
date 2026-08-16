@@ -1,188 +1,80 @@
 # CI/CD — XyDesk
 
-Build dan rilis otomatis lewat GitHub Actions. Tidak perlu Android Studio,
-Xcode, atau Visual Studio di komputer kamu — semua dikerjakan runner GitHub.
+Build dan rilis dijalankan melalui GitHub Actions agar perangkat pengguna tidak
+perlu menjalankan Flutter, Android SDK, Rust, atau Visual Studio secara lokal.
 
----
-
-## 1. Alur Kerja
+## Workflow
 
 | Berkas | Pemicu | Hasil |
 |---|---|---|
-| `.github/workflows/build.yml` | push & PR ke `main` | APK universal |
-| `.github/workflows/release.yml` | tag `v*` | Android Release + checksum |
+| `.github/workflows/build.yml` | push/PR ke `main`, manual | APK Android, aplikasi Flutter Windows, bundle Web |
+| `.github/workflows/build-host.yml` | perubahan `host/**`, manual | `xydesk-host.exe` |
+| `.github/workflows/deploy-signaling.yml` | perubahan `cloudflare/**`, manual | deploy Cloudflare Worker |
+| `.github/workflows/release.yml` | tag `v*`, manual | GitHub Release multi-platform |
 
-### build.yml
+Sesuai keputusan proyek, repositori tidak memiliki suite test otomatis. CI tetap
+menjalankan format, analisis statis, dan build agar artefak yang diterbitkan
+berasal dari source yang dapat dikompilasi. Pengujian perilaku dilakukan manual
+setelah APK/EXE dipasang.
 
-```
-check ──→ android   (XyDesk.apk — universal)
-              ↓
-           summary
-```
+## Build biasa
 
-Job `check` jalan lebih dulu. Kalau gagal, build Android dibatalkan — tidak ada
-gunanya membangun kode yang tidak lolos analisis.
+Push ke `main` menjalankan:
 
-**Isi `check`:**
-1. `dart format --set-exit-if-changed` — format wajib konsisten
-2. `flutter analyze --fatal-infos` — bahkan peringatan `info` menggagalkan build
-3. `flutter test` — seluruh test widget dan feature
-4. **Verifikasi aturan seamless** — CI mencari `Divider(` dan
-   `scrolledUnderElevation: [1-9]` di `lib/`. Kalau ada, build gagal.
+1. `flutter pub get`;
+2. `dart format lib`;
+3. `flutter analyze --fatal-infos`;
+4. pemeriksaan aturan desain seamless;
+5. build Android, Windows, dan Web;
+6. upload hasil ke **Actions → run → Artifacts**.
 
-Poin terakhir yang membuat aturan desain benar-benar ditegakkan. Dokumen bisa
-diabaikan; CI tidak bisa.
+Artefak build biasa disimpan 30 hari. Artefak Actions bukan GitHub Release dan
+tidak otomatis tampil di halaman Releases.
 
-**Kenapa APK universal, bukan split-per-ABI:** split menghasilkan 3 berkas
-terpisah dan pengguna harus tahu arsitektur HP-nya. Universal cuma satu berkas
-— lebih besar sekitar 8 MB, tapi tinggal kirim dan pasang.
+## Menerbitkan GitHub Release
 
-## 2. Cara Memakai
-
-### Pertama kali
-
-```bash
-git init
-git add .
-git commit -m "feat: XyDesk v1.0.0"
-git branch -M main
-git remote add origin https://github.com/xykalnotkel/XyDesk.git
-git push -u origin main
-```
-
-Buka tab **Actions** di GitHub — workflow langsung jalan.
-
-### Mengunduh hasil build
-
-Actions → pilih run → gulir ke bawah ke **Artifacts**:
-
-| Artefak | Isi |
-|---|---|
-| `XyDesk-Android-APK` | `XyDesk.apk` — universal, semua arsitektur |
-
-Artefak disimpan **30 hari**.
-
-### Membuat rilis
+Versi aplikasi saat ini mengikuti `pubspec.yaml`. Buat dan push tag versi dari
+commit yang ingin diterbitkan:
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Workflow `release.yml` saat ini membangun Android, membuat `SHA256SUMS.txt`, dan
-menerbitkan GitHub Release dengan catatan rilis otomatis. Windows dan iOS akan
-ditambahkan sebagai job release setelah backend siap.
+Workflow Release membangun dan melampirkan:
 
----
+- `XyDesk.apk` — client Android universal ARM;
+- `XyDesk-Host.exe` — host Windows;
+- `XyDesk-Web.zip` — client Web;
+- `SHA256SUMS.txt` — checksum unduhan.
 
-## 3. Menandatangani Build (produksi)
+Rilis hanya terbit jika seluruh job build berhasil. Jika salah satu job gagal,
+job `Terbitkan Release` akan dilewati dan halaman Releases tetap kosong.
 
-Build bawaan **belum ditandatangani**. Untuk Play Store dan App Store:
+## Signing Android
 
-### Android
+Secrets berikut harus tersedia di **Settings → Secrets and variables →
+Actions**:
 
-Buat keystore:
-```bash
-keytool -genkey -v -keystore xydesk.jks -keyalg RSA \
-  -keysize 2048 -validity 10000 -alias xydesk
-base64 -w0 xydesk.jks > keystore.b64
-```
+- `KEYSTORE_BASE64`
+- `KEYSTORE_PASSWORD`
+- `KEY_ALIAS`
+- `KEY_PASSWORD`
 
-Tambahkan secrets di **Settings → Secrets and variables → Actions**:
+Keystore dan `android/key.properties` tidak boleh di-commit. Workflow membuatnya
+sementara di runner dan menghapus runner setelah job selesai.
 
-| Secret | Isi |
-|---|---|
-| `KEYSTORE_BASE64` | isi `keystore.b64` |
-| `KEYSTORE_PASSWORD` | kata sandi keystore |
-| `KEY_ALIAS` | `xydesk` |
-| `KEY_PASSWORD` | kata sandi kunci |
+## Konfigurasi publik build
 
-Sisipkan langkah ini sebelum `flutter build apk`:
+Repository variable `GOOGLE_CLIENT_ID` diteruskan sebagai `dart-define` ke build
+Android, Windows Flutter, dan Web. Nilai ini bukan secret, tetapi tetap dikelola
+di GitHub agar konfigurasi build konsisten.
 
-```yaml
-- name: Siapkan keystore
-  run: |
-    echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/xydesk.jks
-    cat > android/key.properties <<EOF
-    storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-    keyPassword=${{ secrets.KEY_PASSWORD }}
-    keyAlias=${{ secrets.KEY_ALIAS }}
-    storeFile=xydesk.jks
-    EOF
-```
+## Checklist manual setelah install
 
-Lalu di `android/app/build.gradle.kts`, baca `key.properties` pada
-`signingConfigs`.
-
-> **Jangan pernah** memasukkan `.jks` atau `key.properties` ke repositori.
-> Keduanya sudah masuk `.gitignore`.
-
-### iOS
-
-Perlu akun Apple Developer berbayar. Simpan sebagai secrets:
-`BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`, `PROVISIONING_PROFILE_BASE64`,
-`KEYCHAIN_PASSWORD`. Cara termudah memakai [fastlane match](https://docs.fastlane.tools/actions/match/).
-
----
-
-## 4. Biaya Runner
-
-Repositori **XyDesk publik**, jadi menit Actions **gratis tanpa batas**.
-
-Perkiraan durasi per push:
-
-| Job | Runner | Durasi |
-|---|---|---|
-| `check` | ubuntu | ~1–3 menit |
-| `android` | ubuntu | ~4–6 menit |
-
-Pada fase mockup hanya Android yang berjalan, jadi total mengikuti job check lalu
-build Android. Windows dan iOS akan dipindahkan ke workflow release ketika
-backend siap.
-
-Yang tetap dibatasi walau repo publik: **penyimpanan artefak** (500 MB gratis).
-Karena itu retensi diset 30 hari, dan hanya satu berkas yang diunggah per run.
-
-## 5. Optimasi yang Sudah Dipasang
-
-- **`concurrency`** — push baru membatalkan run lama di branch yang sama.
-- **`cache: true`** pada `flutter-action` — menghemat ~2 menit per job.
-- **Cache Gradle** — menghemat ~3 menit pada build Android.
-- **Workflow terpisah per tahap** — fase mockup hanya menjalankan Android;
-  Windows dan iOS bisa diaktifkan nanti tanpa memperlambat setiap push.
-- **`timeout-minutes`** — mencegah job menggantung menghabiskan kuota.
-
----
-
-## 6. Masalah yang Sering Muncul
-
-| Gejala | Penyebab | Solusi |
-|---|---|---|
-| `dart format` gagal | Format tidak konsisten | Jalankan `dart format lib test` lalu commit |
-| `analyze --fatal-infos` gagal | Ada saran `info` | Jalankan `dart fix --apply` |
-| Gradle: "Unsupported class file major version" | Java salah versi | Pastikan `setup-java` memakai `17` |
-| Build iOS gagal soal signing | Tidak ada sertifikat | Gunakan `--no-codesign` (sudah dipakai) |
-| Linux gagal soal GTK | Dependensi kurang | `libgtk-3-dev` sudah ada di workflow |
-| Job macOS lambat sekali | Antrean runner macOS | Wajar; batasi hanya untuk rilis |
-
----
-
-## 7. Menjalankan CI Secara Lokal
-
-Sebelum push, jalankan langkah yang sama:
-
-```bash
-dart format --output=none --set-exit-if-changed lib test
-flutter analyze --fatal-infos
-flutter test --coverage
-
-# verifikasi aturan seamless
-grep -rn --include='*.dart' -E '\b(Divider|VerticalDivider)\(' lib/ && echo GAGAL || echo OK
-```
-
-Atau pakai [`act`](https://github.com/nektos/act) untuk menjalankan workflow
-GitHub Actions di Docker lokal:
-
-```bash
-act -j analyze
-```
+- buka aplikasi dan pastikan splash selesai;
+- login OTP dan Google pada perangkat Android nyata;
+- tutup/buka aplikasi untuk memeriksa pemulihan sesi;
+- logout dan pastikan sesi terhapus;
+- periksa keyboard virtual, HUD, rotasi landscape, dan panel sesi;
+- hubungkan host Windows dan periksa video, mouse, keyboard, serta reconnect.

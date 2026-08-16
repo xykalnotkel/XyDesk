@@ -20,13 +20,6 @@ XYDESK_SECRET=... go run . -issue <deviceId>   # host pakai deviceId, client pak
 
 Token berlaku 5 menit; dibawa sebagai `Authorization: Bearer <token>`.
 
-## Test
-
-```bash
-go test ./...    # 7 skenario: auth, hello/list, relay offer, pair, offline, duplikat id
-go vet ./...
-```
-
 ## Deploy gratis
 
 Lihat `../docs/FREE-STACK.md`. Ringkasnya: build ARM64 (`GOOS=linux GOARCH=arm64

@@ -117,20 +117,11 @@ Tanpa `GOOGLE_CLIENT_ID`, endpoint mengembalikan
 `503 google-not-configured`. Tanpa secret auth, endpoint auth mengembalikan
 `503 auth-not-configured`.
 
-## Validasi
+## Validasi manual
 
-```bash
-# Dijalankan oleh GitHub Actions, bukan perangkat pengguna:
-flutter pub get
-flutter analyze --fatal-infos
-flutter test --reporter compact
+GitHub Actions menangani analisis statis dan build. Setelah APK dipasang,
+validasi OTP, Google Sign-In, pemulihan sesi, dan logout secara manual pada
+perangkat Android nyata.
 
-cd cloudflare
-npm ci
-# Workflow menyalakan wrangler dev lalu menjalankan:
-node test/signaling.test.mjs
-node test/auth.test.mjs
-```
-
-Jangan menguji OTP produksi dengan alamat acak: permintaan yang berhasil akan
+Jangan mencoba OTP produksi dengan alamat acak: permintaan yang berhasil akan
 mengirim email sungguhan dan memakai kuota Resend.

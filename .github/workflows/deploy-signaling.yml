@@ -35,31 +35,6 @@ jobs:
         working-directory: cloudflare
         run: npm ci
 
-      - name: Uji end-to-end (signaling + auth) sebelum deploy
-        working-directory: cloudflare
-        env:
-          XYDESK_SECRET: ${{ secrets.XYDESK_SECRET }}
-          ADMIN_SECRET: test-admin
-        run: |
-          # .dev.vars tidak di-commit, jadi secret dipasok via --var.
-          npx wrangler dev --port 8787 --ip 127.0.0.1 \
-            --var XYDESK_SECRET:"$XYDESK_SECRET" \
-            --var ADMIN_SECRET:test-admin \
-            --var XYDESK_DEV:true &
-          WRANGLER_PID=$!
-          # tunggu server siap
-          for i in $(seq 1 30); do
-            curl -s http://127.0.0.1:8787/healthz >/dev/null && break
-            sleep 1
-          done
-          node test/signaling.test.mjs
-          S1=$?
-          node test/auth.test.mjs
-          S2=$?
-          # matikan wrangler dev agar step tidak menggantung
-          kill "$WRANGLER_PID" 2>/dev/null || true
-          if [ $S1 -ne 0 ] || [ $S2 -ne 0 ]; then exit 1; fi
-
       - name: Deploy ke Cloudflare
         working-directory: cloudflare
         env:

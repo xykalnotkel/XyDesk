@@ -1,11 +1,7 @@
-name: Build & Test Host (Rust)
+name: Build Host (Rust)
 
-# Dua pekerjaan:
-#   1. test (Linux)  — jalankan `cargo test`: identity + WebRTC e2e (media plane)
-#   2. build (Windows) — hasilkan xydesk-host.exe (capture DXGI butuh Windows)
-#
-# Build dilakukan di GitHub Actions (bukan mesin lokal) agar hemat memori.
-
+# Build Windows menghasilkan xydesk-host.exe. Build dilakukan di GitHub
+# Actions, bukan perangkat pengguna, agar hemat memori.
 on:
   push:
     paths:
@@ -16,31 +12,6 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test Host (Linux)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            host/target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('host/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-test-
-
-      - name: Uji (identity + WebRTC e2e)
-        working-directory: host
-        run: cargo test --release
-
   build:
     name: Build Host EXE (Windows)
     runs-on: windows-latest

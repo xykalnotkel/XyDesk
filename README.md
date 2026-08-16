@@ -25,7 +25,7 @@ placeholder sebagai ganti `RTCVideoView`.
 | Signaling server (Cloudflare Workers + DO) | Live — `signal.xystudio.my.id` |
 | Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker |
 | TURN (kredensial Cloudflare ber-TTL) | Selesai |
-| Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Media plane terbukti (e2e encode→RTP→decode) |
+| Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Jalur encode→RTP→decode tersedia; capture nyata belum selesai |
 | Wiring `RTCVideoView` di client Flutter | Belum — drop-in ada di `client/`, belum disambung |
 | Benchmark latency end-to-end di jaringan nyata | Belum — prioritas berikutnya |
 
@@ -41,10 +41,11 @@ flutter run
 Butuh Flutter **3.44+** / Dart 3.5+.
 
 ```bash
-flutter test              # seluruh test widget & feature
-flutter analyze           # harus bersih
-dart format lib test      # sebelum push
+flutter analyze           # pemeriksaan statis
+dart format lib           # rapikan source sebelum push
 ```
+
+Pengujian fungsi dilakukan manual pada APK/EXE hasil GitHub Actions.
 
 ---
 

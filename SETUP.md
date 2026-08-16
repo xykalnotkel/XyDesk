@@ -11,9 +11,8 @@ di mesin lokal).
 | Signaling Worker live | `https://signal.xystudio.my.id` (custom domain) |
 | Worker secrets (XYDESK_SECRET, ADMIN_SECRET) | terpasang |
 | Custom domain | `signal.xystudio.my.id` → worker (zona `xystudio.my.id`) |
-| Endpoint TURN `/turn-ice` | jadi + teruji (butuh TURN key di dashboard) |
-| Host WebRTC (webrtc-rs) | jadi + uji e2e dua peer lulus |
-| Signaling test | 11/11 lulus (auth, relay, pair, TURN, dsb.) |
+| Endpoint TURN `/turn-ice` | jadi (butuh TURN key di dashboard) |
+| Host WebRTC (webrtc-rs) | implementasi tersedia |
 | GitHub Secrets (4) | terpasang |
 | CI "Build" (Flutter) | hijau ✅ |
 | CI "Build Host" (Windows EXE) | hijau ✅ |
@@ -71,12 +70,10 @@ XyDesk/
 ## 3. Trigger build
 
 - **Deploy signaling** → push perubahan di `cloudflare/**`, atau manual
-  (Actions → "Deploy Signaling" → Run workflow). Workflow akan:
-  1. uji end-to-end 11 skenario (wrangler dev + test),
-  2. pasang secret ke Worker,
-  3. `wrangler deploy`.
+  (Actions → "Deploy Signaling" → Run workflow). Workflow memasang secret ke
+  Worker lalu menjalankan `wrangler deploy`.
 - **Build host** → push perubahan di `host/**` → menghasilkan
-  `xydesk-host-windows` (artifact EXE) + jalankan `cargo test`.
+  `xydesk-host-windows` (artifact EXE).
 - **Build APK Flutter** → workflow `build.yml` yang SUDAH ada di repo-mu.
 
 ## 4. Setelah deploy signaling jalan

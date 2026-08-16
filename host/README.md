@@ -8,8 +8,8 @@ meng-encode, dan mengirim via WebRTC ke client.
 | Bagian | Status |
 |---|---|
 | Signaling client (daftar, pair, negosiasi) | ✅ jadi, lintas platform |
-| Sesi WebRTC (answerer) + data channel "input" | ✅ jadi + teruji (`tests/e2e.rs`) |
-| **Media plane: track video H264 + encode → RTP → decode** | ✅ **jadi + teruji** (openh264, pola uji) |
+| Sesi WebRTC (answerer) + data channel "input" | ✅ implementasi tersedia |
+| **Media plane: track video H264 + encode → RTP → decode** | ✅ implementasi tersedia (openh264, pola frame) |
 | Sumber video: capture layar (DXGI) + encode (NVENC) | ⏳ Windows-only, belum diimplementasi |
 
 Artinya: jalur media **sudah terbukti end-to-end** — host meng-encode frame
@@ -47,11 +47,12 @@ xydesk-host \
 # --id opsional: otomatis digenerasi & disimpan bila tidak diberikan
 ```
 
-## Bangun & uji (dijalankan di GitHub Actions)
+## Build
+
+GitHub Actions membangun host Windows secara otomatis. Untuk build manual:
 
 ```bash
-cargo build              # compile (lintas platform)
-cargo test               # identity + e2e dua peer WebRTC (media plane)
+cargo build --release
 ```
 
 ## Rencana implementasi sumber video (Windows)
@@ -75,8 +76,6 @@ host/
 │   ├── lib.rs       # pub mod identity; pub mod screen; pub mod session;
 │   ├── main.rs      # CLI + signaling client + wiring sesi
 │   ├── identity.rs  # ID 9 digit + password pairing (persisten, customizable)
-│   ├── session.rs   # WebRTC answerer + data channel input (teruji)
+│   ├── session.rs   # WebRTC answerer + data channel input
 │   └── screen.rs    # sumber video (Windows DXGI — TODO)
-└── tests/
-    └── e2e.rs       # dua peer WebRTC loopback — membuktikan jalur WebRTC
 ```

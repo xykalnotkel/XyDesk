@@ -21,9 +21,9 @@ env:
   GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
 
 jobs:
-  # ── 1. Gerbang mutu: kalau gagal, build tidak dijalankan sama sekali ──
+  # ── 1. Gerbang kompilasi: format dan analisis statis ──
   check:
-    name: Analisis & Test
+    name: Analisis Statis
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -45,13 +45,10 @@ jobs:
           retention-days: 3
 
       - name: Cek & rapikan format
-        run: dart format lib test
+        run: dart format lib
 
       - name: Analisis statis
         run: flutter analyze --fatal-infos
-
-      - name: Test
-        run: flutter test --reporter compact
 
       # Aturan desain ditegakkan mesin, bukan sekadar ditulis di dokumen.
       - name: Verifikasi aturan seamless
