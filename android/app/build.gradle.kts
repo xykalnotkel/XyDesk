@@ -34,21 +34,9 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // Kunci ABI di level Gradle, BUKAN hanya lewat --target-platform.
-        //
-        // Alasannya: --target-platform hanya mengontrol library milik Flutter
-        // (libflutter.so dan libapp.so). Library native milik PLUGIN diambil
-        // apa adanya dari AAR masing-masing, sehingga arsitektur yang tidak
-        // diminta tetap ikut terbungkus. Pada build 510d231 hal ini
-        // menyelundupkan lib/x86_64/libjingle_peerconnection_so.so sebesar
-        // 15.3 MB dari flutter_webrtc, padahal x86_64 tidak pernah diminta.
-        // Akibatnya APK jadi 72.8 MB dan 79 MB setelah dipasang.
-        //
-        // ndk.abiFilters berlaku pada SEMUA sumber .so, termasuk plugin, jadi
-        // inilah gerbang yang benar.
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
+        // Jangan pasang ndk.abiFilters di sini: Flutter --split-per-abi memakai
+        // splits.abi dan Gradle menolak kedua mekanisme jika aktif bersamaan.
+        // Filter final library plugin berada di packaging.jniLibs.excludes.
     }
 
     signingConfigs {
