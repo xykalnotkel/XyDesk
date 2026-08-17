@@ -3,12 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/devlog.dart';
 import '../../core/l10n_bridge.dart';
 import '../../core/store.dart';
 import '../../core/tokens.dart';
+import '../../webrtc/input_codec.dart';
+import '../../webrtc/session_transport.dart';
+import '../../webrtc/vk_codes.dart';
 import '../../widgets/brand.dart';
 import '../../widgets/hud_glyphs.dart';
 import 'media_capabilities.dart';
@@ -25,10 +29,15 @@ class SessionPage extends ConsumerStatefulWidget {
     super.key,
     required this.deviceName,
     required this.deviceId,
+    this.password = '',
   });
 
   final String deviceName;
   final String deviceId;
+
+  /// Password pairing host. Kosong = coba pairing tanpa password (host
+  /// menolak bila mensyaratkan) atau tampilkan preview untuk mode tamu.
+  final String password;
 
   @override
   ConsumerState<SessionPage> createState() => _SessionPageState();
@@ -46,11 +55,17 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   late SessionSettings _settings;
   KbLayout _keyboardLayout = KbLayout.split;
   double _keyboardOpacity = 0.95;
+  late final SessionTransport _transport;
 
   @override
   void initState() {
     super.initState();
     final preferences = ref.read(settingsProvider);
+    _transport = SessionTransport(jwt: ref.read(authProvider).token);
+    _transport.addListener(_onTransportChanged);
+    unawaited(
+      _transport.start(hostId: widget.deviceId, password: widget.password),
+    );
     _settings = SessionSettings(
       pcAudioRequested: preferences.audioEnabled,
       microphoneRequested: preferences.micPassthrough,
@@ -68,7 +83,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       'id=${widget.deviceId}',
     );
     final platformReduce = WidgetsBinding
-        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+        .instance
+        .platformDispatcher
+        .accessibilityFeatures
+        .disableAnimations;
     final reduceMotion = preferences.reduceMotion || platformReduce;
     _connectTimer = Timer(Duration(milliseconds: reduceMotion ? 0 : 450), () {
       if (!mounted) return;
@@ -78,8 +96,21 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     });
   }
 
+  void _onTransportChanged() {
+    if (!mounted) return;
+    final s = _transport.state;
+    DevLog.i(
+      'sesi',
+      'Transport',
+      '${s.status}${s.message == null ? '' : ' - ${s.message}'}',
+    );
+    setState(() {});
+  }
+
   @override
   void dispose() {
+    _transport.removeListener(_onTransportChanged);
+    _transport.dispose();
     _idleTimer?.cancel();
     _connectTimer?.cancel();
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
@@ -88,9 +119,29 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     super.dispose();
   }
 
+  /// Kirim satu kombinasi tombol (modifier sticky + tombol utama) ke host.
+  void _sendKeyCombo(String label, Set<String> modifiers) {
+    if (!_transport.state.live) return;
+    final vk = vkForLabel(label);
+    if (vk == null) return;
+    final modVks = modifiers
+        .map(vkForLabel)
+        .whereType<int>()
+        .toList(growable: false);
+    for (final m in modVks) {
+      _transport.sendInput(InputCodec.key(m, down: true));
+    }
+    _transport.sendInput(InputCodec.key(vk, down: true));
+    _transport.sendInput(InputCodec.key(vk, down: false));
+    for (final m in modVks.reversed) {
+      _transport.sendInput(InputCodec.key(m, down: false));
+    }
+  }
+
   void _leaveSession() {
     // Offline previews are deliberately not added to remote-session history.
     // History should begin only after a real negotiated transport is active.
+    unawaited(_transport.shutdown());
     Navigator.of(context).maybePop();
   }
 
@@ -146,18 +197,26 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxHeight < 440;
-          final panelWidth =
-              (constraints.maxWidth * 0.46).clamp(340.0, 410.0).toDouble();
+          final panelWidth = (constraints.maxWidth * 0.46)
+              .clamp(340.0, 410.0)
+              .toDouble();
           return Stack(
             children: [
               Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _wake,
-                  child: _RemoteScreenPlaceholder(
-                    experience: _settings.experience,
-                  ),
-                ),
+                child: _transport.state.live
+                    ? _RemoteVideoSurface(
+                        transport: _transport,
+                        relativeMouse: _settings.pointerLock,
+                        onWake: _wake,
+                      )
+                    : GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _wake,
+                        child: _RemoteScreenPlaceholder(
+                          experience: _settings.experience,
+                          transport: _transport.state,
+                        ),
+                      ),
               ),
               if (!_keyboardVisible &&
                   !_panelVisible &&
@@ -176,6 +235,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                   deviceName: widget.deviceName,
                   experience: _settings.experience,
                   compact: compact,
+                  live: _transport.state.live,
                   onExperienceChanged: _setExperience,
                   onBack: _leaveSession,
                 ),
@@ -231,7 +291,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                       setState(() => _keyboardLayout = value),
                   onOpacityChanged: (value) =>
                       setState(() => _keyboardOpacity = value),
-                  onKey: (_) {},
+                  onKeyWithModifiers: _sendKeyCombo,
                   onDismiss: () {
                     setState(() => _keyboardVisible = false);
                     _restartIdleTimer();
@@ -269,10 +329,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 2),
-        ),
+        SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
       );
     _wake();
   }
@@ -361,10 +418,84 @@ class _ConnectingView extends StatelessWidget {
   }
 }
 
+/// Permukaan video sungguhan + input trackpad.
+///
+/// Gestur (mode desktop/trackpad):
+///   - seret satu jari  -> gerak pointer relatif
+///   - ketuk            -> klik kiri
+///   - seret dua jari   -> scroll
+class _RemoteVideoSurface extends StatelessWidget {
+  const _RemoteVideoSurface({
+    required this.transport,
+    required this.relativeMouse,
+    required this.onWake,
+  });
+
+  final SessionTransport transport;
+  final bool relativeMouse;
+  final VoidCallback onWake;
+
+  void _click(int button) {
+    transport.sendInput(InputCodec.mouseButton(button, down: true));
+    transport.sendInput(InputCodec.mouseButton(button, down: false));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final renderer = transport.rtc?.renderer;
+    if (renderer == null) return const ColoredBox(color: Colors.black);
+    return LayoutBuilder(
+      builder: (context, constraints) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          onWake();
+          _click(MouseButton.left);
+        },
+        onSecondaryTap: () => _click(MouseButton.right),
+        onPanUpdate: (d) {
+          if (relativeMouse) {
+            transport.sendInput(
+              InputCodec.mouseMoveRel(d.delta.dx.round(), d.delta.dy.round()),
+            );
+          } else {
+            // Mode absolut: posisi jari dipetakan langsung ke layar host
+            // (fraksi 0..1 dari permukaan video).
+            transport.sendInput(
+              InputCodec.mouseMoveAbs(
+                d.localPosition.dx / constraints.maxWidth,
+                d.localPosition.dy / constraints.maxHeight,
+              ),
+            );
+          }
+        },
+        child: RTCVideoView(
+          renderer,
+          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+        ),
+      ),
+    );
+  }
+}
+
 class _RemoteScreenPlaceholder extends StatelessWidget {
-  const _RemoteScreenPlaceholder({required this.experience});
+  const _RemoteScreenPlaceholder({
+    required this.experience,
+    required this.transport,
+  });
 
   final SessionExperience experience;
+  final TransportState transport;
+
+  String get _statusLabel => switch (transport.status) {
+    TransportStatus.preview => 'PREVIEW • TRANSPORT OFFLINE',
+    TransportStatus.pairing => 'MENGHUBUNGI HOST…',
+    TransportStatus.negotiating => 'NEGOSIASI KONEKSI…',
+    TransportStatus.connected => 'TERSAMBUNG',
+    TransportStatus.rejected => 'PAIRING DITOLAK',
+    TransportStatus.peerOffline => 'HOST TIDAK ONLINE',
+    TransportStatus.ended => 'SESI BERAKHIR',
+    TransportStatus.error => 'KONEKSI GAGAL',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -412,9 +543,9 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
                         color: AppColors.warning.withValues(alpha: 0.32),
                       ),
                     ),
-                    child: const Text(
-                      'PREVIEW • TRANSPORT OFFLINE',
-                      style: TextStyle(
+                    child: Text(
+                      _statusLabel,
+                      style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,
@@ -432,9 +563,12 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'HUD dapat dipreview, tetapi belum mengirim input atau audio.',
-                    style: TextStyle(fontSize: 10.5, color: Color(0x66FFFFFF)),
+                  Text(
+                    transport.message ?? 'HUD dapat dipreview, tetapi belum mengirim input atau audio.',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: Color(0x66FFFFFF),
+                    ),
                   ),
                 ],
               ),
@@ -472,6 +606,7 @@ class _TopBar extends StatelessWidget {
     required this.deviceName,
     required this.experience,
     required this.compact,
+    required this.live,
     required this.onExperienceChanged,
     required this.onBack,
   });
@@ -479,6 +614,7 @@ class _TopBar extends StatelessWidget {
   final String deviceName;
   final SessionExperience experience;
   final bool compact;
+  final bool live;
   final ValueChanged<SessionExperience> onExperienceChanged;
   final VoidCallback onBack;
 
@@ -515,8 +651,8 @@ class _TopBar extends StatelessWidget {
             Container(
               width: 7,
               height: 7,
-              decoration: const BoxDecoration(
-                color: AppColors.warning,
+              decoration: BoxDecoration(
+                color: live ? AppColors.success : AppColors.warning,
                 shape: BoxShape.circle,
               ),
             ),
@@ -537,9 +673,14 @@ class _TopBar extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  const Text(
-                    'Preview • tanpa telemetry',
-                    style: TextStyle(fontSize: 10.5, color: Colors.white38),
+                  Text(
+                    live
+                        ? 'Live • end-to-end WebRTC'
+                        : 'Preview • tanpa telemetry',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: Colors.white38,
+                    ),
                   ),
                 ],
               ),
@@ -607,7 +748,8 @@ class _QuickDock extends StatelessWidget {
             icon: LucideIcons.volume2,
             label: 'Audio',
             requested: audioRequested,
-            pending: audioRequested &&
+            pending:
+                audioRequested &&
                 !SessionMediaCapabilities.currentBuild.pcSystemAudio.isActive,
             onTap: onAudio,
           ),
@@ -615,7 +757,8 @@ class _QuickDock extends StatelessWidget {
             icon: LucideIcons.mic,
             label: 'Mik',
             requested: microphoneRequested,
-            pending: microphoneRequested &&
+            pending:
+                microphoneRequested &&
                 !SessionMediaCapabilities.currentBuild.phoneMicrophone.isActive,
             onTap: onMicrophone,
           ),
@@ -675,10 +818,10 @@ class _DockButton extends StatelessWidget {
     final color = danger
         ? AppColors.danger
         : pending
-            ? AppColors.warning
-            : requested
-                ? AppColors.accentDark
-                : Colors.white70;
+        ? AppColors.warning
+        : requested
+        ? AppColors.accentDark
+        : Colors.white70;
     return Tooltip(
       message: pending ? '$label belum aktif • ketuk untuk detail' : label,
       child: InkWell(

@@ -30,29 +30,30 @@ class SignalMessage {
   final List<Map<String, dynamic>>? devices;
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        if (to != null) 'to': to,
-        if (from != null) 'from': from,
-        if (pin != null) 'pin': pin,
-        if (accepted != null) 'accepted': accepted,
-        if (sdp != null) 'sdp': sdp,
-        if (candidate != null) 'candidate': candidate,
-        if (reason != null) 'reason': reason,
-      };
+    'type': type,
+    if (to != null) 'to': to,
+    if (from != null) 'from': from,
+    if (pin != null) 'pin': pin,
+    if (accepted != null) 'accepted': accepted,
+    if (sdp != null) 'sdp': sdp,
+    if (candidate != null) 'candidate': candidate,
+    if (reason != null) 'reason': reason,
+  };
 
   factory SignalMessage.fromJson(Map<String, dynamic> j) => SignalMessage(
-        type: j['type'] as String? ?? '',
-        to: j['to'] as String?,
-        from: j['from'] as String?,
-        pin: j['pin'] as String?,
-        accepted: j['accepted'] as bool?,
-        sdp: j['sdp'] as Map<String, dynamic>?,
-        candidate: j['candidate'] as Map<String, dynamic>?,
-        error: j['error'] as String?,
-        reason: j['reason'] as String?,
-        devices:
-            (j['devices'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList(),
-      );
+    type: j['type'] as String? ?? '',
+    to: j['to'] as String?,
+    from: j['from'] as String?,
+    pin: j['pin'] as String?,
+    accepted: j['accepted'] as bool?,
+    sdp: j['sdp'] as Map<String, dynamic>?,
+    candidate: j['candidate'] as Map<String, dynamic>?,
+    error: j['error'] as String?,
+    reason: j['reason'] as String?,
+    devices: (j['devices'] as List?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList(),
+  );
 }
 
 /// Klien signaling untuk app XyDesk (role=client).
@@ -87,7 +88,9 @@ class SignalingClient {
 
     _sub = ch.stream.listen(
       (data) {
-        final m = SignalMessage.fromJson(jsonDecode(data as String) as Map<String, dynamic>);
+        final m = SignalMessage.fromJson(
+          jsonDecode(data as String) as Map<String, dynamic>,
+        );
         switch (m.type) {
           case 'pair-response':
             onPairResponse?.call(m.accepted ?? false, m.from);
@@ -122,14 +125,7 @@ class SignalingClient {
 
   void sendBye(String peerId) => _send(SignalMessage(type: 'bye', to: peerId));
 
-  void _send(SignalMessage m) {
-    if (m.type == 'hello') {
-      // hello dikirim setelah terhubung; kirim mentah
-      _ch?.sink.add(jsonEncode(m.toJson()));
-    } else {
-      _ch?.sink.add(jsonEncode(m.toJson()));
-    }
-  }
+  void _send(SignalMessage m) => _ch?.sink.add(jsonEncode(m.toJson()));
 
   Future<void> close() async {
     await _sub?.cancel();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -5,6 +6,27 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
 
 import 'signaling_client.dart';
+
+/// Fase koneksi sesi remote — dikonsumsi UI untuk menampilkan status jujur.
+enum RtcPhase {
+  /// Menghubungi signaling dan menunggu host menerima pairing.
+  pairing,
+
+  /// Pairing diterima; negosiasi SDP/ICE sedang berjalan.
+  negotiating,
+
+  /// PeerConnection tersambung; video/input aktif.
+  connected,
+
+  /// Host menolak pairing (password salah / limit percobaan).
+  rejected,
+
+  /// Host tidak online di signaling.
+  peerOffline,
+
+  /// Sesi berakhir (bye, gagal, atau ditutup lokal).
+  ended,
+}
 
 /// Layanan WebRTC client XyDesk.
 ///
@@ -16,6 +38,7 @@ class RtcService {
   RTCPeerConnection? _pc;
   RTCDataChannel? _inputChannel;
   SignalingClient? _sig;
+  bool _stopped = false;
 
   String _deviceId = '';
   String _token = '';
@@ -25,13 +48,18 @@ class RtcService {
   RTCVideoRenderer get renderer => _renderer;
   final RTCVideoRenderer _renderer = RTCVideoRenderer();
 
-  Stream<void> get onSessionEnd => _endCtrl.stream;
-  final _endCtrl = StreamController<void>.broadcast();
+  /// Aliran fase koneksi — satu sumber kebenaran untuk status UI.
+  Stream<RtcPhase> get phases => _phaseCtrl.stream;
+  final _phaseCtrl = StreamController<RtcPhase>.broadcast();
+
+  void _emit(RtcPhase phase) {
+    if (!_phaseCtrl.isClosed) _phaseCtrl.add(phase);
+  }
 
   /// Memulai sesi sebagai client terhadap [hostId].
   ///
-  /// [stun] default pakai STUN publik gratis (tanpa biaya). [turn] opsional —
-  /// isi bila koneksi direct gagal (lihat docs/FREE-STACK.md).
+  /// [stun] default pakai STUN publik gratis (tanpa biaya). TURN otomatis
+  /// diambil dari endpoint `/turn-ice` bila server mengonfigurasinya.
   Future<void> startSession({
     required String signalingUrl,
     required String hostId,
@@ -39,7 +67,6 @@ class RtcService {
     required String deviceId,
     String pin = '',
     List<String> stun = const ['stun:stun.cloudflare.com:3478'],
-    Map<String, String>? turn,
   }) async {
     _deviceId = deviceId;
     _token = token;
@@ -50,50 +77,49 @@ class RtcService {
 
     sig.onPairResponse = (accepted, from) async {
       if (!accepted) {
-        _endCtrl.add(null);
+        _emit(RtcPhase.rejected);
         return;
       }
+      _emit(RtcPhase.negotiating);
       await _negotiate(hostId);
+    };
+
+    sig.onDisconnected = () {
+      if (!_stopped) _emit(RtcPhase.ended);
     };
 
     sig.onMessage = (m) async {
       switch (m.type) {
-        case 'offer': // (tidak lazim: client jadi penerima) — tetap tangani
-          await _pc?.setRemoteDescription(
-            RTCSessionDescription(m.sdp?['sdp'] as String, 'offer'),
-          );
-          final answer = await _pc!.createAnswer();
-          await _pc!.setLocalDescription(answer);
-          sig.sendAnswer(m.from!, {
-            'type': 'answer',
-            'sdp': answer.sdp,
-          });
-          break;
         case 'answer':
           await _pc?.setRemoteDescription(
-            RTCSessionDescription(m.sdp?['sdp'] as String, 'answer'),
+            RTCSessionDescription(m.sdp?['sdp'] as String?, 'answer'),
           );
           break;
         case 'ice':
           final c = m.candidate;
           if (c != null && c['candidate'] != null) {
-            await _pc?.addCandidate(RTCIceCandidate(
-              c['candidate'] as String,
-              c['sdpMid'] as String?,
-              (c['sdpMLineIndex'] as num?)?.toInt(),
-            ));
+            await _pc?.addCandidate(
+              RTCIceCandidate(
+                c['candidate'] as String,
+                c['sdpMid'] as String?,
+                (c['sdpMLineIndex'] as num?)?.toInt(),
+              ),
+            );
           }
           break;
         case 'bye':
           await stop();
           break;
         case 'error':
-          if (m.error == 'peer-offline') _endCtrl.add(null);
+          if (m.error == 'peer-offline') {
+            _emit(RtcPhase.peerOffline);
+          }
           break;
       }
     };
 
     await _renderer.initialize();
+    _emit(RtcPhase.pairing);
     await sig.connect(signalingUrl, token);
     sig.sendPair(hostId, pin);
   }
@@ -102,7 +128,9 @@ class RtcService {
     // STUN selalu ada (gratis tanpa batas). TURN diambil dari endpoint
     // /turn-ice (kredensial ber-TTL); bila belum dikonfigurasi, cukup STUN.
     final iceServers = <Map<String, dynamic>>[
-      {'urls': ['stun:stun.cloudflare.com:3478']},
+      {
+        'urls': ['stun:stun.cloudflare.com:3478'],
+      },
     ];
     final turn = await _fetchTurn();
     if (turn != null) iceServers.add(turn);
@@ -132,14 +160,21 @@ class RtcService {
 
     pc.onTrack = (event) {
       if (event.track.kind == 'video') {
-        _renderer.srcObject = event.streams.isNotEmpty ? event.streams[0] : null;
+        _renderer.srcObject = event.streams.isNotEmpty
+            ? event.streams[0]
+            : null;
       }
     };
 
     pc.onConnectionState = (state) {
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
-        _endCtrl.add(null);
+      switch (state) {
+        case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
+          _emit(RtcPhase.connected);
+        case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
+        case RTCPeerConnectionState.RTCPeerConnectionStateClosed:
+          _emit(RtcPhase.ended);
+        default:
+          break;
       }
     };
 
@@ -149,11 +184,14 @@ class RtcService {
   }
 
   /// Turunkan base URL HTTP dari URL WebSocket signaling:
-  /// `wss://signal.xystudio.my.id/ws` → `https://signal.xystudio.my.id`.
+  /// `wss://signal.xystudio.my.id/ws` -> `https://signal.xystudio.my.id`.
   static String _deriveBase(String signalingUrl) {
     var s = signalingUrl;
-    if (s.startsWith('wss://')) s = 'https://${s.substring(6)}';
-    else if (s.startsWith('ws://')) s = 'http://${s.substring(5)}';
+    if (s.startsWith('wss://')) {
+      s = 'https://${s.substring(6)}';
+    } else if (s.startsWith('ws://')) {
+      s = 'http://${s.substring(5)}';
+    }
     final pathStart = s.indexOf('/', s.indexOf('://') + 3);
     return pathStart == -1 ? s : s.substring(0, pathStart);
   }
@@ -195,10 +233,13 @@ class RtcService {
   }
 
   Future<void> stop() async {
+    if (_stopped) return;
+    _stopped = true;
     await _inputChannel?.close();
     await _pc?.close();
     await _renderer.dispose();
     await _sig?.close();
-    _endCtrl.add(null);
+    _emit(RtcPhase.ended);
+    await _phaseCtrl.close();
   }
 }

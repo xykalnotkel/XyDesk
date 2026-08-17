@@ -235,6 +235,7 @@ class VirtualKeyboard extends StatefulWidget {
   const VirtualKeyboard({
     super.key,
     this.onKey,
+    this.onKeyWithModifiers,
     this.onDismiss,
     this.layout = KbLayout.split,
     this.onLayoutChanged,
@@ -243,6 +244,11 @@ class VirtualKeyboard extends StatefulWidget {
   });
 
   final ValueChanged<String>? onKey;
+
+  /// Seperti [onKey], tetapi menyertakan modifier sticky yang sedang aktif
+  /// (Ctrl/Shift/Alt/Win/Caps) — dibutuhkan transport untuk mengirim kombinasi
+  /// tombol yang benar ke host.
+  final void Function(String label, Set<String> modifiers)? onKeyWithModifiers;
   final VoidCallback? onDismiss;
   final KbLayout layout;
   final ValueChanged<KbLayout>? onLayoutChanged;
@@ -273,6 +279,7 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
       return;
     }
     widget.onKey?.call(k.label);
+    widget.onKeyWithModifiers?.call(k.label, Set.unmodifiable(_sticky));
     if (_sticky.isNotEmpty) {
       setState(() => _sticky.removeWhere((m) => !_locked.contains(m)));
     }
@@ -323,14 +330,9 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
   }
 
   Widget _buildFull(BuildContext context) => SafeArea(
-        top: false,
-        child: _pane(
-          _rowsFull,
-          left: true,
-          fullWidth: true,
-          context: context,
-        ),
-      );
+    top: false,
+    child: _pane(_rowsFull, left: true, fullWidth: true, context: context),
+  );
 
   Widget _buildCompact(BuildContext context) {
     final w = MediaQuery.sizeOf(context).width;
@@ -481,10 +483,11 @@ class _VirtualKeyboardState extends State<VirtualKeyboard> {
             k.label,
             maxLines: 1,
             style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                color: fg,
-                height: 1),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: fg,
+              height: 1,
+            ),
           ),
         ),
       ),
@@ -512,10 +515,7 @@ class _KeyboardCloseButton extends StatelessWidget {
             children: [
               Icon(LucideIcons.x, size: 16, color: c.textHi),
               const SizedBox(width: 5),
-              Text(
-                'Tutup',
-                style: TextStyle(fontSize: 10, color: c.textMid),
-              ),
+              Text('Tutup', style: TextStyle(fontSize: 10, color: c.textMid)),
             ],
           ),
         ),

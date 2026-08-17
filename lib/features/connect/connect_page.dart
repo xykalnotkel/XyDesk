@@ -101,15 +101,15 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     setState(() => _error = null);
 
     final id = _id.text.replaceAll(' ', '');
-    final device = await ref.read(deviceRepoProvider.notifier).connect(
-          id: id,
-          name: _demoName(id),
-          remembered: _remember,
-        );
+    final device = await ref
+        .read(deviceRepoProvider.notifier)
+        .connect(id: id, name: _demoName(id), remembered: _remember);
     if (!mounted) return;
 
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PairSuccessPage(device: device)),
+      MaterialPageRoute(
+        builder: (_) => PairSuccessPage(device: device, password: _pw.text),
+      ),
     );
   }
 
@@ -146,14 +146,13 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
   }
 
   Future<void> _scanQr() async {
-    final id = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const QrScanDemoPage()),
-    );
+    final id = await Navigator.of(
+      context,
+    ).push<String>(MaterialPageRoute(builder: (_) => const QrScanDemoPage()));
     if (!mounted || id == null) return;
     _id.text = id;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('QR berhasil dipindai.')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('QR berhasil dipindai.')));
   }
 
   @override
@@ -266,20 +265,14 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _pill(
-              context,
-              LucideIcons.scanLine,
-              'Pindai QR',
-              () => _scanQr(),
-            ),
+            _pill(context, LucideIcons.scanLine, 'Pindai QR', () => _scanQr()),
             const SizedBox(width: Gap.h32),
             _pill(
               context,
               LucideIcons.history,
               'Riwayat',
-              () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
+              () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const HistoryPage())),
             ),
           ],
         ),
@@ -294,9 +287,8 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
                 style: TextStyle(fontSize: 11.5, color: c.textLow),
               ),
               TextButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const GuidePage()),
-                ),
+                onPressed: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const GuidePage())),
                 child: const Text('Ke sini'),
               ),
             ],
@@ -309,16 +301,16 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
   }
 
   Widget _label(String s) => Padding(
-        padding: const EdgeInsets.only(left: 2, bottom: 6),
-        child: Text(
-          s,
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w500,
-            color: context.c.textMid,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(left: 2, bottom: 6),
+    child: Text(
+      s,
+      style: TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w500,
+        color: context.c.textMid,
+      ),
+    ),
+  );
 
   Widget _pill(
     BuildContext context,
@@ -400,9 +392,13 @@ class QrScanDemoPage extends StatelessWidget {
 
 /// Konfirmasi pairing sebelum masuk ke layar session.
 class PairSuccessPage extends StatelessWidget {
-  const PairSuccessPage({super.key, required this.device});
+  const PairSuccessPage({super.key, required this.device, this.password = ''});
 
   final Device device;
+
+  /// Password pairing yang dimasukkan pengguna — diteruskan ke SessionPage
+  /// agar host dapat memverifikasinya saat transport dimulai.
+  final String password;
 
   @override
   Widget build(BuildContext context) {
@@ -445,6 +441,7 @@ class PairSuccessPage extends StatelessWidget {
                   builder: (_) => SessionPage(
                     deviceName: device.name,
                     deviceId: device.id,
+                    password: password,
                   ),
                 ),
               ),
