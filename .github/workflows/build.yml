@@ -115,7 +115,13 @@ jobs:
           EOF
 
       # ARM Universal = satu APK berisi arm64-v8a & armeabi-v7a (tanpa x86_64).
-      # Ukuran jauh lebih ringan dan jalan di 99.9% HP Android nyata.
+      #
+      # PENTING: --target-platform saja TIDAK cukup. Flag itu hanya mengontrol
+      # libflutter.so dan libapp.so; library native milik plugin tetap diambil
+      # utuh dari AAR-nya. Penyaring ABI yang sebenarnya ada di
+      # android/app/build.gradle.kts (ndk.abiFilters). Flag ini dipertahankan
+      # supaya Flutter tidak membangun artefak yang nantinya dibuang Gradle.
+      #
       # GOOGLE_CLIENT_ID repo-var boleh berisi daftar koma (android,web) untuk
       # Worker; aplikasi hanya memakai elemen pertama (client Android).
       - name: Build APK ARM Universal (arm64 & armeabi-v7a)
@@ -131,6 +137,50 @@ jobs:
           ls -lh dist/
           echo "### APK Universal" >> $GITHUB_STEP_SUMMARY
           echo "Ukuran: $(du -h dist/XyDesk.apk | cut -f1)" >> $GITHUB_STEP_SUMMARY
+
+      # Gerbang regresi ukuran. Bug x86_64 lolos ke rilis v1.0.0 sampai v1.2.0
+      # tanpa ada yang sadar karena tidak ada satu pun pemeriksaan otomatis.
+      # Dua pemeriksaan: ABI terlarang dan ambang ukuran keras.
+      - name: Verifikasi ABI dan ukuran APK
+        run: |
+          set -euo pipefail
+          unzip -q -o dist/XyDesk.apk -d /tmp/apkcheck
+
+          echo "ABI yang terbungkus:"
+          ls /tmp/apkcheck/lib/
+
+          gagal=0
+          for abi in x86 x86_64 armeabi mips; do
+            if [ -d "/tmp/apkcheck/lib/$abi" ]; then
+              ukuran="$(du -sh "/tmp/apkcheck/lib/$abi" | cut -f1)"
+              echo "::error::ABI terlarang '$abi' ikut terbungkus ($ukuran). \
+          Periksa ndk.abiFilters di android/app/build.gradle.kts."
+              gagal=1
+            fi
+          done
+          [ "$gagal" -eq 0 ] || exit 1
+
+          bytes="$(stat -c%s dist/XyDesk.apk)"
+          mb=$(( bytes / 1048576 ))
+          # Ambang 62 MB. Dasarnya bukan angka bulat asal:
+          #   build bermasalah 510d231 = 72 MB
+          #   proyeksi pasca-perbaikan = sekitar 55 MB
+          # Batas ditaruh di antaranya dengan margin ~7 MB untuk pertumbuhan
+          # wajar, tetapi tetap di bawah biaya satu ABI nyasar (15 MB), jadi
+          # regresi yang sama pasti tertangkap lagi.
+          batas=62
+          echo "Ukuran APK: ${mb} MB (batas ${batas} MB)"
+          if [ "$mb" -gt "$batas" ]; then
+            echo "::error::APK ${mb} MB melampaui batas ${batas} MB."
+            exit 1
+          fi
+          {
+            echo ""
+            echo "| Pemeriksaan | Hasil |"
+            echo "|---|---|"
+            echo "| ABI terbungkus | $(ls /tmp/apkcheck/lib/ | tr '\n' ' ') |"
+            echo "| Ukuran APK | ${mb} MB / ${batas} MB |"
+          } >> $GITHUB_STEP_SUMMARY
 
       - uses: actions/upload-artifact@v4
         with:
