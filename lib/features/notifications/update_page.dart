@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/theme.dart';
-import '../../widgets/brand_logo.dart';
+import '../../core/tokens.dart';
+import '../../widgets/brand.dart';
 import 'app_update_details.dart';
 import 'update_download_service.dart';
 import 'update_repository.dart';
@@ -204,14 +204,14 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
     final latest = result != null && !result.updateAvailable;
 
     return Scaffold(
-      backgroundColor: XyColors.bg,
+      backgroundColor: context.c.bg,
       appBar: AppBar(
-        backgroundColor: XyColors.bg,
+        backgroundColor: context.c.bg,
         surfaceTintColor: Colors.transparent,
         titleSpacing: 4,
         title: const Row(
           children: [
-            BrandLogo(size: 31, showWordmark: false),
+            BrandLogo(size: 31),
             SizedBox(width: 10),
             Text(
               'Pusat Update',
@@ -253,8 +253,8 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
             const SizedBox(height: 14),
             Text(
               latest ? 'XyDesk sudah terbaru' : details.title,
-              style: const TextStyle(
-                color: XyColors.ink,
+              style: TextStyle(
+                color: context.c.textHi,
                 fontSize: 24,
                 height: 1.18,
                 fontWeight: FontWeight.w800,
@@ -267,8 +267,8 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
                   ? 'Build yang terpasang sudah sama atau lebih baru dari '
                       'Release resmi saat ini.'
                   : details.message,
-              style: const TextStyle(
-                color: XyColors.muted,
+              style: TextStyle(
+                color: context.c.textMid,
                 fontSize: 14,
                 height: 1.55,
               ),
@@ -285,10 +285,10 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
             ],
             if (details.releaseNotes.isNotEmpty) ...[
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'Yang disiapkan',
                 style: TextStyle(
-                  color: XyColors.ink,
+                  color: context.c.textHi,
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),
@@ -479,8 +479,8 @@ class _VersionValue extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: XyColors.muted,
+          style: TextStyle(
+            color: context.c.textMid,
             fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
@@ -489,8 +489,8 @@ class _VersionValue extends StatelessWidget {
         Text(
           value,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: XyColors.ink,
+          style: TextStyle(
+            color: context.c.textHi,
             fontSize: 14,
             fontWeight: FontWeight.w800,
           ),
@@ -559,8 +559,8 @@ class _DownloadCard extends StatelessWidget {
             const SizedBox(height: 7),
             Text(
               _progressLabel(status),
-              style: const TextStyle(
-                color: XyColors.muted,
+              style: TextStyle(
+                color: context.c.textMid,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
@@ -694,8 +694,8 @@ class _NoteRow extends StatelessWidget {
           Expanded(
             child: Text(
               note,
-              style: const TextStyle(
-                color: XyColors.ink,
+              style: TextStyle(
+                color: context.c.textHi,
                 fontSize: 13,
                 height: 1.4,
                 fontWeight: FontWeight.w600,
