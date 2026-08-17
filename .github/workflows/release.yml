@@ -203,8 +203,13 @@ jobs:
           cp artifacts/release-client-assets/XyDesk-Windows.zip dist/XyDesk-Windows.zip
           cp artifacts/release-client-assets/XyDesk-Web.zip dist/XyDesk-Web.zip
           cp artifacts/release-host-asset/xydesk-host.exe dist/XyDesk-Host.exe
-          cp design/notifications/xydesk_update_banner_1024x512.jpg \
-            dist/xydesk_update_banner_1024x512.jpg
+          # Banner dirender ulang setiap rilis: versi, build, dan tanggal
+          # ditulis otomatis di atas art dasar HD (tool/art/banner.py).
+          pip install --quiet Pillow
+          python3 tool/art/banner.py \
+            --version "$VERSION" \
+            --build "$BUILD_NUMBER" \
+            --out dist/xydesk_update_banner_1024x512.jpg
           test -s dist/XyDesk.apk
           cd dist
           sha256sum XyDesk.apk XyDesk-Host.exe XyDesk-Windows.zip \
