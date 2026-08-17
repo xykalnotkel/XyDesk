@@ -12,8 +12,48 @@ permissions:
   contents: read
 
 jobs:
+  # Gerbang mutu logika keamanan. Dijalankan di Linux karena jauh lebih cepat
+  # dan lebih murah daripada runner Windows; modul yang diuji (pairguard,
+  # identity, input) tidak bergantung pada API Windows.
+  test:
+    name: Uji Logika Host
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            host/target
+          key: test-${{ runner.os }}-cargo-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: test-${{ runner.os }}-cargo-
+
+      - name: Cek format
+        working-directory: host
+        run: cargo fmt --check
+
+      - name: Clippy tanpa toleransi peringatan
+        working-directory: host
+        run: cargo clippy --all-targets -- -D warnings
+
+      # Pertahanan brute force pairing tidak boleh mundur diam-diam. Kalau
+      # test ini merah, host bisa diambil alih; jangan pernah di-skip.
+      - name: Uji unit
+        working-directory: host
+        run: cargo test --all-targets
+
   build:
     name: Build Host EXE (Windows)
+    needs: test
     runs-on: windows-latest
     timeout-minutes: 30
     steps:

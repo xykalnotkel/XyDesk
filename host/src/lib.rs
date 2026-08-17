@@ -5,5 +5,6 @@
 
 pub mod identity;
 pub mod input;
+pub mod pairguard;
 pub mod screen;
 pub mod session;

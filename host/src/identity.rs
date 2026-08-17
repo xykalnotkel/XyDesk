@@ -15,11 +15,23 @@ use std::fs;
 use std::path::PathBuf;
 
 use rand::Rng;
+use sha2::{Digest, Sha256};
 
 /// Panjang ID perangkat (digit).
 pub const ID_LEN: usize = 9;
-/// Panjang minimum password.
+/// Panjang minimum password kustom yang boleh disetel pengguna.
+///
+/// Sengaja dibiarkan 6 agar pengguna tetap bebas memilih, tetapi password
+/// sependek ini hanya aman karena ada [`crate::pairguard`] yang membatasi laju
+/// percobaan. Tanpa penjaga itu, 6 karakter bisa jatuh dalam hitungan menit.
 pub const PW_MIN_LEN: usize = 6;
+/// Panjang password yang DIHASILKAN otomatis.
+///
+/// Dinaikkan dari 8 ke 10. Dengan charset 32 simbol, tiap karakter menyumbang
+/// 5 bit, jadi ini menaikkan entropi dari 40 bit ke 50 bit — ruang pencarian
+/// 1024 kali lebih besar. Biayanya cuma dua karakter tambahan yang diketik
+/// sekali saat pairing.
+pub const PW_GEN_LEN: usize = 10;
 
 // Charset password: tanpa karakter yang mudah tertukar (I/O/0/1).
 const PW_CHARS: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -76,12 +88,39 @@ pub fn load_or_create_password() -> String {
     pw
 }
 
-/// Generate password acak (8 karakter, tanpa karakter membingungkan).
+/// Generate password acak ([`PW_GEN_LEN`] karakter, tanpa karakter
+/// membingungkan).
 pub fn generate_password() -> String {
     let mut rng = rand::thread_rng();
-    (0..8)
+    (0..PW_GEN_LEN)
         .map(|_| PW_CHARS[rng.gen_range(0..PW_CHARS.len())] as char)
         .collect()
+}
+
+/// Bandingkan password yang dikirim client dengan password host.
+///
+/// ## Kenapa tidak memakai `==` atau `eq_ignore_ascii_case`
+///
+/// Kedua operator itu short-circuit: mereka berhenti pada byte pertama yang
+/// berbeda. Selisih waktu antara "salah di karakter pertama" dan "salah di
+/// karakter terakhir" dapat diukur, dan penyerang yang sabar bisa memulihkan
+/// password karakter demi karakter. Itu mengubah serangan 32^8 menjadi 32*8.
+///
+/// Fungsi ini membandingkan hash SHA-256 dari kedua nilai, bukan teks aslinya.
+/// Dua keuntungan: panjang yang dibandingkan selalu 32 byte (panjang password
+/// asli tidak bocor), dan akumulasi XOR memastikan seluruh byte selalu dibaca.
+///
+/// Perbandingan tetap case-insensitive seperti perilaku sebelumnya, karena
+/// pengguna mengetik password dari layar host ke ponsel dan charset generator
+/// memang hanya huruf besar.
+pub fn verify_password(input: &str, actual: &str) -> bool {
+    let a = Sha256::digest(input.trim().to_ascii_uppercase().as_bytes());
+    let b = Sha256::digest(actual.trim().to_ascii_uppercase().as_bytes());
+    let mut diff = 0u8;
+    for (x, y) in a.iter().zip(b.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
 }
 
 /// Set password kustom (persisten). Gagal bila < 6 karakter.

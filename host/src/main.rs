@@ -18,6 +18,7 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::Message;
 
+use xydesk_host::pairguard::{self, PairGuard};
 use xydesk_host::session::{IceCandidate, Session};
 
 /// SDP ter-serialisasi (objek `{type, sdp}` — identik dgn sisi client).
@@ -61,10 +62,12 @@ struct Msg {
     reason: Option<String>,
 }
 
-type Ws = tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+type Ws =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
 
 async fn send_msg(ws: &mut Ws, msg: &Msg) -> Result<()> {
-    ws.send(Message::Text(serde_json::to_string(msg)?.into())).await?;
+    ws.send(Message::Text(serde_json::to_string(msg)?.into()))
+        .await?;
     Ok(())
 }
 
@@ -102,11 +105,11 @@ async fn main() -> Result<()> {
     if let Some(pw) = &args.set_password {
         match xydesk_host::identity::set_password(pw) {
             Ok(()) => {
-                println!("✅ Password pairing diubah menjadi: {pw}");
+                println!("[OK] Password pairing diubah menjadi: {pw}");
                 return Ok(());
             }
             Err(e) => {
-                eprintln!("❌ Gagal: {e}");
+                eprintln!("[GAGAL] {e}");
                 std::process::exit(1);
             }
         }
@@ -114,7 +117,7 @@ async fn main() -> Result<()> {
     if args.new_password {
         let pw = xydesk_host::identity::generate_password();
         xydesk_host::identity::set_password(&pw)?;
-        println!("✅ Password pairing baru: {pw}");
+        println!("[OK] Password pairing baru: {pw}");
         return Ok(());
     }
 
@@ -169,6 +172,8 @@ async fn main() -> Result<()> {
     let stun = args.stun.clone();
     // Sesi aktif (satu pada satu waktu untuk PoC).
     let mut active: Option<Arc<Session>> = None;
+    // Penjaga brute force pairing — lihat pairguard.rs untuk model ancamannya.
+    let mut guard = PairGuard::new(std::time::Instant::now());
 
     while let Some(m) = ws.next().await {
         let m = m.context("koneksi putus")?;
@@ -183,18 +188,68 @@ async fn main() -> Result<()> {
 
             "pair" => {
                 let from = msg.from.unwrap_or_default();
-                // Verifikasi password yang dikirim client terhadap password host.
-                // Client boleh mengirim ID/password dengan spasi — kita bandingkan
-                // hanya bagian alfanumeriknya agar toleran format.
+                let now = std::time::Instant::now();
+
+                // Gerbang laju SEBELUM password disentuh. Peer yang terkunci
+                // tidak boleh menghabiskan siklus verifikasi, dan yang lebih
+                // penting: tidak boleh mendapat sinyal apa pun soal password.
+                let decision = guard.check(&from, now);
+                if let pairguard::Decision::Denied { reason, retry_in } = decision {
+                    println!(
+                        "[xydesk-host] pairing DITOLAK dari {from} ({}), coba lagi {} detik",
+                        reason.as_str(),
+                        retry_in.as_secs()
+                    );
+                    // Penundaan tetap dipertahankan agar penolakan tidak
+                    // terasa lebih cepat daripada kegagalan password biasa.
+                    tokio::time::sleep(pairguard::FAILURE_DELAY).await;
+                    send_msg(
+                        &mut ws,
+                        &Msg {
+                            kind: "pair-response".into(),
+                            to: Some(from),
+                            accepted: Some(false),
+                            ..Default::default()
+                        },
+                    )
+                    .await?;
+                    continue;
+                }
+
+                // Perbandingan konstan-waktu; lihat identity::verify_password.
                 let ok = msg
                     .pin
                     .as_deref()
-                    .map(|p| p.trim().eq_ignore_ascii_case(&password))
+                    .map(|p| xydesk_host::identity::verify_password(p, &password))
                     .unwrap_or(false);
-                println!(
-                    "[xydesk-host] permintaan pairing dari {from} (password {})",
-                    if ok { "COCOK" } else { "SALAH" }
-                );
+
+                if ok {
+                    guard.record_success(&from);
+                    println!("[xydesk-host] pairing DITERIMA dari {from}");
+                } else {
+                    let baru_terkunci = guard.record_failure(&from, now);
+                    if baru_terkunci {
+                        println!(
+                            "[xydesk-host] {from} DIKUNCI {} detik setelah {} kali gagal",
+                            pairguard::PEER_LOCKOUT.as_secs(),
+                            pairguard::MAX_FAILURES_PER_PEER
+                        );
+                    } else {
+                        println!("[xydesk-host] pairing GAGAL dari {from} (password salah)");
+                    }
+                    if guard.is_globally_locked(now) {
+                        println!(
+                            "[xydesk-host] PERINGATAN: penguncian global aktif {} detik. \
+                             Ada indikasi serangan brute force terdistribusi.",
+                            pairguard::GLOBAL_LOCKOUT.as_secs()
+                        );
+                    }
+                    // Penundaan tetap: tidak bergantung isi password maupun
+                    // seberapa jauh tebakan cocok, sehingga waktu respons tidak
+                    // membocorkan informasi.
+                    tokio::time::sleep(pairguard::FAILURE_DELAY).await;
+                }
+
                 send_msg(
                     &mut ws,
                     &Msg {
@@ -220,7 +275,10 @@ async fn main() -> Result<()> {
                     &Msg {
                         kind: "answer".into(),
                         to: Some(client.clone()),
-                        sdp: Some(SdpMsg { kind: "answer".into(), sdp: answer }),
+                        sdp: Some(SdpMsg {
+                            kind: "answer".into(),
+                            sdp: answer,
+                        }),
                         ..Default::default()
                     },
                 )
