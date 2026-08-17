@@ -66,8 +66,7 @@ type Ws =
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
 
 async fn send_msg(ws: &mut Ws, msg: &Msg) -> Result<()> {
-    ws.send(Message::Text(serde_json::to_string(msg)?.into()))
-        .await?;
+    ws.send(Message::Text(serde_json::to_string(msg)?)).await?;
     Ok(())
 }
 
