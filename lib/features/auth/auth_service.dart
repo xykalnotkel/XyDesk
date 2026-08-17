@@ -43,8 +43,14 @@ class AuthService {
 
   void close() => _client.close();
 
-  Future<OtpRequestResult> requestOtp(String email) async {
-    final body = await _post('/auth/request-otp', {'email': email});
+  Future<OtpRequestResult> requestOtp(
+    String email, {
+    required String name,
+  }) async {
+    final body = await _post('/auth/request-otp', {
+      'email': email,
+      'name': name,
+    });
     return OtpRequestResult(
       expiresIn: (body['expires_in'] as num?)?.toInt() ?? 600,
       resendIn: (body['resend_in'] as num?)?.toInt() ?? 60,
@@ -246,6 +252,7 @@ class AuthException implements Exception {
     final retry = (body['resend_in'] as num?)?.toInt();
     final message = switch (code) {
       'invalid-email' => 'Alamat email tidak valid.',
+      'invalid-name' => 'Nama harus terdiri dari 2 sampai 80 karakter.',
       'invalid-input' => 'Data yang dimasukkan tidak valid.',
       'cooldown' =>
         retry == null

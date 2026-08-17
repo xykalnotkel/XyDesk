@@ -29,7 +29,7 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: p.accent,
         brightness: brightness,
-      ).copyWith(surface: p.bg, primary: p.accent, error: AppColors.danger),
+      ).copyWith(surface: p.bg, primary: p.accent, error: p.dangerText),
     );
 
     return base.copyWith(
@@ -136,13 +136,13 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(R.md),
-          borderSide: const BorderSide(color: AppColors.danger, width: 1),
+          borderSide: BorderSide(color: p.dangerText, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(R.md),
-          borderSide: const BorderSide(color: AppColors.danger, width: 1),
+          borderSide: BorderSide(color: p.dangerText, width: 1),
         ),
-        errorStyle: const TextStyle(color: AppColors.danger, fontSize: 11.5),
+        errorStyle: TextStyle(color: p.dangerText, fontSize: 11.5),
       ),
 
       // ── Tombol aksi: radius sedang; pill hanya untuk status/pilihan ──
@@ -198,7 +198,7 @@ class AppTheme {
         trackColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected)
               ? p.accent
-              : const Color(0xFF3A3A3E),
+              : p.textLow.withValues(alpha: 0.45),
         ),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
         trackOutlineWidth: WidgetStateProperty.all(0),

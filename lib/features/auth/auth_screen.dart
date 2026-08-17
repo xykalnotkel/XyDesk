@@ -138,6 +138,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     });
     DevLog.i('auth', 'Mulai masuk dengan Google');
     try {
+      // Beri animasi logo waktu menyelesaikan swipe sebelum dialog akun native
+      // mengambil fokus layar.
+      await Future<void>.delayed(const Duration(milliseconds: 320));
       final session = await ref.read(googleAuthServiceProvider).signIn();
       if (!mounted) return;
       await ref
@@ -173,6 +176,7 @@ class _EmailStep extends ConsumerStatefulWidget {
 }
 
 class _EmailStepState extends ConsumerState<_EmailStep> {
+  final _name = TextEditingController();
   final _email = TextEditingController();
   final _otp = List.generate(6, (_) => TextEditingController());
   final _otpFocus = List.generate(6, (_) => FocusNode());
@@ -192,6 +196,7 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
   @override
   void dispose() {
     _timer?.cancel();
+    _name.dispose();
     _email.dispose();
     for (final c in _otp) {
       c.dispose();
@@ -232,7 +237,12 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
 
   Future<void> _send() async {
     if (_busy) return;
+    final name = _name.text.trim().replaceAll(RegExp(r'\s+'), ' ');
     final email = _email.text.trim();
+    if (name.length < 2 || name.length > 80) {
+      setState(() => _error = context.tr('auth_invalid_name'));
+      return;
+    }
     if (!_emailRe.hasMatch(email)) {
       setState(() => _error = context.tr('auth_invalid_email'));
       return;
@@ -245,7 +255,9 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
     var focusOtp = false;
 
     try {
-      final result = await ref.read(authServiceProvider).requestOtp(email);
+      final result = await ref
+          .read(authServiceProvider)
+          .requestOtp(email, name: name);
       if (!mounted) return;
       _clearOtp();
       setState(() => _otpSent = true);
@@ -365,6 +377,42 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
             ),
             const SizedBox(height: Gap.xxl),
             if (!_otpSent) ...[
+              Text(
+                context.tr('auth_name_label'),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                  color: c.textMid,
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _name,
+                enabled: !_busy,
+                keyboardType: TextInputType.name,
+                autofillHints: const [AutofillHints.name],
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                maxLength: 80,
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
+                decoration: InputDecoration(
+                  hintText: context.tr('auth_name_hint'),
+                  counterText: '',
+                  prefixIcon: Icon(
+                    LucideIcons.userRound,
+                    size: 18,
+                    color: c.textLow,
+                  ),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 48,
+                    minHeight: 48,
+                  ),
+                ),
+                style: TextStyle(fontSize: 14, color: c.textHi),
+              ),
+              const SizedBox(height: Gap.lg),
               Text(
                 context.tr('auth_email_label'),
                 style: TextStyle(
@@ -678,24 +726,17 @@ class _AuthButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final disabled = !enabled && !busy;
-    final radius = googleStyle ? 4.0 : R.md;
-    final background = googleStyle
-        ? (dark ? const Color(0xFF131314) : Colors.white)
-        : c.input;
-    final foreground = googleStyle
-        ? (dark ? const Color(0xFFE3E3E3) : const Color(0xFF1F1F1F))
-        : c.textHi;
+    const radius = R.md;
+    final background = googleStyle ? c.raised : c.input;
+    final foreground = c.textHi;
 
     final button = Material(
       color: background,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radius),
         side: googleStyle
-            ? BorderSide(
-                color: dark ? const Color(0xFF8E918F) : const Color(0xFF747775),
-              )
+            ? BorderSide(color: c.textLow.withValues(alpha: 0.34))
             : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,
@@ -704,24 +745,56 @@ class _AuthButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         child: SizedBox(
           height: googleStyle ? 40 : 50,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (busy)
-                _Spinner(color: foreground)
-              else if (leading != null)
-                leading!,
-              const SizedBox(width: Gap.md),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: googleStyle ? FontWeight.w500 : FontWeight.w600,
-                  color: foreground,
+          child: googleStyle && busy
+              ? TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeInOutCubic,
+                  builder: (context, value, _) => Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Opacity(
+                        opacity: 1 - value,
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: foreground,
+                          ),
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: Offset(104 * value, 0),
+                        child: leading ?? const SizedBox.shrink(),
+                      ),
+                      Opacity(
+                        opacity: value,
+                        child: _Spinner(color: foreground),
+                      ),
+                    ],
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (busy)
+                      _Spinner(color: foreground)
+                    else if (leading != null)
+                      leading!,
+                    const SizedBox(width: Gap.md),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: googleStyle
+                            ? FontWeight.w500
+                            : FontWeight.w600,
+                        color: foreground,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );

@@ -16,8 +16,8 @@ import '../../widgets/brand.dart';
 ///      cincin denyut memancar keluar.
 ///   3. Logo bergeser ke kanan sedikit (ancang-ancang), lalu meluncur ke
 ///      kiri menuju posisi lockup.
-///   4. Bersamaan dengan luncuran ke kiri, wordmark "XyDesk" masuk dari
-///      kanan dengan blur horizontal yang menajam (efek smearing halus).
+///   4. Bersamaan dengan luncuran logo ke kiri, wordmark "XyDesk" terungkap
+///      dari kiri ke kanan. Arah keduanya sengaja berlawanan.
 ///   5. Cincin ala kipas CPU berputar cepat di belakang logo selama fase
 ///      awal, lalu memudar setelah efek klik.
 class SplashPage extends ConsumerStatefulWidget {
@@ -83,7 +83,6 @@ class _SplashScene extends StatelessWidget {
   static const _leftEnd = 0.78;
   static const _wordStart = 0.60;
   static const _wordEnd = 0.88;
-  static const _tagStart = 0.80;
 
   @override
   Widget build(BuildContext context) {
@@ -121,10 +120,8 @@ class _SplashScene extends StatelessWidget {
     const lockupShift = (wordWidth + lockupGap) / 2;
     final nudgeRight = 30.0 * rightT;
     final logoDx = nudgeRight - (nudgeRight + lockupShift) * leftT;
-    final wordDx = 56 * (1 - wordT);
 
     final logoScale = t < _clickStart ? growScale : clickScale;
-    final tagT = Curves.easeOutCubic.transform(_frac(t, _tagStart, 1));
 
     // 5. Cincin CPU: berputar cepat selama fase tumbuh, memudar usai klik.
     final ringOpacity = t < _growEnd
@@ -225,15 +222,16 @@ class _SplashScene extends StatelessWidget {
                             ),
                           ),
                         ),
-                        // Wordmark masuk dari kanan dengan blur horizontal.
+                        // Logo bergerak kanan ke kiri; teks terungkap dari
+                        // kiri ke kanan pada posisi akhirnya.
                         if (wordT > 0)
                           Transform.translate(
                             offset: Offset(
-                              logoDx + lockupShift + logoSize / 2 + wordDx,
+                              logoDx + lockupShift + logoSize / 2,
                               0,
                             ),
-                            child: Opacity(
-                              opacity: wordT,
+                            child: ClipRect(
+                              clipper: _LeftToRightReveal(wordT),
                               child: ImageFiltered(
                                 imageFilter: ImageFilter.blur(
                                   sigmaX: 12 * (1 - wordT),
@@ -268,36 +266,6 @@ class _SplashScene extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Opacity(
-                    opacity: tagT,
-                    child: Transform.translate(
-                      offset: Offset(0, 8 * (1 - tagT)),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.045),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.07),
-                          ),
-                        ),
-                        child: const Text(
-                          'REMOTE  •  FLUID  •  SECURE',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.55,
-                            color: Color(0xFFA8A7B4),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -306,6 +274,20 @@ class _SplashScene extends StatelessWidget {
       ),
     );
   }
+}
+
+class _LeftToRightReveal extends CustomClipper<Rect> {
+  const _LeftToRightReveal(this.progress);
+
+  final double progress;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTWH(0, 0, size.width * progress, size.height);
+
+  @override
+  bool shouldReclip(covariant _LeftToRightReveal oldClipper) =>
+      oldClipper.progress != progress;
 }
 
 /// Cincin putus-putus ala kipas pendingin CPU: beberapa busur dengan celah,

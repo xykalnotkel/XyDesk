@@ -18,6 +18,16 @@ const OTP_IP_MAX_REQUESTS = 8;
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
 
+function normalizeName(value) {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string') return null;
+  const name = value.trim().replace(/\s+/g, ' ');
+  if (name.length < 2 || name.length > 80 || /[\u0000-\u001f\u007f]/.test(name)) {
+    return null;
+  }
+  return name;
+}
+
 export class AuthStore {
   constructor(ctx, env) {
     this.ctx = ctx;
@@ -53,14 +63,18 @@ export class AuthStore {
   }
 
   async requestOtp(request) {
-    let email;
+    let email, name;
     try {
-      ({ email } = await request.json());
+      ({ email, name } = await request.json());
     } catch {
       return json({ error: 'bad-json' }, 400);
     }
     if (!validateEmail(email)) return json({ error: 'invalid-email' }, 400);
     email = email.toLowerCase();
+    const pendingName = normalizeName(name);
+    if (name !== undefined && !pendingName) {
+      return json({ error: 'invalid-name' }, 400);
+    }
 
     const now = Math.floor(Date.now() / 1000);
     const rateLimit = await this.consumeOtpRateLimit(request, now);
@@ -80,6 +94,7 @@ export class AuthStore {
       expires_at: now + OTP_TTL,
       attempts: 0,
       created_at: now,
+      pending_name: pendingName,
     });
 
     const body = { ok: true, expires_in: OTP_TTL, resend_in: OTP_RESEND_COOLDOWN };
@@ -189,7 +204,17 @@ export class AuthStore {
 
     let user = await this.ctx.storage.get(`user:${email}`);
     if (!user) {
-      user = { id: crypto.randomUUID(), email, created_at: now };
+      user = {
+        id: crypto.randomUUID(),
+        email,
+        name: row.pending_name || null,
+        created_at: now,
+      };
+      await this.ctx.storage.put(`user:${email}`, user);
+    } else if (!user.name && row.pending_name) {
+      // Nama hanya diterapkan setelah OTP benar; request tanpa kepemilikan
+      // email tidak dapat mengubah profil akun yang sudah ada.
+      user.name = row.pending_name;
       await this.ctx.storage.put(`user:${email}`, user);
     }
 

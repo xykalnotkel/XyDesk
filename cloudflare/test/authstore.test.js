@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { hashOtp } from '../src/auth.js';
 import { AuthStore } from '../src/authstore.js';
 
 class MemoryStorage {
@@ -12,6 +13,10 @@ class MemoryStorage {
 
   async put(key, value) {
     this.values.set(key, structuredClone(value));
+  }
+
+  async delete(key) {
+    this.values.delete(key);
   }
 }
 
@@ -30,6 +35,32 @@ test('rate limit OTP membatasi per IP tanpa menyimpan alamat mentah', async () =
   assert.equal(blocked.ok, false);
   assert.equal(blocked.retryIn, 600);
   assert.equal([...storage.values.keys()].some((key) => key.includes('203.0.113.10')), false);
+});
+
+test('nama profil baru hanya disimpan setelah OTP benar', async () => {
+  const secret = 'verify-name-test-secret';
+  const storage = new MemoryStorage();
+  const email = 'kall@example.com';
+  const otp = '123456';
+  await storage.put(`otp:${email}`, {
+    hash: await hashOtp(secret, email, otp),
+    expires_at: Math.floor(Date.now() / 1000) + 600,
+    attempts: 0,
+    created_at: Math.floor(Date.now() / 1000),
+    pending_name: 'Kall XySpace',
+  });
+  const store = new AuthStore({ storage }, { AUTH_SECRET: secret });
+  const request = new Request('https://signal.example/auth/verify-otp', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, otp }),
+  });
+
+  const response = await store.verifyOtp(request);
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.user.name, 'Kall XySpace');
+  assert.equal([...storage.values.values()].some((row) => row?.name === 'Kall XySpace'), true);
 });
 
 test('bucket rate limit OTP dibuka kembali setelah jendela selesai', async () => {
