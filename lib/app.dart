@@ -231,6 +231,72 @@ class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _offerNotifications());
+  }
+
+  Future<void> _offerNotifications() async {
+    final service = NotificationService.instance;
+    if (!mounted || !service.supported) return;
+    final store = ref.read(storeProvider);
+    if (store.getBool('notification_offer_seen')) return;
+    await store.setBool('notification_offer_seen', true);
+    await service.refresh();
+    if (!mounted || service.active) return;
+
+    final enable = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Aktifkan notifikasi pembaruan',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: Gap.sm),
+              Text(
+                'XyDesk hanya mengirim notifikasi rilis dan keamanan penting. '
+                'Push tetap diterima saat aplikasi ditutup.',
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: context.c.textMid,
+                ),
+              ),
+              const SizedBox(height: Gap.xl),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Nanti'),
+                    ),
+                  ),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Aktifkan'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (enable == true) await service.enableUpdates();
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     final titles = [
       context.tr('home_devices'),
@@ -325,12 +391,16 @@ class _AppShellState extends ConsumerState<AppShell> {
       _DotIconButton(
         icon: LucideIcons.bell,
         tooltip: 'Notifikasi',
-        showDot: hasUpdate,
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const NotificationPreferencesPage(),
-          ),
-        ),
+        showDot: hasUpdate || !NotificationService.instance.active,
+        onPressed: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const NotificationPreferencesPage(),
+            ),
+          );
+          await NotificationService.instance.refresh();
+          if (mounted) setState(() {});
+        },
       ),
       _DotIconButton(
         icon: LucideIcons.circleArrowUp,

@@ -401,13 +401,10 @@ jobs:
               "app_id": os.environ["ONESIGNAL_APP_ID"],
               "target_channel": "push",
               "isAndroid": True,
-              "filters": [
-                  {
-                      "field": "app_version",
-                      "relation": "<",
-                      "value": build,
-                  }
-              ],
+              # Saat rilis baru terbit, semua subscriber masih berada pada
+              # build lama. Segment resmi lebih andal daripada membandingkan
+              # app_version string dengan Android versionCode integer.
+              "included_segments": ["Subscribed Users"],
               "headings": {
                   "en": "XyDesk Update!! Cek Sekarang",
                   "id": "XyDesk Update!! Cek Sekarang",
@@ -463,13 +460,12 @@ jobs:
           python3 - <<'PY' "$response_file"
           import json, os, sys
           data = json.load(open(sys.argv[1], encoding='utf-8'))
-          # OneSignal menjawab 200 dengan id kosong bila SEMUA penerima
-          # tersaring habis oleh filter app_version < build (semua perangkat
-          # sudah di build terbaru). Itu bukan kegagalan, tetapi wajib
-          # terlihat jelas di log — bukan sukses palsu.
+          # OneSignal menjawab 200 dengan id kosong bila belum ada perangkat
+          # yang memberi izin dan opt-in. Itu bukan sukses pengiriman dan wajib
+          # terlihat jelas di log.
           if not data.get('id'):
-              print('::warning::Push tidak dibuat: tidak ada perangkat '
-                    'dengan build lebih lama dari rilis ini. '
+              print('::warning::Push tidak dibuat: belum ada perangkat '
+                    'yang subscribed ke notifikasi XyDesk. '
                     f"Respons: {json.dumps(data, ensure_ascii=False)}")
           else:
               print(f"Push OneSignal dibuat: id={data.get('id')} "
