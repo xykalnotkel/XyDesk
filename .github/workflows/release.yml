@@ -351,7 +351,17 @@ jobs:
             exit 1
           fi
           python3 - <<'PY' "$response_file"
-          import json, sys
+          import json, os, sys
           data = json.load(open(sys.argv[1], encoding='utf-8'))
-          print(f"Push OneSignal dibuat: id={data.get('id')} recipients={data.get('recipients')}")
+          # OneSignal menjawab 200 dengan id kosong bila SEMUA penerima
+          # tersaring habis oleh filter app_version < build (semua perangkat
+          # sudah di build terbaru). Itu bukan kegagalan, tetapi wajib
+          # terlihat jelas di log — bukan sukses palsu.
+          if not data.get('id'):
+              print('::warning::Push tidak dibuat: tidak ada perangkat '
+                    'dengan build lebih lama dari rilis ini. '
+                    f"Respons: {json.dumps(data, ensure_ascii=False)}")
+          else:
+              print(f"Push OneSignal dibuat: id={data.get('id')} "
+                    f"recipients={data.get('recipients')}")
           PY
