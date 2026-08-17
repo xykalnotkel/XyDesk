@@ -19,6 +19,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE_ART = ROOT / 'design' / 'notifications' / 'banner_art_hd.png'
+LOGO = ROOT / 'assets' / 'img' / 'logo.png'
 FONTS = ROOT / 'assets' / 'fonts'
 
 W, H = 1024, 512
@@ -61,40 +62,31 @@ def build(version: str, build_number: str, out_path: Path, generic: bool = False
 
     draw = ImageDraw.Draw(art)
 
-    f_brand = font('Inter-Bold.ttf', 30)
-    f_sub = font('Inter-SemiBold.ttf', 16)
-    f_head = font('Inter-Bold.ttf', 88)
-    f_ver = font('Inter-SemiBold.ttf', 30)
+    f_brand = font('Inter-Bold.ttf', 31)
+    f_sub = font('Inter-SemiBold.ttf', 15)
+    f_head = font('Inter-Bold.ttf', 92)
+    f_ver = font('Inter-SemiBold.ttf', 31)
     f_meta = font('Inter-Medium.ttf', 19)
-    f_btn = font('Inter-Bold.ttf', 21)
+    f_desc = font('Inter-Regular.ttf', 18)
 
-    y = 74
+    y = 66
 
-    # ── Brand lockup ──
-    # Logo: kotak gradasi sederhana dengan huruf X (vektor teks, selalu tajam).
-    logo = 44
-    lx, ly = MARGIN_X, y - 6
-    for i in range(logo):
-        t = i / logo
-        r = int(154 + (59 - 154) * t)
-        g = int(123 + (124 - 123) * t)
-        b = int(255 + (255 - 255) * t)
-        draw.line([(lx, ly + i), (lx + logo, ly + i)], fill=(r, g, b))
-    # bulatkan sudut logo dengan mask
-    mask = Image.new('L', (logo, logo), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, logo - 1, logo - 1], 12, fill=255)
-    region = art.crop((lx, ly, lx + logo, ly + logo))
-    base_region = Image.new('RGB', (logo, logo), (11, 7, 20))
-    base_region.paste(region, (0, 0), mask)
-    art.paste(base_region, (lx, ly))
+    # ── Brand lockup: logo ASLI XyDesk (assets/img/logo.png, alpha) ──
+    logo_size = 52
+    lx, ly = MARGIN_X, y - 8
+    logo_img = Image.open(LOGO).convert('RGBA')
+    logo_img.thumbnail((logo_size, logo_size), Image.LANCZOS)
+    art = art.convert('RGBA')
+    # pusatkan vertikal di kotak logo_size
+    ox = lx + (logo_size - logo_img.width) // 2
+    oy = ly + (logo_size - logo_img.height) // 2
+    art.alpha_composite(logo_img, (ox, oy))
+    art = art.convert('RGB')
     draw = ImageDraw.Draw(art)
-    fx = font('Inter-Bold.ttf', 28)
-    xw = text_w(draw, 'X', fx)
-    draw.text((lx + (logo - xw) / 2, ly + 5), 'X', font=fx, fill=WHITE)
 
-    draw.text((lx + logo + 14, y - 4), 'XYDESK', font=f_brand, fill=WHITE)
+    draw.text((lx + logo_size + 16, y - 5), 'XYDESK', font=f_brand, fill=WHITE)
     draw.text(
-        (lx + logo + 14, y + 28),
+        (lx + logo_size + 16, y + 29),
         'NEW RELEASE',
         font=f_sub,
         fill=ACCENT_HI,
@@ -107,27 +99,27 @@ def build(version: str, build_number: str, out_path: Path, generic: bool = False
     # ── Versi + tanggal (otomatis) — dilewati pada banner generic in-app ──
     tanggal = ''
     if generic:
-        y += 118
+        y += 122
         draw.text(
             (MARGIN_X, y),
             'Versi baru sudah tersedia',
             font=f_ver,
             fill=LAVENDER,
         )
-        y += 44
+        y += 50
     else:
-        y += 118
+        y += 122
         ver_label = f'Versi {version}'
         draw.text((MARGIN_X, y), ver_label, font=f_ver, fill=LAVENDER)
         vw = text_w(draw, ver_label, f_ver)
         # chip build number
-        chip_x = MARGIN_X + vw + 14
+        chip_x = MARGIN_X + vw + 16
         chip_text = f'build {build_number}'
         cw = text_w(draw, chip_text, f_meta)
-        rounded_rect(draw, [chip_x, y + 2, chip_x + cw + 22, y + 32], 15, (34, 28, 58))
-        draw.text((chip_x + 11, y + 6), chip_text, font=f_meta, fill=ACCENT_HI)
+        rounded_rect(draw, [chip_x, y + 3, chip_x + cw + 22, y + 33], 15, (34, 28, 58))
+        draw.text((chip_x + 11, y + 7), chip_text, font=f_meta, fill=ACCENT_HI)
 
-        y += 44
+        y += 50
         bulan = [
             'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
             'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
@@ -136,26 +128,20 @@ def build(version: str, build_number: str, out_path: Path, generic: bool = False
         tanggal = f'{now.day} {bulan[now.month - 1]} {now.year}'
         draw.text(
             (MARGIN_X, y),
-            f'Sudah tersedia • {tanggal}',
+            f'Dirilis {tanggal}',
             font=f_meta,
             fill=MUTED,
         )
 
-    # ── Tombol CTA ──
-    y += 46
-    btn_text = 'CEK SEKARANG  \u2192'
-    bw = text_w(draw, btn_text, f_btn)
-    bx0, by0 = MARGIN_X, y
-    bx1, by1 = MARGIN_X + bw + 48, y + 52
-    # bayangan lembut
-    shadow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).rounded_rectangle(
-        [bx0, by0 + 6, bx1, by1 + 6], 16, fill=(0, 0, 0, 110),
-    )
-    art = Image.alpha_composite(art.convert('RGBA'), shadow.filter(ImageFilter.GaussianBlur(8))).convert('RGB')
-    draw = ImageDraw.Draw(art)
-    rounded_rect(draw, [bx0, by0, bx1, by1], 16, ACCENT)
-    draw.text((bx0 + 24, by0 + 13), btn_text, font=f_btn, fill=WHITE)
+    # ── Penjelasan (tanpa tombol — notifikasi bukan tempat CTA palsu) ──
+    y += 40
+    desc_lines = [
+        'Buka XyDesk untuk melihat detail pembaruan.',
+        'APK resmi diverifikasi otomatis sebelum dipasang.',
+    ]
+    for line in desc_lines:
+        draw.text((MARGIN_X, y), line, font=f_desc, fill=MUTED)
+        y += 28
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     art.save(out_path, 'JPEG', quality=92, optimize=True, progressive=True)
