@@ -192,20 +192,47 @@ async function handleSignalToken(request, url, env) {
     return new Response('unauthorized', { status: 401 });
   }
 
-  const id = (url.searchParams.get('id') || '').trim();
-  // ID perangkat client: alfanumerik sederhana, mencegah karakter aneh masuk
-  // ke registri hub.
+  let id = (url.searchParams.get('id') || '').trim();
+  let role = 'client';
+  let claim = '';
+  if (request.method === 'POST') {
+    try {
+      const body = await request.json();
+      id = String(body.id || '').trim();
+      role = body.role === 'host' ? 'host' : 'client';
+      claim = String(body.claim || '');
+    } catch {
+      return new Response('bad json', { status: 400 });
+    }
+  }
   if (!/^[A-Za-z0-9_-]{3,64}$/.test(id)) {
     return new Response('bad id', { status: 400 });
   }
 
-  return new Response(
-    await signSignalToken(id, 'client', env.XYDESK_SECRET),
-    {
-      status: 200,
-      headers: { 'content-type': 'text/plain' },
-    },
-  );
+  if (role === 'host') {
+    if (payload.guest === true || !payload.sub || !/^\d{9}$/.test(id)) {
+      return new Response('forbidden', { status: 403 });
+    }
+    const authStore = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'));
+    const claimResponse = await authStore.fetch(
+      new Request('https://internal/auth/authorize-host', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'X-XyDesk-Internal': env.XYDESK_SECRET,
+        },
+        body: JSON.stringify({ owner: payload.sub, device_id: id, claim }),
+      }),
+    );
+    if (!claimResponse.ok) {
+      return new Response('host claim rejected', { status: claimResponse.status });
+    }
+  }
+
+  return new Response(await signSignalToken(id, role, env.XYDESK_SECRET), {
+    status: 200,
+    headers: { 'content-type': 'text/plain' },
+  });
 }
 
 // ── Endpoint kredensial TURN ─────────────────────────────────────────────

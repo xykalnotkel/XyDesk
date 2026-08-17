@@ -132,10 +132,10 @@ Artefak build biasa tersedia melalui tab **Actions**.
 |---|---|---|
 | Android 64-bit | `XyDesk-Android-arm64-v8a.apk` | HP Android modern |
 | Android 32-bit | `XyDesk-Android-armeabi-v7a.apk` | Perangkat ARMv7 lama |
-| Windows x64 | `XyDesk-Windows-x64.zip` | PC Intel/AMD 64-bit |
-| Windows Arm64 | `XyDesk-Windows-arm64.zip` | Windows on Arm |
-| Windows host x64 | `XyDesk-Host-x64.exe` | Host Intel/AMD 64-bit |
-| Windows host Arm64 | `XyDesk-Host-arm64.exe` | Host Windows on Arm |
+| Windows x64 | `XyDesk-Windows-x64.zip` | Aplikasi terpadu Connect + Host Intel/AMD |
+| Windows Arm64 | `XyDesk-Windows-arm64.zip` | Aplikasi terpadu Connect + Host Windows on Arm |
+| Windows host standalone x64 | `XyDesk-Host-x64.exe` | Engine opsional untuk otomasi |
+| Windows host standalone Arm64 | `XyDesk-Host-arm64.exe` | Engine opsional untuk otomasi |
 | Web | `XyDesk-Web.zip` | Bundle web client (Vite + React) |
 
 Bundle Web dari Build `main` yang sukses juga dideploy otomatis ke Cloudflare

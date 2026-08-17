@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -8,6 +10,7 @@ import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
 import '../devices/device_detail_page.dart';
 import '../devices/device_model.dart';
+import '../host/host_mode_page.dart';
 import '../session/session_page.dart';
 
 /// Simulasi pemuatan awal supaya skeleton terlihat.
@@ -20,6 +23,8 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (Platform.isWindows) return const HostModePage();
+
     final loading = ref.watch(_loadingProvider);
     final devices = ref.watch(deviceRepoProvider);
     final topPad = MediaQuery.paddingOf(context).top + 60;

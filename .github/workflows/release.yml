@@ -220,6 +220,18 @@ jobs:
           cp artifacts/release-client-assets/XyDesk-Web.zip dist/
           cp artifacts/release-host-x64/xydesk-host.exe dist/XyDesk-Host-x64.exe
           cp artifacts/release-host-arm64/xydesk-host.exe dist/XyDesk-Host-arm64.exe
+
+          # Paket Windows utama adalah aplikasi terpadu. Client Flutter mencari
+          # engine Rust di Host/XyDesk-Host.exe saat mode Host diaktifkan.
+          for arch in x64 arm64; do
+            bundle="/tmp/windows-$arch"
+            rm -rf "$bundle"
+            mkdir -p "$bundle/Host"
+            unzip -q "dist/XyDesk-Windows-$arch.zip" -d "$bundle"
+            cp "dist/XyDesk-Host-$arch.exe" "$bundle/Host/XyDesk-Host.exe"
+            rm "dist/XyDesk-Windows-$arch.zip"
+            (cd "$bundle" && zip -q -r "$GITHUB_WORKSPACE/dist/XyDesk-Windows-$arch.zip" .)
+          done
           # Banner dirender ulang setiap rilis: versi, build, dan tanggal
           # ditulis otomatis di atas art dasar HD (tool/art/banner.py).
           pip install --quiet Pillow

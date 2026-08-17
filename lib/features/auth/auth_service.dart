@@ -67,6 +67,54 @@ class AuthService {
     return AuthSession.fromJson(body);
   }
 
+  Future<String> hostSignalToken({
+    required String token,
+    required String deviceId,
+    required String password,
+  }) async {
+    try {
+      final response = await _client
+          .post(
+            _uri('/signal-token'),
+            headers: {
+              'authorization': 'Bearer $token',
+              'content-type': 'application/json',
+            },
+            body: jsonEncode({
+              'id': deviceId,
+              'role': 'host',
+              'claim': password,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) {
+        if (response.statusCode == 403) {
+          throw const AuthException(
+            'host-claim-rejected',
+            'ID Host sudah terikat ke akun lain atau password perangkat berubah.',
+            statusCode: 403,
+          );
+        }
+        throw AuthException.fromBody(response.statusCode, _decode(response));
+      }
+      final value = response.body.trim();
+      if (value.isEmpty) {
+        throw const AuthException(
+          'invalid-response',
+          'Server tidak mengembalikan izin Host.',
+        );
+      }
+      return value;
+    } on TimeoutException {
+      throw const AuthException('timeout', 'Server terlalu lama merespons.');
+    } on http.ClientException {
+      throw const AuthException(
+        'network',
+        'Tidak dapat terhubung ke server. Periksa koneksi internet.',
+      );
+    }
+  }
+
   Future<AuthUser> me(String token) async {
     try {
       final response = await _client

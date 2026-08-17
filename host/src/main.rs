@@ -82,9 +82,12 @@ struct Args {
     /// Nama tampilan host
     #[arg(long, default_value = "XyDesk Host")]
     name: String,
-    /// Token Bearer dari server signaling (/issue)
+    /// Token signaling host berumur pendek dari aplikasi XyDesk
     #[arg(long)]
-    token: String,
+    token: Option<String>,
+    /// Cetak identitas host sebagai JSON untuk launcher terpadu, lalu keluar
+    #[arg(long)]
+    identity_json: bool,
     /// Server STUN (kosongkan untuk LAN murni)
     #[arg(long, default_value = "stun:stun.cloudflare.com:3478")]
     stun: String,
@@ -127,6 +130,21 @@ async fn main() -> Result<()> {
         .unwrap_or_else(xydesk_host::identity::load_or_create_device_id);
     let password = xydesk_host::identity::load_or_create_password();
 
+    if args.identity_json {
+        println!(
+            "{}",
+            serde_json::json!({
+                "deviceId": device_id.clone(),
+                "password": password.clone(),
+            })
+        );
+        return Ok(());
+    }
+    let token = args
+        .token
+        .as_deref()
+        .context("--token wajib saat menjalankan Host")?;
+
     println!(
         "[xydesk-host] sumber video: {}",
         xydesk_host::screen::capture_status()
@@ -150,7 +168,7 @@ async fn main() -> Result<()> {
         .context("URL tidak valid")?;
     req.headers_mut().insert(
         "Authorization",
-        HeaderValue::from_str(&format!("Bearer {}", args.token))?,
+        HeaderValue::from_str(&format!("Bearer {token}"))?,
     );
 
     let (mut ws, _) = connect_async(req).await.context("gagal hubung signaling")?;

@@ -91,6 +91,36 @@ test('penerbitan sesi tamu dibatasi per alamat jaringan', async () => {
   assert.equal((await store.guest(request)).status, 429);
 });
 
+test('klaim host mengikat ID, pemilik, dan password perangkat', async () => {
+  const storage = new MemoryStorage();
+  const env = {
+    AUTH_SECRET: 'host-claim-auth-secret',
+    XYDESK_SECRET: 'host-claim-internal-secret',
+  };
+  const store = new AuthStore({ storage }, env);
+  const claim = (owner, password) =>
+    store.authorizeHost(
+      new Request('https://internal/auth/authorize-host', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'X-XyDesk-Internal': env.XYDESK_SECRET,
+        },
+        body: JSON.stringify({
+          owner,
+          device_id: '123456789',
+          claim: password,
+        }),
+      }),
+    );
+
+  assert.equal((await claim('user-a', 'PAIRPASS99')).status, 200);
+  assert.equal((await claim('user-a', 'PAIRPASS99')).status, 200);
+  assert.equal((await claim('user-b', 'PAIRPASS99')).status, 403);
+  // Pemilik yang sama boleh merotasi password Host dari UI terpadu.
+  assert.equal((await claim('user-a', 'NEWPASS999')).status, 200);
+});
+
 test('bucket rate limit OTP dibuka kembali setelah jendela selesai', async () => {
   const storage = new MemoryStorage();
   const store = new AuthStore({ storage }, { AUTH_SECRET: 'rate-limit-test-secret' });

@@ -61,6 +61,9 @@ export class AuthStore {
     if (path === '/auth/guest' && request.method === 'POST') {
       return this.guest(request);
     }
+    if (path === '/auth/authorize-host' && request.method === 'POST') {
+      return this.authorizeHost(request);
+    }
     if (path === '/auth/me' && request.method === 'GET') {
       return this.me(request);
     }
@@ -283,6 +286,51 @@ export class AuthStore {
 
     const token = await signJwt({ sub: user.id, email: user.email }, this.secret());
     return json({ token, user: this.publicUser(user) }, 200);
+  }
+
+  async authorizeHost(request) {
+    if (request.headers.get('X-XyDesk-Internal') !== this.env.XYDESK_SECRET) {
+      return json({ error: 'forbidden' }, 403);
+    }
+    let owner, device_id, claim;
+    try {
+      ({ owner, device_id, claim } = await request.json());
+    } catch {
+      return json({ error: 'bad-json' }, 400);
+    }
+    if (
+      typeof owner !== 'string' ||
+      !owner ||
+      typeof device_id !== 'string' ||
+      !/^\d{9}$/.test(device_id) ||
+      typeof claim !== 'string' ||
+      claim.length < 6 ||
+      claim.length > 128
+    ) {
+      return json({ error: 'invalid-host-claim' }, 400);
+    }
+
+    const key = `device:${device_id}`;
+    const claimHash = await hashOtp(this.secret(), `device:${device_id}`, claim);
+    const existing = await this.ctx.storage.get(key);
+    if (existing) {
+      if (existing.owner !== owner) {
+        return json({ error: 'device-owned-by-another-account' }, 403);
+      }
+      if (!timingSafeEqual(existing.claim_hash, claimHash)) {
+        existing.claim_hash = claimHash;
+        existing.rotated_at = Math.floor(Date.now() / 1000);
+        await this.ctx.storage.put(key, existing);
+      }
+      return json({ ok: true, claimed: false }, 200);
+    }
+
+    await this.ctx.storage.put(key, {
+      owner,
+      claim_hash: claimHash,
+      claimed_at: Math.floor(Date.now() / 1000),
+    });
+    return json({ ok: true, claimed: true }, 200);
   }
 
   async guest(request) {
