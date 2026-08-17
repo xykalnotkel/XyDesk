@@ -472,7 +472,7 @@ class MainActivity : FlutterActivity() {
             val signingInfo = info.signingInfo ?: return emptySet()
             signingInfo.apkContentsSigners
         } else {
-            info.signatures
+            info.signatures ?: return emptySet()
         }
         return signatures.map { signature ->
             val digest = MessageDigest.getInstance("SHA-256")
