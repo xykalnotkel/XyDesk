@@ -1,13 +1,15 @@
-# XyDesk Flutter Web
+# XyDesk Web (Vite + React)
 
-Frontend Web tetap menggunakan Flutter agar Android, Windows, dan browser
-berbagi UI serta logika produk yang sama. Bundle hasil job `Web Application`
-dipublikasikan ke Cloudflare Workers Static Assets.
+Frontend browser XyDesk. Flutter Web ditinggalkan untuk target browser:
+bundle CanvasKit terlalu berat (unduhan MB-an sebelum layar pertama muncul).
+Client web ringan (~65 KB gzip) di folder `web/` memakai backend yang sama
+persis dengan aplikasi Android/Windows.
 
 - Frontend produksi: `https://app.xystudio.my.id`
 - API, autentikasi, dan signaling: `https://signal.xystudio.my.id`
-- Renderer produksi: CanvasKit bawaan Flutter. Build Wasm/Skwasm baru diaktifkan
-  setelah kompatibilitas browser dan seluruh plugin divalidasi manual.
+- Fitur: login OTP email, sambung ke host (ID 9 digit + password pairing),
+  viewer WebRTC + input mouse/scroll ke data channel biner.
 
-Deployment otomatis hanya mengambil artefak Web dari workflow Build yang sukses;
-frontend tidak dibangun ulang dengan dependency yang berbeda saat deployment.
+Deployment otomatis mengambil artefak `XyDesk-Web` dari workflow Build yang
+sukses (job Web Application menjalankan `npm ci && npm run build` di `web/`),
+lalu mempublikasikannya ke Cloudflare Workers Static Assets.

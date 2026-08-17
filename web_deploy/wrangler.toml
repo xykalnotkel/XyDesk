@@ -1,4 +1,4 @@
-# Flutter Web XyDesk — frontend statis terpisah dari Worker API/signaling.
+# XyDesk Web (Vite + React) — frontend statis terpisah dari Worker API/signaling.
 name = "xydesk-web"
 compatibility_date = "2026-08-17"
 workers_dev = true

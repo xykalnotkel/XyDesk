@@ -25,7 +25,7 @@ latency end-to-end.
 | Keyboard virtual (modifier sticky) | Selesai |
 | Glyph HUD (mouse, gulir, arah, switch) | Selesai |
 | CI/CD GitHub Actions | Selesai |
-| Flutter Web (Cloudflare Static Assets) | Deploy otomatis — `app.xystudio.my.id` |
+| Web client (Vite + React, Cloudflare) | Deploy otomatis — `app.xystudio.my.id` |
 | Signaling server (Cloudflare Workers + DO) | Live — `signal.xystudio.my.id` |
 | Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker |
 | TURN (kredensial Cloudflare ber-TTL) | Selesai |
@@ -123,7 +123,7 @@ Artefak build biasa tersedia melalui tab **Actions**.
 | Android | `XyDesk.apk` | Universal untuk Android 8.0+ |
 | Windows client | `XyDesk-Windows.zip` | Build Flutter desktop |
 | Windows host | `XyDesk-Host.exe` | Engine host Rust |
-| Web | `XyDesk-Web.zip` | Bundle Flutter Web |
+| Web | `XyDesk-Web.zip` | Bundle web client (Vite + React) |
 
 Bundle Web dari Build `main` yang sukses juga dideploy otomatis ke Cloudflare
 Workers Static Assets di `https://app.xystudio.my.id`; frontend ini tetap

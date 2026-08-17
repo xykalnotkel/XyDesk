@@ -56,11 +56,12 @@ android/app/*.keystore
 *.mobileprovision
 ios/Runner/GoogleService-Info.plist
 
-# Folder platform dan output deploy dibuat ulang oleh CI
+# Folder platform dan output deploy dibuat ulang oleh CI.
+# CATATAN: /web/ TIDAK diabaikan lagi — sejak client Vite+React, web/ adalah
+# source asli (bukan hasil generate flutter create).
 /windows/
 /linux/
 /macos/
 /ios/
-/web/
 /web_deploy/site/
 .flutter-plugins

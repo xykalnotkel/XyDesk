@@ -64,7 +64,8 @@ jobs:
             --dir web_deploy/site
           cp web_deploy/static/_headers web_deploy/site/_headers
           test -s web_deploy/site/index.html
-          test -s web_deploy/site/main.dart.js
+          # Bundle Vite: minimal ada satu JS ter-hash di assets/.
+          ls web_deploy/site/assets/*.js >/dev/null
 
       - name: Deploy ke Cloudflare
         working-directory: web_deploy

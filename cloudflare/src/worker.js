@@ -24,10 +24,11 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Flutter Web mengirim preflight sebelum request ber-JSON/Authorization.
+    // Browser mengirim preflight sebelum request ber-JSON/Authorization
+    // (client web di app.xystudio.my.id berbeda origin dari Worker ini).
     if (
       request.method === 'OPTIONS' &&
-      (path.startsWith('/auth/') || path === '/signal-token')
+      (path.startsWith('/auth/') || path === '/signal-token' || path === '/turn-ice')
     ) {
       return corsResponse(new Response(null, { status: 204 }), request, env);
     }
@@ -45,7 +46,7 @@ export default {
     }
 
     if (path === '/turn-ice') {
-      return handleTurnIce(request, url, env);
+      return corsResponse(await handleTurnIce(request, url, env), request, env);
     }
 
     if (path.startsWith('/auth/')) {

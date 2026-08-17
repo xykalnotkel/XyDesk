@@ -161,28 +161,32 @@ jobs:
           path: build/windows/x64/runner/Release/*
           retention-days: 30
 
-  # ── 5. Web Application Bundle ──
+  # ── 5. Web Application Bundle (Vite + React — bukan Flutter Web) ──
+  # Flutter Web ditinggalkan untuk browser: bundle CanvasKit terlalu berat
+  # (unduhan MB-an sebelum layar pertama). Client web ringan di web/
+  # memakai backend Worker yang sama.
   web:
     name: Web Application
     needs: check
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/setup-node@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - name: Configure Web Platform
-        run: flutter create . --platforms=web
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Pasang dependensi
+        working-directory: web
+        run: npm ci
       - name: Build Web Release
-        run: flutter build web --release --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
+        working-directory: web
+        run: npm run build
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Web
-          path: build/web/*
+          path: web/dist/*
           retention-days: 30
 
   summary:
