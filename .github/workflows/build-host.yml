@@ -6,6 +6,7 @@ on:
   push:
     paths:
       - 'host/**'
+      - '.github/workflows/build-host.yml'
   workflow_dispatch:
 
 permissions:
