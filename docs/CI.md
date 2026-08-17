@@ -38,8 +38,8 @@ Versi aplikasi adalah satu-satunya pemicu rilis. Naikkan nilai `version` di
 push commit tersebut ke `main`. Workflow Build berjalan lebih dahulu. Setelah
 seluruh analisis dan build sukses, workflow Release otomatis:
 
-1. memastikan nilai versi berbeda dari commit sebelumnya;
-2. memastikan Release `v<versi>` belum ada;
+1. memastikan tag `v<versi>` belum ada (tag menandai versi yang sudah dirilis);
+2. memastikan Build sukses berasal dari commit yang sama;
 3. memakai APK, Windows client, dan Web dari Build yang sudah lulus;
 4. membangun host Rust Windows dari commit yang sama;
 5. menerbitkan aset stabil, checksum, dan `update.json`;
