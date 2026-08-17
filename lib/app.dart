@@ -18,7 +18,11 @@ import 'features/connect/connect_page.dart';
 import 'features/control/control_page.dart';
 import 'features/devices/history_page.dart';
 import 'features/home/home_page.dart';
+import 'features/notifications/app_update_details.dart';
+import 'features/notifications/notification_preferences_page.dart';
 import 'features/notifications/notification_service.dart';
+import 'features/notifications/update_page.dart';
+import 'features/notifications/update_state.dart';
 import 'features/splash/splash_page.dart';
 import 'widgets/seamless.dart';
 
@@ -315,27 +319,104 @@ class _AppShellState extends ConsumerState<AppShell> {
   /// dan tombol Log di Akun.
   List<Widget> _actions(BuildContext context) {
     final c = context.c;
-    switch (_index) {
-      case 0:
-        return [
-          IconButton(
-            tooltip: context.tr('connect_history'),
-            icon: Icon(LucideIcons.history, size: 19, color: c.textMid),
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
+    final update = ref.watch(updateAvailabilityProvider).asData?.value;
+    final hasUpdate = update?.updateAvailable ?? false;
+    final actions = <Widget>[
+      _DotIconButton(
+        icon: LucideIcons.bell,
+        tooltip: 'Notifikasi',
+        showDot: hasUpdate,
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const NotificationPreferencesPage(),
           ),
-        ];
-      case 3:
-        return [
-          IconButton(
-            tooltip: context.tr('settings_devlog'),
-            icon: Icon(LucideIcons.bug, size: 19, color: c.textMid),
-            onPressed: () => DevLog.openPage(context),
-          ),
-        ];
-      default:
-        return const [];
+        ),
+      ),
+      _DotIconButton(
+        icon: LucideIcons.circleArrowUp,
+        tooltip: 'Pusat pembaruan',
+        showDot: hasUpdate,
+        onPressed: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) =>
+                  UpdatePage(details: AppUpdateDetails.updateCenter()),
+            ),
+          );
+          ref.invalidate(updateAvailabilityProvider);
+        },
+      ),
+    ];
+
+    if (_index == 0) {
+      actions.insert(
+        0,
+        IconButton(
+          tooltip: context.tr('connect_history'),
+          icon: Icon(LucideIcons.history, size: 19, color: c.textMid),
+          onPressed: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
+        ),
+      );
+    } else if (_index == 3) {
+      actions.insert(
+        0,
+        IconButton(
+          tooltip: context.tr('settings_devlog'),
+          icon: Icon(LucideIcons.bug, size: 19, color: c.textMid),
+          onPressed: () => DevLog.openPage(context),
+        ),
+      );
     }
+    return actions;
+  }
+}
+
+class _DotIconButton extends StatelessWidget {
+  const _DotIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.showDot,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool showDot;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(icon, size: 19, color: c.textMid),
+          if (showDot)
+            Positioned(
+              top: -3,
+              right: -4,
+              child: Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: c.dangerText,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: c.dangerText.withValues(alpha: 0.32),
+                      blurRadius: 5,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

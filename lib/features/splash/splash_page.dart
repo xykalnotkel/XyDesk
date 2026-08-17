@@ -237,27 +237,16 @@ class _SplashScene extends StatelessWidget {
                                   sigmaX: 12 * (1 - wordT),
                                   sigmaY: 0.4 * (1 - wordT),
                                 ),
-                                child: ShaderMask(
-                                  blendMode: BlendMode.srcIn,
-                                  shaderCallback: (bounds) =>
-                                      const LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFFFFFFFF),
-                                          Color(0xFFE5DEFF),
-                                          Color(0xFFB8A4FF),
-                                        ],
-                                      ).createShader(bounds),
-                                  child: const Text(
-                                    'XyDesk',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 38,
-                                      height: 1,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: -1.9,
-                                    ),
+                                child: const Text(
+                                  'XyDesk',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 38,
+                                    height: 1.08,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -1.9,
+                                    color: Color(0xFFF4F2FA),
+                                    decoration: TextDecoration.none,
                                   ),
                                 ),
                               ),

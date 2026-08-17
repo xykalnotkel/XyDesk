@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Splash native = HANYA warna latar gelap. Tanpa logo: seluruh animasi
-     pembuka dikerjakan Flutter (SplashPage) supaya tidak ada kesan splash
-     dobel. Warna HARUS sama dengan background aplikasi (#090A10). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />
+    <item
+        android:width="104dp"
+        android:height="104dp"
+        android:gravity="center"
+        android:drawable="@drawable/splash_logo_tight" />
 </layer-list>

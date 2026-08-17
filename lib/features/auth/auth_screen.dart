@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -86,6 +87,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               leading: const GoogleBrandIcon(size: 20),
               label: context.tr('auth_google'),
               googleStyle: true,
+              animateGoogle:
+                  !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
               busy: _busy,
               enabled: !_busy,
               onTap: _signInGoogle,
@@ -140,7 +143,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     try {
       // Beri animasi logo waktu menyelesaikan swipe sebelum dialog akun native
       // mengambil fokus layar.
-      await Future<void>.delayed(const Duration(milliseconds: 320));
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        await Future<void>.delayed(const Duration(milliseconds: 320));
+      }
       final session = await ref.read(googleAuthServiceProvider).signIn();
       if (!mounted) return;
       await ref
@@ -712,6 +717,7 @@ class _AuthButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.googleStyle = false,
+    this.animateGoogle = false,
     this.busy = false,
     this.enabled = true,
   });
@@ -720,6 +726,7 @@ class _AuthButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool googleStyle;
+  final bool animateGoogle;
   final bool busy;
   final bool enabled;
 
@@ -745,7 +752,7 @@ class _AuthButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         child: SizedBox(
           height: googleStyle ? 40 : 50,
-          child: googleStyle && busy
+          child: googleStyle && busy && animateGoogle
               ? TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0, end: 1),
                   duration: const Duration(milliseconds: 320),

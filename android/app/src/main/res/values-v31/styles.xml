@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Android 12+ selalu menampilkan splash sistem; ikonnya dibuat
-         transparan supaya pengguna hanya melihat latar gelap sekejap,
-         lalu SplashPage Flutter memainkan seluruh animasi pembuka. -->
+    <!-- Android 12+ menampilkan logo berpadding yang ukurannya menyatu dengan
+         frame awal SplashPage Flutter. -->
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowSplashScreenBackground">@color/splash_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo_android12</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_background</item>
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>

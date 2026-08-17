@@ -19,6 +19,10 @@ permissions:
 env:
   FLUTTER_VERSION: '3.44.9'
   GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+  # google_sign_in serverClientId wajib memakai OAuth Web Client ID, bukan
+  # Android Client ID. Android identity tetap dikenali Google lewat package
+  # name dan SHA sertifikat di project OAuth.
+  GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
 
 jobs:
   # ── 1. Gerbang kompilasi: format dan analisis statis ──
@@ -140,7 +144,7 @@ jobs:
         run: >-
           flutter build apk --release --split-per-abi
           --target-platform=android-arm,android-arm64
-          --dart-define=GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID%%,*}"
+          --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID"
 
       - name: Namai paket berdasarkan ABI
         run: |
@@ -236,7 +240,7 @@ jobs:
       - name: Configure Windows Platform
         run: flutter create . --platforms=windows
       - name: Build Windows ${{ matrix.arch }}
-        run: flutter build windows --release --dart-define=GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID%%,*}"
+        run: flutter build windows --release --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID"
       - name: Pastikan output arsitektur tersedia
         shell: pwsh
         run: |
