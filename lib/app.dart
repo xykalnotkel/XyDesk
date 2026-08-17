@@ -16,6 +16,7 @@ import 'features/connect/connect_page.dart';
 import 'features/control/control_page.dart';
 import 'features/devices/history_page.dart';
 import 'features/home/home_page.dart';
+import 'features/notifications/notification_service.dart';
 import 'features/splash/splash_page.dart';
 import 'widgets/seamless.dart';
 
@@ -30,6 +31,7 @@ class XyDeskApp extends ConsumerWidget {
     return MaterialApp(
       title: 'XyDesk',
       debugShowCheckedModeBanner: false,
+      navigatorKey: appNavigatorKey,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: settings.themeMode,
@@ -47,6 +49,7 @@ class XyDeskApp extends ConsumerWidget {
       ],
 
       builder: (context, child) {
+        NotificationService.instance.flushPendingNavigation();
         // Arah teks mengikuti bahasa (Arab = kanan ke kiri).
         final dir = lang.rtl ? TextDirection.rtl : TextDirection.ltr;
         return Directionality(
@@ -90,10 +93,14 @@ class _BootState extends ConsumerState<_Boot> {
   @override
   void initState() {
     super.initState();
-    // "Kurangi animasi" aktif -> tanpa jeda splash, tetapi validasi sesi tetap
-    // diselesaikan agar token invalid tidak sempat membuka shell aplikasi.
-    final reduce = ref.read(settingsProvider).reduceMotion;
-    Future<void>.delayed(Duration(milliseconds: reduce ? 0 : 1900), () {
+    // The native window already showed the first launch frame. Flutter only
+    // gets a brief continuity window to complete the lockup; never hold the
+    // user for the old 1.9 seconds. Session validation may still take longer.
+    final platformReduce = WidgetsBinding
+        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+    final reduce = ref.read(settingsProvider).reduceMotion || platformReduce;
+    Future<void>.delayed(Duration(milliseconds: reduce ? 0 : 950), () {
+      if (!mounted) return;
       _splashDone = true;
       _revealWhenReady();
     });
@@ -134,15 +141,21 @@ class _BootState extends ConsumerState<_Boot> {
 
   @override
   Widget build(BuildContext context) {
-    return _splashDone && _sessionChecked
-        ? const _Gate()
-        : const SplashPage();
+    final ready = _splashDone && _sessionChecked;
+    return AnimatedSwitcher(
+      duration: D.tab,
+      switchInCurve: D.curve,
+      switchOutCurve: Curves.easeIn,
+      child: ready
+          ? const _Gate(key: ValueKey('boot-gate'))
+          : const SplashPage(key: ValueKey('boot-splash')),
+    );
   }
 }
 
 /// Menentukan layar awal: masuk dulu, atau langsung ke aplikasi.
 class _Gate extends ConsumerWidget {
-  const _Gate();
+  const _Gate({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

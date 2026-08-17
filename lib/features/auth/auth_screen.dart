@@ -64,13 +64,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           padding: EdgeInsets.fromLTRB(side, 0, side, Gap.xxl),
           children: [
             const SizedBox(height: Gap.h32),
-            Center(
-              child: Image.asset(
-                Img.auth,
-                width: 168,
-                height: 168,
-                errorBuilder: (_, __, ___) => const SizedBox(height: 168),
-              ),
+            const Center(
+              child: Illus(Img.auth, size: 168, opticalScale: 1.06),
             ),
             const SizedBox(height: Gap.xl),
             Text(
@@ -90,9 +85,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ),
             const SizedBox(height: Gap.h32),
             _AuthButton(
-              leading: const GoogleBrandIcon(size: 22),
+              leading: const GoogleBrandIcon(size: 20),
               label: context.tr('auth_google'),
-              primary: true,
+              googleStyle: true,
               busy: _busy,
               enabled: !_busy,
               onTap: _signInGoogle,
@@ -664,7 +659,7 @@ class _AuthButton extends StatelessWidget {
     this.leading,
     required this.label,
     required this.onTap,
-    this.primary = false,
+    this.googleStyle = false,
     this.busy = false,
     this.enabled = true,
   });
@@ -672,116 +667,93 @@ class _AuthButton extends StatelessWidget {
   final Widget? leading;
   final String label;
   final VoidCallback onTap;
-  final bool primary;
+  final bool googleStyle;
   final bool busy;
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final disabled = !enabled && !busy;
-    return Opacity(
-      opacity: disabled ? 0.5 : 1.0,
-      child: Material(
-        color: primary ? c.accent : c.input,
-        borderRadius: BorderRadius.circular(R.md),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: busy || !enabled ? null : onTap,
-          borderRadius: BorderRadius.circular(R.md),
-          child: SizedBox(
-            height: 50,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (busy) const _Spinner() else if (leading != null) leading!,
-                const SizedBox(width: Gap.md),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: primary ? Colors.white : c.textHi,
-                  ),
+    final radius = googleStyle ? 4.0 : R.md;
+    final background =
+        googleStyle ? (dark ? const Color(0xFF131314) : Colors.white) : c.input;
+    final foreground = googleStyle
+        ? (dark ? const Color(0xFFE3E3E3) : const Color(0xFF1F1F1F))
+        : c.textHi;
+
+    final button = Material(
+      color: background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radius),
+        side: googleStyle
+            ? BorderSide(
+                color: dark ? const Color(0xFF8E918F) : const Color(0xFF747775),
+              )
+            : BorderSide.none,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: busy || !enabled ? null : onTap,
+        borderRadius: BorderRadius.circular(radius),
+        child: SizedBox(
+          height: googleStyle ? 40 : 50,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (busy)
+                _Spinner(color: foreground)
+              else if (leading != null)
+                leading!,
+              const SizedBox(width: Gap.md),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: googleStyle ? FontWeight.w500 : FontWeight.w600,
+                  color: foreground,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
+    );
+
+    return Opacity(
+      opacity: disabled ? 0.5 : 1.0,
+      child: googleStyle
+          ? SizedBox(
+              height: 50,
+              child: Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 40,
+                  child: button,
+                ),
+              ),
+            )
+          : button,
     );
   }
 }
 
 class GoogleBrandIcon extends StatelessWidget {
-  const GoogleBrandIcon({super.key, this.size = 22});
+  const GoogleBrandIcon({super.key, this.size = 20});
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Image.asset(
+      Img.googleG,
       width: size,
       height: size,
-      child: CustomPaint(painter: _GoogleLogoPainter()),
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+      excludeFromSemantics: true,
     );
   }
-}
-
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-    final strokeWidth = size.width * 0.22;
-    final rect = Rect.fromCircle(
-      center: center,
-      radius: radius - strokeWidth / 2,
-    );
-
-    final blue = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-    final red = Paint()
-      ..color = const Color(0xFFEA4335)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-    final yellow = Paint()
-      ..color = const Color(0xFFFBBC05)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-    final green = Paint()
-      ..color = const Color(0xFF34A853)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-
-    // 4 bagian arc warna resmi Google
-    canvas.drawArc(rect, -0.78, 1.35, false, red);
-    canvas.drawArc(rect, 2.35, 1.15, false, yellow);
-    canvas.drawArc(rect, 0.78, 1.57, false, green);
-    canvas.drawArc(rect, -0.78, -1.05, false, blue);
-
-    // Crossbar horizontal biru G
-    final barPaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(
-      Rect.fromLTRB(
-        center.dx,
-        center.dy - strokeWidth / 2,
-        center.dx + radius * 0.95,
-        center.dy + strokeWidth / 2,
-      ),
-      barPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class EmailBrandIcon extends StatelessWidget {

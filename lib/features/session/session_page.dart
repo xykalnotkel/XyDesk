@@ -1,26 +1,25 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../core/l10n_bridge.dart';
-import '../../core/store.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/devlog.dart';
+import '../../core/l10n_bridge.dart';
+import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
-import '../devices/device_model.dart';
 import '../../widgets/hud_glyphs.dart';
+import 'media_capabilities.dart';
 import 'session_panels.dart';
 import 'virtual_keyboard.dart';
 
-/// Layar sesi aktif.
+/// Adaptive remote-session surface.
 ///
-/// Urutan penting: orientasi dikunci ke landscape **lebih dulu**, baru layar
-/// loading ditampilkan. Kalau dibalik akan ada kedipan orientasi yang membuat
-/// aplikasi terasa murah.
+/// Gaming and Desktop are two views of one session instead of separate pages.
+/// The always-visible HUD is intentionally small; advanced controls live in a
+/// single readable end panel rather than the former eight-category side rail.
 class SessionPage extends ConsumerStatefulWidget {
   const SessionPage({
     super.key,
@@ -38,77 +37,67 @@ class SessionPage extends ConsumerStatefulWidget {
 class _SessionPageState extends ConsumerState<SessionPage> {
   bool _connecting = true;
   bool _overlayVisible = true;
-  bool _keyboard = false;
-  bool _leftRail = false;
-  PanelCat? _panel;
-  Timer? _idle;
-  SessionSettings _settings = const SessionSettings();
-  KbLayout _kbLayout = KbLayout.split;
+  bool _panelVisible = false;
+  bool _keyboardVisible = false;
+  SessionPanelSection _panelSection = SessionPanelSection.stream;
+  int _panelRevision = 0;
+  Timer? _idleTimer;
+  Timer? _connectTimer;
+  late SessionSettings _settings;
+  KbLayout _keyboardLayout = KbLayout.split;
   double _keyboardOpacity = 0.95;
-  late DateTime _startedAt;
-  bool _recorded = false;
 
   @override
   void initState() {
     super.initState();
-    _startedAt = DateTime.now();
+    final preferences = ref.read(settingsProvider);
+    _settings = SessionSettings(
+      pcAudioRequested: preferences.audioEnabled,
+      microphoneRequested: preferences.micPassthrough,
+      haptics: preferences.haptics,
+      pointerLock: preferences.relativeMouseMode,
+    );
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
-    // edgeToEdge, bukan immersiveSticky: immersive menyembunyikan status
-    // bar lalu memunculkannya lagi saat disentuh, membuat tata letak
-    // melompat-lompat dan sempat terlihat kosong.
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     DevLog.i(
       'sesi',
-      'Membuka sesi ke ${widget.deviceName}',
+      'Membuka preview sesi ke ${widget.deviceName}',
       'id=${widget.deviceId}',
     );
-    // Simulasi tahap koneksi.
-    Timer(const Duration(milliseconds: 2200), () {
+    final platformReduce = WidgetsBinding
+        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+    final reduceMotion = preferences.reduceMotion || platformReduce;
+    _connectTimer = Timer(Duration(milliseconds: reduceMotion ? 0 : 450), () {
       if (!mounted) return;
       setState(() => _connecting = false);
-      DevLog.ok('sesi', 'Terhubung — placeholder aktif');
-      _restartIdle();
+      DevLog.i('sesi', 'Preview UI siap — transport belum aktif');
+      _restartIdleTimer();
     });
   }
 
   @override
   void dispose() {
-    DevLog.i('sesi', 'Menutup sesi');
-    _idle?.cancel();
+    _idleTimer?.cancel();
+    _connectTimer?.cancel();
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    DevLog.i('sesi', 'Menutup sesi');
     super.dispose();
   }
 
-  Future<void> _recordSession() async {
-    if (_recorded) return;
-    _recorded = true;
-    final elapsed = DateTime.now().difference(_startedAt);
-    final minutes = elapsed.inMinutes < 1 ? 1 : elapsed.inMinutes;
-    await ref.read(historyProvider.notifier).add(
-          SessionRecord(
-            deviceId: widget.deviceId,
-            deviceName: widget.deviceName,
-            at: _startedAt,
-            durationMin: minutes,
-            path: 'P2P',
-            quality: '1080p60',
-          ),
-        );
+  void _leaveSession() {
+    // Offline previews are deliberately not added to remote-session history.
+    // History should begin only after a real negotiated transport is active.
+    Navigator.of(context).maybePop();
   }
 
-  Future<void> _leaveSession() async {
-    await _recordSession();
-    if (mounted) Navigator.of(context).maybePop();
-  }
-
-  void _restartIdle() {
-    _idle?.cancel();
-    _idle = Timer(D.idleHide, () {
-      if (mounted && _panel == null && !_keyboard && !_leftRail) {
+  void _restartIdleTimer() {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(D.idleHide, () {
+      if (mounted && !_panelVisible && !_keyboardVisible) {
         setState(() => _overlayVisible = false);
       }
     });
@@ -116,192 +105,147 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
   void _wake() {
     if (!_overlayVisible) setState(() => _overlayVisible = true);
-    _restartIdle();
+    _restartIdleTimer();
+  }
+
+  void _openPanel([SessionPanelSection section = SessionPanelSection.stream]) {
+    setState(() {
+      _panelSection = section;
+      _panelRevision++;
+      _panelVisible = true;
+      _overlayVisible = true;
+    });
+    _idleTimer?.cancel();
+  }
+
+  void _closePanel() {
+    setState(() => _panelVisible = false);
+    _restartIdleTimer();
+  }
+
+  void _showKeyboard() {
+    setState(() {
+      _keyboardVisible = true;
+      _panelVisible = false;
+      _overlayVisible = true;
+    });
+    _idleTimer?.cancel();
+  }
+
+  void _setExperience(SessionExperience experience) {
+    setState(() => _settings = _settings.copyWith(experience: experience));
+    _wake();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_connecting) return _ConnectingView(name: widget.deviceName);
+
     return Scaffold(
-      backgroundColor: context.c.bg,
-      body: _connecting
-          ? _ConnectingView(name: widget.deviceName)
-          : Stack(
-              children: [
-                // Layar remote (placeholder untuk RTCVideoView)
-                Positioned.fill(
-                  child: GestureDetector(
-                    onTap: _wake,
-                    child: const _RemoteScreenPlaceholder(),
+      backgroundColor: AppColors.bgDark,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxHeight < 440;
+          final panelWidth =
+              (constraints.maxWidth * 0.46).clamp(340.0, 410.0).toDouble();
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _wake,
+                  child: _RemoteScreenPlaceholder(
+                    experience: _settings.experience,
                   ),
                 ),
-
-                // Statistik kiri atas
-                _fade(
-                  top: 10,
-                  left: _leftRail ? 72 : 12,
-                  child: _StatsOverlay(name: widget.deviceName),
+              ),
+              if (!_keyboardVisible &&
+                  !_panelVisible &&
+                  _settings.experience == SessionExperience.gaming &&
+                  _settings.showGamingControls)
+                _GamingControls(compact: compact),
+              if (!_keyboardVisible &&
+                  !_panelVisible &&
+                  _settings.experience == SessionExperience.desktop)
+                _DesktopControls(compact: compact),
+              _fadePositioned(
+                top: MediaQuery.paddingOf(context).top + 8,
+                left: 12,
+                right: 12,
+                child: _TopBar(
+                  deviceName: widget.deviceName,
+                  experience: _settings.experience,
+                  compact: compact,
+                  onExperienceChanged: _setExperience,
+                  onBack: _leaveSession,
                 ),
-
-                // Panah kiri-atas → buka bilah kiri
-                _fade(
-                  top: MediaQuery.paddingOf(context).top + 8,
-                  left: 0,
-                  child: _OverlayIcon(
-                    leftEdge: true,
-                    label: 'MENU',
-                    icon: _leftRail
-                        ? LucideIcons.chevronLeft
-                        : LucideIcons.chevronRight,
-                    active: _leftRail,
-                    tooltip: 'Menu cepat',
-                    onTap: () {
-                      setState(() => _leftRail = !_leftRail);
-                      _wake();
-                    },
-                  ),
-                ),
-
-                // Panah kanan-atas → buka panel kategori
-                _fade(
-                  top: MediaQuery.paddingOf(context).top + 8,
-                  right: 0,
-                  child: _OverlayIcon(
-                    leftEdge: false,
-                    label: 'PANEL',
-                    icon: _panel == null
-                        ? LucideIcons.chevronLeft
-                        : LucideIcons.chevronRight,
-                    onTap: () {
-                      setState(
-                        () => _panel = _panel == null ? PanelCat.info : null,
-                      );
-                      _wake();
-                    },
-                  ),
-                ),
-
-                // Contoh elemen HUD border-only
-                if (!_keyboard && _panel == null) ...[
-                  const Positioned(
-                    left: 24,
-                    bottom: 22,
-                    child: HudIcon(HudGlyph.dpad, size: 74, strokeWidth: 1.5),
-                  ),
-                  const Positioned(
-                    right: 120,
-                    bottom: 26,
-                    child: HudButton(
-                      glyph: HudGlyph.mouseLeft,
-                      label: 'Kiri',
-                      size: Size(50, 54),
+              ),
+              if (!_keyboardVisible)
+                _fadePositioned(
+                  left: 12,
+                  right: 12,
+                  bottom: MediaQuery.paddingOf(context).bottom + 10,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: _QuickDock(
+                      experience: _settings.experience,
+                      audioRequested: _settings.pcAudioRequested,
+                      microphoneRequested: _settings.microphoneRequested,
+                      onAudio: () => _openPanel(SessionPanelSection.audio),
+                      onMicrophone: () => _openPanel(SessionPanelSection.audio),
+                      onKeyboard: _showKeyboard,
+                      onClipboard: () =>
+                          _showUnavailable('Clipboard transport belum aktif.'),
+                      onSettings: () => _openPanel(),
+                      onDisconnect: _confirmDisconnect,
                     ),
                   ),
-                  const Positioned(
-                    right: 64,
-                    bottom: 26,
-                    child: HudButton(
-                      glyph: HudGlyph.mouseRight,
-                      label: 'Kanan',
-                      size: Size(50, 54),
-                    ),
-                  ),
-                  const Positioned(
-                    right: 64,
-                    bottom: 88,
-                    child: HudButton(
-                      glyph: HudGlyph.scrollBoth,
-                      label: 'Gulir',
-                      size: Size(50, 54),
-                    ),
-                  ),
-                ],
-
-                // FAB keyboard kanan bawah
-                if (!_keyboard)
-                  _fade(
-                    right: 12,
-                    bottom: 12,
-                    child: _KeyboardFab(
-                      onTap: () {
-                        setState(() => _keyboard = true);
-                        _idle?.cancel();
-                      },
-                    ),
-                  ),
-
-                // Bilah ikon kiri
-                AnimatedPositioned(
-                  duration: D.panel,
-                  curve: D.curve,
-                  left: _leftRail ? 0 : -72,
-                  top: 0,
-                  bottom: 0,
-                  child: LeftRail(
-                    active: _panel ?? PanelCat.info,
-                    onClose: () => setState(() => _leftRail = false),
-                    onSelect: (cat) => setState(() {
-                      // Ketuk kategori yang sama = tutup panel.
-                      _panel = (_panel == cat) ? null : cat;
-                    }),
-                    onRestart: () {},
-                    onBack: _leaveSession,
-                    onDisconnect: _confirmDisconnect,
-                  ),
                 ),
-
-                // Panel kategori kanan
-                AnimatedPositioned(
-                  duration: D.panel,
-                  curve: D.curve,
-                  right: _panel != null ? 0 : -260,
-                  top: 0,
-                  bottom: 0,
-                  child: RightPanel(
-                    cat: _panel ?? PanelCat.info,
-                    deviceName: widget.deviceName,
-                    state: _settings,
-                    onChanged: (s) => setState(() => _settings = s),
-                    onBackToHub: () => setState(() => _panel = PanelCat.info),
-                    onSelectCat: (cat) => setState(() => _panel = cat),
-                    onClose: () {
-                      setState(() => _panel = null);
-                      _restartIdle();
-                    },
-                  ),
+              AnimatedPositioned(
+                duration: D.panel,
+                curve: D.curve,
+                top: 0,
+                bottom: 0,
+                right: _panelVisible ? 0 : -panelWidth - 24,
+                width: panelWidth,
+                child: SessionControlPanel(
+                  key: ValueKey((_panelSection, _panelRevision)),
+                  initialSection: _panelSection,
+                  deviceName: widget.deviceName,
+                  state: _settings,
+                  onChanged: (value) => setState(() => _settings = value),
+                  onClose: _closePanel,
+                  onDisconnect: _confirmDisconnect,
                 ),
-
-                // Keyboard virtual
-                AnimatedPositioned(
-                  duration: D.sheet,
-                  curve: D.curve,
-                  left: 0,
-                  right: 0,
-                  bottom: _keyboard ? 0 : -320,
-                  child: VirtualKeyboard(
-                    layout: _kbLayout,
-                    opacity: _keyboardOpacity,
-                    onLayoutChanged: (l) => setState(() => _kbLayout = l),
-                    onOpacityChanged: (v) =>
-                        setState(() => _keyboardOpacity = v),
-                    onKey: (_) {},
-                    onDismiss: () {
-                      setState(() => _keyboard = false);
-                      _restartIdle();
-                    },
-                  ),
+              ),
+              AnimatedPositioned(
+                duration: D.sheet,
+                curve: D.curve,
+                left: 0,
+                right: 0,
+                bottom: _keyboardVisible ? 0 : -360,
+                child: VirtualKeyboard(
+                  layout: _keyboardLayout,
+                  opacity: _keyboardOpacity,
+                  onLayoutChanged: (value) =>
+                      setState(() => _keyboardLayout = value),
+                  onOpacityChanged: (value) =>
+                      setState(() => _keyboardOpacity = value),
+                  onKey: (_) {},
+                  onDismiss: () {
+                    setState(() => _keyboardVisible = false);
+                    _restartIdleTimer();
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  /// Membungkus isi overlay dengan animasi pudar.
-  ///
-  /// PENTING: `Positioned` harus tetap menjadi anak LANGSUNG dari `Stack`.
-  /// Versi sebelumnya membungkus `Positioned` dengan `AnimatedOpacity`,
-  /// yang membuat Flutter melempar "Incorrect use of ParentDataWidget"
-  /// dan seluruh layar sesi gagal dirender (tampak putih/kosong).
-  Widget _fade({
+  Widget _fadePositioned({
     double? left,
     double? top,
     double? right,
@@ -321,26 +265,38 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     );
   }
 
+  void _showUnavailable(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    _wake();
+  }
+
   Future<void> _confirmDisconnect() async {
-    final ok = await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(
           context.tr('session_disconnect_confirm'),
-          style: const TextStyle(fontSize: 14),
+          style: const TextStyle(fontSize: 16),
         ),
         content: const Text(
-          'Sesi akan diakhiri. PC host tetap menyala dan bisa dihubungi lagi '
-          'kapan saja.',
-          style: TextStyle(fontSize: 11.5, height: 1.5),
+          'Preview sesi akan ditutup. PC host tetap menyala dan dapat dipilih '
+          'kembali kapan saja.',
+          style: TextStyle(fontSize: 13, height: 1.5),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Batal'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
               context.tr('session_disconnect_action'),
               style: const TextStyle(color: AppColors.danger),
@@ -349,231 +305,52 @@ class _SessionPageState extends ConsumerState<SessionPage> {
         ],
       ),
     );
-    if (ok == true && mounted) {
-      await _recordSession();
-      if (mounted) Navigator.of(context).pop();
-    }
+    if (confirmed == true && mounted) _leaveSession();
   }
 }
 
-/// Layar loading connect — 5 langkah dengan waktunya masing-masing.
 class _ConnectingView extends StatelessWidget {
   const _ConnectingView({required this.name});
+
   final String name;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Container(
-      color: c.bg,
-      child: Center(
+    return Scaffold(
+      backgroundColor: AppColors.bgDark,
+      body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 300),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 30,
-                height: 30,
-                child: CircularProgressIndicator(strokeWidth: 2.4),
-              ),
-              const SizedBox(height: Gap.lg),
-              Text(
-                '${context.tr('session_connecting')} $name',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: c.textHi,
-                ),
-              ),
-              const SizedBox(height: Gap.sm),
-              Text(
-                'Menyiapkan koneksi aman',
-                style: TextStyle(fontSize: 11.5, color: c.textMid),
-              ),
-              const SizedBox(height: Gap.lg),
-              LinearProgressIndicator(
-                minHeight: 3,
-                backgroundColor: c.textLow.withValues(alpha: 0.18),
-                color: c.accent,
-              ),
-              const SizedBox(height: Gap.md),
-              Text(
-                context.tr('session_landscape_locked'),
-                style: TextStyle(fontSize: 10, color: c.textLow),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RemoteScreenPlaceholder extends StatelessWidget {
-  const _RemoteScreenPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    // Placeholder yang JELAS terbaca sebagai placeholder, bukan layar kosong.
-    // Sebelumnya hanya gradient gelap sehingga terlihat seperti aplikasi hang.
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1A1C22), Color(0xFF101116), Color(0xFF16181D)],
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Opacity(
-              opacity: 0.55,
-              child: Image.asset(
-                Img.gaming,
-                width: 96,
-                height: 96,
-                filterQuality: FilterQuality.medium,
-                errorBuilder: (_, __, ___) => const SizedBox(height: 96),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Layar remote akan tampil di sini',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.42),
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              'WebRTC belum tersambung — ini mode demo.\n'
-              'Panel, keyboard, dan HUD tetap bisa dicoba.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10.5,
-                height: 1.5,
-                color: Colors.white.withValues(alpha: 0.24),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatsOverlay extends ConsumerWidget {
-  const _StatsOverlay({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.c;
-    final s = ref.watch(settingsProvider);
-    final codecShort = s.codec.split(' ')[0];
-    final resShort = s.resolution.split(' ')[0];
-    return Opacity(
-      opacity: 0.85,
-      child: Row(
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: const BoxDecoration(
-              color: AppColors.success,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 7),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 9.5,
-              fontWeight: FontWeight.w600,
-              color: c.textHi,
-            ),
-          ),
-          const SizedBox(width: 9),
-          Text(
-            '8 ms  $resShort  $codecShort (NVENC)  ${s.bitrateMbps} Mbps',
-            style: TextStyle(
-              fontSize: 9.5,
-              fontFamily: 'monospace',
-              color: c.textMid,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OverlayIcon extends StatelessWidget {
-  const _OverlayIcon({
-    required this.icon,
-    required this.onTap,
-    required this.leftEdge,
-    required this.label,
-    this.active = false,
-    this.tooltip,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool leftEdge;
-  final String label;
-  final bool active;
-  final String? tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final edgeColor = active ? c.accent : c.textHi.withValues(alpha: 0.46);
-    final border = leftEdge
-        ? Border(right: BorderSide(color: edgeColor, width: active ? 2 : 1))
-        : Border(left: BorderSide(color: edgeColor, width: active ? 2 : 1));
-    return Tooltip(
-      message: tooltip ?? label,
-      child: Material(
-        color: active
-            ? c.accent.withValues(alpha: 0.88)
-            : c.overlay.withValues(alpha: 0.94),
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        child: InkWell(
-          onTap: onTap,
-          child: Container(
-            width: 50,
-            height: 64,
-            decoration: BoxDecoration(
-              border: border,
-              gradient: LinearGradient(
-                begin: leftEdge ? Alignment.centerLeft : Alignment.centerRight,
-                end: leftEdge ? Alignment.centerRight : Alignment.centerLeft,
-                colors: [
-                  c.textHi.withValues(alpha: active ? 0.10 : 0.04),
-                  Colors.transparent,
-                ],
-              ),
-            ),
+          constraints: const BoxConstraints(maxWidth: 330),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 25, color: active ? Colors.white : c.textHi),
-                const SizedBox(height: 4),
+                const SizedBox(
+                  width: 30,
+                  height: 30,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+                const SizedBox(height: 18),
                 Text(
-                  label,
-                  style: TextStyle(
-                    color: active ? Colors.white : c.textMid,
-                    fontSize: 7,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
+                  'Menyiapkan preview $name',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textHiDark,
                   ),
+                ),
+                const SizedBox(height: 7),
+                const Text(
+                  'Menyiapkan preview kontrol',
+                  style: TextStyle(fontSize: 12, color: AppColors.textMidDark),
+                ),
+                const SizedBox(height: 18),
+                LinearProgressIndicator(
+                  minHeight: 3,
+                  backgroundColor: c.textLow.withValues(alpha: 0.18),
                 ),
               ],
             ),
@@ -584,25 +361,536 @@ class _OverlayIcon extends StatelessWidget {
   }
 }
 
-class _KeyboardFab extends StatelessWidget {
-  const _KeyboardFab({required this.onTap});
+class _RemoteScreenPlaceholder extends StatelessWidget {
+  const _RemoteScreenPlaceholder({required this.experience});
+
+  final SessionExperience experience;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B1E26), Color(0xFF0E1015), Color(0xFF171920)],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(painter: const _AmbientGridPainter()),
+          ),
+          Center(
+            child: Transform.translate(
+              offset: const Offset(0, -4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Opacity(
+                    opacity: 0.52,
+                    child: Image.asset(
+                      experience == SessionExperience.gaming
+                          ? Img.gaming
+                          : Img.screen,
+                      width: 112,
+                      height: 112,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(R.sm),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.32),
+                      ),
+                    ),
+                    child: const Text(
+                      'PREVIEW • TRANSPORT OFFLINE',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                        color: AppColors.warning,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Layar remote akan tampil di sini',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xA6FFFFFF),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'HUD dapat dipreview, tetapi belum mengirim input atau audio.',
+                    style: TextStyle(fontSize: 10.5, color: Color(0x66FFFFFF)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AmbientGridPainter extends CustomPainter {
+  const _AmbientGridPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.018)
+      ..strokeWidth = 1;
+    const spacing = 54.0;
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.deviceName,
+    required this.experience,
+    required this.compact,
+    required this.onExperienceChanged,
+    required this.onBack,
+  });
+
+  final String deviceName;
+  final SessionExperience experience;
+  final bool compact;
+  final ValueChanged<SessionExperience> onExperienceChanged;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 720),
+        height: compact ? 48 : 54,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xE818191D),
+          borderRadius: BorderRadius.circular(R.md),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.28),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: 'Kembali',
+              onPressed: onBack,
+              icon: const Icon(
+                LucideIcons.arrowLeft,
+                size: 19,
+                color: Colors.white70,
+              ),
+            ),
+            Container(
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(
+                color: AppColors.warning,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    deviceName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Preview • tanpa telemetry',
+                    style: TextStyle(fontSize: 10.5, color: Colors.white38),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: compact ? 200 : 230,
+              child: ExperienceSelector(
+                value: experience,
+                compact: true,
+                onChanged: onExperienceChanged,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickDock extends StatelessWidget {
+  const _QuickDock({
+    required this.experience,
+    required this.audioRequested,
+    required this.microphoneRequested,
+    required this.onAudio,
+    required this.onMicrophone,
+    required this.onKeyboard,
+    required this.onClipboard,
+    required this.onSettings,
+    required this.onDisconnect,
+  });
+
+  final SessionExperience experience;
+  final bool audioRequested;
+  final bool microphoneRequested;
+  final VoidCallback onAudio;
+  final VoidCallback onMicrophone;
+  final VoidCallback onKeyboard;
+  final VoidCallback onClipboard;
+  final VoidCallback onSettings;
+  final VoidCallback onDisconnect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 58,
+      constraints: const BoxConstraints(maxWidth: 520),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xEB18191D),
+        borderRadius: BorderRadius.circular(R.lg),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.34),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _DockButton(
+            icon: LucideIcons.volume2,
+            label: 'Audio',
+            requested: audioRequested,
+            pending: audioRequested &&
+                !SessionMediaCapabilities.currentBuild.pcSystemAudio.isActive,
+            onTap: onAudio,
+          ),
+          _DockButton(
+            icon: LucideIcons.mic,
+            label: 'Mik',
+            requested: microphoneRequested,
+            pending: microphoneRequested &&
+                !SessionMediaCapabilities.currentBuild.phoneMicrophone.isActive,
+            onTap: onMicrophone,
+          ),
+          _DockButton(
+            icon: LucideIcons.keyboard,
+            label: 'Keyboard',
+            onTap: onKeyboard,
+          ),
+          if (experience == SessionExperience.desktop)
+            _DockButton(
+              icon: LucideIcons.clipboard,
+              label: 'Clipboard',
+              onTap: onClipboard,
+            ),
+          _DockButton(
+            icon: LucideIcons.settings,
+            label: 'Atur',
+            onTap: onSettings,
+          ),
+          Container(
+            width: 1,
+            height: 28,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            color: Colors.white.withValues(alpha: 0.12),
+          ),
+          _DockButton(
+            icon: LucideIcons.power,
+            label: 'Putus',
+            danger: true,
+            onTap: onDisconnect,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DockButton extends StatelessWidget {
+  const _DockButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.requested = false,
+    this.pending = false,
+    this.danger = false,
+  });
+
+  final IconData icon;
+  final String label;
   final VoidCallback onTap;
+  final bool requested;
+  final bool pending;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = danger
+        ? AppColors.danger
+        : pending
+            ? AppColors.warning
+            : requested
+                ? AppColors.accentDark
+                : Colors.white70;
+    return Tooltip(
+      message: pending ? '$label belum aktif • ketuk untuk detail' : label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: SizedBox(
+          width: 62,
+          height: 52,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 19, color: color),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+              if (pending)
+                const Positioned(
+                  top: 8,
+                  right: 10,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.warning,
+                      shape: BoxShape.circle,
+                    ),
+                    child: SizedBox(width: 5, height: 5),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GamingControls extends StatelessWidget {
+  const _GamingControls({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = compact ? 76.0 : 88.0;
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: false,
+        child: Stack(
+          children: [
+            Positioned(
+              left: 24,
+              bottom: bottom,
+              child: _TouchControl(
+                size: compact ? 82 : 98,
+                glyph: HudGlyph.dpad,
+                label: 'Gerak',
+              ),
+            ),
+            Positioned(
+              right: 30,
+              bottom: bottom + 4,
+              child: SizedBox(
+                width: compact ? 126 : 150,
+                height: compact ? 92 : 108,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: 0,
+                      top: 22,
+                      child: _ActionButton(label: 'B', compact: compact),
+                    ),
+                    Positioned(
+                      right: compact ? 52 : 62,
+                      top: 0,
+                      child: _ActionButton(label: 'Y', compact: compact),
+                    ),
+                    Positioned(
+                      right: compact ? 52 : 62,
+                      bottom: 0,
+                      child: _ActionButton(label: 'A', compact: compact),
+                    ),
+                    Positioned(
+                      left: 0,
+                      top: 22,
+                      child: _ActionButton(label: 'X', compact: compact),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TouchControl extends StatelessWidget {
+  const _TouchControl({
+    required this.size,
+    required this.glyph,
+    required this.label,
+  });
+
+  final double size;
+  final HudGlyph glyph;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     return Opacity(
-      opacity: 0.88,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: const SizedBox(
-            width: 50,
-            height: 50,
-            child: Icon(
-              LucideIcons.keyboard,
-              size: 24,
-              color: Colors.white,
+      opacity: 0.58,
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.2),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.32)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            HudIcon(glyph, size: size * 0.58, color: Colors.white70),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 10, color: Colors.white54),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({required this.label, required this.compact});
+
+  final String label;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = compact ? 42.0 : 50.0;
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.2),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.34)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: Colors.white70,
+        ),
+      ),
+    );
+  }
+}
+
+class _DesktopControls extends StatelessWidget {
+  const _DesktopControls({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 20,
+      right: 20,
+      bottom: compact ? 78 : 90,
+      child: IgnorePointer(
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 460),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.24),
+              borderRadius: BorderRadius.circular(R.md),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                HudIcon(HudGlyph.trackpad, size: 25, color: Colors.white54),
+                SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    'Seret untuk pointer • ketuk untuk klik • dua jari untuk gulir',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 10, color: Colors.white54),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

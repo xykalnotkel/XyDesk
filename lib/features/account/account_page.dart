@@ -12,6 +12,10 @@ import '../../widgets/brand.dart';
 import '../../widgets/seamless.dart';
 import '../auth/auth_service.dart';
 import '../auth/legal_page.dart';
+import '../notifications/app_update_details.dart';
+import '../notifications/notification_preferences_page.dart';
+import '../notifications/update_page.dart';
+import '../session/media_capabilities.dart';
 import 'billing_page.dart';
 import 'permissions_page.dart';
 
@@ -169,15 +173,18 @@ class AccountPage extends ConsumerWidget {
           onChanged: ref.read(settingsProvider.notifier).setRelativeMouseMode,
         ),
         _SwitchRow(
-          title: 'Audio PC Host Streaming',
-          subtitle: 'Putar suara komputer remote di perangkat ini',
+          title: 'Preferensi Audio PC',
+          subtitle: 'Disimpan untuk beta • '
+              '${SessionMediaCapabilities.currentBuild.pcSystemAudio.summary}',
           icon: LucideIcons.volume2,
           value: s.audioEnabled,
           onChanged: ref.read(settingsProvider.notifier).setAudioEnabled,
         ),
         _SwitchRow(
-          title: 'Microphone Passthrough',
-          subtitle: 'Kirim audio mikrofon untuk voice-chat di PC',
+          title: 'Preferensi Mikrofon HP',
+          subtitle: 'Disimpan untuk beta • '
+              '${SessionMediaCapabilities.currentBuild.phoneMicrophone.summary}; '
+              'belum membuat mikrofon virtual Windows',
           icon: LucideIcons.mic,
           value: s.micPassthrough,
           onChanged: ref.read(settingsProvider.notifier).setMicPassthrough,
@@ -199,6 +206,17 @@ class AccountPage extends ConsumerWidget {
           onTap: () => Navigator.of(
             context,
           ).push(MaterialPageRoute(builder: (_) => const PermissionsPage())),
+        ),
+        ListRow(
+          title: 'Notifikasi pembaruan',
+          subtitle: 'Izin & langganan update aplikasi',
+          icon: LucideIcons.bell,
+          trailing: Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const NotificationPreferencesPage(),
+            ),
+          ),
         ),
         ListRow(
           title: context.tr('settings_devlog'),
@@ -315,7 +333,10 @@ class AccountPage extends ConsumerWidget {
     final c = context.c;
     final current = ref.read(settingsProvider).codec;
     final options = [
-      ('AV1 (NVENC / AMF GPU)', 'Latensi Terendah & Bandwidth Efisien (Rekomendasi Gaming)'),
+      (
+        'AV1 (NVENC / AMF GPU)',
+        'Latensi Terendah & Bandwidth Efisien (Rekomendasi Gaming)'
+      ),
       ('HEVC / H.265 (10-bit)', 'Warna Visual & HDR'),
       ('H.264 (AVC Universal)', 'Kompatibilitas Maksimal Semua GPU'),
     ];
@@ -677,18 +698,26 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: Gap.xl),
           ListRow(
             title: context.tr('about_release_notes'),
-            subtitle: 'Apa yang baru di 1.0.0',
+            subtitle: 'Pusat pembaruan & catatan rilis',
             icon: LucideIcons.list,
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Catatan rilis akan hadir.')),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => UpdatePage(
+                  details: AppUpdateDetails.updateCenter(),
+                ),
+              ),
             ),
           ),
           ListRow(
             title: context.tr('about_check_updates'),
-            subtitle: 'Kamu memakai versi terbaru',
+            subtitle: 'Buka rilis Android resmi',
             icon: LucideIcons.refreshCw,
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Kamu memakai versi terbaru.')),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => UpdatePage(
+                  details: AppUpdateDetails.updateCenter(),
+                ),
+              ),
             ),
           ),
           const SectionLabel('Diagnostik'),

@@ -9,6 +9,7 @@ import 'core/devlog.dart';
 import 'core/responsive.dart';
 import 'core/store.dart';
 import 'features/auth/session_vault.dart';
+import 'features/notifications/notification_service.dart';
 
 void main() {
   // runZonedGuarded menangkap error async yang lolos dari framework,
@@ -31,6 +32,9 @@ void main() {
 
       await DisplayMode.useHighestRefreshRate();
       DevLog.i('display', 'Refresh rate', '${DisplayMode.current.round()} Hz');
+
+      // Menyiapkan push tanpa menampilkan dialog izin pada peluncuran awal.
+      await NotificationService.instance.initialize();
 
       final store = await Store.open();
       final sessionVault = SecureSessionVault();

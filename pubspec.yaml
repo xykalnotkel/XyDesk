@@ -17,6 +17,7 @@ dependencies:
   http: ^1.6.0
   google_sign_in: ^7.2.0
   flutter_secure_storage: ^11.0.0
+  onesignal_flutter: ^5.6.7
   # Ikon Lucide — stroke tipis konsisten, sesuai mockup.
   # Material Icons terlalu tebal/filled dan membuat UI terasa berbeda.
   lucide_icons_flutter: ^3.1.15

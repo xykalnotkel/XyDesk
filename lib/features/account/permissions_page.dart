@@ -33,8 +33,8 @@ class PermissionsPage extends StatelessWidget {
     _Perm(
       LucideIcons.mic,
       'Mikrofon',
-      'Mengirim suaramu ke PC saat sesi berlangsung.',
-      'Saat kamu menyalakan mik pertama kali',
+      'Disiapkan untuk beta suara HP; transport audio belum aktif.',
+      'Belum diminta pada build ini',
       false,
     ),
     _Perm(
@@ -46,9 +46,9 @@ class PermissionsPage extends StatelessWidget {
     ),
     _Perm(
       LucideIcons.bell,
-      'Notifikasi',
-      'Status sesi dan peringatan koneksi terputus.',
-      'Setelah sesi pertama selesai',
+      'Notifikasi pembaruan',
+      'Pengumuman versi baru XyDesk, tanpa promosi rutin.',
+      'Setelah kamu menekan Aktifkan di pengaturan notifikasi',
       false,
     ),
     _Perm(
@@ -87,7 +87,14 @@ class PermissionsPage extends StatelessWidget {
           Gap.h40,
         ),
         children: [
-          const Center(child: Illus(Img.secure, size: 132, opacity: 0.9)),
+          const Center(
+            child: Illus(
+              Img.secure,
+              size: 132,
+              opacity: 0.9,
+              opticalScale: 1.12,
+            ),
+          ),
           const SizedBox(height: Gap.lg),
           Text(
             'XyDesk hanya meminta izin saat fiturnya dipakai. '

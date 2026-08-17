@@ -12,6 +12,10 @@ class Img {
   const Img._();
   static const logo = 'assets/img/logo.png';
 
+  /// Google-owned multicolor G. This file comes from Google's official
+  /// Identity branding asset, not from a locally drawn approximation.
+  static const googleG = 'assets/img/google_g.png';
+
   // ilustrasi flow mockup baru (background transparan)
   static const onboarding = 'assets/img/onboarding.webp';
   static const pairSuccess = 'assets/img/pair_success.webp';
@@ -109,23 +113,36 @@ class BrandLockup extends StatelessWidget {
 
 /// Gambar ilustrasi yang aman gagal — tidak pernah membuat layar kosong.
 class Illus extends StatelessWidget {
-  const Illus(this.asset, {super.key, this.size = 140, this.opacity = 1});
+  const Illus(
+    this.asset, {
+    super.key,
+    this.size = 140,
+    this.opacity = 1,
+    this.opticalScale = 1,
+  });
 
   final String asset;
   final double size;
   final double opacity;
 
+  /// Compensates for intentional transparent margins without destructively
+  /// cropping or re-exporting the clean source artwork.
+  final double opticalScale;
+
   @override
   Widget build(BuildContext context) {
     return Opacity(
       opacity: opacity,
-      child: Image.asset(
-        asset,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.high,
-        errorBuilder: (_, __, ___) => SizedBox(width: size, height: size),
+      child: Transform.scale(
+        scale: opticalScale,
+        child: Image.asset(
+          asset,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, __, ___) => SizedBox(width: size, height: size),
+        ),
       ),
     );
   }

@@ -44,6 +44,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# ── Credential/provider — JANGAN pernah di-commit ──
+**/*firebase-adminsdk*.json
+android/app/google-services.json
+
 # ── Penandatanganan — JANGAN pernah di-commit ──
 android/key.properties
 android/app/*.jks
