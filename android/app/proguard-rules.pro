@@ -16,6 +16,13 @@
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 
+# Flutter embedding memuat dukungan opsional deferred components untuk Android
+# App Bundle. XyDesk merilis APK tunggal dan tidak memakai deferred components,
+# sehingga Play Feature Delivery sengaja tidak menjadi dependensi. Tanpa aturan
+# ini R8 gagal pada referensi opsional SplitInstall walau jalurnya tidak pernah
+# dipakai (Build run #32031233134).
+-dontwarn com.google.android.play.core.**
+
 # ── flutter_webrtc / libjingle ──────────────────────────────────────────
 # libjingle_peerconnection_so.so memanggil balik kelas Java ini lewat JNI.
 # Obfuscation di sini memutus jembatan JNI dan mematikan seluruh sesi WebRTC.
