@@ -109,25 +109,24 @@ langsung tahu macetnya di penemuan host, autentikasi, atau NAT.
 
 ---
 
-## Build Otomatis
+## Build dan Release Otomatis
 
-Pada fase mockup ini, push ke GitHub hanya membangun **APK universal**.
-Source Flutter tetap disiapkan untuk Windows dan iOS, tetapi job build kedua
-platform itu sengaja ditunda sampai backend dan server siap.
+Push ke `main` menjalankan analisis statis serta build Android, Windows, dan Web.
+Artefak build biasa tersedia melalui tab **Actions**.
 
-| Target | Artefak | Status |
+| Target | Artefak Release | Status |
 |---|---|---|
-| Android | `XyDesk.apk` | Aktif — universal, satu berkas untuk semua HP Android 8.0+ |
-| Windows | — | Ditunda — source/platform build diaktifkan saat backend siap |
-| iOS | — | Ditunda — perlu runner macOS dan signing Apple |
+| Android | `XyDesk.apk` | Universal untuk Android 8.0+ |
+| Windows client | `XyDesk-Windows.zip` | Build Flutter desktop |
+| Windows host | `XyDesk-Host.exe` | Engine host Rust |
+| Web | `XyDesk-Web.zip` | Bundle Flutter Web |
 
-Unduh APK dari tab **Actions** → pilih run → bagian **Artifacts**.
+GitHub Release tidak dibuat pada setiap push. Release baru hanya berjalan
+setelah workflow Build sukses dan nilai `version` di `pubspec.yaml` berubah.
+Workflow menerbitkan checksum serta manifest `update.json`, lalu mengirim push
+OneSignal hanya ke Android dengan build lebih lama.
 
-```bash
-git tag v1.0.0 && git push origin v1.0.0   # buat rilis
-```
-
-Detail lengkap, termasuk cara menandatangani build dan perkiraan biaya runner:
+Detail trigger, signing, aset, dan secret CI ada di
 [`docs/CI.md`](docs/CI.md).
 
 ---

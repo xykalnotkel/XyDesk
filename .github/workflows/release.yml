@@ -1,82 +1,163 @@
 name: Release
 
-# Jalan saat tag versi didorong: git tag v1.0.0 && git push origin v1.0.0.
-# Dapat pula dijalankan manual dengan tag rilis yang eksplisit. Menghasilkan:
-#   - Android APK (universal)
-#   - Windows EXE (host — dipasang di PC yang dikendalikan)
-#   - Web (untuk user iPhone / yang tak mau install — client via browser)
+# Release stabil dibuat hanya setelah workflow Build pada main sukses.
+# Perubahan versi di pubspec.yaml (contoh 1.1.0+3) menjadi tag v1.1.0.
+# Jika tag/release untuk versi itu sudah ada, workflow berhenti tanpa duplikasi.
 on:
-  push:
-    tags: ['v*']
+  workflow_run:
+    workflows: ['Build']
+    branches: [main]
+    types: [completed]
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Tag rilis yang akan dibuat/diperbarui (contoh v1.0.0)
-        required: true
-        type: string
 
 permissions:
+  actions: read
   contents: write
 
 env:
   FLUTTER_VERSION: '3.44.9'
-  GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+  ONESIGNAL_APP_ID: 'e3d5adea-1c0f-4986-9ce5-e088d65f0998'
 
 jobs:
-  android:
-    name: APK Universal (Android)
+  prepare:
+    name: Validasi versi
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    outputs:
+      should_release: ${{ steps.release.outputs.should_release }}
+      version: ${{ steps.release.outputs.version }}
+      build_number: ${{ steps.release.outputs.build_number }}
+      tag: ${{ steps.release.outputs.tag }}
+      release_sha: ${{ steps.release.outputs.release_sha }}
+      build_run_id: ${{ steps.release.outputs.build_run_id }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: '17'
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - name: Siapkan signing APK
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - id: release
+        name: Cocokkan pubspec dan Build
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "KEYSTORE_BASE64 kosong — lewati signing rilis (fallback debug)."
+          set -euo pipefail
+          release_sha="${WORKFLOW_SHA:-$GITHUB_SHA}"
+
+          version_full="$(awk '/^version:[[:space:]]*/ { print $2; exit }' pubspec.yaml)"
+          if ! [[ "$version_full" =~ ^([0-9]+\.[0-9]+\.[0-9]+)\+([1-9][0-9]*)$ ]]; then
+            echo "::error::version pubspec harus berbentuk SemVer+build, contoh 1.1.0+3"
+            exit 1
+          fi
+          version="${BASH_REMATCH[1]}"
+          build_number="${BASH_REMATCH[2]}"
+          tag="v$version"
+
+          # Run otomatis hanya membuat Release ketika nilai version berubah.
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            previous_version="$(
+              git show "$release_sha^:pubspec.yaml" 2>/dev/null |
+                awk '/^version:[[:space:]]*/ { print $2; exit }'
+            )"
+            if [ "$version_full" = "$previous_version" ]; then
+              echo "Nilai version tidak berubah; Release tidak diperlukan."
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" \
+            >/dev/null 2>&1; then
+            echo "Tag $tag sudah ada; tidak membuat Release duplikat."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/xydesk-release.keystore
-          cat > android/key.properties <<EOF
-          storePassword=$KEYSTORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=$KEY_ALIAS
-          storeFile=xydesk-release.keystore
-          EOF
-      - run: >-
-          flutter build apk --release
-          --target-platform=android-arm,android-arm64
-          --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
-      - name: Siapkan artefak
+
+          build_run_id="${WORKFLOW_RUN_ID:-}"
+          if [ -z "$build_run_id" ]; then
+            build_run_id="$(
+              gh run list \
+                --repo "$GITHUB_REPOSITORY" \
+                --workflow build.yml \
+                --commit "$release_sha" \
+                --status success \
+                --limit 1 \
+                --json databaseId \
+                --jq '.[0].databaseId // empty'
+            )"
+          fi
+          if [ -z "$build_run_id" ]; then
+            echo "::error::Build sukses untuk $release_sha tidak ditemukan."
+            exit 1
+          fi
+          conclusion="$(
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$build_run_id" \
+              --jq '.conclusion'
+          )"
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::Build run $build_run_id belum sukses ($conclusion)."
+            exit 1
+          fi
+
+          {
+            echo "should_release=true"
+            echo "version=$version"
+            echo "build_number=$build_number"
+            echo "tag=$tag"
+            echo "release_sha=$release_sha"
+            echo "build_run_id=$build_run_id"
+          } >> "$GITHUB_OUTPUT"
+          echo "Siap merilis $tag (build $build_number) dari $release_sha."
+
+  clients:
+    name: Ambil build client yang sudah lulus
+    needs: prepare
+    if: needs.prepare.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unduh artefak Build terverifikasi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ needs.prepare.outputs.build_run_id }}
         run: |
-          mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-release.apk dist/XyDesk.apk
+          set -euo pipefail
+          mkdir -p incoming/android incoming/windows incoming/web dist
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name XyDesk-Android-APK --dir incoming/android
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name XyDesk-Windows-EXE --dir incoming/windows
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name XyDesk-Web --dir incoming/web
+          cp incoming/android/XyDesk.apk dist/XyDesk.apk
+          (cd incoming/windows && zip -q -r ../../dist/XyDesk-Windows.zip .)
+          (cd incoming/web && zip -q -r ../../dist/XyDesk-Web.zip .)
+          test -s dist/XyDesk.apk
+          test -s dist/XyDesk-Windows.zip
+          test -s dist/XyDesk-Web.zip
+
       - uses: actions/upload-artifact@v4
         with:
-          name: XyDesk-Android-APK
-          path: dist/XyDesk.apk
+          name: release-client-assets
+          path: dist/*
           if-no-files-found: error
+          retention-days: 3
 
   windows-host:
-    name: Host EXE (Windows)
+    name: Host Rust (Windows)
+    needs: prepare
+    if: needs.prepare.outputs.should_release == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
@@ -87,83 +168,202 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             host/target
-          key: ${{ runner.os }}-cargo-rel-${{ hashFiles('host/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-rel-
-      - name: Build release
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-release-
+      - name: Build host release
         working-directory: host
         run: cargo build --release
       - uses: actions/upload-artifact@v4
         with:
-          name: XyDesk-Host-Windows
+          name: release-host-asset
           path: host/target/release/xydesk-host.exe
           if-no-files-found: error
-
-  web:
-    name: Web Client (browser)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      - run: flutter create . --platforms=web
-      - run: flutter pub get
-      - run: flutter build web --release --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
-      - name: Arsipkan web
-        run: |
-          cd build/web && zip -r ../../XyDesk-Web.zip .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: XyDesk-Web
-          path: XyDesk-Web.zip
-          if-no-files-found: error
+          retention-days: 3
 
   publish:
-    name: Terbitkan Release
-    needs: [android, windows-host, web]
+    name: Terbitkan Release dan push update
+    needs: [prepare, clients, windows-host]
+    if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+      RELEASE_SHA: ${{ needs.prepare.outputs.release_sha }}
+      ONESIGNAL_REST_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Kumpulkan & buat checksum
+      - name: Validasi secret push sebelum publikasi
+        run: |
+          if [ -z "$ONESIGNAL_REST_API_KEY" ]; then
+            echo "::error::GitHub Secret ONESIGNAL_REST_API_KEY belum diatur. Release tidak dipublikasikan."
+            exit 1
+          fi
+
+      - name: Kumpulkan aset, banner, checksum, dan manifest
         run: |
           set -euo pipefail
           mkdir -p dist
-          cp artifacts/XyDesk-Android-APK/XyDesk.apk dist/XyDesk.apk
-          cp artifacts/XyDesk-Host-Windows/xydesk-host.exe dist/XyDesk-Host.exe
-          cp artifacts/XyDesk-Web/XyDesk-Web.zip dist/XyDesk-Web.zip
+          cp artifacts/release-client-assets/XyDesk.apk dist/XyDesk.apk
+          cp artifacts/release-client-assets/XyDesk-Windows.zip dist/XyDesk-Windows.zip
+          cp artifacts/release-client-assets/XyDesk-Web.zip dist/XyDesk-Web.zip
+          cp artifacts/release-host-asset/xydesk-host.exe dist/XyDesk-Host.exe
+          cp design/notifications/xydesk_update_banner_1024x512.jpg \
+            dist/xydesk_update_banner_1024x512.jpg
           test -s dist/XyDesk.apk
-          test -s dist/XyDesk-Host.exe
-          test -s dist/XyDesk-Web.zip
           cd dist
-          sha256sum XyDesk.apk XyDesk-Host.exe XyDesk-Web.zip > SHA256SUMS.txt
+          sha256sum XyDesk.apk XyDesk-Host.exe XyDesk-Windows.zip \
+            XyDesk-Web.zip xydesk_update_banner_1024x512.jpg \
+            > SHA256SUMS.txt
+          apk_sha="$(sha256sum XyDesk.apk | cut -d' ' -f1)"
+          apk_bytes="$(stat -c%s XyDesk.apk)"
+          export apk_sha apk_bytes
+          python3 - <<'PY'
+          import json, os
+          repository = os.environ['GITHUB_REPOSITORY']
+          tag = os.environ['RELEASE_TAG']
+          version = os.environ['VERSION']
+          build = int(os.environ['BUILD_NUMBER'])
+          base = f"https://github.com/{repository}/releases/download/{tag}"
+          manifest = {
+              "schema": 1,
+              "version": version,
+              "build": build,
+              "tag": tag,
+              "title": "XyDesk Update!! Cek Sekarang",
+              "summary": (
+                  f"XyDesk {version} sudah tersedia dengan peningkatan "
+                  "pengalaman, stabilitas, dan keamanan pembaruan."
+              ),
+              "notes": [
+                  "Penyempurnaan pengalaman XyDesk dan tampilan Session.",
+                  "Pembaruan resmi terverifikasi dengan checksum SHA-256.",
+                  "Detail lengkap tersedia di catatan GitHub Release resmi."
+              ],
+              "apk": {
+                  "url": f"{base}/XyDesk.apk",
+                  "sha256": os.environ["apk_sha"],
+                  "bytes": int(os.environ["apk_bytes"]),
+              },
+              "release_url": f"https://github.com/{repository}/releases/tag/{tag}",
+              "banner_url": f"{base}/xydesk_update_banner_1024x512.jpg",
+          }
+          with open("update.json", "w", encoding="utf-8") as handle:
+              json.dump(manifest, handle, ensure_ascii=False, separators=(",", ":"))
+              handle.write("\n")
+          PY
+          python3 -m json.tool update.json >/dev/null
+          sha256sum update.json >> SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - uses: softprops/action-gh-release@v2
+      - name: Publikasikan GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-          target_commitish: ${{ github.sha }}
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          target_commitish: ${{ needs.prepare.outputs.release_sha }}
           files: dist/*
           fail_on_unmatched_files: true
           generate_release_notes: true
           body: |
-            ## XyDesk ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+            ## XyDesk ${{ needs.prepare.outputs.tag }}
 
-            Aplikasi remote desktop low-latency untuk gaming dan kerja.
-            Tanpa VM/VPS, backend di Cloudflare (gratis).
+            Rilis resmi XyDesk untuk Android, Windows, dan Web.
 
             | Platform | Berkas | Keterangan |
             |---|---|---|
-            | Android | `XyDesk.apk` | Universal — HP Android 8.0+ |
-            | Windows | `XyDesk-Host.exe` | Host — dipasang di PC yang dikendalikan |
-            | Web | `XyDesk-Web.zip` | Client browser (iPhone / tanpa install) |
+            | Android | `XyDesk.apk` | APK universal Android 8.0+ |
+            | Windows client | `XyDesk-Windows.zip` | Aplikasi client desktop |
+            | Windows host | `XyDesk-Host.exe` | Dipasang di PC yang dikendalikan |
+            | Web | `XyDesk-Web.zip` | Bundle client browser |
 
-            Verifikasi unduhan dengan `SHA256SUMS.txt`.
+            XyDesk memverifikasi APK menggunakan metadata `update.json`,
+            checksum SHA-256, package ID, dan sertifikat signing sebelum installer dibuka.
 
-            > APK ditandatangani (keystore rilis). Windows EXE belum code-signed
-            > (SmartScreen akan menampilkan peringatan "penerbit tidak dikenal").
+            > APK ditandatangani dengan keystore rilis. Windows EXE belum
+            > code-signed sehingga SmartScreen dapat menampilkan peringatan.
+
+      - name: Kirim OneSignal hanya ke build Android lama
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, uuid
+          repository = os.environ['GITHUB_REPOSITORY']
+          tag = os.environ['RELEASE_TAG']
+          version = os.environ['VERSION']
+          build = os.environ['BUILD_NUMBER']
+          base = f"https://github.com/{repository}/releases/download/{tag}"
+          payload = {
+              "app_id": os.environ["ONESIGNAL_APP_ID"],
+              "target_channel": "push",
+              "isAndroid": True,
+              "filters": [
+                  {
+                      "field": "app_version",
+                      "relation": "<",
+                      "value": build,
+                  }
+              ],
+              "headings": {
+                  "en": "XyDesk Update!! Cek Sekarang",
+                  "id": "XyDesk Update!! Cek Sekarang",
+              },
+              "contents": {
+                  "en": f"Versi {version} sudah tersedia. Lihat detail pembaruan di XyDesk.",
+                  "id": f"Versi {version} sudah tersedia. Lihat detail pembaruan di XyDesk.",
+              },
+              "data": {
+                  "route": "app_update",
+                  "version": version,
+                  "build": build,
+                  "title": "XyDesk Update!! Cek Sekarang",
+                  "summary": f"Versi {version} sudah tersedia untuk diunduh dan dipasang.",
+                  "notes": [
+                      "Penyempurnaan pengalaman dan stabilitas XyDesk.",
+                      "APK resmi diverifikasi sebelum pemasangan."
+                  ],
+              },
+              "big_picture": f"{base}/xydesk_update_banner_1024x512.jpg",
+              "name": f"XyDesk release {tag}",
+              "idempotency_key": str(uuid.UUID(
+                  bytes=uuid.uuid5(uuid.NAMESPACE_URL, f"xydesk:{tag}").bytes,
+                  version=4,
+              )),
+          }
+          with open('/tmp/onesignal-payload.json', 'w', encoding='utf-8') as handle:
+              json.dump(payload, handle, ensure_ascii=False)
+          PY
+          response_file="$(mktemp)"
+          status="$(
+            curl --silent --show-error \
+              --output "$response_file" \
+              --write-out '%{http_code}' \
+              --request POST \
+              --url 'https://api.onesignal.com/notifications' \
+              --header 'Content-Type: application/json' \
+              --header "Authorization: Key $ONESIGNAL_REST_API_KEY" \
+              --data-binary @/tmp/onesignal-payload.json
+          )"
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "::error::OneSignal menolak push update (HTTP $status)."
+            python3 - <<'PY' "$response_file"
+          import json, sys
+          try:
+              data = json.load(open(sys.argv[1], encoding='utf-8'))
+              print(json.dumps({k: data[k] for k in ('errors', 'warnings') if k in data}))
+          except Exception:
+              print('Respons OneSignal tidak dapat dibaca.')
+          PY
+            exit 1
+          fi
+          python3 - <<'PY' "$response_file"
+          import json, sys
+          data = json.load(open(sys.argv[1], encoding='utf-8'))
+          print(f"Push OneSignal dibuat: id={data.get('id')} recipients={data.get('recipients')}")
+          PY

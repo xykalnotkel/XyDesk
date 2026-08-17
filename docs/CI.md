@@ -10,7 +10,7 @@ perlu menjalankan Flutter, Android SDK, Rust, atau Visual Studio secara lokal.
 | `.github/workflows/build.yml` | push/PR ke `main`, manual | APK Android, aplikasi Flutter Windows, bundle Web |
 | `.github/workflows/build-host.yml` | perubahan `host/**`, manual | `xydesk-host.exe` |
 | `.github/workflows/deploy-signaling.yml` | perubahan `cloudflare/**`, manual | deploy Cloudflare Worker |
-| `.github/workflows/release.yml` | tag `v*`, manual | GitHub Release multi-platform |
+| `.github/workflows/release.yml` | Build `main` sukses + nilai `version` berubah, manual recovery | GitHub Release multi-platform + push OneSignal |
 
 Sesuai keputusan proyek, repositori tidak memiliki suite test otomatis. CI tetap
 menjalankan format, analisis statis, dan build agar artefak yang diterbitkan
@@ -33,23 +33,37 @@ tidak otomatis tampil di halaman Releases.
 
 ## Menerbitkan GitHub Release
 
-Versi aplikasi saat ini mengikuti `pubspec.yaml`. Buat dan push tag versi dari
-commit yang ingin diterbitkan:
+Versi aplikasi adalah satu-satunya pemicu rilis. Naikkan nilai `version` di
+`pubspec.yaml` dengan format SemVer + Android build, misalnya `1.1.0+3`, lalu
+push commit tersebut ke `main`. Workflow Build berjalan lebih dahulu. Setelah
+seluruh analisis dan build sukses, workflow Release otomatis:
 
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+1. memastikan nilai versi berbeda dari commit sebelumnya;
+2. memastikan Release `v<versi>` belum ada;
+3. memakai APK, Windows client, dan Web dari Build yang sudah lulus;
+4. membangun host Rust Windows dari commit yang sama;
+5. menerbitkan aset stabil, checksum, dan `update.json`;
+6. mengirim OneSignal ke Android dengan `app_version` lebih kecil dari build
+   baru.
 
-Workflow Release membangun dan melampirkan:
+Push biasa tanpa perubahan nilai versi tidak membuat Release. Trigger manual
+hanya disediakan untuk pemulihan jika run otomatis perlu dijalankan ulang.
+
+Aset Release:
 
 - `XyDesk.apk` — client Android universal ARM;
 - `XyDesk-Host.exe` — host Windows;
+- `XyDesk-Windows.zip` — client Flutter Windows;
 - `XyDesk-Web.zip` — client Web;
-- `SHA256SUMS.txt` — checksum unduhan.
+- `SHA256SUMS.txt` — checksum unduhan;
+- `update.json` — manifest update resmi untuk perbandingan build dan verifikasi
+  APK;
+- `xydesk_update_banner_1024x512.jpg` — gambar push update.
 
-Rilis hanya terbit jika seluruh job build berhasil. Jika salah satu job gagal,
-job `Terbitkan Release` akan dilewati dan halaman Releases tetap kosong.
+Rilis hanya terbit jika workflow Build untuk commit yang sama sukses dan GitHub
+Secret OneSignal tersedia. APK kemudian diverifikasi aplikasi melalui checksum
+SHA-256, package ID, nomor build, dan sertifikat signing sebelum installer
+Android ditampilkan.
 
 ## Signing Android
 
@@ -63,6 +77,11 @@ Actions**:
 
 Keystore dan `android/key.properties` tidak boleh di-commit. Workflow membuatnya
 sementara di runner dan menghapus runner setelah job selesai.
+
+Push update otomatis juga memerlukan GitHub Actions Secret
+`ONESIGNAL_REST_API_KEY`. Nilainya hanya dimasukkan langsung melalui GitHub dan
+tidak boleh disimpan di source, log, issue, atau percakapan. Jika Secret ini
+belum tersedia, workflow berhenti sebelum GitHub Release dipublikasikan.
 
 ## Konfigurasi publik build
 

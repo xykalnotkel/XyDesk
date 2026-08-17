@@ -248,7 +248,7 @@ class AccountPage extends ConsumerWidget {
         ListRow(
           title: context.tr('settings_about'),
           icon: LucideIcons.info,
-          value: 'v1.0.0',
+          value: 'v1.1.0',
           trailing: Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
           onTap: () => Navigator.of(
             context,
@@ -691,7 +691,7 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: Gap.md),
           Center(
             child: Text(
-              'Versi 1.0.0 · Build 2',
+              'Versi 1.1.0 · Build 3',
               style: TextStyle(fontSize: 11.5, color: c.textLow),
             ),
           ),
@@ -710,7 +710,7 @@ class AboutPage extends StatelessWidget {
           ),
           ListRow(
             title: context.tr('about_check_updates'),
-            subtitle: 'Buka rilis Android resmi',
+            subtitle: 'Bandingkan dengan Release resmi',
             icon: LucideIcons.refreshCw,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(

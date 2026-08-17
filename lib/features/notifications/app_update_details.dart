@@ -2,8 +2,9 @@ import 'dart:convert';
 
 /// Data yang ditampilkan oleh halaman pembaruan internal.
 ///
-/// Detail boleh datang dari Additional Data OneSignal, tetapi aksi unduh selalu
-/// menuju GitHub Releases resmi XyDesk. URL dari payload tidak pernah dieksekusi.
+/// Detail boleh datang dari Additional Data OneSignal, tetapi pemeriksaan dan
+/// download selalu memakai manifest GitHub Release resmi. URL dari payload tidak
+/// pernah dieksekusi.
 class AppUpdateDetails {
   const AppUpdateDetails({
     required this.title,
@@ -11,10 +12,6 @@ class AppUpdateDetails {
     required this.version,
     required this.releaseNotes,
   });
-
-  static final Uri officialDownloadUri = Uri.parse(
-    'https://github.com/xykalnotkel/XyDesk/releases/latest/download/XyDesk.apk',
-  );
 
   final String title;
   final String message;
@@ -24,12 +21,12 @@ class AppUpdateDetails {
   factory AppUpdateDetails.updateCenter() => const AppUpdateDetails(
         title: 'Pusat Pembaruan XyDesk',
         message:
-            'Buka rilis Android resmi untuk melihat dan mengunduh versi XyDesk '
-            'yang tersedia.',
-        version: 'Versi terpasang 1.0.0 · Build 2',
+            'XyDesk akan membandingkan versi terpasang dengan manifest GitHub '
+            'Release resmi.',
+        version: 'Memeriksa versi resmi',
         releaseNotes: [
           'Catatan perubahan lengkap tersedia bersama setiap rilis resmi.',
-          'APK hanya diarahkan ke repositori resmi XyDesk di GitHub Releases.',
+          'APK hanya diambil dari repositori resmi XyDesk di GitHub Releases.',
         ],
       );
 

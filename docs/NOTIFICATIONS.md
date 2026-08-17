@@ -11,30 +11,43 @@ XyDesk uses `onesignal_flutter` 5.6.7 for Android/iOS push delivery. The SDK is 
 
 ## Sending an update
 
-Set the OneSignal notification title and message normally, for example:
+Push update produksi dibuat otomatis oleh `.github/workflows/release.yml` setelah
+Build sukses dan seluruh aset GitHub Release, termasuk `XyDesk.apk` dan
+`update.json`, selesai dipublikasikan. Workflow memakai GitHub Actions Secret
+`ONESIGNAL_REST_API_KEY`; nilainya tidak boleh disimpan di source atau log.
 
-- **Title:** `XyDesk Update!! Cek Sekarang`
-- **Message:** `Versi baru tersedia. Lihat detail pembaruan di XyDesk.`
-
-Add this exact shape under **Additional Data** (custom data):
+Payload otomatis memakai bentuk berikut dan membatasi penerima Android pada
+`app_version < <build baru>`:
 
 ```json
 {
   "route": "app_update",
   "version": "1.1.0",
+  "build": "3",
   "title": "XyDesk Update!! Cek Sekarang",
-  "summary": "Versi baru tersedia dengan peningkatan stabilitas dan pengalaman sesi.",
-  "notes": "[\"Peningkatan stabilitas koneksi\",\"Penyempurnaan tampilan dan performa\"]"
+  "summary": "Versi 1.1.0 sudah tersedia untuk diunduh dan dipasang.",
+  "notes": [
+    "Penyempurnaan pengalaman dan stabilitas XyDesk.",
+    "APK resmi diverifikasi sebelum pemasangan."
+  ]
 }
 ```
 
-Routing also accepts `screen` or `type` with `app_update`, `update`, or `/app-update`. An optional OneSignal action button may use action ID `open_update`. Keep `route: app_update` as the canonical format.
+Routing juga menerima `screen` atau `type` dengan nilai `app_update`, `update`,
+atau `/app-update`. Tombol aksi opsional boleh memakai ID `open_update`.
+Pertahankan `route: app_update` sebagai format kanonis.
 
-Payload text is display-only. Any URL supplied in Additional Data is intentionally ignored. The internal page's download button is hardcoded to:
+Teks payload hanya untuk tampilan. URL apa pun di Additional Data selalu
+diabaikan. Halaman internal mengambil manifest
+`releases/latest/download/update.json`, memvalidasi bahwa URL APK tepat mengarah
+ke aset tag resmi, lalu membandingkan build terpasang dengan build Release.
+Download Android hanya dimulai melalui `DownloadManager` native. Sebelum tombol
+“Pasang update” aktif, aplikasi memeriksa ukuran, SHA-256, package ID, nomor
+build, dan sertifikat signing.
 
-`https://github.com/xykalnotkel/XyDesk/releases/latest/download/XyDesk.apk`
-
-A notification click is buffered until the root Flutter Navigator exists, then opens the internal update page. It never downloads or opens GitHub directly from the click listener.
+Klik notifikasi ditahan sampai root Flutter Navigator tersedia, lalu membuka
+halaman update internal. Listener tidak langsung mengunduh APK atau membuka
+GitHub.
 
 ## Rich image
 
@@ -42,7 +55,7 @@ Use the 2:1 JPEG master:
 
 `design/notifications/xydesk_update_banner_1024x512.jpg`
 
-The image is 1024×512 and below 1 MB. OneSignal's Android **Big Picture** field requires a publicly reachable HTTPS URL; a repository-local path does not work. Publish this exact JPEG to the official release assets, repository, or trusted CDN before sending the campaign, then paste that HTTPS URL into the Big Picture field. Do not use an expiring or authenticated URL.
+The image is 1024×512 and below 1 MB. OneSignal's Android **Big Picture** field requires a publicly reachable HTTPS URL; a repository-local path does not work. The Release workflow publishes this exact JPEG as a stable release asset and sets that public HTTPS URL in the automatic OneSignal request. Do not replace it with an expiring or authenticated URL.
 
 The same image is bundled at `assets/img/xydesk_update_banner.jpg` for the internal page. Android's system notification remains static; motion/depth is simulated by the artwork, while the internal page adds subtle motion.
 
