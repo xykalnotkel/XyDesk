@@ -367,9 +367,7 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
         onPressed: _checkForUpdates,
         icon: const Icon(LucideIcons.circleCheck, size: 18),
         label: const Text('Anda memakai versi terbaru'),
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
-        ),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
       );
     }
     if (!result.isAndroid) {
@@ -386,9 +384,7 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
         onPressed: _acting ? null : _installUpdate,
         icon: const Icon(LucideIcons.packageCheck, size: 18),
         label: Text(_acting ? 'Menyiapkan installer…' : 'Pasang update'),
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
-        ),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
       ),
       UpdateDownloadPhase.queued ||
       UpdateDownloadPhase.running ||
@@ -710,11 +706,7 @@ class _SafetyNotice extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            LucideIcons.shieldCheck,
-            size: 19,
-            color: context.c.textMid,
-          ),
+          Icon(LucideIcons.shieldCheck, size: 19, color: context.c.textMid),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
