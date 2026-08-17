@@ -242,12 +242,12 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
                 _StatusChip(
                   icon: latest ? LucideIcons.circleCheck : LucideIcons.sparkles,
                   label: latest ? 'Versi terbaru' : details.version,
-                  color: latest ? const Color(0xFF178B57) : colors.primary,
+                  color: latest ? context.c.successText : colors.primary,
                 ),
-                const _StatusChip(
+                _StatusChip(
                   icon: LucideIcons.shieldCheck,
                   label: 'Release resmi',
-                  color: Color(0xFF49627C),
+                  color: context.c.textMid,
                 ),
               ],
             ),
@@ -281,7 +281,7 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
               _MessageCard(
                 icon: LucideIcons.wifiOff,
                 message: _checkError!,
-                color: const Color(0xFFA76200),
+                color: context.c.warningText,
               ),
             ],
             if (details.releaseNotes.isNotEmpty) ...[
@@ -311,7 +311,7 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
               _MessageCard(
                 icon: LucideIcons.triangleAlert,
                 message: _actionError!,
-                color: const Color(0xFFB23B35),
+                color: context.c.dangerText,
               ),
             ],
             const SizedBox(height: 18),
@@ -369,7 +369,6 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
         label: const Text('Anda memakai versi terbaru'),
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(50),
-          backgroundColor: const Color(0xFF178B57),
         ),
       );
     }
@@ -389,7 +388,6 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
         label: Text(_acting ? 'Menyiapkan installer…' : 'Pasang update'),
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(50),
-          backgroundColor: const Color(0xFF178B57),
         ),
       ),
       UpdateDownloadPhase.queued ||
@@ -439,9 +437,8 @@ class _VersionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.c.raised,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE7EBF0)),
       ),
       child: Row(
         children: [
@@ -502,9 +499,9 @@ class _DownloadCard extends StatelessWidget {
     final ready = status.phase == UpdateDownloadPhase.ready;
     final failed = status.phase == UpdateDownloadPhase.failed;
     final color = ready
-        ? const Color(0xFF178B57)
+        ? context.c.successText
         : failed
-        ? const Color(0xFFB23B35)
+        ? context.c.dangerText
         : Theme.of(context).colorScheme.primary;
 
     return Container(
@@ -662,9 +659,8 @@ class _NoteRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.c.raised,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8EBEF)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,14 +668,14 @@ class _NoteRow extends StatelessWidget {
           Container(
             width: 22,
             height: 22,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEAF5F0),
+            decoration: BoxDecoration(
+              color: context.c.successText.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.check,
               size: 14,
-              color: Color(0xFF178B57),
+              color: context.c.successText,
             ),
           ),
           const SizedBox(width: 10),
@@ -708,14 +704,18 @@ class _SafetyNotice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F5F8),
+        color: context.c.input,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(LucideIcons.shieldCheck, size: 19, color: Color(0xFF49627C)),
-          SizedBox(width: 10),
+          Icon(
+            LucideIcons.shieldCheck,
+            size: 19,
+            color: context.c.textMid,
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               'APK diunduh oleh Android di latar belakang. Sebelum tombol '
@@ -723,7 +723,7 @@ class _SafetyNotice extends StatelessWidget {
               'package ID, nomor build, dan sertifikat signing. Pemasangan '
               'tetap memerlukan konfirmasi Anda di installer Android.',
               style: TextStyle(
-                color: Color(0xFF49627C),
+                color: context.c.textMid,
                 fontSize: 11.5,
                 height: 1.48,
               ),

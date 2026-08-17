@@ -151,7 +151,9 @@ class GoogleAuthService {
           'Google tidak memberikan ID token. Periksa konfigurasi OAuth.',
         );
       }
-      return _api.signInWithGoogle(idToken);
+      // Await di dalam blok try agar kegagalan HTTP tetap melewati pemetaan
+      // error di bawah, bukan lolos sebagai Future error mentah ke UI.
+      return await _api.signInWithGoogle(idToken);
     } on GoogleSignInException catch (error) {
       if (error.code == GoogleSignInExceptionCode.canceled) {
         throw const AuthException(

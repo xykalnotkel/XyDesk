@@ -31,6 +31,13 @@ class AppColors {
   static const success = Color(0xFF4FA97A);
   static const warning = Color(0xFFC9963F);
   static const danger = Color(0xFFD9646E);
+
+  // Varian teks untuk latar terang. Warna status dasar di atas dirancang
+  // untuk Graphite; jika dipakai sebagai teks di Paper kontrasnya terlalu
+  // rendah. Token terpisah mencegah layar memilih warna mentah sendiri.
+  static const successTextLight = Color(0xFF167347);
+  static const warningTextLight = Color(0xFF855400);
+  static const dangerTextLight = Color(0xFFA52A36);
 }
 
 /// Warna yang bergantung tema, diambil lewat `context.c`.
@@ -45,9 +52,13 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.textHi,
     required this.textMid,
     required this.textLow,
+    required this.successText,
+    required this.warningText,
+    required this.dangerText,
   });
 
   final Color bg, raised, overlay, input, accent, textHi, textMid, textLow;
+  final Color successText, warningText, dangerText;
 
   Color get success => AppColors.success;
   Color get warning => AppColors.warning;
@@ -65,6 +76,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     textHi: AppColors.textHiDark,
     textMid: AppColors.textMidDark,
     textLow: AppColors.textLowDark,
+    successText: AppColors.success,
+    warningText: AppColors.warning,
+    dangerText: AppColors.danger,
   );
 
   static const light = AppPalette(
@@ -76,6 +90,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     textHi: AppColors.textHiLight,
     textMid: AppColors.textMidLight,
     textLow: AppColors.textLowLight,
+    successText: AppColors.successTextLight,
+    warningText: AppColors.warningTextLight,
+    dangerText: AppColors.dangerTextLight,
   );
 
   @override
@@ -88,6 +105,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? textHi,
     Color? textMid,
     Color? textLow,
+    Color? successText,
+    Color? warningText,
+    Color? dangerText,
   }) {
     return AppPalette(
       bg: bg ?? this.bg,
@@ -98,6 +118,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
       textHi: textHi ?? this.textHi,
       textMid: textMid ?? this.textMid,
       textLow: textLow ?? this.textLow,
+      successText: successText ?? this.successText,
+      warningText: warningText ?? this.warningText,
+      dangerText: dangerText ?? this.dangerText,
     );
   }
 
@@ -113,6 +136,9 @@ class AppPalette extends ThemeExtension<AppPalette> {
       textHi: Color.lerp(textHi, other.textHi, t)!,
       textMid: Color.lerp(textMid, other.textMid, t)!,
       textLow: Color.lerp(textLow, other.textLow, t)!,
+      successText: Color.lerp(successText, other.successText, t)!,
+      warningText: Color.lerp(warningText, other.warningText, t)!,
+      dangerText: Color.lerp(dangerText, other.dangerText, t)!,
     );
   }
 }
@@ -151,7 +177,8 @@ class R {
   static const pill = 999.0;
 }
 
-/// Durasi — semua ≤ 280ms, tanpa bounce.
+/// Durasi interaksi utama ≤ 280ms, tanpa bounce. `fade` sengaja lebih lama
+/// karena dipakai untuk transisi opacity, bukan umpan balik sentuh.
 class D {
   const D._();
   static const fast = Duration(milliseconds: 120);

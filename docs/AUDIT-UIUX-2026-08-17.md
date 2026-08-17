@@ -30,6 +30,14 @@ buru-buru.
 
 Yang sudah benar dan gua catat di bagian 6 supaya tidak ikut dirombak.
 
+### Pembaruan setelah audit
+
+Temuan kritis layar update sudah ditangani. Seluruh warna mentah di
+`update_page.dart` dipindah ke token tema, panel memakai `raised`/`input`, dan
+border kartu terang dihapus. `AppPalette` kini punya `successText`,
+`warningText`, dan `dangerText` dengan nilai khusus mode terang agar status
+teks tetap kontras. Verifikasi visual perangkat tetap menjadi gerbang terakhir.
+
 ---
 
 ## 1. KRITIS: `update_page.dart` rusak di mode gelap
