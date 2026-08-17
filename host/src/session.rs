@@ -42,7 +42,9 @@ impl Session {
     /// Membuat peer connection (answerer) dengan server STUN/TURN opsional.
     pub async fn new(stun: Vec<String>, turn: Vec<RTCIceServer>) -> Result<Self> {
         let mut media = MediaEngine::default();
-        media.register_default_codecs().context("gagal daftar codec")?;
+        media
+            .register_default_codecs()
+            .context("gagal daftar codec")?;
 
         let mut registry = Registry::new();
         registry = register_default_interceptors(registry, &mut media)
@@ -92,8 +94,8 @@ impl Session {
     /// Menyetujui offer client; mengembalikan SDP jawaban (kandidat sudah
     /// tergabung karena kita menunggu ICE gathering selesai — non-trickle).
     pub async fn answer(&self, offer_sdp: &str) -> Result<String> {
-        let offer = RTCSessionDescription::offer(offer_sdp.to_string())
-            .context("SDP offer tidak valid")?;
+        let offer =
+            RTCSessionDescription::offer(offer_sdp.to_string()).context("SDP offer tidak valid")?;
         self.pc
             .set_remote_description(offer)
             .await
@@ -141,8 +143,9 @@ impl Session {
                 mime_type: "video/H264".to_owned(),
                 clock_rate: 90000,
                 channels: 0,
-                sdp_fmtp_line: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"
-                    .to_owned(),
+                sdp_fmtp_line:
+                    "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"
+                        .to_owned(),
                 rtcp_feedback: vec![],
             },
             "video".to_owned(),
@@ -150,7 +153,9 @@ impl Session {
         ));
         // `add_track` membuat/memakai transceiver video (sendrecv) otomatis.
         self.pc
-            .add_track(Arc::clone(&track) as Arc<dyn webrtc::track::track_local::TrackLocal + Send + Sync>)
+            .add_track(
+                Arc::clone(&track) as Arc<dyn webrtc::track::track_local::TrackLocal + Send + Sync>
+            )
             .await
             .context("gagal add track video")?;
         Ok(track)
@@ -175,11 +180,10 @@ impl Session {
     where
         F: FnMut(RTCPeerConnectionState) + Send + Sync + 'static,
     {
-        self.pc
-            .on_peer_connection_state_change(Box::new(move |s| {
-                f(s);
-                Box::pin(async {})
-            }));
+        self.pc.on_peer_connection_state_change(Box::new(move |s| {
+            f(s);
+            Box::pin(async {})
+        }));
     }
 
     /// Mengirim data biner lewat data channel (mis. balasan input).

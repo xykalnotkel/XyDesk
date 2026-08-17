@@ -168,9 +168,9 @@ mod windows {
 
             let mut buffer = frame.buffer()?; // FrameBuffer (RGBA, ColorFormat::Rgba8)
             let raw = buffer.as_raw_buffer(); // &[u8]
-            // Catatan: bila buffer.has_padding() true (row_pitch > width*4),
-            // perlu strip padding per baris. Untuk PoC resolusi umum padding
-            // biasanya nol. Lihat TODO di bawah.
+                                              // Catatan: bila buffer.has_padding() true (row_pitch > width*4),
+                                              // perlu strip padding per baris. Untuk PoC resolusi umum padding
+                                              // biasanya nol. Lihat TODO di bawah.
             let rgba = RgbaSliceU8::new(raw, (width, height));
             let yuv = YUVBuffer::from_rgb_source(rgba);
             let encoded = self.encoder.encode(&yuv)?.to_vec();
