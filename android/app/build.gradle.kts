@@ -90,6 +90,18 @@ android {
     // Buang duplikat metadata dari dependensi Kotlin/Play Services yang tidak
     // dibutuhkan saat runtime.
     packaging {
+        // abiFilters ditimpa oleh integrasi Flutter saat varian dirakit. Build
+        // run #32034879381 membuktikan x86_64 dari AAR flutter_webrtc masih
+        // lolos. Exclude packaging bekerja pada input JNI final, sehingga ini
+        // menjadi gerbang deterministik terakhir sebelum APK ditulis.
+        jniLibs {
+            excludes += setOf(
+                "**/x86/**",
+                "**/x86_64/**",
+                "**/armeabi/**",
+                "**/mips/**",
+            )
+        }
         resources {
             excludes += setOf(
                 "META-INF/*.version",

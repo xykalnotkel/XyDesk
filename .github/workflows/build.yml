@@ -37,6 +37,11 @@ jobs:
 
       - run: flutter pub get
 
+      # Lockfile wajib identik dengan source. `pub get` yang diam-diam mengubah
+      # resolusi dependency berarti build lokal dan CI tidak reproduktif.
+      - name: Verifikasi dependency lock tidak berubah
+        run: git diff --exit-code -- pubspec.lock
+
       - name: Simpan dependency lock hasil resolusi
         uses: actions/upload-artifact@v4
         with:
@@ -45,10 +50,21 @@ jobs:
           retention-days: 3
 
       - name: Cek format (gagal bila ada file belum rapi)
-        run: dart format --output=none --set-exit-if-changed lib
+        run: dart format --output=none --set-exit-if-changed lib tool
 
-      - name: Analisis statis
-        run: flutter analyze --fatal-infos
+      - name: Tolak suppression analyzer
+        run: |
+          if grep -RInE 'ignore_for_file:|//[[:space:]]*ignore:' lib tool; then
+            echo "::error::Suppression analyzer dilarang. Perbaiki akar warning/error-nya."
+            exit 1
+          fi
+          if grep -nE '^[[:space:]]*exclude:|:[[:space:]]*ignore$' analysis_options.yaml; then
+            echo "::error::analysis_options tidak boleh mengecualikan source atau menurunkan diagnostic menjadi ignore."
+            exit 1
+          fi
+
+      - name: Analisis statis tanpa toleransi diagnostic
+        run: flutter analyze --fatal-infos --fatal-warnings
 
       # Aturan desain ditegakkan mesin, bukan sekadar ditulis di dokumen.
       - name: Verifikasi aturan seamless
@@ -118,9 +134,10 @@ jobs:
       #
       # PENTING: --target-platform saja TIDAK cukup. Flag itu hanya mengontrol
       # libflutter.so dan libapp.so; library native milik plugin tetap diambil
-      # utuh dari AAR-nya. Penyaring ABI yang sebenarnya ada di
-      # android/app/build.gradle.kts (ndk.abiFilters). Flag ini dipertahankan
-      # supaya Flutter tidak membangun artefak yang nantinya dibuang Gradle.
+      # utuh dari AAR-nya. Penyaring final ada di packaging.jniLibs.excludes;
+      # ndk.abiFilters saja terbukti masih dilangkahi integrasi plugin Flutter.
+      # Flag ini dipertahankan supaya Flutter tidak membangun artefak yang
+      # nantinya dibuang Gradle.
       #
       # GOOGLE_CLIENT_ID repo-var boleh berisi daftar koma (android,web) untuk
       # Worker; aplikasi hanya memakai elemen pertama (client Android).
@@ -140,11 +157,15 @@ jobs:
 
       # Gerbang regresi ukuran. Bug x86_64 lolos ke rilis v1.0.0 sampai v1.2.0
       # tanpa ada yang sadar karena tidak ada satu pun pemeriksaan otomatis.
-      # Dua pemeriksaan: ABI terlarang dan ambang ukuran keras.
-      - name: Verifikasi ABI dan ukuran APK
+      # Pemeriksaan dilakukan terhadap byte/entry final APK, bukan asumsi dari
+      # konfigurasi Gradle: integritas zip, ABI wajib, ABI terlarang, library
+      # runtime inti, dan ambang ukuran byte-presisi.
+      - name: Verifikasi integritas, ABI, runtime, dan ukuran APK
         run: |
           set -euo pipefail
-          unzip -q -o dist/XyDesk.apk -d /tmp/apkcheck
+          unzip -tq dist/XyDesk.apk >/dev/null
+          rm -rf /tmp/apkcheck
+          unzip -q dist/XyDesk.apk -d /tmp/apkcheck
 
           echo "ABI yang terbungkus:"
           ls /tmp/apkcheck/lib/
@@ -154,32 +175,45 @@ jobs:
             if [ -d "/tmp/apkcheck/lib/$abi" ]; then
               ukuran="$(du -sh "/tmp/apkcheck/lib/$abi" | cut -f1)"
               echo "::error::ABI terlarang '$abi' ikut terbungkus ($ukuran). \
-          Periksa ndk.abiFilters di android/app/build.gradle.kts."
+          Periksa packaging.jniLibs.excludes di android/app/build.gradle.kts."
               gagal=1
             fi
+          done
+
+          for abi in arm64-v8a armeabi-v7a; do
+            if [ ! -d "/tmp/apkcheck/lib/$abi" ]; then
+              echo "::error::ABI wajib '$abi' hilang dari APK."
+              gagal=1
+              continue
+            fi
+            for library in libflutter.so libapp.so libjingle_peerconnection_so.so; do
+              if [ ! -s "/tmp/apkcheck/lib/$abi/$library" ]; then
+                echo "::error::$abi/$library hilang atau kosong."
+                gagal=1
+              fi
+            done
           done
           [ "$gagal" -eq 0 ] || exit 1
 
           bytes="$(stat -c%s dist/XyDesk.apk)"
-          mb=$(( bytes / 1048576 ))
-          # Ambang 62 MB. Dasarnya bukan angka bulat asal:
-          #   build bermasalah 510d231 = 72 MB
-          #   proyeksi pasca-perbaikan = sekitar 55 MB
-          # Batas ditaruh di antaranya dengan margin ~7 MB untuk pertumbuhan
-          # wajar, tetapi tetap di bawah biaya satu ABI nyasar (15 MB), jadi
-          # regresi yang sama pasti tertangkap lagi.
-          batas=62
-          echo "Ukuran APK: ${mb} MB (batas ${batas} MB)"
-          if [ "$mb" -gt "$batas" ]; then
-            echo "::error::APK ${mb} MB melampaui batas ${batas} MB."
+          batas_mb=62
+          batas_bytes=$(( batas_mb * 1048576 ))
+          ukuran_mib="$(awk -v b="$bytes" 'BEGIN { printf "%.2f", b / 1048576 }')"
+          # Perbandingan memakai byte. Pembulatan integer sebelumnya membuat
+          # APK 62.99 MiB salah terbaca 62 MiB dan lolos.
+          echo "Ukuran APK: ${ukuran_mib} MiB (batas ${batas_mb} MiB)"
+          if [ "$bytes" -gt "$batas_bytes" ]; then
+            echo "::error::APK ${ukuran_mib} MiB melampaui batas ${batas_mb} MiB."
             exit 1
           fi
           {
             echo ""
             echo "| Pemeriksaan | Hasil |"
             echo "|---|---|"
+            echo "| Integritas ZIP/APK | Lulus |"
             echo "| ABI terbungkus | $(ls /tmp/apkcheck/lib/ | tr '\n' ' ') |"
-            echo "| Ukuran APK | ${mb} MB / ${batas} MB |"
+            echo "| Runtime inti ARM | Lengkap |"
+            echo "| Ukuran APK | ${ukuran_mib} MiB / ${batas_mb} MiB |"
           } >> $GITHUB_STEP_SUMMARY
 
       - uses: actions/upload-artifact@v4

@@ -5,7 +5,3 @@ linter:
     prefer_single_quotes: true
     require_trailing_commas: false
     avoid_print: true
-
-analyzer:
-  errors:
-    invalid_annotation_target: ignore
