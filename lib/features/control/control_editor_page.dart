@@ -44,32 +44,32 @@ class MappedElement {
   PressMode mode;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'label': label,
-        'glyph': glyph.name,
-        'x': x,
-        'y': y,
-        'scale': scale,
-        'opacity': opacity,
-        'mode': mode.name,
-      };
+    'id': id,
+    'label': label,
+    'glyph': glyph.name,
+    'x': x,
+    'y': y,
+    'scale': scale,
+    'opacity': opacity,
+    'mode': mode.name,
+  };
 
   factory MappedElement.fromJson(Map<String, dynamic> j) => MappedElement(
-        id: j['id'] as String? ?? 'btn_${DateTime.now().millisecondsSinceEpoch}',
-        label: j['label'] as String? ?? 'BTN',
-        glyph: HudGlyph.values.firstWhere(
-          (g) => g.name == j['glyph'],
-          orElse: () => HudGlyph.combo4,
-        ),
-        x: (j['x'] as num? ?? 0.5).toDouble(),
-        y: (j['y'] as num? ?? 0.5).toDouble(),
-        scale: (j['scale'] as num? ?? 1.0).toDouble(),
-        opacity: (j['opacity'] as num? ?? 0.85).toDouble(),
-        mode: PressMode.values.firstWhere(
-          (m) => m.name == j['mode'],
-          orElse: () => PressMode.normal,
-        ),
-      );
+    id: j['id'] as String? ?? 'btn_${DateTime.now().millisecondsSinceEpoch}',
+    label: j['label'] as String? ?? 'BTN',
+    glyph: HudGlyph.values.firstWhere(
+      (g) => g.name == j['glyph'],
+      orElse: () => HudGlyph.combo4,
+    ),
+    x: (j['x'] as num? ?? 0.5).toDouble(),
+    y: (j['y'] as num? ?? 0.5).toDouble(),
+    scale: (j['scale'] as num? ?? 1.0).toDouble(),
+    opacity: (j['opacity'] as num? ?? 0.85).toDouble(),
+    mode: PressMode.values.firstWhere(
+      (m) => m.name == j['mode'],
+      orElse: () => PressMode.normal,
+    ),
+  );
 }
 
 /// Halaman Editor Mapping Kontrol (Drag & Drop, Atur Size, Opacity, Mode Tekan).
@@ -225,8 +225,11 @@ class _ControlMappingEditorPageState
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(LucideIcons.trash2,
-                            size: 18, color: AppColors.danger),
+                        icon: const Icon(
+                          LucideIcons.trash2,
+                          size: 18,
+                          color: AppColors.danger,
+                        ),
                         onPressed: () {
                           setState(() {
                             _elements.removeWhere((e) => e.id == elem.id);
@@ -367,12 +370,13 @@ class _ControlMappingEditorPageState
           // Background grid simulasi layar game
           Positioned.fill(
             child: CustomPaint(
-              painter: _GridBackgroundPainter(c.textLow.withValues(alpha: 0.08)),
+              painter: _GridBackgroundPainter(
+                c.textLow.withValues(alpha: 0.08),
+              ),
             ),
           ),
           // Elemen Mapped (Drag & Drop)
-          for (final elem in _elements)
-            _buildDraggableElement(elem, context),
+          for (final elem in _elements) _buildDraggableElement(elem, context),
           // Bilah navigasi atas HUD Editor
           Positioned(
             top: 12,
@@ -441,12 +445,10 @@ class _ControlMappingEditorPageState
         onPanUpdate: (details) {
           setState(() {
             _selected = elem;
-            elem.x =
-                ((elem.x * size.width + details.delta.dx) / size.width)
-                    .clamp(0.05, 0.95);
-            elem.y =
-                ((elem.y * size.height + details.delta.dy) / size.height)
-                    .clamp(0.10, 0.90);
+            elem.x = ((elem.x * size.width + details.delta.dx) / size.width)
+                .clamp(0.05, 0.95);
+            elem.y = ((elem.y * size.height + details.delta.dy) / size.height)
+                .clamp(0.10, 0.90);
           });
         },
         onTapDown: (_) {

@@ -243,12 +243,7 @@ final langProvider = Provider<AppLang>((ref) {
 
 @immutable
 class UserSession {
-  const UserSession({
-    this.email,
-    this.name,
-    this.token,
-    this.isGuest = false,
-  });
+  const UserSession({this.email, this.name, this.token, this.isGuest = false});
 
   final String? email;
   final String? name;

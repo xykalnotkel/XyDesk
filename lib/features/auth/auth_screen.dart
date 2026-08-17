@@ -64,9 +64,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           padding: EdgeInsets.fromLTRB(side, 0, side, Gap.xxl),
           children: [
             const SizedBox(height: Gap.h32),
-            const Center(
-              child: Illus(Img.auth, size: 168, opticalScale: 1.06),
-            ),
+            const Center(child: Illus(Img.auth, size: 168, opticalScale: 1.06)),
             const SizedBox(height: Gap.xl),
             Text(
               context.tr('auth_welcome'),
@@ -142,7 +140,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     try {
       final session = await ref.read(googleAuthServiceProvider).signIn();
       if (!mounted) return;
-      await ref.read(authProvider.notifier).signInAuthenticated(
+      await ref
+          .read(authProvider.notifier)
+          .signInAuthenticated(
             email: session.user.email,
             name: session.user.name,
             token: session.token,
@@ -288,7 +288,9 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
           .read(authServiceProvider)
           .verifyOtp(_email.text.trim(), code);
       if (!mounted) return;
-      await ref.read(authProvider.notifier).signInAuthenticated(
+      await ref
+          .read(authProvider.notifier)
+          .signInAuthenticated(
             email: session.user.email,
             name: session.user.name,
             token: session.token,
@@ -338,8 +340,9 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
               child: IconButton(
                 icon: Icon(LucideIcons.arrowLeft, size: 20, color: c.textMid),
                 tooltip: context.tr('back'),
-                onPressed:
-                    _busy ? null : (_otpSent ? _editEmail : widget.onBack),
+                onPressed: _busy
+                    ? null
+                    : (_otpSent ? _editEmail : widget.onBack),
               ),
             ),
             const SizedBox(height: Gap.sm),
@@ -548,8 +551,9 @@ class _OtpBoxes extends StatelessWidget {
     return AutofillGroup(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final contentWidth =
-              constraints.maxWidth > 352 ? 352.0 : constraints.maxWidth;
+          final contentWidth = constraints.maxWidth > 352
+              ? 352.0
+              : constraints.maxWidth;
           final gap = contentWidth < 300 ? 6.0 : 8.0;
           final boxWidth = (contentWidth - (gap * 5)) / 6;
           final idleBorder = c.textLow.withValues(alpha: 0.20);
@@ -677,8 +681,9 @@ class _AuthButton extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final disabled = !enabled && !busy;
     final radius = googleStyle ? 4.0 : R.md;
-    final background =
-        googleStyle ? (dark ? const Color(0xFF131314) : Colors.white) : c.input;
+    final background = googleStyle
+        ? (dark ? const Color(0xFF131314) : Colors.white)
+        : c.input;
     final foreground = googleStyle
         ? (dark ? const Color(0xFFE3E3E3) : const Color(0xFF1F1F1F))
         : c.textHi;
@@ -809,10 +814,10 @@ class _Spinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: 16,
-        height: 16,
-        child: CircularProgressIndicator(strokeWidth: 2, color: color),
-      );
+    width: 16,
+    height: 16,
+    child: CircularProgressIndicator(strokeWidth: 2, color: color),
+  );
 }
 
 class _LegalNote extends StatelessWidget {

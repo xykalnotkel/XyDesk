@@ -19,16 +19,16 @@ class AppUpdateDetails {
   final List<String> releaseNotes;
 
   factory AppUpdateDetails.updateCenter() => const AppUpdateDetails(
-        title: 'Pusat Pembaruan XyDesk',
-        message:
-            'XyDesk akan membandingkan versi terpasang dengan manifest GitHub '
-            'Release resmi.',
-        version: 'Memeriksa versi resmi',
-        releaseNotes: [
-          'Catatan perubahan lengkap tersedia bersama setiap rilis resmi.',
-          'APK hanya diambil dari repositori resmi XyDesk di GitHub Releases.',
-        ],
-      );
+    title: 'Pusat Pembaruan XyDesk',
+    message:
+        'XyDesk akan membandingkan versi terpasang dengan manifest GitHub '
+        'Release resmi.',
+    version: 'Memeriksa versi resmi',
+    releaseNotes: [
+      'Catatan perubahan lengkap tersedia bersama setiap rilis resmi.',
+      'APK hanya diambil dari repositori resmi XyDesk di GitHub Releases.',
+    ],
+  );
 
   factory AppUpdateDetails.fromPayload({
     required String? notificationTitle,
@@ -36,10 +36,12 @@ class AppUpdateDetails {
     required Map<String, dynamic>? data,
   }) {
     final payload = data ?? const <String, dynamic>{};
-    final title = _displayText(payload['title'], maxLength: 80) ??
+    final title =
+        _displayText(payload['title'], maxLength: 80) ??
         _displayText(notificationTitle, maxLength: 80) ??
         'XyDesk Update';
-    final message = _displayText(payload['summary'], maxLength: 320) ??
+    final message =
+        _displayText(payload['summary'], maxLength: 320) ??
         _displayText(payload['message'], maxLength: 320) ??
         _displayText(notificationBody, maxLength: 320) ??
         'Pembaruan XyDesk tersedia. Lihat detailnya sebelum mengunduh.';

@@ -16,7 +16,8 @@ class NotificationPreferencesPage extends StatefulWidget {
 }
 
 class _NotificationPreferencesPageState
-    extends State<NotificationPreferencesPage> with WidgetsBindingObserver {
+    extends State<NotificationPreferencesPage>
+    with WidgetsBindingObserver {
   final _service = NotificationService.instance;
 
   @override
@@ -51,12 +52,12 @@ class _NotificationPreferencesPageState
 
     final enabled = await _service.enableUpdates();
     if (!mounted || enabled) return;
-    final message = _service.lastError ??
+    final message =
+        _service.lastError ??
         'Notifikasi belum aktif. Jika izin pernah ditolak, aktifkan melalui '
             'pengaturan notifikasi Android.';
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -88,10 +89,7 @@ class _NotificationPreferencesPageState
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    c.accent.withValues(alpha: 0.28),
-                    c.raised,
-                  ],
+                  colors: [c.accent.withValues(alpha: 0.28), c.raised],
                 ),
                 borderRadius: BorderRadius.circular(R.xl),
               ),
@@ -164,19 +162,22 @@ class _NotificationPreferencesPageState
           const _InfoRow(
             icon: LucideIcons.smartphone,
             title: 'Kamu yang memutuskan',
-            body: 'Dialog izin Android baru muncul setelah tombol Aktifkan '
+            body:
+                'Dialog izin Android baru muncul setelah tombol Aktifkan '
                 'ditekan, bukan saat aplikasi pertama dibuka.',
           ),
           const _InfoRow(
             icon: LucideIcons.packageOpen,
             title: 'Masuk ke halaman internal',
-            body: 'Mengetuk notifikasi membuka detail update di XyDesk lebih '
+            body:
+                'Mengetuk notifikasi membuka detail update di XyDesk lebih '
                 'dahulu, bukan langsung memasang APK.',
           ),
           const _InfoRow(
             icon: LucideIcons.shieldCheck,
             title: 'Unduhan resmi',
-            body: 'Aksi unduh pada halaman update hanya menuju GitHub Releases '
+            body:
+                'Aksi unduh pada halaman update hanya menuju GitHub Releases '
                 'resmi XyDesk.',
           ),
           const SizedBox(height: Gap.xl),
@@ -195,12 +196,12 @@ class _NotificationPreferencesPageState
               _service.busy
                   ? 'Menyiapkan…'
                   : _service.active
-                      ? 'Jeda notifikasi update'
-                      : !_service.permissionGranted &&
-                              !_service.canRequestPermission &&
-                              _service.initialized
-                          ? 'Buka pengaturan notifikasi'
-                          : 'Aktifkan notifikasi update',
+                  ? 'Jeda notifikasi update'
+                  : !_service.permissionGranted &&
+                        !_service.canRequestPermission &&
+                        _service.initialized
+                  ? 'Buka pengaturan notifikasi'
+                  : 'Aktifkan notifikasi update',
             ),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(50),
@@ -267,11 +268,7 @@ class _NotificationPreferencesPageState
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.title,
-    required this.body,
-  });
+  const _InfoRow({required this.icon, required this.title, required this.body});
 
   final IconData icon;
   final String title;

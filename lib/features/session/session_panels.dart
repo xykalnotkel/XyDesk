@@ -200,17 +200,17 @@ class _SessionControlPanelState extends ConsumerState<SessionControlPanel> {
                   child: switch (_section) {
                     SessionPanelSection.stream => const _StreamPanel(),
                     SessionPanelSection.audio => _AudioPanel(
-                        state: widget.state,
-                        onChanged: _update,
-                      ),
+                      state: widget.state,
+                      onChanged: _update,
+                    ),
                     SessionPanelSection.controls => _ControlsPanel(
-                        state: widget.state,
-                        onChanged: _update,
-                      ),
+                      state: widget.state,
+                      onChanged: _update,
+                    ),
                     SessionPanelSection.session => _SessionPanel(
-                        deviceName: widget.deviceName,
-                        onDisconnect: widget.onDisconnect,
-                      ),
+                      deviceName: widget.deviceName,
+                      onDisconnect: widget.onDisconnect,
+                    ),
                   },
                 ),
               ),
@@ -387,11 +387,7 @@ class _StreamPanel extends ConsumerWidget {
                 value: resolution,
               ),
               const _CardGap(),
-              _InfoRow(
-                icon: LucideIcons.cpu,
-                title: 'Codec',
-                value: codec,
-              ),
+              _InfoRow(icon: LucideIcons.cpu, title: 'Codec', value: codec),
               const _CardGap(),
               _SliderRow(
                 label: 'Bitrate maksimal',
@@ -550,18 +546,9 @@ class _AudioPanel extends StatelessWidget {
         _Segmented<AudioLatencyMode>(
           value: state.audioLatencyMode,
           entries: const [
-            _SegmentEntry(
-              value: AudioLatencyMode.lowLatency,
-              label: 'Gaming',
-            ),
-            _SegmentEntry(
-              value: AudioLatencyMode.balanced,
-              label: 'Seimbang',
-            ),
-            _SegmentEntry(
-              value: AudioLatencyMode.quality,
-              label: 'Kualitas',
-            ),
+            _SegmentEntry(value: AudioLatencyMode.lowLatency, label: 'Gaming'),
+            _SegmentEntry(value: AudioLatencyMode.balanced, label: 'Seimbang'),
+            _SegmentEntry(value: AudioLatencyMode.quality, label: 'Kualitas'),
           ],
           onChanged: (value) =>
               onChanged(state.copyWith(audioLatencyMode: value)),
@@ -772,7 +759,8 @@ class _ControlsPanel extends StatelessWidget {
         const _StatusCard(
           icon: LucideIcons.info,
           title: 'Input transport belum tersambung',
-          body: 'Kontrol di layar dapat dipreview, tetapi belum mengirim input '
+          body:
+              'Kontrol di layar dapat dipreview, tetapi belum mengirim input '
               'ke host pada mode demo.',
         ),
       ],
@@ -781,10 +769,7 @@ class _ControlsPanel extends StatelessWidget {
 }
 
 class _SessionPanel extends StatelessWidget {
-  const _SessionPanel({
-    required this.deviceName,
-    required this.onDisconnect,
-  });
+  const _SessionPanel({required this.deviceName, required this.onDisconnect});
 
   final String deviceName;
   final VoidCallback onDisconnect;
@@ -834,9 +819,7 @@ class _SessionPanel extends StatelessWidget {
             label: const Text('Putuskan sesi'),
             style: OutlinedButton.styleFrom(
               foregroundColor: context.c.danger,
-              side: BorderSide(
-                color: context.c.danger.withValues(alpha: 0.55),
-              ),
+              side: BorderSide(color: context.c.danger.withValues(alpha: 0.55)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(R.md),
               ),
@@ -911,8 +894,11 @@ class _CapabilityCard extends StatelessWidget {
                   'Kontrol di bawah menyiapkan preferensi sesi; pilihan audio dan '
                   'mikrofon utama disimpan. Tidak ada audio yang dikirim atau '
                   'diputar pada build ini.',
-                  style:
-                      TextStyle(fontSize: 11.5, height: 1.45, color: c.textMid),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.45,
+                    color: c.textMid,
+                  ),
                 ),
               ],
             ),
@@ -1249,10 +1235,7 @@ class _SliderRow extends StatelessWidget {
           ),
           SizedBox(
             height: 30,
-            child: Slider(
-              value: value.clamp(0.0, 1.0),
-              onChanged: onChanged,
-            ),
+            child: Slider(value: value.clamp(0.0, 1.0), onChanged: onChanged),
           ),
         ],
       ),
@@ -1300,8 +1283,11 @@ class _StatusCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   body,
-                  style:
-                      TextStyle(fontSize: 11, height: 1.45, color: c.textLow),
+                  style: TextStyle(
+                    fontSize: 11,
+                    height: 1.45,
+                    color: c.textLow,
+                  ),
                 ),
               ],
             ),

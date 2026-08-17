@@ -99,59 +99,57 @@ class _GuidePageState extends State<GuidePage> {
   }
 
   List<_GuideData> get _clientSteps => const [
-        _GuideData(
-          title: 'Pasang aplikasi client',
-          description:
-              'Buka XyDesk di HP yang akan kamu gunakan sebagai remote.',
-          icon: LucideIcons.smartphone,
-          illustration: Img.guideClient,
-        ),
-        _GuideData(
-          title: 'Dapatkan ID dari host',
-          description:
-              'Minta ID perangkat dan kata sandi dari aplikasi XyDesk Host.',
-          icon: LucideIcons.keyRound,
-        ),
-        _GuideData(
-          title: 'Masukkan ID atau scan QR',
-          description:
-              'Buka menu Connect, masukkan data host, atau gunakan Pindai QR.',
-          icon: LucideIcons.scanLine,
-        ),
-        _GuideData(
-          title: 'Mulai sesi',
-          description:
-              'Tekan Hubungkan, tunggu pairing selesai, lalu tekan Mulai sesi.',
-          icon: LucideIcons.play,
-        ),
-      ];
+    _GuideData(
+      title: 'Pasang aplikasi client',
+      description: 'Buka XyDesk di HP yang akan kamu gunakan sebagai remote.',
+      icon: LucideIcons.smartphone,
+      illustration: Img.guideClient,
+    ),
+    _GuideData(
+      title: 'Dapatkan ID dari host',
+      description:
+          'Minta ID perangkat dan kata sandi dari aplikasi XyDesk Host.',
+      icon: LucideIcons.keyRound,
+    ),
+    _GuideData(
+      title: 'Masukkan ID atau scan QR',
+      description:
+          'Buka menu Connect, masukkan data host, atau gunakan Pindai QR.',
+      icon: LucideIcons.scanLine,
+    ),
+    _GuideData(
+      title: 'Mulai sesi',
+      description:
+          'Tekan Hubungkan, tunggu pairing selesai, lalu tekan Mulai sesi.',
+      icon: LucideIcons.play,
+    ),
+  ];
 
   List<_GuideData> get _hostSteps => const [
-        _GuideData(
-          title: 'Pasang aplikasi host',
-          description:
-              'Jalankan XyDesk Host di PC yang ingin kamu akses dari HP.',
-          icon: LucideIcons.monitor,
-          illustration: Img.guideHost,
-        ),
-        _GuideData(
-          title: 'Aktifkan akses remote',
-          description: 'Pastikan aplikasi host aktif dan PC tidak masuk sleep.',
-          icon: LucideIcons.power,
-        ),
-        _GuideData(
-          title: 'Bagikan ID atau QR',
-          description:
-              'Tampilkan ID dan QR pairing dari halaman host untuk client.',
-          icon: LucideIcons.qrCode,
-        ),
-        _GuideData(
-          title: 'Terima koneksi',
-          description:
-              'Saat client masuk, periksa permintaan lalu izinkan sesi remote.',
-          icon: LucideIcons.shieldCheck,
-        ),
-      ];
+    _GuideData(
+      title: 'Pasang aplikasi host',
+      description: 'Jalankan XyDesk Host di PC yang ingin kamu akses dari HP.',
+      icon: LucideIcons.monitor,
+      illustration: Img.guideHost,
+    ),
+    _GuideData(
+      title: 'Aktifkan akses remote',
+      description: 'Pastikan aplikasi host aktif dan PC tidak masuk sleep.',
+      icon: LucideIcons.power,
+    ),
+    _GuideData(
+      title: 'Bagikan ID atau QR',
+      description:
+          'Tampilkan ID dan QR pairing dari halaman host untuk client.',
+      icon: LucideIcons.qrCode,
+    ),
+    _GuideData(
+      title: 'Terima koneksi',
+      description:
+          'Saat client masuk, periksa permintaan lalu izinkan sesi remote.',
+      icon: LucideIcons.shieldCheck,
+    ),
+  ];
 }
 
 class _AudienceToggle extends StatelessWidget {
@@ -171,8 +169,12 @@ class _AudienceToggle extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _item(context, GuideAudience.client, 'Saya di HP',
-              LucideIcons.smartphone),
+          _item(
+            context,
+            GuideAudience.client,
+            'Saya di HP',
+            LucideIcons.smartphone,
+          ),
           _item(context, GuideAudience.host, 'Saya di PC', LucideIcons.monitor),
         ],
       ),
@@ -180,7 +182,11 @@ class _AudienceToggle extends StatelessWidget {
   }
 
   Widget _item(
-      BuildContext context, GuideAudience value, String label, IconData icon) {
+    BuildContext context,
+    GuideAudience value,
+    String label,
+    IconData icon,
+  ) {
     final c = context.c;
     final active = value == selected;
     return Expanded(

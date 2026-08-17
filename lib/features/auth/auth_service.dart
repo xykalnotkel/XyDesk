@@ -52,10 +52,7 @@ class AuthService {
   }
 
   Future<AuthSession> verifyOtp(String email, String otp) async {
-    final body = await _post('/auth/verify-otp', {
-      'email': email,
-      'otp': otp,
-    });
+    final body = await _post('/auth/verify-otp', {'email': email, 'otp': otp});
     return AuthSession.fromJson(body);
   }
 
@@ -67,10 +64,7 @@ class AuthService {
   Future<AuthUser> me(String token) async {
     try {
       final response = await _client
-          .get(
-            _uri('/auth/me'),
-            headers: {'Authorization': 'Bearer $token'},
-          )
+          .get(_uri('/auth/me'), headers: {'Authorization': 'Bearer $token'})
           .timeout(const Duration(seconds: 10));
       final body = _decode(response);
       if (response.statusCode != 200) {
@@ -251,14 +245,16 @@ class AuthException implements Exception {
     final message = switch (code) {
       'invalid-email' => 'Alamat email tidak valid.',
       'invalid-input' => 'Data yang dimasukkan tidak valid.',
-      'cooldown' => retry == null
-          ? 'Tunggu sebelum mengirim ulang kode.'
-          : 'Tunggu $retry detik sebelum mengirim ulang.',
+      'cooldown' =>
+        retry == null
+            ? 'Tunggu sebelum mengirim ulang kode.'
+            : 'Tunggu $retry detik sebelum mengirim ulang.',
       'wrong-otp' => 'Kode OTP salah.',
       'otp-expired' => 'Kode OTP kedaluwarsa. Minta kode yang baru.',
       'too-many-attempts' => 'Terlalu banyak percobaan. Minta OTP baru.',
       'email-not-configured' => 'Layanan email OTP belum dikonfigurasi.',
-      'email-send-failed' => 'Email OTP gagal dikirim. Coba beberapa saat lagi.',
+      'email-send-failed' =>
+        'Email OTP gagal dikirim. Coba beberapa saat lagi.',
       'auth-not-configured' => 'Layanan autentikasi belum dikonfigurasi.',
       'google-not-configured' => 'Google login belum dikonfigurasi di server.',
       'email-not-verified' => 'Email Google belum diverifikasi.',

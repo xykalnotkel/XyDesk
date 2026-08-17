@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../core/tokens.dart';
 
 /// Glyph HUD XyDesk — versi Flutter dari `hudsvg.py`.
@@ -593,7 +594,9 @@ class _HudButtonState extends State<HudButton> {
                     color: _down
                         ? c.accent.withValues(alpha: 0.35)
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999), // HARUS BULAT, Gada yang kotak!
+                    borderRadius: BorderRadius.circular(
+                      999,
+                    ), // HARUS BULAT, Gada yang kotak!
                     border: Border.all(
                       color: _down
                           ? c.accent

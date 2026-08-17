@@ -136,9 +136,7 @@ class ControlPage extends ConsumerWidget {
 
   void _openEditor(BuildContext context, ControlProfile p) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ControlMappingEditorPage(profile: p),
-      ),
+      MaterialPageRoute(builder: (_) => ControlMappingEditorPage(profile: p)),
     );
   }
 

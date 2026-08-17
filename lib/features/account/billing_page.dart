@@ -13,7 +13,8 @@ class BillingPage extends StatelessWidget {
   void _comingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-          content: Text('Billing akan tersedia setelah backend siap.')),
+        content: Text('Billing akan tersedia setelah backend siap.'),
+      ),
     );
   }
 

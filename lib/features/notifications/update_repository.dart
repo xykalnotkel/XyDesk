@@ -33,7 +33,8 @@ class OfficialUpdateManifest {
   static OfficialUpdateManifest fromJson(Map<String, dynamic> json) {
     if (json['schema'] != 1) {
       throw const UpdateCheckException(
-          'Format metadata update belum didukung.');
+        'Format metadata update belum didukung.',
+      );
     }
 
     final version = _requiredText(json, 'version', maxLength: 32);
@@ -132,10 +133,12 @@ class OfficialUpdateRepository {
   Future<UpdateCheckResult> check() async {
     final packageInfo = await PackageInfo.fromPlatform();
     final installedBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
-    final response = await http.get(
-      Uri.parse(_manifestUrl),
-      headers: const {'Accept': 'application/json'},
-    ).timeout(const Duration(seconds: 20));
+    final response = await http
+        .get(
+          Uri.parse(_manifestUrl),
+          headers: const {'Accept': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 20));
 
     if (response.statusCode != 200) {
       throw UpdateCheckException(

@@ -22,10 +22,10 @@ class UpdateDownloadStatus {
   });
 
   const UpdateDownloadStatus.idle()
-      : phase = UpdateDownloadPhase.idle,
-        downloadedBytes = 0,
-        totalBytes = 0,
-        message = null;
+    : phase = UpdateDownloadPhase.idle,
+      downloadedBytes = 0,
+      totalBytes = 0,
+      message = null;
 
   final UpdateDownloadPhase phase;
   final int downloadedBytes;
@@ -38,13 +38,12 @@ class UpdateDownloadStatus {
   }
 
   bool get isActive => switch (phase) {
-        UpdateDownloadPhase.queued ||
-        UpdateDownloadPhase.running ||
-        UpdateDownloadPhase.paused ||
-        UpdateDownloadPhase.verifying =>
-          true,
-        _ => false,
-      };
+    UpdateDownloadPhase.queued ||
+    UpdateDownloadPhase.running ||
+    UpdateDownloadPhase.paused ||
+    UpdateDownloadPhase.verifying => true,
+    _ => false,
+  };
 
   factory UpdateDownloadStatus.fromMap(Map<Object?, Object?> map) {
     final phaseName = map['phase'] as String? ?? 'idle';
@@ -74,24 +73,19 @@ class AndroidUpdateDownloader {
     return _invokeStatus('getStatus');
   }
 
-  Future<UpdateDownloadStatus> start(
-    OfficialUpdateManifest manifest,
-  ) async {
+  Future<UpdateDownloadStatus> start(OfficialUpdateManifest manifest) async {
     if (!isSupported) {
       throw const UpdateDownloadException(
         'Download update otomatis hanya tersedia di Android.',
       );
     }
-    return _invokeStatus(
-      'startDownload',
-      <String, Object>{
-        'url': manifest.apkUri.toString(),
-        'sha256': manifest.apkSha256,
-        'bytes': manifest.apkBytes,
-        'version': manifest.version,
-        'build': manifest.buildNumber,
-      },
-    );
+    return _invokeStatus('startDownload', <String, Object>{
+      'url': manifest.apkUri.toString(),
+      'sha256': manifest.apkSha256,
+      'bytes': manifest.apkBytes,
+      'version': manifest.version,
+      'build': manifest.buildNumber,
+    });
   }
 
   Future<UpdateDownloadStatus> install() async {

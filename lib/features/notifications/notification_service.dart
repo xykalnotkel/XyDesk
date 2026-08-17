@@ -207,7 +207,10 @@ class NotificationService extends ChangeNotifier {
       data: data,
     );
     DevLog.i(
-        'push', 'Notifikasi dibuka', NotificationConfig.updateRoutePayload);
+      'push',
+      'Notifikasi dibuka',
+      NotificationConfig.updateRoutePayload,
+    );
     flushPendingNavigation();
   }
 
@@ -227,17 +230,17 @@ class NotificationService extends ChangeNotifier {
       _updateRouteOpen = true;
       navigator
           .push<void>(
-        MaterialPageRoute(
-          settings: const RouteSettings(
-            name: NotificationConfig.updateRouteName,
-          ),
-          builder: (_) => UpdatePage(details: details),
-        ),
-      )
+            MaterialPageRoute(
+              settings: const RouteSettings(
+                name: NotificationConfig.updateRouteName,
+              ),
+              builder: (_) => UpdatePage(details: details),
+            ),
+          )
           .whenComplete(() {
-        _updateRouteOpen = false;
-        flushPendingNavigation();
-      });
+            _updateRouteOpen = false;
+            flushPendingNavigation();
+          });
     });
   }
 }

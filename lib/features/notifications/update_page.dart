@@ -20,8 +20,9 @@ class UpdatePage extends StatefulWidget {
 }
 
 class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
-  static final Uri _officialReleasesUri =
-      Uri.parse('https://github.com/xykalnotkel/XyDesk/releases/latest');
+  static final Uri _officialReleasesUri = Uri.parse(
+    'https://github.com/xykalnotkel/XyDesk/releases/latest',
+  );
 
   final _repository = const OfficialUpdateRepository();
   final _downloader = const AndroidUpdateDownloader();
@@ -265,7 +266,7 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
             Text(
               latest
                   ? 'Build yang terpasang sudah sama atau lebih baru dari '
-                      'Release resmi saat ini.'
+                        'Release resmi saat ini.'
                   : details.message,
               style: TextStyle(
                 color: context.c.textMid,
@@ -358,9 +359,7 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
         onPressed: _checkForUpdates,
         icon: const Icon(LucideIcons.refreshCw, size: 18),
         label: const Text('Coba cek lagi'),
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
-        ),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
       );
     }
     if (!result.updateAvailable) {
@@ -379,48 +378,41 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
         onPressed: _openOfficialRelease,
         icon: const Icon(LucideIcons.externalLink, size: 18),
         label: const Text('Buka download resmi'),
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
-        ),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
       );
     }
 
     return switch (_downloadStatus.phase) {
       UpdateDownloadPhase.ready => FilledButton.icon(
-          onPressed: _acting ? null : _installUpdate,
-          icon: const Icon(LucideIcons.packageCheck, size: 18),
-          label: Text(_acting ? 'Menyiapkan installer…' : 'Pasang update'),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(50),
-            backgroundColor: const Color(0xFF178B57),
-          ),
+        onPressed: _acting ? null : _installUpdate,
+        icon: const Icon(LucideIcons.packageCheck, size: 18),
+        label: Text(_acting ? 'Menyiapkan installer…' : 'Pasang update'),
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(50),
+          backgroundColor: const Color(0xFF178B57),
         ),
+      ),
       UpdateDownloadPhase.queued ||
       UpdateDownloadPhase.running ||
       UpdateDownloadPhase.paused ||
-      UpdateDownloadPhase.verifying =>
-        FilledButton.icon(
-          onPressed: null,
-          icon: const Icon(LucideIcons.download, size: 18),
-          label: const Text('Download berjalan di latar belakang'),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(50),
-          ),
-        ),
+      UpdateDownloadPhase.verifying => FilledButton.icon(
+        onPressed: null,
+        icon: const Icon(LucideIcons.download, size: 18),
+        label: const Text('Download berjalan di latar belakang'),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+      ),
       _ => FilledButton.icon(
-          onPressed: _acting ? null : _startDownload,
-          icon: const Icon(LucideIcons.download, size: 18),
-          label: Text(
-            _acting
-                ? 'Menyiapkan download…'
-                : _downloadStatus.phase == UpdateDownloadPhase.failed
-                    ? 'Coba unduh lagi'
-                    : 'Unduh update',
-          ),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(50),
-          ),
+        onPressed: _acting ? null : _startDownload,
+        icon: const Icon(LucideIcons.download, size: 18),
+        label: Text(
+          _acting
+              ? 'Menyiapkan download…'
+              : _downloadStatus.phase == UpdateDownloadPhase.failed
+              ? 'Coba unduh lagi'
+              : 'Unduh update',
         ),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+      ),
     };
   }
 }
@@ -435,13 +427,13 @@ class _VersionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final installed = result == null
         ? checking
-            ? 'Memuat…'
-            : 'Belum diketahui'
+              ? 'Memuat…'
+              : 'Belum diketahui'
         : '${result!.installedVersion}+${result!.installedBuildNumber}';
     final release = result == null
         ? checking
-            ? 'Memeriksa…'
-            : 'Belum diketahui'
+              ? 'Memeriksa…'
+              : 'Belum diketahui'
         : '${result!.manifest.version}+${result!.manifest.buildNumber}';
 
     return Container(
@@ -512,8 +504,8 @@ class _DownloadCard extends StatelessWidget {
     final color = ready
         ? const Color(0xFF178B57)
         : failed
-            ? const Color(0xFFB23B35)
-            : Theme.of(context).colorScheme.primary;
+        ? const Color(0xFFB23B35)
+        : Theme.of(context).colorScheme.primary;
 
     return Container(
       padding: const EdgeInsets.all(15),
@@ -531,8 +523,8 @@ class _DownloadCard extends StatelessWidget {
                 ready
                     ? LucideIcons.shieldCheck
                     : failed
-                        ? LucideIcons.triangleAlert
-                        : LucideIcons.download,
+                    ? LucideIcons.triangleAlert
+                    : LucideIcons.download,
                 color: color,
                 size: 19,
               ),
