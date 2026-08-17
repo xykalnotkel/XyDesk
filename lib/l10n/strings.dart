@@ -197,6 +197,14 @@ const Map<String, Map<String, String>> kStrings = {
     'pt': 'Endereço de e-mail',
     'ar': 'البريد الإلكتروني',
   },
+  'auth_email_help': {
+    'id': 'Kami akan mengirim kode verifikasi 6 digit. Tanpa kata sandi.',
+    'en': "We'll email you a 6-digit verification code. No password needed.",
+    'zh': '我们会向您发送一个 6 位验证码，无需密码。',
+    'es': 'Te enviaremos un código de 6 dígitos. No necesitas contraseña.',
+    'pt': 'Enviaremos um código de 6 dígitos. Não é preciso usar senha.',
+    'ar': 'سنرسل إليك رمز تحقق من 6 أرقام. لا حاجة إلى كلمة مرور.',
+  },
   'auth_send_code': {
     'id': 'Kirim kode',
     'en': 'Send code',

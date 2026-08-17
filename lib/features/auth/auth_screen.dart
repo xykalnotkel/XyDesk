@@ -13,6 +13,15 @@ import '../../widgets/brand.dart';
 import 'auth_service.dart';
 import 'legal_page.dart';
 
+const _authContentWidth = 440.0;
+
+double _authSidePadding(double width) {
+  final centered = (width - _authContentWidth) / 2;
+  return centered > Gap.screen ? centered : Gap.screen;
+}
+
+enum _EmailOperation { sendOtp, verifyOtp }
+
 /// Layar masuk asli: Google ID token atau Email + OTP melalui Cloudflare.
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -47,68 +56,84 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Widget _buildChoice(BuildContext context, AppPalette c) {
-    return ListView(
-      key: const ValueKey('choice'),
-      padding: const EdgeInsets.fromLTRB(Gap.screen, 0, Gap.screen, Gap.xxl),
-      children: [
-        const SizedBox(height: Gap.h32),
-        Center(
-          child: Image.asset(
-            Img.auth,
-            width: 168,
-            height: 168,
-            errorBuilder: (_, __, ___) => const SizedBox(height: 168),
-          ),
-        ),
-        const SizedBox(height: Gap.xl),
-        Text(
-          context.tr('auth_welcome'),
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            color: c.textHi,
-          ),
-        ),
-        const SizedBox(height: Gap.sm),
-        Text(
-          context.tr('auth_subtitle'),
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, height: 1.55, color: c.textMid),
-        ),
-        const SizedBox(height: Gap.h32),
-        _AuthButton(
-          leading: const GoogleBrandIcon(size: 22),
-          label: context.tr('auth_google'),
-          primary: true,
-          busy: _busy,
-          onTap: _signInGoogle,
-        ),
-        if (_error != null) ...[
-          const SizedBox(height: Gap.sm),
-          Text(
-            _error!,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11.5, color: c.danger),
-          ),
-        ],
-        const SizedBox(height: Gap.md),
-        _AuthButton(
-          leading: const EmailBrandIcon(size: 22),
-          label: context.tr('auth_email'),
-          onTap: () => setState(() => _emailMode = true),
-        ),
-        const SizedBox(height: Gap.md),
-        _AuthButton(
-          leading: const GuestBrandIcon(size: 22),
-          label: context.tr('auth_guest'),
-          onTap: () async {
-            await ref.read(authProvider.notifier).signInGuest();
-          },
-        ),
-        const SizedBox(height: Gap.xxl),
-        const _LegalNote(),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final side = _authSidePadding(constraints.maxWidth);
+        return ListView(
+          key: const ValueKey('choice'),
+          padding: EdgeInsets.fromLTRB(side, 0, side, Gap.xxl),
+          children: [
+            const SizedBox(height: Gap.h32),
+            Center(
+              child: Image.asset(
+                Img.auth,
+                width: 168,
+                height: 168,
+                errorBuilder: (_, __, ___) => const SizedBox(height: 168),
+              ),
+            ),
+            const SizedBox(height: Gap.xl),
+            Text(
+              context.tr('auth_welcome'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                color: c.textHi,
+              ),
+            ),
+            const SizedBox(height: Gap.sm),
+            Text(
+              context.tr('auth_subtitle'),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, height: 1.55, color: c.textMid),
+            ),
+            const SizedBox(height: Gap.h32),
+            _AuthButton(
+              leading: const GoogleBrandIcon(size: 22),
+              label: context.tr('auth_google'),
+              primary: true,
+              busy: _busy,
+              enabled: !_busy,
+              onTap: _signInGoogle,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: Gap.sm),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11.5, color: c.danger),
+                ),
+              ),
+            ],
+            const SizedBox(height: Gap.md),
+            _AuthButton(
+              leading: const EmailBrandIcon(size: 22),
+              label: context.tr('auth_email'),
+              enabled: !_busy,
+              onTap: () {
+                setState(() {
+                  _emailMode = true;
+                  _error = null;
+                });
+              },
+            ),
+            const SizedBox(height: Gap.md),
+            _AuthButton(
+              leading: const GuestBrandIcon(size: 22),
+              label: context.tr('auth_guest'),
+              enabled: !_busy,
+              onTap: () async {
+                await ref.read(authProvider.notifier).signInGuest();
+              },
+            ),
+            const SizedBox(height: Gap.xxl),
+            const _LegalNote(),
+          ],
+        );
+      },
     );
   }
 
@@ -160,10 +185,14 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
   final _otpFocus = List.generate(6, (_) => FocusNode());
 
   bool _otpSent = false;
-  bool _busy = false;
+  _EmailOperation? _operation;
+  String _otpValue = '';
+  bool _otpHasError = false;
   String? _error;
   int _cooldown = 0;
   Timer? _timer;
+
+  bool get _busy => _operation != null;
 
   static final _emailRe = RegExp(r'^[\w.+-]+@[\w-]+\.[\w.-]+$');
 
@@ -178,6 +207,24 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
       f.dispose();
     }
     super.dispose();
+  }
+
+  void _clearOtp() {
+    for (final controller in _otp) {
+      controller.clear();
+    }
+    _otpValue = '';
+    _otpHasError = false;
+  }
+
+  void _editEmail() {
+    _timer?.cancel();
+    _clearOtp();
+    setState(() {
+      _otpSent = false;
+      _cooldown = 0;
+      _error = null;
+    });
   }
 
   void _startCooldown(int seconds) {
@@ -198,16 +245,19 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
       return;
     }
     setState(() {
-      _busy = true;
+      _operation = _EmailOperation.sendOtp;
+      _otpHasError = false;
       _error = null;
     });
+    var focusOtp = false;
 
     try {
       final result = await ref.read(authServiceProvider).requestOtp(email);
       if (!mounted) return;
+      _clearOtp();
       setState(() => _otpSent = true);
       _startCooldown(result.resendIn);
-      _otpFocus.first.requestFocus();
+      focusOtp = true;
       DevLog.ok('auth', 'Kode OTP dikirim', email);
     } on AuthException catch (error) {
       if (!mounted) return;
@@ -218,7 +268,14 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
       setState(() => _error = 'Kode OTP gagal dikirim. Coba lagi.');
       DevLog.e('auth', 'Gagal meminta OTP', error, stack);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _operation = null);
+        if (focusOtp) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _otpFocus.first.requestFocus();
+          });
+        }
+      }
     }
   }
 
@@ -226,8 +283,10 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
     if (_busy) return;
     final code = _otp.map((c) => c.text).join();
     if (code.length < 6) return;
+    var refocusOtp = false;
     setState(() {
-      _busy = true;
+      _operation = _EmailOperation.verifyOtp;
+      _otpHasError = false;
       _error = null;
     });
 
@@ -246,179 +305,362 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
       DevLog.ok('auth', 'OTP berhasil diverifikasi', session.user.email);
     } on AuthException catch (error) {
       if (!mounted) return;
-      setState(() => _error = error.message);
-      DevLog.w('auth', 'Verifikasi OTP gagal', error.code);
-      if (error.code == 'wrong-otp' || error.code == 'otp-expired') {
-        for (final controller in _otp) {
-          controller.clear();
-        }
-        _otpFocus.first.requestFocus();
+      final codeRejected =
+          error.code == 'wrong-otp' || error.code == 'otp-expired';
+      if (codeRejected) {
+        _clearOtp();
+        refocusOtp = true;
       }
+      setState(() {
+        _otpHasError = codeRejected;
+        _error = error.message;
+      });
+      DevLog.w('auth', 'Verifikasi OTP gagal', error.code);
     } catch (error, stack) {
       if (!mounted) return;
       setState(() => _error = 'Verifikasi gagal. Coba lagi.');
       DevLog.e('auth', 'Verifikasi OTP gagal', error, stack);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _operation = null);
+        if (refocusOtp) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _otpFocus.first.requestFocus();
+          });
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(Gap.screen, 0, Gap.screen, Gap.xxl),
-      children: [
-        const SizedBox(height: Gap.sm),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: IconButton(
-            icon: Icon(LucideIcons.arrowLeft, size: 20, color: c.textMid),
-            onPressed: _otpSent
-                ? () => setState(() {
-                      _otpSent = false;
-                      _error = null;
-                    })
-                : widget.onBack,
-          ),
-        ),
-        const SizedBox(height: Gap.sm),
-        Text(
-          _otpSent ? context.tr('auth_otp_title') : context.tr('auth_email'),
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: c.textHi,
-          ),
-        ),
-        const SizedBox(height: Gap.sm),
-        Text(
-          _otpSent
-              ? '${context.tr('auth_otp_sent')} ${_email.text.trim()}'
-              : context.tr('auth_subtitle'),
-          style: TextStyle(fontSize: 12.5, height: 1.5, color: c.textMid),
-        ),
-        const SizedBox(height: Gap.xxl),
-        if (!_otpSent) ...[
-          Text(
-            context.tr('auth_email_label'),
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w500,
-              color: c.textMid,
-            ),
-          ),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _email,
-            keyboardType: TextInputType.emailAddress,
-            autocorrect: false,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _send(),
-            decoration: InputDecoration(errorText: _error),
-            style: TextStyle(fontSize: 14, color: c.textHi),
-          ),
-          const SizedBox(height: Gap.xl),
-          FilledButton(
-            onPressed: _busy ? null : _send,
-            child:
-                _busy ? const _Spinner() : Text(context.tr('auth_send_code')),
-          ),
-        ] else ...[
-          _OtpBoxes(
-            controllers: _otp,
-            focusNodes: _otpFocus,
-            onFilled: _verify,
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: Gap.md),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11.5, color: c.danger),
-            ),
-          ],
-          const SizedBox(height: Gap.xl),
-          FilledButton(
-            onPressed: _busy ? null : _verify,
-            child: _busy ? const _Spinner() : Text(context.tr('auth_verify')),
-          ),
-          const SizedBox(height: Gap.md),
-          Center(
-            child: TextButton(
-              onPressed: _cooldown > 0 ? null : _send,
-              child: Text(
-                _cooldown > 0
-                    ? '${context.tr('auth_resend_in')} ${_cooldown}s'
-                    : context.tr('auth_resend'),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final side = _authSidePadding(constraints.maxWidth);
+        return ListView(
+          padding: EdgeInsets.fromLTRB(side, 0, side, Gap.xxl),
+          children: [
+            const SizedBox(height: Gap.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                icon: Icon(LucideIcons.arrowLeft, size: 20, color: c.textMid),
+                tooltip: context.tr('back'),
+                onPressed:
+                    _busy ? null : (_otpSent ? _editEmail : widget.onBack),
               ),
             ),
-          ),
-        ],
-        const SizedBox(height: Gap.xxl),
-        const _LegalNote(),
-      ],
+            const SizedBox(height: Gap.sm),
+            Text(
+              _otpSent
+                  ? context.tr('auth_otp_title')
+                  : context.tr('auth_email_label'),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                color: c.textHi,
+              ),
+            ),
+            const SizedBox(height: Gap.sm),
+            Text(
+              _otpSent
+                  ? '${context.tr('auth_otp_sent')} ${_email.text.trim()}'
+                  : context.tr('auth_email_help'),
+              style: TextStyle(fontSize: 12.5, height: 1.5, color: c.textMid),
+            ),
+            const SizedBox(height: Gap.xxl),
+            if (!_otpSent) ...[
+              Text(
+                context.tr('auth_email_label'),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                  color: c.textMid,
+                ),
+              ),
+              const SizedBox(height: 6),
+              AutofillGroup(
+                child: TextField(
+                  controller: _email,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  textCapitalization: TextCapitalization.none,
+                  textInputAction: TextInputAction.done,
+                  onChanged: (_) {
+                    if (_error != null) setState(() => _error = null);
+                  },
+                  onSubmitted: (_) => _send(),
+                  decoration: InputDecoration(
+                    hintText: 'email@example.com',
+                    errorText: _error,
+                    prefixIcon: Icon(
+                      LucideIcons.mail,
+                      size: 18,
+                      color: c.textLow,
+                    ),
+                    prefixIconConstraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                  ),
+                  style: TextStyle(fontSize: 14, color: c.textHi),
+                ),
+              ),
+              const SizedBox(height: Gap.xl),
+              FilledButton(
+                onPressed: _busy ? null : _send,
+                style: _operation == _EmailOperation.sendOtp
+                    ? FilledButton.styleFrom(
+                        disabledBackgroundColor: c.accent,
+                        disabledForegroundColor: Colors.white,
+                      )
+                    : null,
+                child: _operation == _EmailOperation.sendOtp
+                    ? Semantics(
+                        label: context.tr('auth_send_code'),
+                        child: const _Spinner(),
+                      )
+                    : Text(context.tr('auth_send_code')),
+              ),
+            ] else ...[
+              _OtpBoxes(
+                controllers: _otp,
+                focusNodes: _otpFocus,
+                enabled: !_busy,
+                hasError: _otpHasError,
+                onChanged: (code) {
+                  setState(() {
+                    _otpValue = code;
+                    _otpHasError = false;
+                    _error = null;
+                  });
+                },
+                onSubmitted: _verify,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: Gap.md),
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11.5, color: c.danger),
+                  ),
+                ),
+              ],
+              const SizedBox(height: Gap.xl),
+              FilledButton(
+                onPressed: _busy || _otpValue.length != 6 ? null : _verify,
+                style: _operation == _EmailOperation.verifyOtp
+                    ? FilledButton.styleFrom(
+                        disabledBackgroundColor: c.accent,
+                        disabledForegroundColor: Colors.white,
+                      )
+                    : null,
+                child: _operation == _EmailOperation.verifyOtp
+                    ? Semantics(
+                        label: context.tr('auth_verify'),
+                        child: const _Spinner(),
+                      )
+                    : Text(context.tr('auth_verify')),
+              ),
+              const SizedBox(height: Gap.md),
+              Center(
+                child: TextButton(
+                  onPressed: _busy || _cooldown > 0 ? null : _send,
+                  child: _operation == _EmailOperation.sendOtp
+                      ? Semantics(
+                          label: context.tr('auth_resend'),
+                          child: _Spinner(color: c.accent),
+                        )
+                      : Text(
+                          _cooldown > 0
+                              ? '${context.tr('auth_resend_in')} ${_cooldown}s'
+                              : context.tr('auth_resend'),
+                        ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
 
-/// Enam kotak OTP dengan perpindahan fokus otomatis.
+/// Enam field OTP yang tegas dan ringkas, dengan dukungan paste/autofill.
 class _OtpBoxes extends StatelessWidget {
   const _OtpBoxes({
     required this.controllers,
     required this.focusNodes,
-    required this.onFilled,
+    required this.enabled,
+    required this.hasError,
+    required this.onChanged,
+    required this.onSubmitted,
   });
 
   final List<TextEditingController> controllers;
   final List<FocusNode> focusNodes;
-  final VoidCallback onFilled;
+  final bool enabled;
+  final bool hasError;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onSubmitted;
+
+  String get _code => controllers.map((controller) => controller.text).join();
+
+  void _notify() => onChanged(_code);
+
+  void _handleChanged(int index, String value) {
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+
+    // OTP autofill dan paste biasanya masuk sebagai enam digit sekaligus.
+    // Sebarkan ke seluruh field agar pengguna tidak perlu mengetik ulang.
+    if (digits.length > 1) {
+      final start = digits.length == 6 ? 0 : index;
+      for (var offset = 0; offset < digits.length; offset++) {
+        final target = start + offset;
+        if (target >= controllers.length) break;
+        controllers[target].text = digits[offset];
+      }
+      final next = start + digits.length;
+      focusNodes[next < focusNodes.length ? next : focusNodes.length - 1]
+          .requestFocus();
+    } else if (digits.isNotEmpty && index < focusNodes.length - 1) {
+      focusNodes[index + 1].requestFocus();
+    } else if (digits.isEmpty && index > 0) {
+      focusNodes[index - 1].requestFocus();
+    }
+
+    _notify();
+  }
+
+  KeyEventResult _handleKey(int index, KeyEvent event) {
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.backspace &&
+        controllers[index].text.isEmpty &&
+        index > 0) {
+      controllers[index - 1].clear();
+      focusNodes[index - 1].requestFocus();
+      _notify();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        for (var i = 0; i < 6; i++)
-          Flexible(
-            child: Padding(
-              padding: EdgeInsets.only(right: i == 5 ? 0 : 8),
-              child: AspectRatio(
-                aspectRatio: 0.82,
-                child: TextField(
-                  controller: controllers[i],
-                  focusNode: focusNodes[i],
-                  textAlign: TextAlign.center,
-                  keyboardType: TextInputType.number,
-                  maxLength: 1,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: c.textHi,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                  decoration: const InputDecoration(
-                    counterText: '',
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  onChanged: (v) {
-                    if (v.isNotEmpty && i < 5) {
-                      focusNodes[i + 1].requestFocus();
-                    } else if (v.isEmpty && i > 0) {
-                      focusNodes[i - 1].requestFocus();
-                    }
-                    if (controllers.every((c) => c.text.isNotEmpty)) {
-                      FocusScope.of(context).unfocus();
-                      onFilled();
-                    }
-                  },
-                ),
+    return AutofillGroup(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final contentWidth = constraints.maxWidth > 352
+              ? 352.0
+              : constraints.maxWidth;
+          final gap = contentWidth < 300 ? 6.0 : 8.0;
+          final boxWidth = (contentWidth - (gap * 5)) / 6;
+          final idleBorder = c.textLow.withValues(alpha: 0.20);
+          final borderColor = hasError ? c.danger : idleBorder;
+          final focusColor = hasError ? c.danger : c.accent;
+
+          return Align(
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: contentWidth,
+              child: Row(
+                children: [
+                  for (var i = 0; i < 6; i++) ...[
+                    if (i > 0) SizedBox(width: gap),
+                    SizedBox(
+                      width: boxWidth,
+                      height: 58,
+                      child: Focus(
+                        canRequestFocus: false,
+                        onKeyEvent: (_, event) => _handleKey(i, event),
+                        child: Semantics(
+                          label: '${context.tr('auth_otp_title')} ${i + 1}',
+                          textField: true,
+                          child: TextField(
+                            controller: controllers[i],
+                            focusNode: focusNodes[i],
+                            enabled: enabled,
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            textInputAction: i == 5
+                                ? TextInputAction.done
+                                : TextInputAction.next,
+                            autofillHints: i == 0
+                                ? const [AutofillHints.oneTimeCode]
+                                : null,
+                            autocorrect: false,
+                            enableSuggestions: false,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(6),
+                            ],
+                            cursorColor: c.accent,
+                            style: TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w600,
+                              color: c.textHi,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                            decoration: InputDecoration(
+                              counterText: '',
+                              filled: true,
+                              fillColor: c.input,
+                              constraints: const BoxConstraints.tightFor(
+                                height: 58,
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(R.sm),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(R.sm),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                              disabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(R.sm),
+                                borderSide: BorderSide(color: idleBorder),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(R.sm),
+                                borderSide: BorderSide(
+                                  color: focusColor,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                            onTap: () {
+                              final text = controllers[i].text;
+                              controllers[i].selection = TextSelection(
+                                baseOffset: 0,
+                                extentOffset: text.length,
+                              );
+                            },
+                            onChanged: (value) =>
+                                _handleChanged(i, value),
+                            onSubmitted: (_) {
+                              if (_code.length == 6) onSubmitted();
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ),
-      ],
+          );
+        },
+      ),
     );
   }
 }
@@ -430,6 +672,7 @@ class _AuthButton extends StatelessWidget {
     required this.onTap,
     this.primary = false,
     this.busy = false,
+    this.enabled = true,
   });
 
   final Widget? leading;
@@ -437,35 +680,41 @@ class _AuthButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool primary;
   final bool busy;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Material(
-      color: primary ? c.accent : c.input,
-      borderRadius: BorderRadius.circular(999), // HARUS FULLY ROUNDED
-      child: InkWell(
-        onTap: busy ? null : onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: SizedBox(
-          height: 50,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (busy)
-                const _Spinner()
-              else if (leading != null)
-                leading!,
-              const SizedBox(width: Gap.md),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: primary ? Colors.white : c.textHi,
+    final disabled = !enabled && !busy;
+    return Opacity(
+      opacity: disabled ? 0.5 : 1.0,
+      child: Material(
+        color: primary ? c.accent : c.input,
+        borderRadius: BorderRadius.circular(R.md),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: busy || !enabled ? null : onTap,
+          borderRadius: BorderRadius.circular(R.md),
+          child: SizedBox(
+            height: 50,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (busy)
+                  const _Spinner()
+                else if (leading != null)
+                  leading!,
+                const SizedBox(width: Gap.md),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: primary ? Colors.white : c.textHi,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -584,13 +833,15 @@ class GuestBrandIcon extends StatelessWidget {
 }
 
 class _Spinner extends StatelessWidget {
-  const _Spinner();
+  const _Spinner({this.color = Colors.white});
+
+  final Color color;
 
   @override
-  Widget build(BuildContext context) => const SizedBox(
+  Widget build(BuildContext context) => SizedBox(
         width: 16,
         height: 16,
-        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+        child: CircularProgressIndicator(strokeWidth: 2, color: color),
       );
 }
 

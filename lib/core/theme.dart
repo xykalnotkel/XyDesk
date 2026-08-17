@@ -114,7 +114,9 @@ class AppTheme {
         ),
       ),
 
-      // ── Input: tanpa border; fokus = ring 1px, bukan glow ──
+      // ── Input: rounded rectangle 12dp, bukan kapsul ──
+      // Bentuk yang lebih tegas membuat field mudah dibedakan dari tombol,
+      // status pill, dan kontrol pilihan.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: p.input,
@@ -125,29 +127,29 @@ class AppTheme {
           vertical: 0,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(R.md),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(R.md),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(R.md),
           borderSide: BorderSide(color: p.accent, width: 1),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(R.md),
           borderSide: const BorderSide(color: AppColors.danger, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(R.md),
           borderSide: const BorderSide(color: AppColors.danger, width: 1),
         ),
         errorStyle: const TextStyle(color: AppColors.danger, fontSize: 11.5),
       ),
 
-      // ── Tombol: solid, TANPA gradient, FULLY ROUNDED ──
+      // ── Tombol aksi: radius sedang; pill hanya untuk status/pilihan ──
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: p.accent,
@@ -159,7 +161,7 @@ class AppTheme {
           minimumSize: const Size.fromHeight(50),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(R.md),
           ),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
@@ -170,7 +172,7 @@ class AppTheme {
           minimumSize: const Size(48, 44),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(R.sm),
           ),
           textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
         ),
@@ -181,21 +183,17 @@ class AppTheme {
           foregroundColor: p.textHi,
           side: BorderSide(color: p.textLow.withValues(alpha: 0.30)),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(R.md),
           ),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
+        style: IconButton.styleFrom(shape: const CircleBorder()),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(R.lg),
         ),
       ),
 
