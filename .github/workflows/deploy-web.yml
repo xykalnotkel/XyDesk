@@ -1,0 +1,85 @@
+name: Deploy Flutter Web (Cloudflare)
+
+on:
+  workflow_run:
+    workflows: ['Build']
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: deploy-flutter-web-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Cloudflare Workers Static Assets
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Ambil bundle Web dari Build yang lulus
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          run_id="${WORKFLOW_RUN_ID:-}"
+          if [ -z "$run_id" ]; then
+            run_id="$(
+              gh run list \
+                --repo "$GITHUB_REPOSITORY" \
+                --workflow build.yml \
+                --commit "$RELEASE_SHA" \
+                --status success \
+                --limit 1 \
+                --json databaseId \
+                --jq '.[0].databaseId // empty'
+            )"
+          fi
+          if [ -z "$run_id" ]; then
+            echo "::error::Build Web sukses untuk $RELEASE_SHA tidak ditemukan."
+            exit 1
+          fi
+          rm -rf web_deploy/site
+          mkdir -p web_deploy/site
+          gh run download "$run_id" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name XyDesk-Web \
+            --dir web_deploy/site
+          cp web_deploy/static/_headers web_deploy/site/_headers
+          test -s web_deploy/site/index.html
+          test -s web_deploy/site/main.dart.js
+
+      - name: Deploy ke Cloudflare
+        working-directory: web_deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Credential Cloudflare belum tersedia."
+            exit 1
+          fi
+          npx --yes wrangler@4.86.0 deploy
+          {
+            echo "## Flutter Web production"
+            echo ""
+            echo "https://app.xystudio.my.id"
+          } >> "$GITHUB_STEP_SUMMARY"

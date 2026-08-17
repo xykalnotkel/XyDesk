@@ -1,0 +1,15 @@
+# Flutter Web XyDesk — frontend statis terpisah dari Worker API/signaling.
+name = "xydesk-web"
+compatibility_date = "2026-08-17"
+workers_dev = true
+preview_urls = true
+
+# Domain aplikasi. Backend tetap di https://signal.xystudio.my.id.
+routes = [
+  { pattern = "app.xystudio.my.id", custom_domain = true }
+]
+
+[assets]
+directory = "./site"
+not_found_handling = "single-page-application"
+html_handling = "auto-trailing-slash"

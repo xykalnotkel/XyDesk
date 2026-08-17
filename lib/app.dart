@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -89,17 +91,21 @@ class _Boot extends ConsumerStatefulWidget {
 class _BootState extends ConsumerState<_Boot> {
   bool _splashDone = false;
   bool _sessionChecked = false;
+  late final bool _reduceMotion;
 
   @override
   void initState() {
     super.initState();
-    // The native window already showed the first launch frame. Flutter only
-    // gets a brief continuity window to complete the lockup; never hold the
-    // user for the old 1.9 seconds. Session validation may still take longer.
+    // Splash Flutter menyelesaikan intro premium setelah frame native. Durasi
+    // tetap singkat, tetapi memberi ruang untuk logo besar, blur, dan wordmark
+    // berhenti pada keadaan tajam sebelum halaman berikutnya muncul.
     final platformReduce = WidgetsBinding
-        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
-    final reduce = ref.read(settingsProvider).reduceMotion || platformReduce;
-    Future<void>.delayed(Duration(milliseconds: reduce ? 0 : 950), () {
+        .instance
+        .platformDispatcher
+        .accessibilityFeatures
+        .disableAnimations;
+    _reduceMotion = ref.read(settingsProvider).reduceMotion || platformReduce;
+    Future<void>.delayed(Duration(milliseconds: _reduceMotion ? 0 : 1650), () {
       if (!mounted) return;
       _splashDone = true;
       _revealWhenReady();
@@ -143,12 +149,51 @@ class _BootState extends ConsumerState<_Boot> {
   Widget build(BuildContext context) {
     final ready = _splashDone && _sessionChecked;
     return AnimatedSwitcher(
-      duration: D.tab,
-      switchInCurve: D.curve,
-      switchOutCurve: Curves.easeIn,
+      duration: _reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 480),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: _reduceMotion
+          ? (child, _) => child
+          : (child, animation) =>
+                _BlurFadeTransition(animation: animation, child: child),
       child: ready
           ? const _Gate(key: ValueKey('boot-gate'))
           : const SplashPage(key: ValueKey('boot-splash')),
+    );
+  }
+}
+
+/// Fade lembut dengan blur tipis saat splash berpindah ke aplikasi. Nilai blur
+/// kecil menjaga transisi terasa cepat tanpa mengaburkan konten setelah diam.
+class _BlurFadeTransition extends StatelessWidget {
+  const _BlurFadeTransition({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      child: child,
+      builder: (context, child) {
+        final value = Curves.easeOutCubic.transform(animation.value);
+        return Opacity(
+          opacity: value,
+          child: Transform.scale(
+            scale: 0.985 + (0.015 * value),
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(
+                sigmaX: 3.5 * (1 - value),
+                sigmaY: 3.5 * (1 - value),
+              ),
+              child: child!,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -275,9 +320,8 @@ class _AppShellState extends ConsumerState<AppShell> {
           IconButton(
             tooltip: context.tr('connect_history'),
             icon: Icon(LucideIcons.history, size: 19, color: c.textMid),
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
+            onPressed: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const HistoryPage())),
           ),
         ];
       case 3:

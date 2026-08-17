@@ -22,6 +22,7 @@ placeholder sebagai ganti `RTCVideoView`.
 | Keyboard virtual (modifier sticky) | Selesai |
 | Glyph HUD (mouse, gulir, arah, switch) | Selesai |
 | CI/CD GitHub Actions | Selesai |
+| Flutter Web (Cloudflare Static Assets) | Deploy otomatis — `app.xystudio.my.id` |
 | Signaling server (Cloudflare Workers + DO) | Live — `signal.xystudio.my.id` |
 | Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker |
 | TURN (kredensial Cloudflare ber-TTL) | Selesai |
@@ -120,6 +121,10 @@ Artefak build biasa tersedia melalui tab **Actions**.
 | Windows client | `XyDesk-Windows.zip` | Build Flutter desktop |
 | Windows host | `XyDesk-Host.exe` | Engine host Rust |
 | Web | `XyDesk-Web.zip` | Bundle Flutter Web |
+
+Bundle Web dari Build `main` yang sukses juga dideploy otomatis ke Cloudflare
+Workers Static Assets di `https://app.xystudio.my.id`; frontend ini tetap
+berkomunikasi dengan Worker API/signaling di `https://signal.xystudio.my.id`.
 
 GitHub Release tidak dibuat pada setiap push. Release baru hanya berjalan
 setelah workflow Build sukses dan nilai `version` di `pubspec.yaml` berubah.

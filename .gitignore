@@ -56,10 +56,11 @@ android/app/*.keystore
 *.mobileprovision
 ios/Runner/GoogleService-Info.plist
 
-# Folder platform dibuat ulang oleh CI (flutter create)
+# Folder platform dan output deploy dibuat ulang oleh CI
 /windows/
 /linux/
 /macos/
 /ios/
 /web/
+/web_deploy/site/
 .flutter-plugins

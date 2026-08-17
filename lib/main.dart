@@ -18,7 +18,7 @@ void main() {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
       DevLog.install();
-      DevLog.i('app', 'XyDesk mulai', 'versi 1.1.0+3');
+      DevLog.i('app', 'XyDesk mulai', 'versi 1.2.0+4');
 
       // Edge-to-edge: background mengalir dari status bar sampai nav bar.
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

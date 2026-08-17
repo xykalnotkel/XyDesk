@@ -9,7 +9,8 @@ perlu menjalankan Flutter, Android SDK, Rust, atau Visual Studio secara lokal.
 |---|---|---|
 | `.github/workflows/build.yml` | push/PR ke `main`, manual | APK Android, aplikasi Flutter Windows, bundle Web |
 | `.github/workflows/build-host.yml` | perubahan `host/**`, manual | `xydesk-host.exe` |
-| `.github/workflows/deploy-signaling.yml` | perubahan `cloudflare/**`, manual | deploy Cloudflare Worker |
+| `.github/workflows/deploy-signaling.yml` | perubahan `cloudflare/**`, manual | deploy Cloudflare Worker API/signaling |
+| `.github/workflows/deploy-web.yml` | Build `main` sukses, manual recovery | deploy bundle Flutter Web terverifikasi ke Cloudflare Static Assets |
 | `.github/workflows/release.yml` | Build `main` sukses + nilai `version` berubah, manual recovery | GitHub Release multi-platform + push OneSignal |
 
 Sesuai keputusan proyek, repositori tidak memiliki suite test otomatis. CI tetap
@@ -30,6 +31,18 @@ Push ke `main` menjalankan:
 
 Artefak build biasa disimpan 30 hari. Artefak Actions bukan GitHub Release dan
 tidak otomatis tampil di halaman Releases.
+
+## Deployment Flutter Web
+
+Setelah workflow Build pada `main` sukses, workflow Web mengambil artefak
+`XyDesk-Web` dari run yang sama dan memublikasikannya tanpa build ulang ke
+Cloudflare Workers Static Assets. Produksi menggunakan
+`https://app.xystudio.my.id`; API, autentikasi, dan signaling tetap terpisah di
+`https://signal.xystudio.my.id`.
+
+Konfigurasi publik berada di `web_deploy/wrangler.toml`. Deployment membutuhkan
+GitHub Actions Secrets `CLOUDFLARE_ACCOUNT_ID` dan `CLOUDFLARE_API_TOKEN`.
+Artefak Web tidak boleh di-commit ke repository.
 
 ## Menerbitkan GitHub Release
 

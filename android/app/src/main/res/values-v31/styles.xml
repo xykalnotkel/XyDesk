@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Android 12+ system splash: the shared artwork is centered in a 72 dp
+    <!-- Android 12+ system splash: the shared artwork is centered in a 120 dp
          transparent canvas and kept inside the platform's icon safe zone. -->
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowSplashScreenBackground">@color/splash_background</item>

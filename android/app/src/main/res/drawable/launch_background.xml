@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Splash native. Warnanya HARUS sama dengan background aplikasi
-     (#131315), kalau tidak akan ada kedipan putih saat aplikasi dibuka. -->
+     (#090A10), kalau tidak akan ada kedipan putih saat aplikasi dibuka. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />
-    <!-- 34 dp mark in a 72 dp transparent canvas matches Flutter's first frame
+    <!-- 82 dp mark in a 120 dp transparent canvas matches Flutter's first frame
          and stays inside the Android 12 icon safe zone. -->
     <item>
         <bitmap
