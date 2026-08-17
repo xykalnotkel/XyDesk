@@ -10,9 +10,16 @@ export const WS_URL = import.meta.env.DEV
   ? `wss://${new URL(PROD_BASE).host}/ws`
   : `${PROD_BASE.replace('https://', 'wss://')}/ws`;
 
+export interface UserProfile {
+  id?: string;
+  email: string;
+  name?: string | null;
+  picture?: string | null;
+}
+
 export interface AuthSession {
   token: string;
-  user?: { email: string; name?: string | null };
+  user?: UserProfile;
 }
 
 export class ApiError extends Error {
@@ -53,12 +60,17 @@ export function verifyOtp(email: string, otp: string) {
   return post<AuthSession>('/auth/verify-otp', { email, otp });
 }
 
+/// Login dengan Google ID token (dari Google Identity Services di browser).
+export function signInWithGoogle(idToken: string) {
+  return post<AuthSession>('/auth/google', { id_token: idToken });
+}
+
 export async function me(token: string) {
   const res = await fetch(`${API_BASE}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new ApiError(res.status, 'unauthorized', 'Sesi berakhir.');
-  return (await res.json()) as { user: { email: string; name?: string } };
+  return (await res.json()) as { user: UserProfile };
 }
 
 /// Tukar JWT sesi menjadi token signaling 5 menit untuk deviceId ini.

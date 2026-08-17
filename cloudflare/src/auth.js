@@ -101,7 +101,8 @@ export const authConstants = { OTP_TTL, OTP_RESEND_COOLDOWN, OTP_MAX_ATTEMPTS, J
 
 // ── Google OAuth (asli) ──────────────────────────────────────────────────
 // Memverifikasi ID token Google (RS256 via JWKS publik) → kembalikan claims.
-// Butuh GOOGLE_CLIENT_ID (dari Google Cloud Console, gratis).
+// GOOGLE_CLIENT_ID boleh berisi BEBERAPA client id dipisah koma (Android +
+// Web memakai OAuth client berbeda di project Google yang sama).
 export async function verifyGoogleIdToken(env, idToken) {
   if (!env.GOOGLE_CLIENT_ID) {
     return { ok: false, status: 503, error: 'google-not-configured' };
@@ -148,7 +149,11 @@ export async function verifyGoogleIdToken(env, idToken) {
 
   const claims = JSON.parse(new TextDecoder().decode(b64urlDecode(parts[1])));
   const now = Math.floor(Date.now() / 1000);
-  if (claims.aud !== env.GOOGLE_CLIENT_ID) return { ok: false, status: 401, error: 'bad-audience' };
+  const allowedAud = String(env.GOOGLE_CLIENT_ID)
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+  if (!allowedAud.includes(claims.aud)) return { ok: false, status: 401, error: 'bad-audience' };
   if (claims.iss !== 'https://accounts.google.com' && claims.iss !== 'accounts.google.com') {
     return { ok: false, status: 401, error: 'bad-issuer' };
   }
@@ -160,5 +165,11 @@ export async function verifyGoogleIdToken(env, idToken) {
     return { ok: false, status: 401, error: 'email-not-verified' };
   }
   if (!claims.sub) return { ok: false, status: 401, error: 'missing-sub' };
-  return { ok: true, email, name: claims.name || null, sub: String(claims.sub) };
+  return {
+    ok: true,
+    email,
+    name: claims.name || null,
+    picture: claims.picture || null,
+    sub: String(claims.sub),
+  };
 }

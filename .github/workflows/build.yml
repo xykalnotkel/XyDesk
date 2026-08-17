@@ -182,6 +182,9 @@ jobs:
         run: npm ci
       - name: Build Web Release
         working-directory: web
+        env:
+          # OAuth client WEB (beda dari client Android; bukan secret).
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
         run: npm run build
       - uses: actions/upload-artifact@v4
         with:

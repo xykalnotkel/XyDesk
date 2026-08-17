@@ -52,11 +52,10 @@ header {
   letter-spacing: -0.4px;
 }
 
-.logo {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent-hi), #3b7cff);
+.brand-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .web-tag {
@@ -149,6 +148,126 @@ button.ghost {
 button.ghost:hover {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-hi);
+}
+
+/* ── Auth ── */
+
+.auth-card {
+  margin-top: 7vh;
+}
+
+.auth-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  align-self: center;
+  margin-bottom: 4px;
+}
+
+.auth-card h1 {
+  text-align: center;
+}
+
+.auth-card > .hint {
+  text-align: center;
+}
+
+.google-btn {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.apple-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: #16171f;
+  color: var(--text-mid);
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 22px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-low);
+  font-size: 12px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.footnote {
+  color: var(--text-low);
+  font-size: 11.5px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+/* ── Profil ── */
+
+.profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 6px 8px 6px 6px;
+}
+
+.profile-chip img,
+.avatar-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.profile-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  max-width: 180px;
+}
+
+.profile-meta strong {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-meta small {
+  font-size: 11px;
+  color: var(--text-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 560px) {
+  .profile-meta {
+    display: none;
+  }
 }
 
 .session {

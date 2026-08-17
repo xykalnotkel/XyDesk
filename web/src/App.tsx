@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { me, requestOtp, verifyOtp, ApiError } from './api';
+import {
+  ApiError,
+  me,
+  requestOtp,
+  signInWithGoogle,
+  UserProfile,
+  verifyOtp,
+} from './api';
+import { GOOGLE_CLIENT_ID, renderGoogleButton } from './google';
 import { InputCodec, RtcPhase, RtcSession } from './rtc';
 
 type Screen = 'login' | 'otp' | 'connect' | 'session';
@@ -10,10 +18,10 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('login');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [jwt, setJwt] = useState<string | null>(
-    () => localStorage.getItem(TOKEN_KEY),
+  const [jwt, setJwt] = useState<string | null>(() =>
+    localStorage.getItem(TOKEN_KEY),
   );
-  const [userEmail, setUserEmail] = useState('');
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -22,7 +30,7 @@ export default function App() {
     if (!jwt) return;
     me(jwt)
       .then((r) => {
-        setUserEmail(r.user.email);
+        setProfile(r.user);
         setScreen('connect');
       })
       .catch(() => {
@@ -30,6 +38,13 @@ export default function App() {
         setJwt(null);
       });
   }, [jwt]);
+
+  const finishAuth = (token: string, user?: UserProfile) => {
+    localStorage.setItem(TOKEN_KEY, token);
+    setJwt(token);
+    if (user) setProfile(user);
+    setScreen('connect');
+  };
 
   const doRequestOtp = async () => {
     setBusy(true);
@@ -49,12 +64,24 @@ export default function App() {
     setError('');
     try {
       const session = await verifyOtp(email.trim().toLowerCase(), otp.trim());
-      localStorage.setItem(TOKEN_KEY, session.token);
-      setJwt(session.token);
-      setUserEmail(email.trim().toLowerCase());
-      setScreen('connect');
+      finishAuth(session.token, session.user);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'OTP salah.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doGoogle = async (idToken: string) => {
+    setBusy(true);
+    setError('');
+    try {
+      const session = await signInWithGoogle(idToken);
+      finishAuth(session.token, session.user);
+    } catch (e) {
+      setError(
+        e instanceof ApiError ? e.message : 'Login Google gagal. Coba lagi.',
+      );
     } finally {
       setBusy(false);
     }
@@ -63,7 +90,7 @@ export default function App() {
   const signOut = () => {
     localStorage.removeItem(TOKEN_KEY);
     setJwt(null);
-    setUserEmail('');
+    setProfile(null);
     setScreen('login');
   };
 
@@ -71,39 +98,56 @@ export default function App() {
     <div className="shell">
       <header>
         <div className="brand">
-          <span className="logo" aria-hidden />
-          XyDesk <span className="web-tag">WEB</span>
+          <img src="/logo.png" alt="" className="brand-logo" />
+          <span className="brand-name">
+            XyDesk <span className="web-tag">WEB</span>
+          </span>
         </div>
-        {userEmail && (
-          <button className="ghost" onClick={signOut}>
-            {userEmail} — keluar
-          </button>
-        )}
+        {profile && <ProfileChip profile={profile} onSignOut={signOut} />}
       </header>
 
       {screen === 'login' && (
-        <main className="card">
-          <h1>Masuk</h1>
+        <main className="card auth-card">
+          <img src="/logo.png" alt="XyDesk" className="auth-logo" />
+          <h1>Masuk ke XyDesk</h1>
           <p className="hint">
-            Kode OTP dikirim ke email. Akun sama dengan aplikasi Android.
+            Satu akun untuk semua perangkat. Sudah punya akun di aplikasi
+            Android? Masuk dengan email atau Google yang sama — semuanya
+            tersambung.
           </p>
+
+          <GoogleButton onCredential={doGoogle} />
+          <AppleButton />
+
+          <div className="divider">
+            <span>atau lewat email</span>
+          </div>
+
           <input
             type="email"
             placeholder="email@contoh.com"
             value={email}
-            autoFocus
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && email && doRequestOtp()}
           />
           {error && <p className="error">{error}</p>}
-          <button disabled={busy || !email.includes('@')} onClick={doRequestOtp}>
+          <button
+            disabled={busy || !email.includes('@')}
+            onClick={doRequestOtp}
+          >
             {busy ? 'Mengirim…' : 'Kirim kode OTP'}
           </button>
+
+          <p className="footnote">
+            Pengguna iPhone/iPad: XyDesk Web adalah cara resmi memakai XyDesk
+            di iOS. Tambahkan ke Home Screen (Bagikan &rarr; Tambah ke Layar
+            Utama) agar terasa seperti aplikasi.
+          </p>
         </main>
       )}
 
       {screen === 'otp' && (
-        <main className="card">
+        <main className="card auth-card">
           <h1>Kode OTP</h1>
           <p className="hint">6 digit dikirim ke {email}.</p>
           <input
@@ -113,7 +157,9 @@ export default function App() {
             value={otp}
             autoFocus
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-            onKeyDown={(e) => e.key === 'Enter' && otp.length === 6 && doVerify()}
+            onKeyDown={(e) =>
+              e.key === 'Enter' && otp.length === 6 && doVerify()
+            }
           />
           {error && <p className="error">{error}</p>}
           <button disabled={busy || otp.length !== 6} onClick={doVerify}>
@@ -129,6 +175,67 @@ export default function App() {
         <ConnectScreen jwt={jwt} onSession={() => setScreen('session')} />
       )}
     </div>
+  );
+}
+
+function ProfileChip({
+  profile,
+  onSignOut,
+}: {
+  profile: UserProfile;
+  onSignOut: () => void;
+}) {
+  const initial = (profile.name || profile.email)[0]?.toUpperCase() ?? '?';
+  return (
+    <div className="profile-chip">
+      {profile.picture ? (
+        <img src={profile.picture} alt="" referrerPolicy="no-referrer" />
+      ) : (
+        <span className="avatar-fallback">{initial}</span>
+      )}
+      <span className="profile-meta">
+        <strong>{profile.name || profile.email}</strong>
+        {profile.name && <small>{profile.email}</small>}
+      </span>
+      <button className="ghost" onClick={onSignOut}>
+        Keluar
+      </button>
+    </div>
+  );
+}
+
+function GoogleButton({
+  onCredential,
+}: {
+  onCredential: (idToken: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [failed, setFailed] = useState(!GOOGLE_CLIENT_ID);
+
+  useEffect(() => {
+    if (!ref.current || !GOOGLE_CLIENT_ID) return;
+    renderGoogleButton(ref.current, onCredential).catch(() => setFailed(true));
+  }, [onCredential]);
+
+  if (failed) return null;
+  return <div ref={ref} className="google-btn" />;
+}
+
+function AppleButton() {
+  // Sign in with Apple butuh keanggotaan Apple Developer Program (berbayar)
+  // untuk membuat Services ID. Tombol disiapkan tetapi nonaktif sampai
+  // kredensial tersedia — jujur ke pengguna, bukan tombol yang diam-diam
+  // gagal.
+  return (
+    <button className="apple-btn" disabled title="Segera hadir">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
+        <path
+          fill="currentColor"
+          d="M16.36 12.79c-.02-2.07 1.69-3.06 1.77-3.11-.96-1.41-2.46-1.6-3-1.62-1.28-.13-2.5.75-3.15.75-.65 0-1.65-.73-2.72-.71-1.4.02-2.69.81-3.41 2.06-1.45 2.52-.37 6.25 1.04 8.29.69 1 1.52 2.12 2.6 2.08 1.04-.04 1.44-.67 2.7-.67 1.26 0 1.62.67 2.72.65 1.12-.02 1.83-1.02 2.52-2.02.79-1.16 1.12-2.28 1.14-2.34-.03-.01-2.19-.84-2.21-3.36zM14.3 6.7c.57-.7.96-1.66.85-2.62-.83.03-1.83.55-2.42 1.24-.53.62-1 1.6-.87 2.55.92.07 1.86-.47 2.44-1.17z"
+        />
+      </svg>
+      Lanjutkan dengan Apple — segera hadir
+    </button>
   );
 }
 
@@ -171,7 +278,6 @@ function ConnectScreen({
 
   useEffect(() => disconnect, [disconnect]);
 
-  // Input pointer -> data channel (absolut, fraksi permukaan video).
   const onPointerMove = (e: React.PointerEvent) => {
     const el = surfaceRef.current;
     const s = sessionRef.current;
@@ -226,9 +332,13 @@ function ConnectScreen({
             value={pin}
             onChange={(e) => setPin(e.target.value)}
           />
-          {phase && <p className="hint status">{statusLabel[phase] ?? phase}</p>}
+          {phase && (
+            <p className="hint status">{statusLabel[phase] ?? phase}</p>
+          )}
           <button
-            disabled={!idOk || !pin || phase === 'pairing' || phase === 'negotiating'}
+            disabled={
+              !idOk || !pin || phase === 'pairing' || phase === 'negotiating'
+            }
             onClick={connect}
           >
             {phase === 'pairing' || phase === 'negotiating'

@@ -161,7 +161,7 @@ export class AuthStore {
     }
 
     const token = await signJwt({ sub: user.id, email: user.email }, this.secret());
-    return json({ token, user: { id: user.id, email: user.email } }, 200);
+    return json({ token, user: this.publicUser(user) }, 200);
   }
 
   async google(request) {
@@ -182,6 +182,7 @@ export class AuthStore {
         id: crypto.randomUUID(),
         email,
         name: r.name || null,
+        picture: r.picture || null,
         google_sub: r.sub,
         created_at: now,
       };
@@ -199,11 +200,16 @@ export class AuthStore {
         user.name = r.name;
         changed = true;
       }
+      // Foto profil Google boleh berubah; selalu segarkan bila berbeda.
+      if (r.picture && user.picture !== r.picture) {
+        user.picture = r.picture;
+        changed = true;
+      }
       if (changed) await this.ctx.storage.put(`user:${email}`, user);
     }
 
     const token = await signJwt({ sub: user.id, email: user.email }, this.secret());
-    return json({ token, user: { id: user.id, email: user.email, name: user.name } }, 200);
+    return json({ token, user: this.publicUser(user) }, 200);
   }
 
   async me(request) {
@@ -213,6 +219,16 @@ export class AuthStore {
     if (!payload) return json({ error: 'unauthorized' }, 401);
     const user = await this.ctx.storage.get(`user:${payload.email}`);
     if (!user) return json({ error: 'user-not-found' }, 404);
-    return json({ user: { id: user.id, email: user.email, name: user.name } }, 200);
+    return json({ user: this.publicUser(user) }, 200);
+  }
+
+  /// Profil standar yang boleh keluar dari API: id, email, name, picture.
+  publicUser(user) {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name || null,
+      picture: user.picture || null,
+    };
   }
 }
