@@ -105,7 +105,8 @@ class _BootState extends ConsumerState<_Boot> {
         .accessibilityFeatures
         .disableAnimations;
     _reduceMotion = ref.read(settingsProvider).reduceMotion || platformReduce;
-    Future<void>.delayed(Duration(milliseconds: _reduceMotion ? 0 : 1650), () {
+    // 2450 ms koreografi SplashPage + 250 ms jeda tenang di lockup akhir.
+    Future<void>.delayed(Duration(milliseconds: _reduceMotion ? 0 : 2700), () {
       if (!mounted) return;
       _splashDone = true;
       _revealWhenReady();

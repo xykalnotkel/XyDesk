@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Android 12+ system splash: the shared artwork is centered in a 120 dp
-         transparent canvas and kept inside the platform's icon safe zone. -->
+    <!-- Android 12+ selalu menampilkan splash sistem; ikonnya dibuat
+         transparan supaya pengguna hanya melihat latar gelap sekejap,
+         lalu SplashPage Flutter memainkan seluruh animasi pembuka. -->
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowSplashScreenBackground">@color/splash_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_background</item>
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

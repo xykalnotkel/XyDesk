@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Splash native. Warnanya HARUS sama dengan background aplikasi
-     (#090A10), kalau tidak akan ada kedipan putih saat aplikasi dibuka. -->
+<!-- Splash native = HANYA warna latar gelap. Tanpa logo: seluruh animasi
+     pembuka dikerjakan Flutter (SplashPage) supaya tidak ada kesan splash
+     dobel. Warna HARUS sama dengan background aplikasi (#090A10). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />
-    <!-- 82 dp mark in a 120 dp transparent canvas matches Flutter's first frame
-         and stays inside the Android 12 icon safe zone. -->
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@drawable/splash_logo" />
-    </item>
 </layer-list>
