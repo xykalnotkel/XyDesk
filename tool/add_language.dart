@@ -33,8 +33,10 @@ void main(List<String> args) {
 
   final file = File('lib/l10n/strings.dart');
   if (!file.existsSync()) {
-    stderr.writeln('Tidak menemukan lib/l10n/strings.dart. '
-        'Jalankan dari akar proyek.');
+    stderr.writeln(
+      'Tidak menemukan lib/l10n/strings.dart. '
+      'Jalankan dari akar proyek.',
+    );
     exit(66);
   }
 
@@ -46,7 +48,8 @@ void main(List<String> args) {
   }
 
   // 1) Tambah konstanta AppLang
-  final constLine = "  static const $code = AppLang('$code', '$name', "
+  final constLine =
+      "  static const $code = AppLang('$code', '$name', "
       "'$native'${rtl ? ', rtl: true' : ''});";
   src = src.replaceFirst(
     RegExp(r'\n\n  static const all = <AppLang>\['),
@@ -94,7 +97,9 @@ void main(List<String> args) {
     ..writeln('  ${todo.length} kunci menunggu terjemahan')
     ..writeln('  Daftar tugas: ${todoFile.path}')
     ..writeln('')
-    ..writeln('Kunci kosong otomatis memakai bahasa Inggris, '
-        'jadi aplikasi tetap berjalan normal.')
+    ..writeln(
+      'Kunci kosong otomatis memakai bahasa Inggris, '
+      'jadi aplikasi tetap berjalan normal.',
+    )
     ..writeln('Jalankan `dart format lib/l10n/strings.dart` setelah mengisi.');
 }
