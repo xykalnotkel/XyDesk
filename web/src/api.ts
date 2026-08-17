@@ -93,15 +93,15 @@ export async function signalToken(token: string, deviceId: string) {
 export async function turnIce(
   deviceId: string,
   token: string,
-): Promise<RTCIceServer | null> {
+): Promise<RTCIceServer[]> {
   try {
     const res = await fetch(
       `${API_BASE}/turn-ice?id=${encodeURIComponent(deviceId)}&token=${encodeURIComponent(token)}`,
     );
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const body = (await res.json()) as { iceServers?: RTCIceServer[] };
-    return body.iceServers?.[0] ?? null;
+    return (body.iceServers ?? []).filter((server) => server.urls);
   } catch {
-    return null;
+    return [];
   }
 }

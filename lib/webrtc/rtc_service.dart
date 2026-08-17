@@ -132,8 +132,8 @@ class RtcService {
         'urls': ['stun:stun.cloudflare.com:3478'],
       },
     ];
-    final turn = await _fetchTurn();
-    if (turn != null) iceServers.add(turn);
+    final turnServers = await _fetchTurn();
+    iceServers.addAll(turnServers);
 
     final config = <String, dynamic>{'iceServers': iceServers};
     final pc = await createPeerConnection(config);
@@ -201,22 +201,23 @@ class RtcService {
   /// Auth memakai token signaling perangkat ini (bukan admin secret). Bila
   /// TURN belum dikonfigurasi (503) atau gagal, kembalikan null — koneksi
   /// tetap jalan dengan STUN saja (cukup untuk LAN & sebagian besar NAT).
-  Future<Map<String, dynamic>?> _fetchTurn() async {
-    if (_sig == null) return null;
+  Future<List<Map<String, dynamic>>> _fetchTurn() async {
+    if (_sig == null) return const [];
     try {
       final base = _signalingBase;
       final uri = Uri.parse('$base/turn-ice?id=$_deviceId&token=$_token');
       final res = await http.get(uri).timeout(const Duration(seconds: 5));
-      if (res.statusCode != 200) return null;
+      if (res.statusCode != 200) return const [];
       final body = jsonDecode(res.body);
-      // body berbentuk { iceServers: [ ... ] } atau objek iceServers langsung.
       final servers = body['iceServers'];
-      if (servers is List && servers.isNotEmpty) {
-        return Map<String, dynamic>.from(servers.first as Map);
-      }
-      return null;
+      if (servers is! List) return const [];
+      return servers
+          .whereType<Map>()
+          .map((server) => Map<String, dynamic>.from(server))
+          .where((server) => server['urls'] != null)
+          .toList(growable: false);
     } catch (_) {
-      return null;
+      return const [];
     }
   }
 

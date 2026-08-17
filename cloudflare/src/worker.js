@@ -271,7 +271,10 @@ async function handleTurnIce(request, url, env) {
     );
   }
 
-  const ttl = Number(url.searchParams.get('ttl') || 86400); // default 1 hari
+  const requestedTtl = Number(url.searchParams.get('ttl') || 86400);
+  const ttl = Number.isFinite(requestedTtl)
+    ? Math.max(300, Math.min(86400, Math.floor(requestedTtl)))
+    : 86400;
   const resp = await fetch(
     `https://rtc.live.cloudflare.com/v1/turn/keys/${env.TURN_KEY_ID}/credentials/generate-ice-servers`,
     {

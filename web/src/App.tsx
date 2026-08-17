@@ -38,13 +38,13 @@ const downloads = [
   {
     platform: 'Windows',
     architecture: 'x64',
-    file: 'XyDesk-Windows-x64.zip',
+    file: 'XyDesk-Windows-x64-Setup.exe',
     note: 'Aplikasi terpadu Connect + Host untuk Intel atau AMD',
   },
   {
     platform: 'Windows',
     architecture: 'Arm64',
-    file: 'XyDesk-Windows-arm64.zip',
+    file: 'XyDesk-Windows-arm64-Setup.exe',
     note: 'Aplikasi terpadu Connect + Host untuk Windows on Arm',
   },
 ] as const;
@@ -135,8 +135,17 @@ function SiteHeader({ route, navigate }: { route: Route; navigate: (r: Route) =>
 
 function PlatformIcon({ platform }: { platform: 'android' | 'windows' }) {
   return platform === 'android' ? (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor" d="M7.2 8.1h9.6v8.3a1.5 1.5 0 0 1-1.5 1.5h-.7v2.3a.9.9 0 0 1-1.8 0v-2.3h-1.6v2.3a.9.9 0 0 1-1.8 0v-2.3h-.7a1.5 1.5 0 0 1-1.5-1.5V8.1Zm-2.3.2a.9.9 0 0 1 .9.9v6a.9.9 0 1 1-1.8 0v-6a.9.9 0 0 1 .9-.9Zm14.2 0a.9.9 0 0 1 .9.9v6a.9.9 0 1 1-1.8 0v-6a.9.9 0 0 1 .9-.9ZM8 6.9a4.5 4.5 0 0 1 1.1-2.4L7.9 2.8a.45.45 0 0 1 .73-.52l1.15 1.6A5.4 5.4 0 0 1 12 3.4c.8 0 1.55.17 2.22.47l1.15-1.6a.45.45 0 1 1 .73.52l-1.2 1.68A4.5 4.5 0 0 1 16 6.9H8Zm2.2-1.3a.55.55 0 1 0 0-1.1.55.55 0 0 0 0 1.1Zm3.6 0a.55.55 0 1 0 0-1.1.55.55 0 0 0 0 1.1Z" />
+    <svg className="android-head-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <defs>
+        <linearGradient id="androidMetal" x1="4" y1="3" x2="19" y2="19">
+          <stop offset="0" stopColor="#d8dde0" />
+          <stop offset="0.36" stopColor="#75c776" />
+          <stop offset="0.72" stopColor="#3f8f55" />
+          <stop offset="1" stopColor="#b8bec2" />
+        </linearGradient>
+      </defs>
+      <path fill="url(#androidMetal)" d="M7.1 10.2c.2-2.15 1.42-4 3.2-4.95L8.95 3.3a.55.55 0 0 1 .9-.63l1.45 2.08A7.2 7.2 0 0 1 12 4.7c.24 0 .48.02.71.05l1.45-2.08a.55.55 0 1 1 .9.63l-1.36 1.95a5.95 5.95 0 0 1 3.2 4.95H7.1Zm2.9-2.1a.72.72 0 1 0 0-1.44.72.72 0 0 0 0 1.44Zm4 0a.72.72 0 1 0 0-1.44.72.72 0 0 0 0 1.44ZM7.05 11.3h9.9v6.25c0 1.04-.84 1.89-1.89 1.89H8.94a1.89 1.89 0 0 1-1.89-1.89V11.3Z" />
+      <path fill="none" stroke="rgba(255,255,255,.55)" strokeWidth=".65" d="M7.8 11.95h8.4" />
     </svg>
   ) : (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -150,12 +159,15 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
   return (
     <main>
       <section className="hero">
-        <img
-          className="hero-gear"
-          src="/xydesk-floating-gear.webp"
-          alt=""
-          aria-hidden="true"
-        />
+        <div className="float-stage" aria-hidden="true">
+          <img className="float-item float-monitor" src="/float-monitor.webp" alt="" />
+          <img className="float-item float-controller" src="/float-controller.webp" alt="" />
+          <img className="float-item float-keyboard" src="/float-keyboard.webp" alt="" />
+          <img className="float-item float-mouse" src="/float-mouse.webp" alt="" />
+          <i className="orbit-dot orbit-dot-a" />
+          <i className="orbit-dot orbit-dot-b" />
+          <i className="orbit-dot orbit-dot-c" />
+        </div>
         <div className="hero-copy">
           <p className="eyebrow">REMOTE DESKTOP, TANPA RIBET</p>
           <h1>XyDesk</h1>
@@ -236,7 +248,7 @@ function detectRecommendedDownload(): RecommendedDownload {
     return { file: 'XyDesk-Android-arm64-v8a.apk', label: 'Android ARM64' };
   }
   if (ua.includes('windows')) {
-    return { file: 'XyDesk-Windows-x64.zip', label: 'Windows x64' };
+    return { file: 'XyDesk-Windows-x64-Setup.exe', label: 'Windows x64' };
   }
   return { file: null, label: 'browser' };
 }
@@ -268,7 +280,7 @@ function useRecommendedDownload() {
         });
       } else if (platform.includes('windows') && architecture.includes('arm')) {
         setRecommended({
-          file: 'XyDesk-Windows-arm64.zip',
+          file: 'XyDesk-Windows-arm64-Setup.exe',
           label: 'Windows Arm64',
         });
       }

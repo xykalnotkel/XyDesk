@@ -75,8 +75,23 @@ button:not(:disabled):active, .primary-cta:active, .secondary-cta:active { trans
 
 .hero { min-height: 730px; position: relative; display: grid; place-items: center; isolation: isolate; }
 .hero::after { content: ''; position: absolute; inset: auto 0 0; height: 180px; background: linear-gradient(transparent, var(--bg)); z-index: -1; }
-.hero-gear { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .72; z-index: -2; }
-.hero-copy { width: min(720px, calc(100% - 40px)); text-align: center; display: flex; flex-direction: column; align-items: center; }
+.float-stage { position: absolute; inset: 0; z-index: -2; overflow: hidden; perspective: 900px; pointer-events: none; }
+.float-stage::before { content: ''; position: absolute; width: 520px; height: 520px; left: 50%; top: 48%; transform: translate(-50%,-50%); background: radial-gradient(circle, rgba(86,74,178,.15), transparent 67%); }
+.float-item { position: absolute; object-fit: contain; filter: drop-shadow(0 24px 30px rgba(0,0,0,.42)); will-change: transform; }
+.float-monitor { width: clamp(190px, 24vw, 370px); left: -4%; top: 4%; animation: gravity-a 9s ease-in-out infinite; }
+.float-controller { width: clamp(150px, 19vw, 285px); right: 2%; top: 7%; animation: gravity-b 8.2s ease-in-out infinite; }
+.float-keyboard { width: clamp(170px, 21vw, 320px); left: 2%; bottom: 1%; animation: gravity-c 10.5s ease-in-out infinite; }
+.float-mouse { width: clamp(120px, 15vw, 220px); right: 7%; bottom: 3%; animation: gravity-d 7.6s ease-in-out infinite; }
+.orbit-dot { position: absolute; display: block; width: 9px; height: 9px; border-radius: 50%; background: linear-gradient(145deg,#bfc0c7,#5147a7); box-shadow: 0 8px 15px rgba(0,0,0,.35); }
+.orbit-dot-a { left: 24%; top: 27%; animation: orbit-a 8s ease-in-out infinite; }
+.orbit-dot-b { right: 25%; top: 31%; width: 6px; height: 6px; animation: orbit-a 10s ease-in-out -3s infinite reverse; }
+.orbit-dot-c { left: 29%; bottom: 19%; width: 12px; height: 12px; animation: orbit-a 9s ease-in-out -5s infinite; }
+@keyframes gravity-a { 0%,100% { transform: translate3d(0,0,0) rotate(-3deg); } 50% { transform: translate3d(22px,20px,35px) rotate(1deg); } }
+@keyframes gravity-b { 0%,100% { transform: translate3d(0,8px,0) rotate(3deg); } 50% { transform: translate3d(-18px,-17px,42px) rotate(-2deg); } }
+@keyframes gravity-c { 0%,100% { transform: translate3d(0,0,0) rotate(2deg); } 50% { transform: translate3d(18px,-24px,30px) rotate(-2deg); } }
+@keyframes gravity-d { 0%,100% { transform: translate3d(0,0,0) rotate(-4deg); } 50% { transform: translate3d(-16px,21px,46px) rotate(3deg); } }
+@keyframes orbit-a { 0%,100% { transform: translate3d(0,0,0); } 33% { transform: translate3d(18px,-13px,30px); } 66% { transform: translate3d(-12px,16px,-10px); } }
+.hero-copy { position: relative; z-index: 2; width: min(720px, calc(100% - 40px)); text-align: center; display: flex; flex-direction: column; align-items: center; }
 .eyebrow { color: #aaa3ed; font-size: 10px; letter-spacing: 2.4px; font-weight: 750; }
 .hero h1 { margin-top: 16px; font-size: clamp(76px, 13vw, 154px); line-height: .9; letter-spacing: -.09em; font-weight: 800; }
 .hero-description { max-width: 660px; margin-top: 26px; color: var(--muted); font-size: clamp(16px, 2vw, 19px); line-height: 1.65; }
@@ -86,7 +101,7 @@ button:not(:disabled):active, .primary-cta:active, .secondary-cta:active { trans
 
 .platform-tables { width: min(960px, calc(100% - 40px)); margin: 60px auto 84px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .platform-tables.compact { margin-top: -40px; position: relative; z-index: 3; }
-.platform-table { background: var(--surface); border-radius: 20px; padding: 22px; }
+.platform-table { background: var(--surface); border-radius: 14px; padding: 22px; }
 .platform-table-head { display: flex; align-items: center; gap: 10px; padding: 4px 2px 18px; }
 .platform-table-head h2 { font-size: 18px; letter-spacing: -.03em; }
 .platform-table-body { display: flex; flex-direction: column; gap: 7px; }
@@ -98,11 +113,11 @@ button:not(:disabled):active, .primary-cta:active, .secondary-cta:active { trans
 .platform-table-row a:hover { background: rgba(255,255,255,.12); }
 
 .feature-grid { width: min(1120px, calc(100% - 40px)); margin: 0 auto 100px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.feature-card, .blog-grid article { min-height: 250px; padding: 28px; border-radius: 20px; background: var(--surface); }
+.feature-card, .blog-grid article { min-height: 250px; padding: 28px; border-radius: 14px; background: var(--surface); }
 .feature-card > span, .blog-grid article > span { color: var(--low); font-size: 11px; font-variant-numeric: tabular-nums; }
 .feature-card h2, .blog-grid h2 { margin-top: 64px; font-size: 20px; letter-spacing: -.5px; }
 .feature-card p, .blog-grid p { margin-top: 12px; color: var(--muted); font-size: 13px; line-height: 1.65; }
-.release-strip { width: min(1120px, calc(100% - 40px)); margin: 0 auto 110px; padding: 44px; display: flex; justify-content: space-between; align-items: end; background: #111217; border-radius: 24px; }
+.release-strip { width: min(1120px, calc(100% - 40px)); margin: 0 auto 110px; padding: 44px; display: flex; justify-content: space-between; align-items: end; background: #111217; border-radius: 14px; }
 .release-strip h2 { margin-top: 10px; font-size: clamp(28px, 5vw, 48px); letter-spacing: -.05em; max-width: 620px; }
 
 .content-page { width: min(960px, calc(100% - 40px)); margin: 96px auto 120px; }
@@ -119,12 +134,12 @@ button:not(:disabled):active, .primary-cta:active, .secondary-cta:active { trans
 .download-page > .channel-link { display: table; margin: 28px auto 0; }
 
 .prose-page { max-width: 760px; }
-.prose-page section { margin-top: 48px; padding: 28px; background: var(--surface); border-radius: 18px; }
+.prose-page section { margin-top: 48px; padding: 28px; background: var(--surface); border-radius: 12px; }
 .prose-page h2 { font-size: 20px; }
 .prose-page section p { margin-top: 12px; color: var(--muted); line-height: 1.75; font-size: 14px; }
 .blog-grid { margin-top: 58px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 
-.surface-card { background: var(--surface); border-radius: 20px; }
+.surface-card { background: var(--surface); border-radius: 14px; }
 .connect-page { width: min(920px, calc(100% - 32px)); margin: 28px auto 80px; }
 .connect-account-bar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; min-height: 38px; color: var(--muted); font-size: 12px; }
 .text-action, .back-action { color: #aaa3ed; padding: 8px; font-weight: 600; }
@@ -165,12 +180,16 @@ footer button, footer a { padding: 0; color: var(--muted); text-decoration: none
   .menu-toggle.open span:nth-child(2) { opacity: 0; }
   .menu-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
   .menu-backdrop { display: block; position: fixed; z-index: 60; inset: 0; padding: 0; background: rgba(0,0,0,.48); border-radius: 0; backdrop-filter: blur(5px); }
-  .site-header nav { position: fixed; z-index: 70; top: 0; right: 0; bottom: 0; width: min(82vw, 330px); padding: 92px 18px 24px; display: flex; flex-direction: column; align-items: stretch; gap: 6px; background: #14151a; border-radius: 22px 0 0 22px; transform: translateX(105%); transition: transform .26s cubic-bezier(.22,.8,.24,1); }
+  .site-header nav { position: fixed; z-index: 70; top: 0; right: 0; bottom: 0; width: min(82vw, 330px); padding: 92px 18px 24px; display: flex; flex-direction: column; align-items: stretch; gap: 6px; background: #14151a; border-radius: 14px 0 0 14px; transform: translateX(105%); transition: transform .26s cubic-bezier(.22,.8,.24,1); }
   .site-header nav.open { transform: translateX(0); }
   .nav-link { padding: 15px 16px; text-align: left; font-size: 15px; }
   .header-cta { display: none; }
   .hero { min-height: 660px; }
-  .hero-gear { object-position: center; opacity: .5; }
+  .float-stage { opacity: .68; }
+  .float-monitor { left: -25%; top: 8%; }
+  .float-controller { right: -18%; top: 12%; }
+  .float-keyboard { left: -22%; bottom: 5%; }
+  .float-mouse { right: -12%; bottom: 8%; }
   .hero h1 { font-size: clamp(74px, 24vw, 112px); }
   .platform-tables, .feature-grid, .blog-grid { grid-template-columns: 1fr; }
   .platform-tables.compact { margin-top: -18px; }

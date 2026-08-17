@@ -78,6 +78,8 @@ export class RtcSession {
   private token = '';
   private hostId = '';
   private stopped = false;
+  private recoveryAttempt = 0;
+  private recovering = false;
 
   onPhase: (phase: RtcPhase) => void = () => {};
   onTrack: (stream: MediaStream) => void = () => {};
@@ -142,10 +144,14 @@ export class RtcSession {
     const iceServers: RTCIceServer[] = [
       { urls: ['stun:stun.cloudflare.com:3478'] },
     ];
-    const turn = await turnIce(this.deviceId, this.token);
-    if (turn) iceServers.push(turn);
+    const turnServers = await turnIce(this.deviceId, this.token);
+    iceServers.push(...turnServers);
 
-    const pc = new RTCPeerConnection({ iceServers });
+    const pc = new RTCPeerConnection({
+      iceServers,
+      iceTransportPolicy: 'all',
+      bundlePolicy: 'max-bundle',
+    });
     this.pc = pc;
 
     pc.addTransceiver('video', { direction: 'recvonly' });
@@ -169,8 +175,13 @@ export class RtcSession {
       }
     };
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') this.onPhase('connected');
-      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+      if (pc.connectionState === 'connected') {
+        this.recoveryAttempt = 0;
+        this.recovering = false;
+        this.onPhase('connected');
+      } else if (pc.connectionState === 'failed') {
+        void this.recoverConnection();
+      } else if (pc.connectionState === 'closed') {
         this.onPhase('ended');
       }
     };
@@ -182,6 +193,40 @@ export class RtcSession {
       to: this.hostId,
       sdp: { type: 'offer', sdp: offer.sdp ?? '' },
     });
+  }
+
+  private async recoverConnection() {
+    const pc = this.pc;
+    if (!pc || this.stopped || this.recovering) return;
+    if (this.recoveryAttempt >= 2) {
+      this.onPhase('ended');
+      return;
+    }
+    this.recovering = true;
+    this.recoveryAttempt += 1;
+    this.onPhase('negotiating');
+    try {
+      // Percobaan pertama merotasi kandidat direct/STUN/TURN. Percobaan kedua
+      // memaksa TURN relay, termasuk TURN TCP/TLS bila server menyediakannya.
+      if (this.recoveryAttempt === 2) {
+        pc.setConfiguration({
+          ...pc.getConfiguration(),
+          iceTransportPolicy: 'relay',
+        });
+      }
+      pc.restartIce();
+      const offer = await pc.createOffer({ iceRestart: true });
+      await pc.setLocalDescription(offer);
+      this.send({
+        type: 'offer',
+        to: this.hostId,
+        sdp: { type: 'offer', sdp: offer.sdp ?? '' },
+      });
+    } catch {
+      if (this.recoveryAttempt >= 2) this.onPhase('ended');
+    } finally {
+      this.recovering = false;
+    }
   }
 
   sendInput(event: Uint8Array) {
