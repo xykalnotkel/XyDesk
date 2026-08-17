@@ -39,25 +39,13 @@ const downloads = [
     platform: 'Windows',
     architecture: 'x64',
     file: 'XyDesk-Windows-x64.zip',
-    note: 'Client untuk PC Intel atau AMD 64-bit',
+    note: 'Aplikasi terpadu Connect + Host untuk Intel atau AMD',
   },
   {
     platform: 'Windows',
     architecture: 'Arm64',
     file: 'XyDesk-Windows-arm64.zip',
-    note: 'Client native Windows on Arm',
-  },
-  {
-    platform: 'Windows Host',
-    architecture: 'x64',
-    file: 'XyDesk-Host-x64.exe',
-    note: 'Bagikan PC Intel atau AMD',
-  },
-  {
-    platform: 'Windows Host',
-    architecture: 'Arm64',
-    file: 'XyDesk-Host-arm64.exe',
-    note: 'Bagikan Windows on Arm',
+    note: 'Aplikasi terpadu Connect + Host untuk Windows on Arm',
   },
 ] as const;
 
@@ -99,13 +87,29 @@ export default function App() {
 }
 
 function SiteHeader({ route, navigate }: { route: Route; navigate: (r: Route) => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const go = (next: Route) => {
+    setMenuOpen(false);
+    navigate(next);
+  };
   return (
     <header className="site-header">
-      <button className="brand-button" onClick={() => navigate('/')}>
+      <button className="brand-button" onClick={() => go('/')}>
         <img src="/logo.png" alt="" className="brand-logo" />
         <span>XyDesk</span>
       </button>
-      <nav aria-label="Navigasi utama">
+      <button
+        className={menuOpen ? 'menu-toggle open' : 'menu-toggle'}
+        aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((value) => !value)}
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+      {menuOpen && <button className="menu-backdrop" aria-label="Tutup menu" onClick={() => setMenuOpen(false)} />}
+      <nav className={menuOpen ? 'open' : ''} aria-label="Navigasi utama">
         {([
           ['/', 'Beranda'],
           ['/connect', 'Connect'],
@@ -116,16 +120,28 @@ function SiteHeader({ route, navigate }: { route: Route; navigate: (r: Route) =>
           <button
             key={path}
             className={route === path ? 'nav-link active' : 'nav-link'}
-            onClick={() => navigate(path)}
+            onClick={() => go(path)}
           >
             {label}
           </button>
         ))}
       </nav>
-      <button className="header-cta" onClick={() => navigate('/connect')}>
+      <button className="header-cta" onClick={() => go('/connect')}>
         Buka Web
       </button>
     </header>
+  );
+}
+
+function PlatformIcon({ platform }: { platform: 'android' | 'windows' }) {
+  return platform === 'android' ? (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M7.2 8.1h9.6v8.3a1.5 1.5 0 0 1-1.5 1.5h-.7v2.3a.9.9 0 0 1-1.8 0v-2.3h-1.6v2.3a.9.9 0 0 1-1.8 0v-2.3h-.7a1.5 1.5 0 0 1-1.5-1.5V8.1Zm-2.3.2a.9.9 0 0 1 .9.9v6a.9.9 0 1 1-1.8 0v-6a.9.9 0 0 1 .9-.9Zm14.2 0a.9.9 0 0 1 .9.9v6a.9.9 0 1 1-1.8 0v-6a.9.9 0 0 1 .9-.9ZM8 6.9a4.5 4.5 0 0 1 1.1-2.4L7.9 2.8a.45.45 0 0 1 .73-.52l1.15 1.6A5.4 5.4 0 0 1 12 3.4c.8 0 1.55.17 2.22.47l1.15-1.6a.45.45 0 1 1 .73.52l-1.2 1.68A4.5 4.5 0 0 1 16 6.9H8Zm2.2-1.3a.55.55 0 1 0 0-1.1.55.55 0 0 0 0 1.1Zm3.6 0a.55.55 0 1 0 0-1.1.55.55 0 0 0 0 1.1Z" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M3 5.2 10.7 4v7.35H3V5.2Zm8.7-1.35L21 2.5v8.85h-9.3v-7.5ZM3 12.35h7.7V19.7L3 18.5v-6.15Zm8.7 0H21v8.9l-9.3-1.4v-7.5Z" />
+    </svg>
   );
 }
 
@@ -149,8 +165,9 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           </p>
           <div className="hero-actions">
             {recommended.file ? (
-              <a className="primary-cta" href={`${RELEASE_BASE}/${recommended.file}`}>
-                Download untuk {recommended.label}
+              <a className="primary-cta platform-cta" href={`${RELEASE_BASE}/${recommended.file}`}>
+                <PlatformIcon platform={recommended.label.startsWith('Windows') ? 'windows' : 'android'} />
+                Download For {recommended.label.startsWith('Windows') ? 'Windows' : 'Android'}
               </a>
             ) : (
               <button className="primary-cta" onClick={() => navigate('/connect')}>
@@ -166,6 +183,8 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           </a>
         </div>
       </section>
+
+      <PlatformTables compact />
 
       <section className="feature-grid" aria-label="Keunggulan XyDesk">
         <FeatureCard index="01" title="Satu ID, langsung konek">
@@ -242,7 +261,12 @@ function useRecommendedDownload() {
     ]).then((data) => {
       const platform = (data.platform || nav.userAgentData?.platform || '').toLowerCase();
       const architecture = (data.architecture || '').toLowerCase();
-      if (platform.includes('windows') && architecture.includes('arm')) {
+      if (platform.includes('android') && data.bitness === '32') {
+        setRecommended({
+          file: 'XyDesk-Android-armeabi-v7a.apk',
+          label: 'Android 32-bit',
+        });
+      } else if (platform.includes('windows') && architecture.includes('arm')) {
         setRecommended({
           file: 'XyDesk-Windows-arm64.zip',
           label: 'Windows Arm64',
@@ -251,6 +275,36 @@ function useRecommendedDownload() {
     });
   }, []);
   return recommended;
+}
+
+function PlatformTables({ compact = false }: { compact?: boolean }) {
+  const android = downloads.filter((item) => item.platform === 'Android');
+  const windows = downloads.filter((item) => item.platform !== 'Android');
+  const table = (title: string, icon: 'android' | 'windows', items: readonly (typeof downloads)[number][]) => (
+    <section className="platform-table">
+      <div className="platform-table-head">
+        <PlatformIcon platform={icon} />
+        <h2>{title}</h2>
+      </div>
+      <div className="platform-table-body">
+        {items.map((item) => (
+          <div className="platform-table-row" key={item.file}>
+            <div>
+              <strong>{item.architecture}</strong>
+              {!compact && <span>{item.note}</span>}
+            </div>
+            <a href={`${RELEASE_BASE}/${item.file}`}>Download</a>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+  return (
+    <div className={compact ? 'platform-tables compact' : 'platform-tables'}>
+      {table('Android', 'android', android)}
+      {table('Windows', 'windows', windows)}
+    </div>
+  );
 }
 
 function DownloadPage() {
@@ -264,26 +318,16 @@ function DownloadPage() {
         terhubung langsung ke GitHub Release terbaru dan dilindungi SHA-256.
       </p>
       {recommended.file ? (
-        <a className="primary-cta centered-cta" href={`${RELEASE_BASE}/${recommended.file}`}>
-          Download rekomendasi
+        <a className="primary-cta centered-cta platform-cta" href={`${RELEASE_BASE}/${recommended.file}`}>
+          <PlatformIcon platform={recommended.label.startsWith('Windows') ? 'windows' : 'android'} />
+          Download For {recommended.label.startsWith('Windows') ? 'Windows' : 'Android'}
         </a>
       ) : (
         <a className="primary-cta centered-cta" href="/connect">
           Buka XyDesk Web
         </a>
       )}
-      <div className="download-list">
-        {downloads.map((item) => (
-          <article className="download-row" key={item.file}>
-            <div className="download-platform">
-              <strong>{item.platform}</strong>
-              <span>{item.architecture}</span>
-            </div>
-            <p>{item.note}</p>
-            <a href={`${RELEASE_BASE}/${item.file}`}>Download</a>
-          </article>
-        ))}
-      </div>
+      <PlatformTables />
       <a className="channel-link" href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
         Ikuti info rilis di saluran WhatsApp
       </a>
