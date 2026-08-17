@@ -66,8 +66,9 @@ Aset Release:
 
 - `XyDesk-Android-arm64-v8a.apk` — client Android 64-bit;
 - `XyDesk-Android-armeabi-v7a.apk` — client Android 32-bit;
-- `XyDesk-Host-x64.exe` dan `XyDesk-Host-arm64.exe` — host Windows;
-- `XyDesk-Windows-x64.zip` dan `XyDesk-Windows-arm64.zip` — client Windows;
+- `XyDesk-Windows-x64-Setup.exe` dan `XyDesk-Windows-arm64-Setup.exe` — installer Windows terpadu;
+- `XyDesk-Windows-x64.zip` dan `XyDesk-Windows-arm64.zip` — paket portable terpadu;
+- `XyDesk-Host-x64.exe` dan `XyDesk-Host-arm64.exe` — engine standalone untuk otomasi;
 - `XyDesk-Web.zip` — client Web;
 - `SHA256SUMS.txt` — checksum unduhan;
 - `update.json` — manifest update resmi untuk perbandingan build dan verifikasi

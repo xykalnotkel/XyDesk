@@ -182,9 +182,65 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+  windows-installer:
+    name: Installer Windows ${{ matrix.arch }}
+    needs: [prepare, clients, windows-host]
+    if: needs.prepare.outputs.should_release == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-client-assets
+          path: incoming/clients
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-host-${{ matrix.arch }}
+          path: incoming/host
+      - name: Satukan aplikasi dan engine Host
+        shell: pwsh
+        run: |
+          $bundle = Join-Path $env:RUNNER_TEMP "xydesk-${{ matrix.arch }}"
+          New-Item -ItemType Directory -Force -Path $bundle | Out-Null
+          Expand-Archive "incoming/clients/XyDesk-Windows-${{ matrix.arch }}.zip" $bundle
+          New-Item -ItemType Directory -Force -Path "$bundle/Host" | Out-Null
+          Copy-Item "incoming/host/xydesk-host.exe" "$bundle/Host/XyDesk-Host.exe"
+          "BUNDLE_PATH=$bundle" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Pasang Inno Setup stabil
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+      - name: Build satu installer EXE utuh
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP "installer-out"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            "/DArch=${{ matrix.arch }}" `
+            "/DVersion=$env:VERSION" `
+            "/DSourceDir=$env:BUNDLE_PATH" `
+            "/DOutputDir=$out" `
+            "packaging/windows/XyDesk.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup gagal: $LASTEXITCODE" }
+          "INSTALLER_OUT=$out" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-installer-${{ matrix.arch }}
+          path: ${{ env.INSTALLER_OUT }}/*.exe
+          if-no-files-found: error
+          retention-days: 3
+
   publish:
     name: Terbitkan Release dan push update
-    needs: [prepare, clients, windows-host]
+    needs: [prepare, clients, windows-host, windows-installer]
     if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     env:
@@ -220,6 +276,8 @@ jobs:
           cp artifacts/release-client-assets/XyDesk-Web.zip dist/
           cp artifacts/release-host-x64/xydesk-host.exe dist/XyDesk-Host-x64.exe
           cp artifacts/release-host-arm64/xydesk-host.exe dist/XyDesk-Host-arm64.exe
+          cp artifacts/release-installer-x64/XyDesk-Windows-x64-Setup.exe dist/
+          cp artifacts/release-installer-arm64/XyDesk-Windows-arm64-Setup.exe dist/
 
           # Paket Windows utama adalah aplikasi terpadu. Client Flutter mencari
           # engine Rust di Host/XyDesk-Host.exe saat mode Host diaktifkan.
@@ -245,6 +303,7 @@ jobs:
           sha256sum XyDesk-Android-arm64-v8a.apk \
             XyDesk-Android-armeabi-v7a.apk XyDesk-Host-x64.exe \
             XyDesk-Host-arm64.exe XyDesk-Windows-x64.zip XyDesk-Windows-arm64.zip \
+            XyDesk-Windows-x64-Setup.exe XyDesk-Windows-arm64-Setup.exe \
             XyDesk-Web.zip xydesk_update_banner_1024x512.jpg \
             > SHA256SUMS.txt
           arm64_sha="$(sha256sum XyDesk-Android-arm64-v8a.apk | cut -d' ' -f1)"
@@ -314,8 +373,10 @@ jobs:
             |---|---|---|
             | Android 64-bit | `XyDesk-Android-arm64-v8a.apk` | HP Android modern |
             | Android 32-bit | `XyDesk-Android-armeabi-v7a.apk` | Perangkat ARMv7 lama |
-            | Windows x64 | `XyDesk-Windows-x64.zip` | PC Intel/AMD 64-bit |
-            | Windows Arm64 | `XyDesk-Windows-arm64.zip` | Windows on Arm |
+            | Windows x64 installer | `XyDesk-Windows-x64-Setup.exe` | Satu EXE utuh, direkomendasikan |
+            | Windows Arm64 installer | `XyDesk-Windows-arm64-Setup.exe` | Satu EXE utuh, Windows on Arm |
+            | Windows x64 portable | `XyDesk-Windows-x64.zip` | Tanpa instalasi |
+            | Windows Arm64 portable | `XyDesk-Windows-arm64.zip` | Tanpa instalasi |
             | Windows host x64 | `XyDesk-Host-x64.exe` | Host Intel/AMD 64-bit |
             | Windows host Arm64 | `XyDesk-Host-arm64.exe` | Host Windows on Arm |
             | Web | `XyDesk-Web.zip` | Bundle client browser |

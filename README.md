@@ -132,8 +132,9 @@ Artefak build biasa tersedia melalui tab **Actions**.
 |---|---|---|
 | Android 64-bit | `XyDesk-Android-arm64-v8a.apk` | HP Android modern |
 | Android 32-bit | `XyDesk-Android-armeabi-v7a.apk` | Perangkat ARMv7 lama |
-| Windows x64 | `XyDesk-Windows-x64.zip` | Aplikasi terpadu Connect + Host Intel/AMD |
-| Windows Arm64 | `XyDesk-Windows-arm64.zip` | Aplikasi terpadu Connect + Host Windows on Arm |
+| Windows x64 installer | `XyDesk-Windows-x64-Setup.exe` | Satu EXE utuh Connect + Host |
+| Windows Arm64 installer | `XyDesk-Windows-arm64-Setup.exe` | Satu EXE utuh Windows on Arm |
+| Windows portable | `XyDesk-Windows-<arch>.zip` | Alternatif tanpa instalasi |
 | Windows host standalone x64 | `XyDesk-Host-x64.exe` | Engine opsional untuk otomasi |
 | Windows host standalone Arm64 | `XyDesk-Host-arm64.exe` | Engine opsional untuk otomasi |
 | Web | `XyDesk-Web.zip` | Bundle web client (Vite + React) |
