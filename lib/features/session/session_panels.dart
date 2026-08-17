@@ -472,7 +472,7 @@ class _AudioPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _CapabilityCard(capabilities: _capabilities),
+        const _CapabilityCard(capabilities: _capabilities),
         const SizedBox(height: 18),
         const _SectionTitle(
           title: 'Suara PC ke perangkat',

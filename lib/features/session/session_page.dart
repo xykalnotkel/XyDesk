@@ -378,8 +378,8 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: CustomPaint(painter: const _AmbientGridPainter()),
+          const Positioned.fill(
+            child: CustomPaint(painter: _AmbientGridPainter()),
           ),
           Center(
             child: Transform.translate(
