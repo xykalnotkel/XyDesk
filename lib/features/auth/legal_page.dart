@@ -16,8 +16,9 @@ class LegalPage extends StatelessWidget {
   final LegalDoc doc;
 
   static void open(BuildContext context, LegalDoc doc) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => LegalPage(doc: doc)));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => LegalPage(doc: doc)));
   }
 
   String _title(BuildContext c) => switch (doc) {

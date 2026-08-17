@@ -404,8 +404,9 @@ class AboutPage extends StatelessWidget {
             trailing: Icon(LucideIcons.copy, size: 15, color: c.textLow),
             onTap: () {
               Clipboard.setData(const ClipboardData(text: 'a7f3-9c21-4e88'));
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(context.tr('copied'))));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(context.tr('copied'))));
             },
           ),
           ListRow(

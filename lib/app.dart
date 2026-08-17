@@ -320,8 +320,9 @@ class _AppShellState extends ConsumerState<AppShell> {
           IconButton(
             tooltip: context.tr('connect_history'),
             icon: Icon(LucideIcons.history, size: 19, color: c.textMid),
-            onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const HistoryPage())),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
           ),
         ];
       case 3:

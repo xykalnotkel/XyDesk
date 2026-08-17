@@ -564,7 +564,8 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    transport.message ?? 'HUD dapat dipreview, tetapi belum mengirim input atau audio.',
+                    transport.message ??
+                        'HUD dapat dipreview, tetapi belum mengirim input atau audio.',
                     style: const TextStyle(
                       fontSize: 10.5,
                       color: Color(0x66FFFFFF),
