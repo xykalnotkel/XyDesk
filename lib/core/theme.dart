@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -122,10 +121,7 @@ class AppTheme {
         fillColor: p.input,
         hintStyle: TextStyle(color: p.textLow, fontSize: 14),
         constraints: const BoxConstraints(minHeight: 56),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 0,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(R.md),
           borderSide: BorderSide.none,

@@ -347,8 +347,9 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
               child: IconButton(
                 icon: Icon(LucideIcons.arrowLeft, size: 20, color: c.textMid),
                 tooltip: context.tr('back'),
-                onPressed:
-                    _busy ? null : (_otpSent ? _editEmail : widget.onBack),
+                onPressed: _busy
+                    ? null
+                    : (_otpSent ? _editEmail : widget.onBack),
               ),
             ),
             const SizedBox(height: Gap.sm),
@@ -645,8 +646,7 @@ class _OtpBoxes extends StatelessWidget {
                                 extentOffset: text.length,
                               );
                             },
-                            onChanged: (value) =>
-                                _handleChanged(i, value),
+                            onChanged: (value) => _handleChanged(i, value),
                             onSubmitted: (_) {
                               if (_code.length == 6) onSubmitted();
                             },
@@ -700,10 +700,7 @@ class _AuthButton extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (busy)
-                  const _Spinner()
-                else if (leading != null)
-                  leading!,
+                if (busy) const _Spinner() else if (leading != null) leading!,
                 const SizedBox(width: Gap.md),
                 Text(
                   label,
@@ -742,7 +739,10 @@ class _GoogleLogoPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
     final strokeWidth = size.width * 0.22;
-    final rect = Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
+    final rect = Rect.fromCircle(
+      center: center,
+      radius: radius - strokeWidth / 2,
+    );
 
     final blue = Paint()
       ..color = const Color(0xFF4285F4)
@@ -827,7 +827,11 @@ class GuestBrandIcon extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: Icon(LucideIcons.userCheck, size: size * 0.58, color: Colors.white),
+      child: Icon(
+        LucideIcons.userCheck,
+        size: size * 0.58,
+        color: Colors.white,
+      ),
     );
   }
 }
@@ -839,10 +843,10 @@ class _Spinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: 16,
-        height: 16,
-        child: CircularProgressIndicator(strokeWidth: 2, color: color),
-      );
+    width: 16,
+    height: 16,
+    child: CircularProgressIndicator(strokeWidth: 2, color: color),
+  );
 }
 
 class _LegalNote extends StatelessWidget {
