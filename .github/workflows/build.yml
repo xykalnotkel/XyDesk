@@ -116,11 +116,13 @@ jobs:
 
       # ARM Universal = satu APK berisi arm64-v8a & armeabi-v7a (tanpa x86_64).
       # Ukuran jauh lebih ringan dan jalan di 99.9% HP Android nyata.
+      # GOOGLE_CLIENT_ID repo-var boleh berisi daftar koma (android,web) untuk
+      # Worker; aplikasi hanya memakai elemen pertama (client Android).
       - name: Build APK ARM Universal (arm64 & armeabi-v7a)
         run: >-
           flutter build apk --release
           --target-platform=android-arm,android-arm64
-          --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
+          --dart-define=GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID%%,*}"
 
       - name: Ganti nama & ambil ukuran
         run: |
@@ -154,7 +156,7 @@ jobs:
       - name: Configure Windows Platform
         run: flutter create . --platforms=windows
       - name: Build Windows EXE
-        run: flutter build windows --release --dart-define=GOOGLE_CLIENT_ID="${{ vars.GOOGLE_CLIENT_ID }}"
+        run: flutter build windows --release --dart-define=GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID%%,*}"
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Windows-EXE

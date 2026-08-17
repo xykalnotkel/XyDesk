@@ -239,6 +239,14 @@ function AppleButton() {
   );
 }
 
+const LAST_HOST_KEY = 'xydesk.web.lastHost';
+
+/// Format ID host "123456789" -> "123 456 789" saat mengetik.
+function formatHostId(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 9);
+  return d.replace(/(\d{3})(?=\d)/g, '$1 ');
+}
+
 function ConnectScreen({
   jwt,
   onSession,
@@ -246,16 +254,22 @@ function ConnectScreen({
   jwt: string;
   onSession: () => void;
 }) {
-  const [hostId, setHostId] = useState('');
+  const [hostId, setHostId] = useState(
+    () => localStorage.getItem(LAST_HOST_KEY) ?? '',
+  );
   const [pin, setPin] = useState('');
   const [phase, setPhase] = useState<RtcPhase | ''>('');
   const sessionRef = useRef<RtcSession | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const pinRef = useRef<HTMLInputElement | null>(null);
 
   const idOk = hostId.replace(/[\s-]/g, '').length === 9;
+  const canConnect =
+    idOk && !!pin && phase !== 'pairing' && phase !== 'negotiating';
 
   const connect = async () => {
+    localStorage.setItem(LAST_HOST_KEY, hostId);
     const session = new RtcSession();
     sessionRef.current = session;
     session.onPhase = setPhase;
@@ -318,32 +332,38 @@ function ConnectScreen({
         <>
           <h1>Sambungkan ke PC</h1>
           <p className="hint">
-            ID perangkat 9 digit dari XyDesk Host di PC kamu.
+            Masukkan ID 9 digit dan password dari XyDesk Host di PC kamu —
+            langsung konek.
           </p>
           <input
+            className="host-id"
+            inputMode="numeric"
             placeholder="123 456 789"
             value={hostId}
-            autoFocus
-            onChange={(e) => setHostId(e.target.value)}
+            autoFocus={!hostId}
+            onChange={(e) => {
+              const v = formatHostId(e.target.value);
+              setHostId(v);
+              // ID lengkap -> pindah fokus ke password otomatis.
+              if (v.replace(/\s/g, '').length === 9) pinRef.current?.focus();
+            }}
           />
           <input
+            ref={pinRef}
             type="password"
             placeholder="Password pairing"
             value={pin}
+            autoFocus={!!hostId}
             onChange={(e) => setPin(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && canConnect && connect()}
           />
           {phase && (
             <p className="hint status">{statusLabel[phase] ?? phase}</p>
           )}
-          <button
-            disabled={
-              !idOk || !pin || phase === 'pairing' || phase === 'negotiating'
-            }
-            onClick={connect}
-          >
+          <button disabled={!canConnect} onClick={connect}>
             {phase === 'pairing' || phase === 'negotiating'
               ? statusLabel[phase]
-              : 'Mulai sesi'}
+              : 'Konek'}
           </button>
         </>
       )}
