@@ -4,7 +4,7 @@ Aplikasi remote desktop low-latency untuk **gaming dan kerja**.
 Gaya visual **Quiet Surface** — clean, modern, tanpa satu pun garis pemisah.
 
 [![Build](https://github.com/xykalnotkel/XyDesk/actions/workflows/build.yml/badge.svg)](https://github.com/xykalnotkel/XyDesk/actions/workflows/build.yml)
-[![Host](https://github.com/xykalnotkel/XyDesk/actions/workflows/build-host.yml/badge.svg)](https://github.com/xykalnotkel/XyDesk/actions/workflows/build-host.yml)
+[![Host tests](https://github.com/xykalnotkel/XyDesk/actions/workflows/build-host.yml/badge.svg?branch=main)](https://github.com/xykalnotkel/XyDesk/actions/workflows/build-host.yml)
 [![Signaling](https://github.com/xykalnotkel/XyDesk/actions/workflows/deploy-signaling.yml/badge.svg)](https://github.com/xykalnotkel/XyDesk/actions/workflows/deploy-signaling.yml)
 [![Release](https://img.shields.io/github/v/release/xykalnotkel/XyDesk?display_name=tag&sort=semver)](https://github.com/xykalnotkel/XyDesk/releases)
 [![Flutter](https://img.shields.io/badge/Flutter-3.44%2B-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
@@ -32,7 +32,7 @@ latency end-to-end.
 | Keyboard virtual (modifier sticky) | Selesai |
 | Glyph HUD (mouse, gulir, arah, switch) | Selesai |
 | CI/CD GitHub Actions | Selesai |
-| Web client (Vite + React, Cloudflare) | Deploy otomatis — `app.xystudio.my.id` |
+| Web landing, download, legal, blog, dan client tamu | Deploy otomatis — `app.xystudio.my.id` |
 | Signaling server (Cloudflare Workers + DO) | Live — `signal.xystudio.my.id` |
 | Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker; JWT dan OTP punya test otomatis |
 | Gerbang signaling | Role terikat HMAC, relay client-host divalidasi, daftar host global ditutup |

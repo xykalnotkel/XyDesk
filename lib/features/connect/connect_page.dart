@@ -37,8 +37,7 @@ class DeviceIdFormatter extends TextInputFormatter {
 /// Link dukungan — ganti dengan akun/resmi XyDesk kamu.
 const _kTelegram = 'https://t.me/xydesk';
 const _kTelegramApp = 'tg://resolve?domain=xydesk';
-const _kWhatsApp = 'https://wa.me/628000000000';
-const _kWhatsAppApp = 'whatsapp://send?phone=628000000000';
+const _kWhatsApp = 'https://whatsapp.com/channel/0029VbB7nwuJZg3ym6UQ4Z1L';
 const _kTikTok = 'https://tiktok.com/@xydesk';
 const _kTikTokApp = 'snssdk1233://user/profile/xydesk';
 
@@ -489,7 +488,6 @@ class _SupportBlock extends StatelessWidget {
             _SocialTile(
               asset: 'assets/libraryicons/social_whatsapp.webp',
               url: _kWhatsApp,
-              appUrl: _kWhatsAppApp,
               label: 'WhatsApp',
             ),
             SizedBox(width: 12),
