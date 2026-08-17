@@ -29,8 +29,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # Wrangler 4.123 membutuhkan Node 22 atau lebih baru.
-          node-version: '22'
+          # Node 24 adalah Active LTS; Wrangler 4.123 membutuhkan Node >=22.
+          node-version: '24'
 
       - name: Pasang dependensi
         working-directory: cloudflare

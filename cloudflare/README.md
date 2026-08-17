@@ -28,7 +28,7 @@ npx wrangler deploy                    # → https://signal.xystudio.my.id
 
 ## Terbitkan token host
 
-Wrangler 4.123 membutuhkan Node.js 22 atau lebih baru.
+Gunakan Node.js 24 Active LTS. Wrangler 4.123 membutuhkan minimal Node.js 22.
 
 ```bash
 curl -H "X-Admin: $ADMIN_SECRET" \
