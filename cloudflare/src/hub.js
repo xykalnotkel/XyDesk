@@ -44,7 +44,9 @@ export class Hub {
       case 'hello':
         return this.handleHello(ws, msg);
       case 'list':
-        return this.send(ws, { type: 'devices', devices: this.snapshot() });
+        // Tanpa registri kepemilikan, daftar global akan membocorkan semua ID
+        // host ke setiap akun. Koneksi langsung tetap bekerja lewat ID tujuan.
+        return this.send(ws, { type: 'devices', devices: [] });
       case 'ping':
         return this.send(ws, { type: 'pong' });
       case 'pair':
@@ -61,8 +63,13 @@ export class Hub {
 
   handleHello(ws, msg) {
     const meta = ws.deserializeAttachment();
-    const id = msg.to || meta.id;
+    const id = meta.id;
     if (!id) return this.send(ws, { type: 'error', error: 'hello butuh id perangkat' });
+    // ID dan role berasal dari query yang sudah diverifikasi Worker. Payload
+    // WebSocket tidak boleh menggantinya setelah melewati gerbang auth.
+    if (msg.to && msg.to !== id) {
+      return this.send(ws, { type: 'error', error: 'id tidak cocok dengan token' });
+    }
 
     // Tolak id duplikat (mencegah pencurian sesi).
     const dup = this.sockets().find((w) => {
@@ -73,13 +80,12 @@ export class Hub {
 
     meta.id = id;
     meta.registered = true;
-    meta.role = msg.reason === ROLE_HOST ? ROLE_HOST : 'client';
+    meta.role = meta.role === ROLE_HOST ? ROLE_HOST : 'client';
     meta.name = msg.from || meta.name || id;
     meta.since = Math.floor(Date.now() / 1000);
     ws.serializeAttachment(meta);
 
     this.send(ws, { type: 'welcome', from: id });
-    this.broadcast({ type: 'devices', devices: this.snapshot() });
   }
 
   // Relay antar peer; server selalu menimpa `from` dengan id pengirim agar
@@ -87,6 +93,9 @@ export class Hub {
   relay(ws, msg) {
     const meta = ws.deserializeAttachment();
     const toId = msg.to;
+    if (!meta?.registered) {
+      return this.send(ws, { type: 'error', error: 'hello wajib sebelum relay' });
+    }
     if (!toId) return this.send(ws, { type: 'error', error: 'to wajib', reason: msg.type });
 
     const peer = this.sockets().find((w) => {
@@ -95,21 +104,23 @@ export class Hub {
     });
     if (!peer) return this.send(ws, { type: 'error', error: 'peer-offline', reason: toId });
 
+    const target = peer.deserializeAttachment();
+    if (!this.relayAllowed(msg.type, meta.role, target.role)) {
+      return this.send(ws, { type: 'error', error: 'arah relay ditolak', reason: msg.type });
+    }
+
     peer.send(JSON.stringify({ ...msg, from: meta.id }));
   }
 
-  snapshot() {
-    return this.sockets()
-      .map((w) => w.deserializeAttachment())
-      .filter((a) => a && a.registered)
-      .map((a) => ({ id: a.id, name: a.name, role: a.role, online: true, since: a.since }));
-  }
-
-  broadcast(msg) {
-    const text = JSON.stringify(msg);
-    for (const w of this.sockets()) {
-      try { w.send(text); } catch { /* peer baru saja putus */ }
+  relayAllowed(type, fromRole, toRole) {
+    if (type === 'pair' || type === 'offer') {
+      return fromRole === 'client' && toRole === ROLE_HOST;
     }
+    if (type === 'pair-response' || type === 'answer') {
+      return fromRole === ROLE_HOST && toRole === 'client';
+    }
+    // ICE dan bye sah dua arah, tetapi tidak pernah sesama role.
+    return (type === 'ice' || type === 'bye') && fromRole !== toRole;
   }
 
   send(ws, msg) {
@@ -121,10 +132,6 @@ export class Hub {
   }
 
   async webSocketClose(ws) {
-    const meta = ws.deserializeAttachment();
-    if (meta && meta.registered) {
-      this.broadcast({ type: 'devices', devices: this.snapshot() });
-    }
     ws.close(1011, 'closed');
   }
 

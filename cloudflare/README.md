@@ -26,25 +26,30 @@ npx wrangler secret put ADMIN_SECRET    # isi: kata sandi admin /issue
 npx wrangler deploy                    # → https://signal.xystudio.my.id
 ```
 
-## Terbitkan token (host & client)
+## Terbitkan token host
+
+Wrangler 4.123 membutuhkan Node.js 22 atau lebih baru.
 
 ```bash
 curl -H "X-Admin: $ADMIN_SECRET" \
   "https://signal.xystudio.my.id/issue?purpose=gaming-pc-01"
-# → 1786843937.gaming-pc-01.<sig>   (berlaku 5 menit)
+# → 1786843937.gaming-pc-01.<sig>   (berlaku 5 menit, role host)
 ```
 
-Host pakai `purpose = deviceId`-nya; client pakai `purpose = deviceId`-nya juga.
-Token dibawa sebagai `?token=` (client Flutter) atau header `Authorization:
-Bearer` (host Rust).
+Host membawa token lewat header `Authorization: Bearer`. Client tidak memakai
+endpoint admin; setelah login, client menukar JWT lewat `/signal-token` dan
+mendapat token role `client`. ID dan role masuk ke signature HMAC, jadi token
+client tidak bisa dipakai ulang untuk menyamar sebagai host.
 
 ## Jalankan lokal
 
 ```bash
+npm test       # test JWT, OTP, rate limit, role token, dan arah relay
+npm run check  # test + validasi bundle Worker tanpa deploy
 npm run dev    # wrangler dev di :8787
 ```
 
-Validasi fungsi dilakukan manual terhadap Worker lokal atau deployment produksi.
+Workflow deploy menjalankan `npm run check` sebelum menyentuh produksi.
 
 ## Struktur
 

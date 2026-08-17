@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "node --test",
+    "check": "npm test && wrangler deploy --dry-run --outdir .wrangler/dry-run"
   },
   "devDependencies": {
-    "wrangler": "^3.100.0"
+    "wrangler": "^4.123.0"
   }
 }

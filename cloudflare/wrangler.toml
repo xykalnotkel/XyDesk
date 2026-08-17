@@ -2,7 +2,12 @@
 # Tanpa VM/VPS. Deploy: `npx wrangler deploy` (gratis, tanpa kartu kredit).
 name = "xydesk-signaling"
 main = "src/worker.js"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-08-17"
+
+# Browser produksi yang boleh memanggil API. Klien native tidak mengirim
+# Origin, jadi pembatasan ini tidak mengganggu Android/desktop.
+[vars]
+CORS_ORIGINS = "https://app.xystudio.my.id"
 
 # ── Durable Object: hub global (registri host + relay SDP/ICE) ──
 [durable_objects]

@@ -61,12 +61,17 @@ export default {
 
     // ── Autentikasi ──
     const deviceId = url.searchParams.get('id') || '';
-    const role = url.searchParams.get('role') || 'client';
+    if (!/^[A-Za-z0-9_-]{3,64}$/.test(deviceId)) {
+      return new Response('bad id', { status: 400 });
+    }
+    const role = url.searchParams.get('role') === 'host' ? 'host' : 'client';
     const name = url.searchParams.get('name') || deviceId;
     const token = extractToken(request, url);
     const purpose = deviceId || 'client';
 
-    if (!token || !(await verifyToken(token, purpose, env.XYDESK_SECRET))) {
+    // Role ikut ditandatangani. Token client dari /signal-token tidak bisa
+    // dipakai ulang sebagai host untuk memanen password pairing.
+    if (!token || !(await verifyToken(token, purpose, role, env.XYDESK_SECRET))) {
       return new Response('unauthorized', { status: 401 });
     }
 
@@ -117,16 +122,23 @@ function extractToken(request, url) {
   return url.searchParams.get('token') || '';
 }
 
-// Verifikasi token `ts.purpose.sig`. Data yang ditandatangani = purpose + \0 + ts.
-async function verifyToken(token, purpose, secret) {
-  if (!secret) return false;
+// Token tetap ringkas `ts.purpose.sig`, tetapi signature mengikat purpose DAN
+// role. Role tidak perlu dikirim dua kali karena sudah ada di query /ws.
+export async function signSignalToken(purpose, role, secret, timestamp) {
+  const ts = String(timestamp ?? Math.floor(Date.now() / 1000));
+  const sig = await hmacHex(secret, `${purpose}\x00${role}\x00${ts}`);
+  return `${ts}.${purpose}.${sig}`;
+}
+
+export async function verifyToken(token, purpose, role, secret) {
+  if (!secret || (role !== 'host' && role !== 'client')) return false;
   const parts = token.split('.');
-  if (parts.length !== 3) return false;
-  const ts = parseInt(parts[0], 10);
-  if (!ts) return false;
+  if (parts.length !== 3 || !/^\d+$/.test(parts[0])) return false;
+  const ts = Number(parts[0]);
+  if (!Number.isSafeInteger(ts)) return false;
   if (Math.abs(Date.now() / 1000 - ts) > 300) return false; // 5 menit
   if (parts[1] !== purpose) return false;
-  const expect = await hmacHex(secret, `${purpose}\x00${parts[0]}`);
+  const expect = await hmacHex(secret, `${purpose}\x00${role}\x00${parts[0]}`);
   return timingSafeEqual(expect, parts[2]);
 }
 
@@ -152,9 +164,16 @@ async function handleIssue(request, url, env) {
     return new Response('forbidden', { status: 403 });
   }
   const purpose = url.searchParams.get('purpose') || 'client';
-  const ts = String(Math.floor(Date.now() / 1000));
-  const sig = await hmacHex(env.XYDESK_SECRET, `${purpose}\x00${ts}`);
-  return new Response(`${ts}.${purpose}.${sig}`, { status: 200 });
+  if (!/^[A-Za-z0-9_-]{3,64}$/.test(purpose)) {
+    return new Response('bad purpose', { status: 400 });
+  }
+  // Endpoint operator dipakai untuk menjalankan binary host. Client biasa
+  // harus memakai /signal-token yang selalu menerbitkan role client.
+  const role = url.searchParams.get('role') === 'client' ? 'client' : 'host';
+  return new Response(
+    await signSignalToken(purpose, role, env.XYDESK_SECRET),
+    { status: 200 },
+  );
 }
 
 // ── Endpoint token signaling untuk client ber-JWT ────────────────────────
@@ -180,12 +199,13 @@ async function handleSignalToken(request, url, env) {
     return new Response('bad id', { status: 400 });
   }
 
-  const ts = String(Math.floor(Date.now() / 1000));
-  const sig = await hmacHex(env.XYDESK_SECRET, `${id}\x00${ts}`);
-  return new Response(`${ts}.${id}.${sig}`, {
-    status: 200,
-    headers: { 'content-type': 'text/plain' },
-  });
+  return new Response(
+    await signSignalToken(id, 'client', env.XYDESK_SECRET),
+    {
+      status: 200,
+      headers: { 'content-type': 'text/plain' },
+    },
+  );
 }
 
 // ── Endpoint kredensial TURN ─────────────────────────────────────────────
@@ -208,7 +228,7 @@ async function handleTurnIce(request, url, env) {
     if (request.headers.get('X-Admin') === env.ADMIN_SECRET) return true;
     const id = url.searchParams.get('id') || 'client';
     const token = url.searchParams.get('token') || '';
-    return token && (await verifyToken(token, id, env.XYDESK_SECRET));
+    return token && (await verifyToken(token, id, 'client', env.XYDESK_SECRET));
   })();
   if (!authorized) {
     return new Response('forbidden', { status: 403 });

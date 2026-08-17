@@ -12,6 +12,8 @@ import {
 import { otpEmailHtml, otpEmailText } from './email_otp.js';
 
 const { OTP_TTL, OTP_RESEND_COOLDOWN, OTP_MAX_ATTEMPTS } = authConstants;
+const OTP_IP_WINDOW = 10 * 60;
+const OTP_IP_MAX_REQUESTS = 8;
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
@@ -61,6 +63,11 @@ export class AuthStore {
     email = email.toLowerCase();
 
     const now = Math.floor(Date.now() / 1000);
+    const rateLimit = await this.consumeOtpRateLimit(request, now);
+    if (!rateLimit.ok) {
+      return json({ error: 'rate-limited', retry_in: rateLimit.retryIn }, 429);
+    }
+
     const existing = await this.ctx.storage.get(`otp:${email}`);
     if (existing && now - existing.created_at < OTP_RESEND_COOLDOWN) {
       return json({ error: 'cooldown', resend_in: OTP_RESEND_COOLDOWN - (now - existing.created_at) }, 429);
@@ -87,6 +94,32 @@ export class AuthStore {
     }
 
     return json(body, 200);
+  }
+
+  // Batas per alamat jaringan mencegah endpoint OTP dipakai sebagai alat bom
+  // email. Alamat tidak disimpan mentah; key storage memakai hash ber-salt.
+  async consumeOtpRateLimit(request, now) {
+    const ip = request.headers.get('CF-Connecting-IP');
+    // Header ini selalu diisi Cloudflare pada produksi. Dev lokal tidak dipukul
+    // oleh bucket global palsu bernama "unknown".
+    if (!ip) return { ok: true, retryIn: 0 };
+
+    const keyHash = await hashOtp(this.secret(), 'rate-limit', ip);
+    const key = `rate:otp:${keyHash}`;
+    let bucket = await this.ctx.storage.get(key);
+    if (!bucket || now - bucket.started_at >= OTP_IP_WINDOW) {
+      bucket = { started_at: now, count: 0 };
+    }
+    if (bucket.count >= OTP_IP_MAX_REQUESTS) {
+      return {
+        ok: false,
+        retryIn: Math.max(1, OTP_IP_WINDOW - (now - bucket.started_at)),
+      };
+    }
+
+    bucket.count += 1;
+    await this.ctx.storage.put(key, bucket);
+    return { ok: true, retryIn: 0 };
   }
 
   // Kirim email OTP lewat Resend (gratis 3.000 email/bln, tanpa kartu).

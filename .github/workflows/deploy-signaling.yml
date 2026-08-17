@@ -29,11 +29,16 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Wrangler 4.123 membutuhkan Node 22 atau lebih baru.
+          node-version: '22'
 
       - name: Pasang dependensi
         working-directory: cloudflare
         run: npm ci
+
+      - name: Uji auth dan validasi bundle Worker
+        working-directory: cloudflare
+        run: npm run check
 
       - name: Deploy ke Cloudflare
         working-directory: cloudflare

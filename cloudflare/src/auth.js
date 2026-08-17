@@ -40,10 +40,20 @@ async function sha256Hex(data) {
 }
 
 export function timingSafeEqual(a, b) {
-  if (a.length !== b.length) return false;
-  let r = 0;
-  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return r === 0;
+  const left = new TextEncoder().encode(String(a));
+  const right = new TextEncoder().encode(String(b));
+  return timingSafeBytesEqual(left, right);
+}
+
+function timingSafeBytesEqual(left, right) {
+  // Tetap telusuri panjang terpanjang. Perbedaan panjang ikut masuk ke hasil,
+  // tetapi tidak membuat fungsi keluar lebih awal.
+  const length = Math.max(left.length, right.length);
+  let diff = left.length ^ right.length;
+  for (let i = 0; i < length; i++) {
+    diff |= (left[i] ?? 0) ^ (right[i] ?? 0);
+  }
+  return diff === 0;
 }
 
 // ── JWT (HS256) ──────────────────────────────────────────────────────────
@@ -59,13 +69,26 @@ export async function signJwt(payload, secret, ttl = JWT_TTL) {
 
 export async function verifyJwt(token, secret) {
   const parts = String(token || '').split('.');
-  if (parts.length !== 3) return null;
+  if (parts.length !== 3 || !secret) return null;
   const [h, p, s] = parts;
-  const expect = b64urlEncode(await hmac(secret, `${h}.${p}`));
-  if (!timingSafeEqual(expect, s)) return null;
+
   try {
+    const header = JSON.parse(new TextDecoder().decode(b64urlDecode(h)));
+    // Jangan bergantung pada kebetulan bahwa implementasi saat ini selalu
+    // menghitung HMAC. Algoritma dan tipe token adalah bagian kontrak auth.
+    if (header.alg !== 'HS256' || header.typ !== 'JWT') return null;
+
+    const supplied = b64urlDecode(s);
+    const expected = await hmac(secret, `${h}.${p}`);
+    if (!timingSafeBytesEqual(expected, supplied)) return null;
+
     const payload = JSON.parse(new TextDecoder().decode(b64urlDecode(p)));
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
+    const now = Math.floor(Date.now() / 1000);
+    if (!Number.isInteger(payload.exp) || payload.exp <= now) return null;
+    if (!Number.isInteger(payload.iat) || payload.iat > now + 60) return null;
+    if (payload.nbf !== undefined && (!Number.isInteger(payload.nbf) || payload.nbf > now)) {
+      return null;
+    }
     return payload;
   } catch {
     return null;

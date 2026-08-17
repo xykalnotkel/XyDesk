@@ -4,6 +4,13 @@ Aplikasi remote desktop low-latency untuk **gaming dan kerja**.
 Gaya visual **Quiet Surface** — clean, modern, tanpa satu pun garis pemisah.
 
 [![Build](https://github.com/xykalnotkel/XyDesk/actions/workflows/build.yml/badge.svg)](https://github.com/xykalnotkel/XyDesk/actions/workflows/build.yml)
+[![Host](https://github.com/xykalnotkel/XyDesk/actions/workflows/build-host.yml/badge.svg)](https://github.com/xykalnotkel/XyDesk/actions/workflows/build-host.yml)
+[![Signaling](https://github.com/xykalnotkel/XyDesk/actions/workflows/deploy-signaling.yml/badge.svg)](https://github.com/xykalnotkel/XyDesk/actions/workflows/deploy-signaling.yml)
+[![Release](https://img.shields.io/github/v/release/xykalnotkel/XyDesk?display_name=tag&sort=semver)](https://github.com/xykalnotkel/XyDesk/releases)
+[![Flutter](https://img.shields.io/badge/Flutter-3.44%2B-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Rust](https://img.shields.io/badge/Host-Rust-000000?logo=rust&logoColor=white)](host/)
+[![Cloudflare](https://img.shields.io/badge/Edge-Cloudflare_Workers-F38020?logo=cloudflare&logoColor=white)](cloudflare/)
+[![License](https://img.shields.io/github/license/xykalnotkel/XyDesk)](LICENSE)
 
 ---
 
@@ -27,7 +34,8 @@ latency end-to-end.
 | CI/CD GitHub Actions | Selesai |
 | Web client (Vite + React, Cloudflare) | Deploy otomatis — `app.xystudio.my.id` |
 | Signaling server (Cloudflare Workers + DO) | Live — `signal.xystudio.my.id` |
-| Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker |
+| Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker; JWT dan OTP punya test otomatis |
+| Gerbang signaling | Role terikat HMAC, relay client-host divalidasi, daftar host global ditutup |
 | TURN (kredensial Cloudflare ber-TTL) | Selesai |
 | Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Jalur encode→RTP→decode tersedia; capture nyata belum selesai |
 | Wiring `RTCVideoView` di client Flutter | Selesai — `lib/webrtc/` tersambung ke `SessionPage` |
@@ -49,7 +57,9 @@ flutter analyze           # pemeriksaan statis
 dart format lib           # rapikan source sebelum push
 ```
 
-Pengujian fungsi dilakukan manual pada APK/EXE hasil GitHub Actions.
+GitHub Actions menjalankan analisis Flutter, test keamanan Worker, test unit
+host Rust, pemeriksaan format/lint, serta build target. APK/EXE hasilnya tetap
+diuji manual untuk perilaku perangkat nyata.
 
 ---
 
@@ -141,14 +151,16 @@ Detail trigger, signing, aset, dan secret CI ada di
 
 ## Langkah Berikutnya
 
-1. Tambahkan `flutter_webrtc`, sambungkan `RTCVideoView` ke `SessionPage`.
-2. Bangun signaling server (Go + WebSocket) dan host app (Rust + Tauri).
-3. Terapkan SRP-6a untuk autentikasi tanpa mengirim kata sandi.
-4. Editor control mapping dengan penyimpanan profil JSON.
+1. Selesaikan capture DXGI nyata dan ukur latency end-to-end pada jaringan target.
+2. Ikat registrasi host ke pemilik akun agar daftar perangkat privat dapat
+   dikembalikan tanpa membocorkan ID lintas akun.
+3. Terapkan PAKE untuk pairing agar password tidak pernah dikirim lewat relay.
+4. Tambahkan test codec input Flutter dan test protokol signaling Go.
 
 > **Catatan jujur:** bagian tersulit bukan UI, melainkan **latency dan NAT
 > traversal**. Buat PoC `capture → encode → WebRTC → decode` lebih dulu dan
 > ukur angkanya. Kalau tidak tembus di bawah 40 ms pada jaringan target,
 > posisi "cocok untuk game" harus dievaluasi ulang sebelum UI dipoles.
 
-Dokumen desain, keamanan, dan izin ada di folder `remote-desktop-docs/`.
+Dokumen arsitektur, protokol, keamanan, CI, dan keputusan produk ada di folder
+[`docs/`](docs/).
