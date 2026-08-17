@@ -14,6 +14,8 @@ import { otpEmailHtml, otpEmailText } from './email_otp.js';
 const { OTP_TTL, OTP_RESEND_COOLDOWN, OTP_MAX_ATTEMPTS } = authConstants;
 const OTP_IP_WINDOW = 10 * 60;
 const OTP_IP_MAX_REQUESTS = 8;
+const GUEST_IP_WINDOW = 60 * 60;
+const GUEST_IP_MAX_REQUESTS = 20;
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
@@ -55,6 +57,9 @@ export class AuthStore {
     }
     if (path === '/auth/google' && request.method === 'POST') {
       return this.google(request);
+    }
+    if (path === '/auth/guest' && request.method === 'POST') {
+      return this.guest(request);
     }
     if (path === '/auth/me' && request.method === 'GET') {
       return this.me(request);
@@ -114,21 +119,31 @@ export class AuthStore {
   // Batas per alamat jaringan mencegah endpoint OTP dipakai sebagai alat bom
   // email. Alamat tidak disimpan mentah; key storage memakai hash ber-salt.
   async consumeOtpRateLimit(request, now) {
+    return this.consumeRateLimit(
+      request,
+      now,
+      'otp',
+      OTP_IP_WINDOW,
+      OTP_IP_MAX_REQUESTS,
+    );
+  }
+
+  async consumeRateLimit(request, now, purpose, windowSeconds, maxRequests) {
     const ip = request.headers.get('CF-Connecting-IP');
     // Header ini selalu diisi Cloudflare pada produksi. Dev lokal tidak dipukul
     // oleh bucket global palsu bernama "unknown".
     if (!ip) return { ok: true, retryIn: 0 };
 
-    const keyHash = await hashOtp(this.secret(), 'rate-limit', ip);
-    const key = `rate:otp:${keyHash}`;
+    const keyHash = await hashOtp(this.secret(), `rate-${purpose}`, ip);
+    const key = `rate:${purpose}:${keyHash}`;
     let bucket = await this.ctx.storage.get(key);
-    if (!bucket || now - bucket.started_at >= OTP_IP_WINDOW) {
+    if (!bucket || now - bucket.started_at >= windowSeconds) {
       bucket = { started_at: now, count: 0 };
     }
-    if (bucket.count >= OTP_IP_MAX_REQUESTS) {
+    if (bucket.count >= maxRequests) {
       return {
         ok: false,
-        retryIn: Math.max(1, OTP_IP_WINDOW - (now - bucket.started_at)),
+        retryIn: Math.max(1, windowSeconds - (now - bucket.started_at)),
       };
     }
 
@@ -268,6 +283,29 @@ export class AuthStore {
 
     const token = await signJwt({ sub: user.id, email: user.email }, this.secret());
     return json({ token, user: this.publicUser(user) }, 200);
+  }
+
+  async guest(request) {
+    // Sesi tamu hanya memberi hak sebagai client signaling selama dua jam.
+    // Tidak disimpan, tidak punya email, dan tidak dapat mengklaim host.
+    const now = Math.floor(Date.now() / 1000);
+    const rateLimit = await this.consumeRateLimit(
+      request,
+      now,
+      'guest',
+      GUEST_IP_WINDOW,
+      GUEST_IP_MAX_REQUESTS,
+    );
+    if (!rateLimit.ok) {
+      return json({ error: 'rate-limited', retry_in: rateLimit.retryIn }, 429);
+    }
+    const id = crypto.randomUUID();
+    const token = await signJwt(
+      { sub: `guest:${id}`, guest: true },
+      this.secret(),
+      2 * 60 * 60,
+    );
+    return json({ token, guest: true }, 200);
   }
 
   async me(request) {

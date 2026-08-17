@@ -63,6 +63,34 @@ test('nama profil baru hanya disimpan setelah OTP benar', async () => {
   assert.equal([...storage.values.values()].some((row) => row?.name === 'Kall XySpace'), true);
 });
 
+test('sesi tamu berumur pendek dan tidak menyimpan identitas', async () => {
+  const storage = new MemoryStorage();
+  const store = new AuthStore({ storage }, { AUTH_SECRET: 'guest-test-secret' });
+  const response = await store.guest(
+    new Request('https://signal.example/auth/guest', { method: 'POST' }),
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.guest, true);
+  assert.equal(typeof body.token, 'string');
+  assert.equal(storage.values.size, 0);
+});
+
+test('penerbitan sesi tamu dibatasi per alamat jaringan', async () => {
+  const storage = new MemoryStorage();
+  const store = new AuthStore({ storage }, { AUTH_SECRET: 'guest-rate-secret' });
+  const request = new Request('https://signal.example/auth/guest', {
+    method: 'POST',
+    headers: { 'CF-Connecting-IP': '192.0.2.44' },
+  });
+
+  for (let index = 0; index < 20; index++) {
+    assert.equal((await store.guest(request)).status, 200);
+  }
+  assert.equal((await store.guest(request)).status, 429);
+});
+
 test('bucket rate limit OTP dibuka kembali setelah jendela selesai', async () => {
   const storage = new MemoryStorage();
   const store = new AuthStore({ storage }, { AUTH_SECRET: 'rate-limit-test-secret' });

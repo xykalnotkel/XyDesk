@@ -49,11 +49,15 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return data as T;
 }
 
-export function requestOtp(email: string) {
+export function requestOtp(email: string, name?: string) {
   return post<{ expires_in: number; resend_in: number }>(
     '/auth/request-otp',
-    { email },
+    { email, ...(name ? { name } : {}) },
   );
+}
+
+export function createGuestSession() {
+  return post<{ token: string; guest: true }>('/auth/guest', {});
 }
 
 export function verifyOtp(email: string, otp: string) {
