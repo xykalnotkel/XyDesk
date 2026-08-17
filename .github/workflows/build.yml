@@ -44,8 +44,8 @@ jobs:
           path: pubspec.lock
           retention-days: 3
 
-      - name: Cek & rapikan format
-        run: dart format lib
+      - name: Cek format (gagal bila ada file belum rapi)
+        run: dart format --output=none --set-exit-if-changed lib
 
       - name: Analisis statis
         run: flutter analyze --fatal-infos

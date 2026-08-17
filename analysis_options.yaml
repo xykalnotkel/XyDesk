@@ -7,9 +7,5 @@ linter:
     avoid_print: true
 
 analyzer:
-  exclude:
-    # client/ = drop-in WebRTC (belum di-wire ke app; dependensinya belum di
-    # pubspec). Dikecualikan dari analisis sampai Fase 0 (lihat ROADMAP.md).
-    - client/**
   errors:
     invalid_annotation_target: ignore
