@@ -76,12 +76,13 @@ event klik/tekan keyboard tidak boleh terjadi.
 - Transport input: data channel vs UDP khusus (seperti Parsec). → data channel
   dulu untuk PoC; optimasi belakangan bila jitter input terukur tinggi.
 
-## Struktur repo yang diusulkan (tambahan ke repo XyDesk)
+## Struktur repo
 
 ```
 XyDesk/
-├── signaling/      # Go (REPO INI SUDAH BERISI — copy ke repo GitHub-mu)
-├── host/           # Rust + Tauri (scaffolding ada di sini)
-├── lib/            # Flutter client (yang sudah ada) + client/webrtc drop-in
+├── cloudflare/     # signaling + auth produksi (Worker + Durable Object)
+├── signaling/      # Go — opsi self-host LAN (cadangan; produksi = cloudflare/)
+├── host/           # Rust (WebRTC host: capture, encode, input)
+├── lib/            # Flutter client; lib/webrtc/ = transport sesi remote
 └── docs/           # PROTOCOL.md, ARCHITECTURE.md, FREE-STACK.md
 ```

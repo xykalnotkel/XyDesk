@@ -9,9 +9,12 @@ Gaya visual **Quiet Surface** — clean, modern, tanpa satu pun garis pemisah.
 
 ## Status
 
-Ini adalah **kerangka UI yang bisa dijalankan** — seluruh antarmuka sudah hidup
-dan bisa dipakai, tetapi lapisan WebRTC belum tersambung. Layar sesi memakai
-placeholder sebagai ganti `RTCVideoView`.
+Lapisan WebRTC client kini tersambung ke layar sesi: setelah login dan pairing
+diterima host, `RTCVideoView` menampilkan video host dan input (trackpad +
+keyboard virtual) terkirim lewat data channel biner. Tanpa login (mode tamu)
+layar sesi berjalan sebagai preview dengan status transport yang jujur.
+Yang belum terbukti: capture layar nyata di host (masih pola uji) dan angka
+latency end-to-end.
 
 | Bagian | Status |
 |---|---|
@@ -27,7 +30,7 @@ placeholder sebagai ganti `RTCVideoView`.
 | Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker |
 | TURN (kredensial Cloudflare ber-TTL) | Selesai |
 | Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Jalur encode→RTP→decode tersedia; capture nyata belum selesai |
-| Wiring `RTCVideoView` di client Flutter | Belum — drop-in ada di `client/`, belum disambung |
+| Wiring `RTCVideoView` di client Flutter | Selesai — `lib/webrtc/` tersambung ke `SessionPage` |
 | Benchmark latency end-to-end di jaringan nyata | Belum — prioritas berikutnya |
 
 ---

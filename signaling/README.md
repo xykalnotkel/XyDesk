@@ -1,5 +1,11 @@
 # XyDesk Signaling Server (Go)
 
+> STATUS: CADANGAN (self-host LAN). Produksi memakai `cloudflare/`
+> (Worker + Durable Object) di `signal.xystudio.my.id`. Protokolnya identik
+> (`protocol.go` = kontrak); server ini dipertahankan untuk skenario
+> offline/LAN tanpa internet. Jangan mengembangkan fitur baru di sini
+> tanpa menyamakan dengan `cloudflare/src/hub.js`.
+
 Plane kontrol WebRTC untuk XyDesk: mempertemukan host & client lalu merelay
 SDP/ICE. **Tidak pernah menyentuh media** — video/audio end-to-end lewat WebRTC.
 

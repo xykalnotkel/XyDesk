@@ -2,7 +2,7 @@ name: Deploy Signaling (Cloudflare Workers)
 
 # Build & deploy backend signaling ke Cloudflare — tanpa VM/VPS, gratis.
 # Trigger: push ke cloudflare/** atau manual. Secret yang dibutuhkan:
-#   CLOUDFLARE_API_TOKEN  → isi dari file "CloudflareApiToken (1).txt"
+#   CLOUDFLARE_API_TOKEN  → API token Cloudflare (scope Workers Scripts:Edit)
 #   CLOUDFLARE_ACCOUNT_ID → ID akun Cloudflare (dashboard → Workers)
 #   XYDESK_SECRET         → openssl rand -hex 32
 #   ADMIN_SECRET          → kata sandi untuk endpoint /issue
