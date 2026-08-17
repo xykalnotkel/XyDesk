@@ -118,7 +118,7 @@ class _SplashScene extends StatelessWidget {
     // Ukuran lockup akhir: [logo][jeda][wordmark] berpusat di tengah layar.
     const wordWidth = 132.0;
     const lockupGap = 18.0;
-    final lockupShift = (wordWidth + lockupGap) / 2;
+    const lockupShift = (wordWidth + lockupGap) / 2;
     final nudgeRight = 30.0 * rightT;
     final logoDx = nudgeRight - (nudgeRight + lockupShift) * leftT;
     final wordDx = 56 * (1 - wordT);
