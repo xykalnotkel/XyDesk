@@ -18,6 +18,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.security.MessageDigest
 import java.util.concurrent.Executors
+import java.util.zip.ZipFile
 
 class MainActivity : FlutterActivity() {
     companion object {
@@ -49,6 +50,7 @@ class MainActivity : FlutterActivity() {
 
     private fun handleUpdateCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
+            "getPrimaryAbi" -> result.success(Build.SUPPORTED_ABIS.firstOrNull().orEmpty())
             "getStatus" -> runUpdateTask(result) { resolveStatus() }
             "startDownload" -> runUpdateTask(result) { startDownload(call) }
             "installDownloadedUpdate" -> prepareInstallation(result)
@@ -360,7 +362,14 @@ class MainActivity : FlutterActivity() {
         build: Long,
     ) {
         val uri = Uri.parse(url)
-        val expectedPath = "${REPOSITORY_PATH}v$version/XyDesk.apk"
+        val abi = Build.SUPPORTED_ABIS.firstOrNull().orEmpty()
+        if (abi != "arm64-v8a" && abi != "armeabi-v7a") {
+            throw UpdateFailure(
+                "UNSUPPORTED_ABI",
+                "Arsitektur Android tidak didukung paket update resmi.",
+            )
+        }
+        val expectedPath = "${REPOSITORY_PATH}v$version/XyDesk-Android-$abi.apk"
         val validUrl = uri.scheme == "https" &&
             uri.host == "github.com" &&
             uri.path == expectedPath &&
@@ -398,6 +407,7 @@ class MainActivity : FlutterActivity() {
                 "Checksum APK tidak cocok. File dibuang demi keamanan.",
             )
         }
+        verifyApkAbi(file)
 
         val archive = archivePackageInfo(file)
             ?: throw UpdateFailure("INVALID_APK", "Android tidak mengenali file sebagai APK.")
@@ -421,6 +431,25 @@ class MainActivity : FlutterActivity() {
             throw UpdateFailure(
                 "SIGNATURE_MISMATCH",
                 "Sertifikat signing APK tidak cocok dengan instalasi XyDesk.",
+            )
+        }
+    }
+
+    private fun verifyApkAbi(file: File) {
+        val expectedAbi = Build.SUPPORTED_ABIS.firstOrNull().orEmpty()
+        val packagedAbis = ZipFile(file).use { archive ->
+            archive.entries().asSequence()
+                .mapNotNull { entry ->
+                    Regex("^lib/([^/]+)/[^/]+\\.so$").matchEntire(entry.name)
+                        ?.groupValues
+                        ?.get(1)
+                }
+                .toSet()
+        }
+        if (packagedAbis != setOf(expectedAbi)) {
+            throw UpdateFailure(
+                "ABI_MISMATCH",
+                "Arsitektur native APK tidak cocok dengan perangkat ini.",
             )
         }
     }

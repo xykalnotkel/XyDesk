@@ -52,10 +52,18 @@ jobs:
         run: cargo test --all-targets
 
   build:
-    name: Build Host EXE (Windows)
+    name: Build Host Windows ${{ matrix.arch }}
     needs: test
-    runs-on: windows-latest
-    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
@@ -70,8 +78,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             host/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('host/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.arch }}-cargo-
 
       - name: Build release
         working-directory: host
@@ -80,7 +88,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xydesk-host-windows
+          name: xydesk-host-windows-${{ matrix.arch }}
           path: host/target/release/xydesk-host.exe
           if-no-files-found: error
           retention-days: 30

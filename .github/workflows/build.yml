@@ -66,6 +66,11 @@ jobs:
       - name: Analisis statis tanpa toleransi diagnostic
         run: flutter analyze --fatal-infos --fatal-warnings
 
+      - name: Audit ilustrasi transparan untuk semua tema
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 tool/audit_assets.py
+
       # Aturan desain ditegakkan mesin, bukan sekadar ditulis di dokumen.
       - name: Verifikasi aturan seamless
         run: |
@@ -79,9 +84,9 @@ jobs:
           fi
           echo "OK - tidak ada garis pemisah terlarang."
 
-  # ── 2. APK universal (satu berkas, jalan di semua HP Android) ──
+  # ── 2. APK per ABI: unduhan kecil, tanpa universal gemuk ──
   android:
-    name: APK Universal
+    name: APK Android per ABI
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -110,7 +115,6 @@ jobs:
 
       - run: flutter pub get
 
-      # Siapkan keystore rilis (dari GitHub Secrets) + key.properties.
       - name: Siapkan signing APK
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -130,105 +134,85 @@ jobs:
           storeFile=xydesk-release.keystore
           EOF
 
-      # ARM Universal = satu APK berisi arm64-v8a & armeabi-v7a (tanpa x86_64).
-      #
-      # PENTING: --target-platform saja TIDAK cukup. Flag itu hanya mengontrol
-      # libflutter.so dan libapp.so; library native milik plugin tetap diambil
-      # utuh dari AAR-nya. Penyaring final ada di packaging.jniLibs.excludes;
-      # ndk.abiFilters saja terbukti masih dilangkahi integrasi plugin Flutter.
-      # Flag ini dipertahankan supaya Flutter tidak membangun artefak yang
-      # nantinya dibuang Gradle.
-      #
-      # GOOGLE_CLIENT_ID repo-var boleh berisi daftar koma (android,web) untuk
-      # Worker; aplikasi hanya memakai elemen pertama (client Android).
-      - name: Build APK ARM Universal (arm64 & armeabi-v7a)
+      # Dua APK saja: ARM64 untuk perangkat modern dan ARMv7 untuk Android
+      # 32-bit. Tidak ada universal dan tidak ada x86/x86_64.
+      - name: Build APK terpisah ARM64 dan ARMv7
         run: >-
-          flutter build apk --release
+          flutter build apk --release --split-per-abi
           --target-platform=android-arm,android-arm64
           --dart-define=GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID%%,*}"
 
-      - name: Ganti nama & ambil ukuran
-        run: |
-          mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-release.apk dist/XyDesk.apk
-          ls -lh dist/
-          echo "### APK Universal" >> $GITHUB_STEP_SUMMARY
-          echo "Ukuran: $(du -h dist/XyDesk.apk | cut -f1)" >> $GITHUB_STEP_SUMMARY
-
-      # Gerbang regresi ukuran. Bug x86_64 lolos ke rilis v1.0.0 sampai v1.2.0
-      # tanpa ada yang sadar karena tidak ada satu pun pemeriksaan otomatis.
-      # Pemeriksaan dilakukan terhadap byte/entry final APK, bukan asumsi dari
-      # konfigurasi Gradle: integritas zip, ABI wajib, ABI terlarang, library
-      # runtime inti, dan ambang ukuran byte-presisi.
-      - name: Verifikasi integritas, ABI, runtime, dan ukuran APK
+      - name: Namai paket berdasarkan ABI
         run: |
           set -euo pipefail
-          unzip -tq dist/XyDesk.apk >/dev/null
-          rm -rf /tmp/apkcheck
-          unzip -q dist/XyDesk.apk -d /tmp/apkcheck
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+            dist/XyDesk-Android-arm64-v8a.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
+            dist/XyDesk-Android-armeabi-v7a.apk
+          ls -lh dist/
 
-          echo "ABI yang terbungkus:"
-          ls /tmp/apkcheck/lib/
-
+      - name: Verifikasi setiap APK hanya memuat ABI yang benar
+        run: |
+          set -euo pipefail
           gagal=0
-          for abi in x86 x86_64 armeabi mips; do
-            if [ -d "/tmp/apkcheck/lib/$abi" ]; then
-              ukuran="$(du -sh "/tmp/apkcheck/lib/$abi" | cut -f1)"
-              echo "::error::ABI terlarang '$abi' ikut terbungkus ($ukuran). \
-          Periksa packaging.jniLibs.excludes di android/app/build.gradle.kts."
-              gagal=1
-            fi
-          done
-
           for abi in arm64-v8a armeabi-v7a; do
-            if [ ! -d "/tmp/apkcheck/lib/$abi" ]; then
-              echo "::error::ABI wajib '$abi' hilang dari APK."
+            apk="dist/XyDesk-Android-${abi}.apk"
+            root="/tmp/apk-${abi}"
+            unzip -tq "$apk" >/dev/null
+            rm -rf "$root"
+            unzip -q "$apk" -d "$root"
+
+            actual="$(find "$root/lib" -mindepth 1 -maxdepth 1 -type d \
+              -printf '%f\n' | sort | paste -sd, -)"
+            if [ "$actual" != "$abi" ]; then
+              echo "::error::$apk memuat ABI '$actual', seharusnya hanya '$abi'."
               gagal=1
-              continue
             fi
             for library in libflutter.so libapp.so libjingle_peerconnection_so.so; do
-              if [ ! -s "/tmp/apkcheck/lib/$abi/$library" ]; then
-                echo "::error::$abi/$library hilang atau kosong."
+              if [ ! -s "$root/lib/$abi/$library" ]; then
+                echo "::error::$apk kehilangan $abi/$library."
                 gagal=1
               fi
             done
+
+            bytes="$(stat -c%s "$apk")"
+            limit_bytes=$(( 40 * 1048576 ))
+            size_mib="$(awk -v b="$bytes" 'BEGIN { printf "%.2f", b / 1048576 }')"
+            if [ "$bytes" -gt "$limit_bytes" ]; then
+              echo "::error::$apk berukuran ${size_mib} MiB, melampaui 40 MiB."
+              gagal=1
+            fi
+            echo "$abi: ${size_mib} MiB"
+            {
+              echo "| Android $abi | ${size_mib} MiB | ABI tunggal, runtime lengkap |"
+            } >> "$GITHUB_STEP_SUMMARY"
           done
           [ "$gagal" -eq 0 ] || exit 1
-
-          bytes="$(stat -c%s dist/XyDesk.apk)"
-          batas_mb=62
-          batas_bytes=$(( batas_mb * 1048576 ))
-          ukuran_mib="$(awk -v b="$bytes" 'BEGIN { printf "%.2f", b / 1048576 }')"
-          # Perbandingan memakai byte. Pembulatan integer sebelumnya membuat
-          # APK 62.99 MiB salah terbaca 62 MiB dan lolos.
-          echo "Ukuran APK: ${ukuran_mib} MiB (batas ${batas_mb} MiB)"
-          if [ "$bytes" -gt "$batas_bytes" ]; then
-            echo "::error::APK ${ukuran_mib} MiB melampaui batas ${batas_mb} MiB."
-            exit 1
-          fi
-          {
-            echo ""
-            echo "| Pemeriksaan | Hasil |"
-            echo "|---|---|"
-            echo "| Integritas ZIP/APK | Lulus |"
-            echo "| ABI terbungkus | $(ls /tmp/apkcheck/lib/ | tr '\n' ' ') |"
-            echo "| Runtime inti ARM | Lengkap |"
-            echo "| Ukuran APK | ${ukuran_mib} MiB / ${batas_mb} MiB |"
-          } >> $GITHUB_STEP_SUMMARY
 
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Android-APK
-          path: dist/XyDesk.apk
+          path: dist/*.apk
           retention-days: 30
           if-no-files-found: error
 
-  # ── 3. Windows Native Desktop (EXE) ──
+  # ── 3. Windows Native Desktop: x64 dan Arm64 resmi Flutter ──
   windows:
-    name: Windows Desktop (EXE)
+    name: Windows ${{ matrix.arch }}
     needs: check
-    runs-on: windows-latest
-    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+            output: x64
+          - arch: arm64
+            runner: windows-11-arm
+            output: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -239,13 +223,21 @@ jobs:
       - run: flutter pub get
       - name: Configure Windows Platform
         run: flutter create . --platforms=windows
-      - name: Build Windows EXE
+      - name: Build Windows ${{ matrix.arch }}
         run: flutter build windows --release --dart-define=GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID%%,*}"
+      - name: Pastikan output arsitektur tersedia
+        shell: pwsh
+        run: |
+          $path = "build/windows/${{ matrix.output }}/runner/Release"
+          if (-not (Test-Path "$path/xydesk.exe")) {
+            throw "Output Windows ${{ matrix.arch }} tidak ditemukan di $path"
+          }
       - uses: actions/upload-artifact@v4
         with:
-          name: XyDesk-Windows-EXE
-          path: build/windows/x64/runner/Release/*
+          name: XyDesk-Windows-${{ matrix.arch }}
+          path: build/windows/${{ matrix.output }}/runner/Release/*
           retention-days: 30
+          if-no-files-found: error
 
   # ── 5. Web Application Bundle (Vite + React — bukan Flutter Web) ──
   # Flutter Web ditinggalkan untuk browser: bundle CanvasKit terlalu berat

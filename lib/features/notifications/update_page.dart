@@ -712,7 +712,7 @@ class _SafetyNotice extends StatelessWidget {
             child: Text(
               'APK diunduh oleh Android di latar belakang. Sebelum tombol '
               '“Pasang update” aktif, XyDesk memeriksa checksum SHA-256, '
-              'package ID, nomor build, dan sertifikat signing. Pemasangan '
+              'arsitektur CPU, package ID, nomor build, dan sertifikat signing. Pemasangan '
               'tetap memerlukan konfirmasi Anda di installer Android.',
               style: TextStyle(
                 color: context.c.textMid,

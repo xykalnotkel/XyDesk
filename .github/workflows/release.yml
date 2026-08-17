@@ -115,18 +115,24 @@ jobs:
           BUILD_RUN_ID: ${{ needs.prepare.outputs.build_run_id }}
         run: |
           set -euo pipefail
-          mkdir -p incoming/android incoming/windows incoming/web dist
+          mkdir -p incoming/android incoming/windows-x64 incoming/windows-arm64 incoming/web dist
           gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name XyDesk-Android-APK --dir incoming/android
           gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
-            --name XyDesk-Windows-EXE --dir incoming/windows
+            --name XyDesk-Windows-x64 --dir incoming/windows-x64
+          gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name XyDesk-Windows-arm64 --dir incoming/windows-arm64
           gh run download "$BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name XyDesk-Web --dir incoming/web
-          cp incoming/android/XyDesk.apk dist/XyDesk.apk
-          (cd incoming/windows && zip -q -r ../../dist/XyDesk-Windows.zip .)
+          cp incoming/android/XyDesk-Android-arm64-v8a.apk dist/
+          cp incoming/android/XyDesk-Android-armeabi-v7a.apk dist/
+          (cd incoming/windows-x64 && zip -q -r ../../dist/XyDesk-Windows-x64.zip .)
+          (cd incoming/windows-arm64 && zip -q -r ../../dist/XyDesk-Windows-arm64.zip .)
           (cd incoming/web && zip -q -r ../../dist/XyDesk-Web.zip .)
-          test -s dist/XyDesk.apk
-          test -s dist/XyDesk-Windows.zip
+          test -s dist/XyDesk-Android-arm64-v8a.apk
+          test -s dist/XyDesk-Android-armeabi-v7a.apk
+          test -s dist/XyDesk-Windows-x64.zip
+          test -s dist/XyDesk-Windows-arm64.zip
           test -s dist/XyDesk-Web.zip
 
       - uses: actions/upload-artifact@v4
@@ -137,11 +143,19 @@ jobs:
           retention-days: 3
 
   windows-host:
-    name: Host Rust (Windows)
+    name: Host Rust Windows ${{ matrix.arch }}
     needs: prepare
     if: needs.prepare.outputs.should_release == 'true'
-    runs-on: windows-latest
-    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -156,14 +170,14 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             host/target
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('host/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-release-
+          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-release-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.arch }}-cargo-release-
       - name: Build host release
         working-directory: host
         run: cargo build --release
       - uses: actions/upload-artifact@v4
         with:
-          name: release-host-asset
+          name: release-host-${{ matrix.arch }}
           path: host/target/release/xydesk-host.exe
           if-no-files-found: error
           retention-days: 3
@@ -199,10 +213,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          cp artifacts/release-client-assets/XyDesk.apk dist/XyDesk.apk
-          cp artifacts/release-client-assets/XyDesk-Windows.zip dist/XyDesk-Windows.zip
-          cp artifacts/release-client-assets/XyDesk-Web.zip dist/XyDesk-Web.zip
-          cp artifacts/release-host-asset/xydesk-host.exe dist/XyDesk-Host.exe
+          cp artifacts/release-client-assets/XyDesk-Android-arm64-v8a.apk dist/
+          cp artifacts/release-client-assets/XyDesk-Android-armeabi-v7a.apk dist/
+          cp artifacts/release-client-assets/XyDesk-Windows-x64.zip dist/
+          cp artifacts/release-client-assets/XyDesk-Windows-arm64.zip dist/
+          cp artifacts/release-client-assets/XyDesk-Web.zip dist/
+          cp artifacts/release-host-x64/xydesk-host.exe dist/XyDesk-Host-x64.exe
+          cp artifacts/release-host-arm64/xydesk-host.exe dist/XyDesk-Host-arm64.exe
           # Banner dirender ulang setiap rilis: versi, build, dan tanggal
           # ditulis otomatis di atas art dasar HD (tool/art/banner.py).
           pip install --quiet Pillow
@@ -210,14 +227,19 @@ jobs:
             --version "$VERSION" \
             --build "$BUILD_NUMBER" \
             --out dist/xydesk_update_banner_1024x512.jpg
-          test -s dist/XyDesk.apk
+          test -s dist/XyDesk-Android-arm64-v8a.apk
+          test -s dist/XyDesk-Android-armeabi-v7a.apk
           cd dist
-          sha256sum XyDesk.apk XyDesk-Host.exe XyDesk-Windows.zip \
+          sha256sum XyDesk-Android-arm64-v8a.apk \
+            XyDesk-Android-armeabi-v7a.apk XyDesk-Host-x64.exe \
+            XyDesk-Host-arm64.exe XyDesk-Windows-x64.zip XyDesk-Windows-arm64.zip \
             XyDesk-Web.zip xydesk_update_banner_1024x512.jpg \
             > SHA256SUMS.txt
-          apk_sha="$(sha256sum XyDesk.apk | cut -d' ' -f1)"
-          apk_bytes="$(stat -c%s XyDesk.apk)"
-          export apk_sha apk_bytes
+          arm64_sha="$(sha256sum XyDesk-Android-arm64-v8a.apk | cut -d' ' -f1)"
+          arm64_bytes="$(stat -c%s XyDesk-Android-arm64-v8a.apk)"
+          armv7_sha="$(sha256sum XyDesk-Android-armeabi-v7a.apk | cut -d' ' -f1)"
+          armv7_bytes="$(stat -c%s XyDesk-Android-armeabi-v7a.apk)"
+          export arm64_sha arm64_bytes armv7_sha armv7_bytes
           python3 - <<'PY'
           import json, os
           repository = os.environ['GITHUB_REPOSITORY']
@@ -226,7 +248,7 @@ jobs:
           build = int(os.environ['BUILD_NUMBER'])
           base = f"https://github.com/{repository}/releases/download/{tag}"
           manifest = {
-              "schema": 1,
+              "schema": 2,
               "version": version,
               "build": build,
               "tag": tag,
@@ -240,10 +262,17 @@ jobs:
                   "Pembaruan resmi terverifikasi dengan checksum SHA-256.",
                   "Detail lengkap tersedia di catatan GitHub Release resmi."
               ],
-              "apk": {
-                  "url": f"{base}/XyDesk.apk",
-                  "sha256": os.environ["apk_sha"],
-                  "bytes": int(os.environ["apk_bytes"]),
+              "apks": {
+                  "arm64-v8a": {
+                      "url": f"{base}/XyDesk-Android-arm64-v8a.apk",
+                      "sha256": os.environ["arm64_sha"],
+                      "bytes": int(os.environ["arm64_bytes"]),
+                  },
+                  "armeabi-v7a": {
+                      "url": f"{base}/XyDesk-Android-armeabi-v7a.apk",
+                      "sha256": os.environ["armv7_sha"],
+                      "bytes": int(os.environ["armv7_bytes"]),
+                  },
               },
               "release_url": f"https://github.com/{repository}/releases/tag/{tag}",
               "banner_url": f"{base}/xydesk_update_banner_1024x512.jpg",
@@ -271,9 +300,12 @@ jobs:
 
             | Platform | Berkas | Keterangan |
             |---|---|---|
-            | Android | `XyDesk.apk` | APK universal Android 8.0+ |
-            | Windows client | `XyDesk-Windows.zip` | Aplikasi client desktop |
-            | Windows host | `XyDesk-Host.exe` | Dipasang di PC yang dikendalikan |
+            | Android 64-bit | `XyDesk-Android-arm64-v8a.apk` | HP Android modern |
+            | Android 32-bit | `XyDesk-Android-armeabi-v7a.apk` | Perangkat ARMv7 lama |
+            | Windows x64 | `XyDesk-Windows-x64.zip` | PC Intel/AMD 64-bit |
+            | Windows Arm64 | `XyDesk-Windows-arm64.zip` | Windows on Arm |
+            | Windows host x64 | `XyDesk-Host-x64.exe` | Host Intel/AMD 64-bit |
+            | Windows host Arm64 | `XyDesk-Host-arm64.exe` | Host Windows on Arm |
             | Web | `XyDesk-Web.zip` | Bundle client browser |
 
             XyDesk memverifikasi APK menggunakan metadata `update.json`,

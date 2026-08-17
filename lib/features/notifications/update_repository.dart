@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -30,8 +31,11 @@ class OfficialUpdateManifest {
   final int apkBytes;
   final AppUpdateDetails details;
 
-  static OfficialUpdateManifest fromJson(Map<String, dynamic> json) {
-    if (json['schema'] != 1) {
+  static OfficialUpdateManifest fromJson(
+    Map<String, dynamic> json, {
+    required String androidAbi,
+  }) {
+    if (json['schema'] != 2) {
       throw const UpdateCheckException(
         'Format metadata update belum didukung.',
       );
@@ -52,13 +56,22 @@ class OfficialUpdateManifest {
       throw const UpdateCheckException('Tag dan versi update tidak cocok.');
     }
 
-    final apk = json['apk'];
+    if (androidAbi != 'arm64-v8a' && androidAbi != 'armeabi-v7a') {
+      throw const UpdateCheckException(
+        'Arsitektur Android perangkat ini tidak didukung rilis XyDesk.',
+      );
+    }
+    final apks = json['apks'];
+    final apk = apks is Map<String, dynamic> ? apks[androidAbi] : null;
     if (apk is! Map<String, dynamic>) {
-      throw const UpdateCheckException('Metadata APK resmi tidak tersedia.');
+      throw const UpdateCheckException(
+        'Paket update untuk arsitektur perangkat tidak tersedia.',
+      );
     }
 
     final apkUri = Uri.tryParse(_requiredText(apk, 'url', maxLength: 512));
-    final expectedPath = '/$_repository/releases/download/$tag/XyDesk.apk';
+    final expectedPath =
+        '/$_repository/releases/download/$tag/XyDesk-Android-$androidAbi.apk';
     if (apkUri == null ||
         apkUri.scheme != 'https' ||
         apkUri.host != _officialHost ||
@@ -130,8 +143,20 @@ class UpdateCheckResult {
 class OfficialUpdateRepository {
   const OfficialUpdateRepository();
 
+  static const _updateChannel = MethodChannel('com.xystudio.xydesk/update');
+
   Future<UpdateCheckResult> check() async {
     final packageInfo = await PackageInfo.fromPlatform();
+    final isAndroid =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    final androidAbi = isAndroid
+        ? await _updateChannel.invokeMethod<String>('getPrimaryAbi')
+        : 'arm64-v8a';
+    if (androidAbi == null || androidAbi.isEmpty) {
+      throw const UpdateCheckException(
+        'Arsitektur Android tidak dapat dideteksi dengan aman.',
+      );
+    }
     final installedBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
     final response = await http
         .get(
@@ -156,9 +181,10 @@ class OfficialUpdateRepository {
       throw const UpdateCheckException('Metadata update resmi tidak valid.');
     }
 
-    final manifest = OfficialUpdateManifest.fromJson(decoded);
-    final isAndroid =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    final manifest = OfficialUpdateManifest.fromJson(
+      decoded,
+      androidAbi: androidAbi,
+    );
     final updateAvailable = isAndroid
         ? manifest.buildNumber > installedBuild
         : _compareVersions(manifest.version, packageInfo.version) > 0;

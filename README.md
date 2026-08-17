@@ -130,9 +130,12 @@ Artefak build biasa tersedia melalui tab **Actions**.
 
 | Target | Artefak Release | Status |
 |---|---|---|
-| Android | `XyDesk.apk` | Universal untuk Android 8.0+ |
-| Windows client | `XyDesk-Windows.zip` | Build Flutter desktop |
-| Windows host | `XyDesk-Host.exe` | Engine host Rust |
+| Android 64-bit | `XyDesk-Android-arm64-v8a.apk` | HP Android modern |
+| Android 32-bit | `XyDesk-Android-armeabi-v7a.apk` | Perangkat ARMv7 lama |
+| Windows x64 | `XyDesk-Windows-x64.zip` | PC Intel/AMD 64-bit |
+| Windows Arm64 | `XyDesk-Windows-arm64.zip` | Windows on Arm |
+| Windows host x64 | `XyDesk-Host-x64.exe` | Host Intel/AMD 64-bit |
+| Windows host Arm64 | `XyDesk-Host-arm64.exe` | Host Windows on Arm |
 | Web | `XyDesk-Web.zip` | Bundle web client (Vite + React) |
 
 Bundle Web dari Build `main` yang sukses juga dideploy otomatis ke Cloudflare

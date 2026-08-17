@@ -12,7 +12,7 @@ XyDesk uses `onesignal_flutter` 5.6.7 for Android/iOS push delivery. The SDK is 
 ## Sending an update
 
 Push update produksi dibuat otomatis oleh `.github/workflows/release.yml` setelah
-Build sukses dan seluruh aset GitHub Release, termasuk `XyDesk.apk` dan
+Build sukses dan seluruh aset GitHub Release, termasuk APK ARM64/ARMv7 dan
 `update.json`, selesai dipublikasikan. Workflow memakai GitHub Actions Secret
 `ONESIGNAL_REST_API_KEY`; nilainya tidak boleh disimpan di source atau log.
 
@@ -42,8 +42,8 @@ diabaikan. Halaman internal mengambil manifest
 `releases/latest/download/update.json`, memvalidasi bahwa URL APK tepat mengarah
 ke aset tag resmi, lalu membandingkan build terpasang dengan build Release.
 Download Android hanya dimulai melalui `DownloadManager` native. Sebelum tombol
-“Pasang update” aktif, aplikasi memeriksa ukuran, SHA-256, package ID, nomor
-build, dan sertifikat signing.
+“Pasang update” aktif, aplikasi memeriksa ukuran, SHA-256, ABI perangkat,
+package ID, nomor build, dan sertifikat signing.
 
 Klik notifikasi ditahan sampai root Flutter Navigator tersedia, lalu membuka
 halaman update internal. Listener tidak langsung mengunduh APK atau membuka
