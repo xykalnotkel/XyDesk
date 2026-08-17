@@ -193,7 +193,7 @@ class _SessionControlPanelState extends ConsumerState<SessionControlPanel> {
                 value: _section,
                 onChanged: (value) => setState(() => _section = value),
               ),
-              Divider(height: 1, color: c.textLow.withValues(alpha: 0.2)),
+              const SizedBox(height: 1),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -386,13 +386,13 @@ class _StreamPanel extends ConsumerWidget {
                 title: 'Resolusi',
                 value: resolution,
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _InfoRow(
                 icon: LucideIcons.cpu,
                 title: 'Codec',
                 value: codec,
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _SliderRow(
                 label: 'Bitrate maksimal',
                 valueLabel: '${settings.bitrateMbps} Mbps',
@@ -491,7 +491,7 @@ class _AudioPanel extends StatelessWidget {
                 onChanged: (value) =>
                     onChanged(state.copyWith(pcAudioRequested: value)),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _DeviceRow(
                 icon: LucideIcons.monitor,
                 title: 'Sumber host',
@@ -504,7 +504,7 @@ class _AudioPanel extends StatelessWidget {
                       'WASAPI loopback dan daftar render endpoint host',
                 ),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _DeviceRow(
                 icon: LucideIcons.volume2,
                 title: 'Output perangkat',
@@ -516,7 +516,7 @@ class _AudioPanel extends StatelessWidget {
                   requirement: 'Track audio remote yang aktif',
                 ),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _SliderRow(
                 label: 'Volume remote',
                 valueLabel: '${(state.remoteVolume * 100).round()}%',
@@ -524,7 +524,7 @@ class _AudioPanel extends StatelessWidget {
                 onChanged: (value) =>
                     onChanged(state.copyWith(remoteVolume: value)),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _ToggleRow(
                 icon: LucideIcons.activity,
                 title: 'Audio stereo',
@@ -584,7 +584,7 @@ class _AudioPanel extends StatelessWidget {
                 onChanged: (value) =>
                     onChanged(state.copyWith(microphoneRequested: value)),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _DeviceRow(
                 icon: LucideIcons.smartphone,
                 title: 'Input',
@@ -596,7 +596,7 @@ class _AudioPanel extends StatelessWidget {
                   requirement: 'Izin mikrofon dan enumerasi input perangkat',
                 ),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _DeviceRow(
                 icon: LucideIcons.monitor,
                 title: 'Output Windows',
@@ -608,9 +608,9 @@ class _AudioPanel extends StatelessWidget {
                   requirement: 'Komponen virtual microphone terpasang di host',
                 ),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               const _InactiveLevelMeter(),
-              const _CardDivider(),
+              const _CardGap(),
               _SliderRow(
                 label: 'Gain input',
                 valueLabel: '${((state.microphoneGain - 0.5) * 24).round()} dB',
@@ -618,7 +618,7 @@ class _AudioPanel extends StatelessWidget {
                 onChanged: (value) =>
                     onChanged(state.copyWith(microphoneGain: value)),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _SliderRow(
                 label: 'Level kirim',
                 valueLabel: '${(state.microphoneSendLevel * 100).round()}%',
@@ -645,7 +645,7 @@ class _AudioPanel extends StatelessWidget {
                 onChanged: (value) =>
                     onChanged(state.copyWith(noiseSuppression: value)),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _ToggleRow(
                 icon: LucideIcons.volume2,
                 title: 'Peredam gema',
@@ -654,7 +654,7 @@ class _AudioPanel extends StatelessWidget {
                 onChanged: (value) =>
                     onChanged(state.copyWith(echoCancellation: value)),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _ToggleRow(
                 icon: LucideIcons.gauge,
                 title: 'Gain otomatis',
@@ -721,7 +721,7 @@ class _ControlsPanel extends StatelessWidget {
                   onChanged: (value) =>
                       onChanged(state.copyWith(showGamingControls: value)),
                 ),
-                const _CardDivider(),
+                const _CardGap(),
               ],
               _ToggleRow(
                 icon: LucideIcons.vibrate,
@@ -729,7 +729,7 @@ class _ControlsPanel extends StatelessWidget {
                 value: state.haptics,
                 onChanged: (value) => onChanged(state.copyWith(haptics: value)),
               ),
-              const _CardDivider(),
+              const _CardGap(),
               _SliderRow(
                 label: gaming ? 'Sensitivitas bidik' : 'Kecepatan pointer',
                 valueLabel:
@@ -739,7 +739,7 @@ class _ControlsPanel extends StatelessWidget {
                     onChanged(state.copyWith(pointerSensitivity: value)),
               ),
               if (!gaming) ...[
-                const _CardDivider(),
+                const _CardGap(),
                 _ToggleRow(
                   icon: LucideIcons.mouse,
                   title: 'Ketuk untuk klik',
@@ -747,7 +747,7 @@ class _ControlsPanel extends StatelessWidget {
                   onChanged: (value) =>
                       onChanged(state.copyWith(tapToClick: value)),
                 ),
-                const _CardDivider(),
+                const _CardGap(),
                 _ToggleRow(
                   icon: LucideIcons.activity,
                   title: 'Balik arah gulir',
@@ -755,7 +755,7 @@ class _ControlsPanel extends StatelessWidget {
                   onChanged: (value) =>
                       onChanged(state.copyWith(reverseScroll: value)),
                 ),
-                const _CardDivider(),
+                const _CardGap(),
                 _ToggleRow(
                   icon: LucideIcons.crosshair,
                   title: 'Pointer relatif',
@@ -803,19 +803,19 @@ class _SessionPanel extends StatelessWidget {
                 title: 'Perangkat',
                 value: deviceName,
               ),
-              const _CardDivider(),
+              const _CardGap(),
               const _InfoRow(
                 icon: LucideIcons.wifi,
                 title: 'Transport',
                 value: 'Demo • offline',
               ),
-              const _CardDivider(),
+              const _CardGap(),
               const _InfoRow(
                 icon: LucideIcons.video,
                 title: 'Video',
                 value: 'Tidak aktif',
               ),
-              const _CardDivider(),
+              const _CardGap(),
               const _InfoRow(
                 icon: LucideIcons.volume2,
                 title: 'Audio',
@@ -1042,12 +1042,12 @@ class _PanelCard extends StatelessWidget {
   }
 }
 
-class _CardDivider extends StatelessWidget {
-  const _CardDivider();
+class _CardGap extends StatelessWidget {
+  const _CardGap();
 
   @override
   Widget build(BuildContext context) {
-    return Divider(height: 1, color: context.c.textLow.withValues(alpha: 0.16));
+    return const SizedBox(height: 1);
   }
 }
 
