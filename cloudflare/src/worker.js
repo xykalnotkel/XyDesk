@@ -4,6 +4,7 @@
 //   GET  /ws?id=<deviceId>&role=host|client&token=<token>  -> WebSocket ke hub
 //   GET  /healthz                                          -> liveness
 //   GET  /issue?purpose=<id>  (header X-Admin)             -> terbitkan token
+//   GET  /signal-token?id=<deviceId> (Bearer JWT)          -> token signaling
 //   GET  /turn-ice            (header X-Admin)             -> kredensial TURN
 //   POST /auth/request-otp { email }                        -> kirim OTP
 //   POST /auth/verify-otp  { email, otp }                   -> { token } (JWT)
@@ -13,6 +14,7 @@
 // Auth signaling: token HMAC-SHA256 berumur 5 menit (format ts.purpose.sig).
 import { Hub } from './hub.js';
 import { AuthStore } from './authstore.js';
+import { verifyJwt } from './auth.js';
 
 // Wrangler mewajibkan kelas Durable Object diekspor dari entrypoint.
 export { Hub, AuthStore };
@@ -22,8 +24,11 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Flutter Web mengirim preflight sebelum POST JSON/Authorization.
-    if (request.method === 'OPTIONS' && path.startsWith('/auth/')) {
+    // Flutter Web mengirim preflight sebelum request ber-JSON/Authorization.
+    if (
+      request.method === 'OPTIONS' &&
+      (path.startsWith('/auth/') || path === '/signal-token')
+    ) {
       return corsResponse(new Response(null, { status: 204 }), request, env);
     }
 
@@ -33,6 +38,10 @@ export default {
 
     if (path === '/issue') {
       return handleIssue(request, url, env);
+    }
+
+    if (path === '/signal-token') {
+      return corsResponse(await handleSignalToken(request, url, env), request, env);
     }
 
     if (path === '/turn-ice') {
@@ -145,6 +154,37 @@ async function handleIssue(request, url, env) {
   const ts = String(Math.floor(Date.now() / 1000));
   const sig = await hmacHex(env.XYDESK_SECRET, `${purpose}\x00${ts}`);
   return new Response(`${ts}.${purpose}.${sig}`, { status: 200 });
+}
+
+// ── Endpoint token signaling untuk client ber-JWT ────────────────────────
+//
+// Client app TIDAK boleh memegang ADMIN_SECRET, tetapi butuh token signaling
+// untuk connect ke /ws. Solusi: setelah login (OTP/Google), app menukar JWT
+// sesinya dengan token signaling berumur pendek untuk deviceId miliknya.
+// Rantai kepercayaan: login -> JWT (AUTH_SECRET) -> token signaling
+// (XYDESK_SECRET, 5 menit) -> /ws.
+async function handleSignalToken(request, url, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const secret = env.AUTH_SECRET || env.XYDESK_SECRET;
+  const payload = jwt ? await verifyJwt(jwt, secret) : null;
+  if (!payload) {
+    return new Response('unauthorized', { status: 401 });
+  }
+
+  const id = (url.searchParams.get('id') || '').trim();
+  // ID perangkat client: alfanumerik sederhana, mencegah karakter aneh masuk
+  // ke registri hub.
+  if (!/^[A-Za-z0-9_-]{3,64}$/.test(id)) {
+    return new Response('bad id', { status: 400 });
+  }
+
+  const ts = String(Math.floor(Date.now() / 1000));
+  const sig = await hmacHex(env.XYDESK_SECRET, `${id}\x00${ts}`);
+  return new Response(`${ts}.${id}.${sig}`, {
+    status: 200,
+    headers: { 'content-type': 'text/plain' },
+  });
 }
 
 // ── Endpoint kredensial TURN ─────────────────────────────────────────────
