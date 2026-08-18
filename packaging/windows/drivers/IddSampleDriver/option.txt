@@ -1,0 +1,28 @@
+; ============================================================================
+; Opsi driver display virtual ge9/IddSampleDriver
+; Format: <key> = <value>
+; Letakkan file ini di folder yang sama dengan IddSampleDriver.inf.
+; ============================================================================
+
+[meta]
+version = 1
+
+[monitor.0]
+name = "XyDesk Virtual Display"
+resolution = "1920x1080"
+refresh = 60
+primary = false
+
+; Kalau lo butuh lebih dari satu monitor virtual, uncomment ini:
+;[monitor.1]
+;name = "XyDesk Virtual Display 2"
+;resolution = "1920x1080"
+;refresh = 60
+;primary = false
+
+; Untuk monitor spesifik 1440p untuk kebutuhan game:
+;[monitor.0]
+;name = "XyDesk Virtual Display"
+;resolution = "2560x1440"
+;refresh = 144
+;primary = false
