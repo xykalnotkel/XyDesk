@@ -12,6 +12,9 @@ name: Deploy Signaling (Cloudflare Workers)
 
 on:
   push:
+    # Tanpa filter branch, push cloudflare/** dari branch mana pun akan
+    # men-deploy Worker PRODUKSI. Batasi ke main saja.
+    branches: [main]
     paths:
       - 'cloudflare/**'
   workflow_dispatch:

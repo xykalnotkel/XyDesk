@@ -286,9 +286,50 @@ jobs:
           path: web/dist/*
           retention-days: 30
 
+  # ── 6. Lint installer Inno Setup ──
+  # Skrip .iss tidak pernah dikompilasi sampai tahap Release, sehingga error
+  # sintaks baru ketahuan saat rilis sedang berjalan. Job ini mengompilasi
+  # dengan /O- (tanpa menulis output) supaya kesalahan tertangkap lebih awal.
+  installer-lint:
+    name: Lint Installer Windows
+    needs: check
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pasang Inno Setup
+        run: choco install innosetup --no-progress -y
+      - name: Compile-check XyDesk.iss (x64 dan arm64)
+        shell: pwsh
+        run: |
+          $iscc = Get-ChildItem "C:\Program Files (x86)" -Filter ISCC.exe -Recurse -ErrorAction SilentlyContinue |
+                  Select-Object -First 1 -ExpandProperty FullName
+          if (-not $iscc) { throw "ISCC.exe tidak ditemukan" }
+          Write-Host "Memakai compiler: $iscc"
+
+          # Bundle tiruan: lint hanya memerlukan struktur, bukan biner asli.
+          $fake = Join-Path $env:RUNNER_TEMP "fake-bundle"
+          New-Item -ItemType Directory -Force -Path "$fake\Host" | Out-Null
+          Set-Content "$fake\xydesk.exe" "stub"
+          Set-Content "$fake\Host\XyDesk-Host.exe" "stub"
+
+          $failed = $false
+          foreach ($arch in @("x64", "arm64")) {
+            Write-Host "--- Lint arch=$arch ---"
+            & $iscc /O- "/DArch=$arch" "/DVersion=0.0.0" `
+              "/DSourceDir=$fake" "/DOutputDir=$env:RUNNER_TEMP" `
+              "packaging/windows/XyDesk.iss"
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::error::XyDesk.iss gagal compile untuk $arch"
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }
+          Write-Host "OK: installer lolos compile-check untuk kedua arsitektur."
+
   summary:
     name: Ringkasan
-    needs: [android, windows, web]
+    needs: [android, windows, web, installer-lint]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -302,6 +343,7 @@ jobs:
             echo "| Android APK (ARM Universal) | ${{ needs.android.result }} | \`XyDesk-Android-APK\` |"
             echo "| Windows Desktop (EXE)       | ${{ needs.windows.result }} | \`XyDesk-Windows-EXE\` |"
             echo "| Web Application             | ${{ needs.web.result }}     | \`XyDesk-Web\`         |"
+            echo "| Lint Installer Windows      | ${{ needs['installer-lint'].result }} | \`packaging/windows\` |"
             echo ""
             echo "Unduh seluruh artefak dari bagian **Artifacts** di bawah halaman ini."
           } >> $GITHUB_STEP_SUMMARY

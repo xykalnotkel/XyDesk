@@ -1,4 +1,4 @@
-name: Deploy Flutter Web (Cloudflare)
+name: Deploy Web App (Cloudflare)
 
 on:
   workflow_run:
