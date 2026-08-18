@@ -26,6 +26,25 @@ const WINDOWS_X64 = 'XyDesk-Windows-x64-Setup.exe';
 const WINDOWS_ARM64 = 'XyDesk-Windows-arm64-Setup.exe';
 
 function fallback(): DeviceRecommendation {
+  const override = localStorage.getItem('xydesk.download.arch');
+  if (override === 'android-armv7') {
+    return {
+      file: ANDROID_ARMV7,
+      label: 'Android 32-bit',
+      platform: 'android',
+      architecture: 'armv7',
+      confidence: 'high',
+    };
+  }
+  if (override === 'android-arm64') {
+    return {
+      file: ANDROID_ARM64,
+      label: 'Android ARM64',
+      platform: 'android',
+      architecture: 'arm64',
+      confidence: 'high',
+    };
+  }
   const ua = navigator.userAgent.toLowerCase();
   if (/iphone|ipad|ipod/.test(ua)) {
     return {
@@ -67,6 +86,7 @@ function fallback(): DeviceRecommendation {
 
 export async function detectDevicePackage(): Promise<DeviceRecommendation> {
   const basic = fallback();
+  if (localStorage.getItem('xydesk.download.arch')) return basic;
   const nav = navigator as Navigator & { userAgentData?: NavigatorUAData };
   const uaData = nav.userAgentData;
   if (!uaData?.getHighEntropyValues) return basic;

@@ -74,6 +74,16 @@ function useRoute() {
 
 export default function App() {
   const { route, navigate } = useRoute();
+  useEffect(() => {
+    const titles: Record<Route, string> = {
+      '/': 'XyDesk — Remote Desktop untuk Semua Perangkat',
+      '/connect': 'Connect Web — XyDesk',
+      '/download': 'Download XyDesk untuk Android dan Windows',
+      '/blog': 'XyDesk Notes',
+      '/legal': 'Legal dan Privasi — XyDesk',
+    };
+    document.title = titles[route];
+  }, [route]);
   return (
     <div className="site-shell">
       <SiteHeader route={route} navigate={navigate} />
@@ -135,23 +145,13 @@ function SiteHeader({ route, navigate }: { route: Route; navigate: (r: Route) =>
 }
 
 function PlatformIcon({ platform }: { platform: 'android' | 'windows' }) {
-  return platform === 'android' ? (
-    <svg className="android-head-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <defs>
-        <linearGradient id="androidMetal" x1="4" y1="3" x2="19" y2="19">
-          <stop offset="0" stopColor="#d8dde0" />
-          <stop offset="0.36" stopColor="#75c776" />
-          <stop offset="0.72" stopColor="#3f8f55" />
-          <stop offset="1" stopColor="#b8bec2" />
-        </linearGradient>
-      </defs>
-      <path fill="url(#androidMetal)" d="M7.1 10.2c.2-2.15 1.42-4 3.2-4.95L8.95 3.3a.55.55 0 0 1 .9-.63l1.45 2.08A7.2 7.2 0 0 1 12 4.7c.24 0 .48.02.71.05l1.45-2.08a.55.55 0 1 1 .9.63l-1.36 1.95a5.95 5.95 0 0 1 3.2 4.95H7.1Zm2.9-2.1a.72.72 0 1 0 0-1.44.72.72 0 0 0 0 1.44Zm4 0a.72.72 0 1 0 0-1.44.72.72 0 0 0 0 1.44ZM7.05 11.3h9.9v6.25c0 1.04-.84 1.89-1.89 1.89H8.94a1.89 1.89 0 0 1-1.89-1.89V11.3Z" />
-      <path fill="none" stroke="rgba(255,255,255,.55)" strokeWidth=".65" d="M7.8 11.95h8.4" />
-    </svg>
-  ) : (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor" d="M3 5.2 10.7 4v7.35H3V5.2Zm8.7-1.35L21 2.5v8.85h-9.3v-7.5ZM3 12.35h7.7V19.7L3 18.5v-6.15Zm8.7 0H21v8.9l-9.3-1.4v-7.5Z" />
-    </svg>
+  return (
+    <img
+      className="platform-image-icon"
+      src={platform === 'android' ? '/platform-android.webp' : '/platform-windows.webp'}
+      alt=""
+      aria-hidden="true"
+    />
   );
 }
 
@@ -198,6 +198,18 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           <a className="channel-link" href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
             Join saluran WhatsApp
           </a>
+          {recommended.platform === 'android' &&
+            recommended.confidence === 'fallback' && (
+              <button
+                className="abi-correction"
+                onClick={() => {
+                  localStorage.setItem('xydesk.download.arch', 'android-armv7');
+                  window.location.reload();
+                }}
+              >
+                HP Android 32-bit? Gunakan ARMv7
+              </button>
+            )}
         </div>
       </section>
 
@@ -299,6 +311,21 @@ function DownloadPage() {
           Buka XyDesk Web
         </a>
       )}
+      <div className="abi-switcher" aria-label="Pilih arsitektur Android manual">
+        <span>Android ABI:</span>
+        <button onClick={() => {
+          localStorage.setItem('xydesk.download.arch', 'android-arm64');
+          window.location.reload();
+        }}>ARM64</button>
+        <button onClick={() => {
+          localStorage.setItem('xydesk.download.arch', 'android-armv7');
+          window.location.reload();
+        }}>ARMv7 32-bit</button>
+        <button onClick={() => {
+          localStorage.removeItem('xydesk.download.arch');
+          window.location.reload();
+        }}>Deteksi ulang</button>
+      </div>
       <PlatformTables />
       <a className="channel-link" href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
         Ikuti info rilis di saluran WhatsApp
@@ -580,7 +607,10 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       sessionRef.current = session;
       session.onPhase = (next) => {
         setPhase(next);
-        if (next === 'connected') void enterImmersive();
+        if (next === 'connected') {
+          window.history.replaceState({}, '', '/connect#session');
+          void enterImmersive();
+        }
       };
       session.onTrack = (stream) => {
         if (videoRef.current) videoRef.current.srcObject = stream;
@@ -595,6 +625,9 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     sessionRef.current?.stop();
     sessionRef.current = null;
     setPhase('');
+    if (window.location.hash === '#session') {
+      window.history.replaceState({}, '', '/connect');
+    }
     if (document.fullscreenElement) void document.exitFullscreen();
   }, []);
   useEffect(() => disconnect, [disconnect]);
@@ -656,12 +689,35 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
 
 function SiteFooter({ navigate }: { navigate: (r: Route) => void }) {
   return (
-    <footer>
-      <span>XyDesk · XySpace Tch</span>
-      <div>
-        <button onClick={() => navigate('/legal')}>Legal</button>
+    <footer className="site-footer">
+      <div className="footer-brand">
+        <div className="brand">
+          <img src="/logo.png" alt="" className="brand-logo" />
+          <strong>XyDesk</strong>
+        </div>
+        <p>Remote desktop ringan untuk kerja, bermain, dan mengakses PC dari mana saja.</p>
+      </div>
+      <div className="footer-column">
+        <strong>Produk</strong>
+        <button onClick={() => navigate('/connect')}>Connect Web</button>
+        <button onClick={() => navigate('/download')}>Download</button>
         <button onClick={() => navigate('/blog')}>Blog</button>
-        <a href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">WhatsApp</a>
+      </div>
+      <div className="footer-column">
+        <strong>Platform</strong>
+        <a href={`${RELEASE_BASE}/XyDesk-Android-arm64-v8a.apk`}>Android</a>
+        <a href={`${RELEASE_BASE}/XyDesk-Windows-x64-Setup.exe`}>Windows</a>
+        <button onClick={() => navigate('/connect')}>iPhone & iPad</button>
+      </div>
+      <div className="footer-column">
+        <strong>Dukungan</strong>
+        <button onClick={() => navigate('/legal')}>Legal & Privasi</button>
+        <a href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">Saluran WhatsApp</a>
+        <a href="https://github.com/xykalnotkel/XyDesk/releases" target="_blank" rel="noreferrer">GitHub Releases</a>
+      </div>
+      <div className="footer-bottom">
+        <span>© 2026 XySpace Tch. XyDesk.</span>
+        <span>Media sesi tidak disimpan oleh server.</span>
       </div>
     </footer>
   );
