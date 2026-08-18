@@ -5,6 +5,7 @@
 
 pub mod identity;
 pub mod input;
+pub mod pairedpeers;
 pub mod pairguard;
 pub mod screen;
 pub mod session;

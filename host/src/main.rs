@@ -7,7 +7,7 @@
 //! Identitas: ID perangkat (9 digit, format `123 456 789`) + password pairing
 //! (persisten, bisa di-customize via `--set-password` / `--new-password`).
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -18,6 +18,7 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::Message;
 
+use xydesk_host::pairedpeers::PairedPeers;
 use xydesk_host::pairguard::{self, PairGuard};
 use xydesk_host::session::{IceCandidate, Session};
 
@@ -191,6 +192,14 @@ async fn main() -> Result<()> {
     let mut active: Option<Arc<Session>> = None;
     // Penjaga brute force pairing — lihat pairguard.rs untuk model ancamannya.
     let mut guard = PairGuard::new(std::time::Instant::now());
+    // Siapa yang BOLEH membuka sesi media. `pairguard` membatasi laju tebakan
+    // password; registri ini yang memastikan hanya peer yang benar-benar lulus
+    // tebakan itu bisa melanjutkan ke `offer`. Lihat pairedpeers.rs.
+    //
+    // Dibungkus Arc<Mutex<..>> karena bukan hanya loop ini yang mengubahnya:
+    // handler status WebRTC (lihat arm "offer") harus bisa melepas slot sesi
+    // saat client hilang tanpa mengirim `bye`.
+    let paired = Arc::new(Mutex::new(PairedPeers::new()));
 
     while let Some(m) = ws.next().await {
         let m = m.context("koneksi putus")?;
@@ -242,6 +251,10 @@ async fn main() -> Result<()> {
 
                 if ok {
                     guard.record_success(&from);
+                    // Izin membuka sesi diberikan DI SINI dan hanya di sini.
+                    // Berumur pendek: kalau client tidak melanjutkan ke offer,
+                    // password harus dimasukkan ulang.
+                    paired.lock().unwrap().grant(&from, now);
                     println!("[xydesk-host] pairing DITERIMA dari {from}");
                 } else {
                     let baru_terkunci = guard.record_failure(&from, now);
@@ -281,6 +294,33 @@ async fn main() -> Result<()> {
 
             "offer" => {
                 let client = msg.from.clone().unwrap_or_default();
+                let now = std::time::Instant::now();
+
+                // GERBANG WAJIB. Tanpa ini, penyerang cukup mengirim `offer`
+                // tanpa pernah menebak password: host akan menjawab, membuka
+                // data channel `input`, dan SendInput mulai mengeksekusi
+                // keyboard/mouse di mesin ini. Seluruh pertahanan pairguard
+                // dilewati karena jalur yang dijaga bukan jalur yang dipakai.
+                let gate = paired.lock().unwrap().authorize_offer(&client, now);
+                if let Err(reason) = gate {
+                    println!(
+                        "[xydesk-host] offer DITOLAK dari {client} ({})",
+                        reason.as_str()
+                    );
+                    send_msg(
+                        &mut ws,
+                        &Msg {
+                            kind: "error".into(),
+                            to: Some(client),
+                            error: Some(reason.as_str().into()),
+                            reason: Some("offer".into()),
+                            ..Default::default()
+                        },
+                    )
+                    .await?;
+                    continue;
+                }
+
                 let sdp = msg.sdp.clone().context("offer tanpa SDP")?;
                 println!("[xydesk-host] menerima offer dari {client}");
 
@@ -300,6 +340,27 @@ async fn main() -> Result<()> {
                     },
                 )
                 .await?;
+
+                // Client bisa hilang tanpa sempat mengirim `bye` (mati listrik,
+                // kereta masuk terowongan, proses di-kill). Tanpa handler ini
+                // slot sesi tetap dianggap terisi dan host menolak SEMUA koneksi
+                // berikutnya dengan "host-sibuk" sampai di-restart manual.
+                {
+                    let paired = paired.clone();
+                    let client = client.clone();
+                    session.on_state_change(move |state| {
+                        use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
+                        if matches!(
+                            state,
+                            RTCPeerConnectionState::Failed
+                                | RTCPeerConnectionState::Disconnected
+                                | RTCPeerConnectionState::Closed
+                        ) {
+                            println!("[xydesk-host] koneksi {client} {state} — slot dilepas");
+                            paired.lock().unwrap().revoke(&client);
+                        }
+                    });
+                }
 
                 // Terima input (data channel) di task terpisah.
                 {
@@ -377,6 +438,15 @@ async fn main() -> Result<()> {
             }
 
             "ice" => {
+                let from = msg.from.clone().unwrap_or_default();
+                // Kandidat hanya diterima dari peer yang sesinya sedang aktif.
+                // Peer lain tidak punya alasan sah mengirim ICE ke sini, dan
+                // menyuntik kandidat ke sesi orang lain adalah cara termurah
+                // untuk merusak koneksi yang sedang berjalan.
+                if !paired.lock().unwrap().is_active(&from) {
+                    println!("[xydesk-host] ICE diabaikan dari {from} (bukan sesi aktif)");
+                    continue;
+                }
                 if let (Some(session), Some(c)) = (&active, msg.candidate) {
                     session
                         .add_ice_candidate(IceCandidate {
@@ -389,10 +459,20 @@ async fn main() -> Result<()> {
             }
 
             "bye" => {
-                println!("[xydesk-host] sesi diakhiri client");
+                let from = msg.from.clone().unwrap_or_default();
+                // Hanya pemilik sesi yang boleh mengakhirinya. Tanpa ini, peer
+                // mana pun bisa memutus sesi orang lain dengan satu pesan.
+                if !paired.lock().unwrap().is_active(&from) {
+                    println!("[xydesk-host] bye diabaikan dari {from} (bukan sesi aktif)");
+                    continue;
+                }
+                println!("[xydesk-host] sesi diakhiri client {from}");
                 if let Some(s) = active.take() {
                     let _ = s.close().await;
                 }
+                // Sesi selesai bukan alasan untuk terus mempercayai peer:
+                // menyambung ulang wajib pairing lagi.
+                paired.lock().unwrap().revoke(&from);
             }
             "error" => println!("[xydesk-host] error: {}", msg.error.unwrap_or_default()),
             other => println!("[xydesk-host] pesan: {other}"),
