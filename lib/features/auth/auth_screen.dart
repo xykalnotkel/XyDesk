@@ -83,16 +83,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               style: TextStyle(fontSize: 13, height: 1.55, color: c.textMid),
             ),
             const SizedBox(height: Gap.h32),
-            _AuthButton(
-              leading: const GoogleBrandIcon(size: 20),
-              label: context.tr('auth_google'),
-              googleStyle: true,
-              animateGoogle:
-                  !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
-              busy: _busy,
-              enabled: !_busy,
-              onTap: _signInGoogle,
-            ),
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+              _GoogleSwipeButton(
+                label: context.tr('auth_google'),
+                busy: _busy,
+                onCompleted: _signInGoogle,
+              )
+            else
+              _AuthButton(
+                leading: const GoogleBrandIcon(size: 20),
+                label: context.tr('auth_google'),
+                googleStyle: true,
+                busy: _busy,
+                enabled: !_busy,
+                onTap: _signInGoogle,
+              ),
             if (_error != null) ...[
               const SizedBox(height: Gap.sm),
               Semantics(
@@ -143,9 +148,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     try {
       // Beri animasi logo waktu menyelesaikan swipe sebelum dialog akun native
       // mengambil fokus layar.
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        await Future<void>.delayed(const Duration(milliseconds: 320));
-      }
       final session = await ref.read(googleAuthServiceProvider).signIn();
       if (!mounted) return;
       await ref
@@ -711,13 +713,132 @@ class _OtpBoxes extends StatelessWidget {
   }
 }
 
+class _GoogleSwipeButton extends StatefulWidget {
+  const _GoogleSwipeButton({
+    required this.label,
+    required this.busy,
+    required this.onCompleted,
+  });
+
+  final String label;
+  final bool busy;
+  final VoidCallback onCompleted;
+
+  @override
+  State<_GoogleSwipeButton> createState() => _GoogleSwipeButtonState();
+}
+
+class _GoogleSwipeButtonState extends State<_GoogleSwipeButton> {
+  double _progress = 0;
+
+  @override
+  void didUpdateWidget(covariant _GoogleSwipeButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.busy && !widget.busy && mounted) {
+      setState(() => _progress = 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const handle = 44.0;
+        final travel = (constraints.maxWidth - handle - 8)
+            .clamp(1.0, 500.0)
+            .toDouble();
+        return Semantics(
+          button: true,
+          label: '${widget.label}. Geser logo Google ke kanan.',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragUpdate: widget.busy
+                ? null
+                : (details) => setState(() {
+                    _progress = (_progress + details.delta.dx / travel)
+                        .clamp(0.0, 1.0)
+                        .toDouble();
+                  }),
+            onHorizontalDragEnd: widget.busy
+                ? null
+                : (_) {
+                    if (_progress >= 0.82) {
+                      setState(() => _progress = 1);
+                      HapticFeedback.mediumImpact();
+                      widget.onCompleted();
+                    } else {
+                      setState(() => _progress = 0);
+                    }
+                  },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: 52,
+              decoration: BoxDecoration(
+                color: c.raised,
+                borderRadius: BorderRadius.circular(R.pill),
+                border: Border.all(
+                  color: _progress >= 0.82
+                      ? c.accent
+                      : c.textLow.withValues(alpha: 0.32),
+                ),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Opacity(
+                    opacity: widget.busy ? 0 : (1 - _progress * 0.72),
+                    child: Text(
+                      _progress < 0.12
+                          ? 'Geser untuk masuk dengan Google'
+                          : 'Lepas untuk melanjutkan',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: c.textMid,
+                      ),
+                    ),
+                  ),
+                  if (widget.busy) const _Spinner(),
+                  AnimatedPositionedDirectional(
+                    duration: const Duration(milliseconds: 90),
+                    curve: Curves.easeOut,
+                    start: 4 + travel * _progress,
+                    top: 4,
+                    child: Container(
+                      width: handle,
+                      height: handle,
+                      decoration: BoxDecoration(
+                        color: c.input,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: const GoogleBrandIcon(size: 22),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _AuthButton extends StatelessWidget {
   const _AuthButton({
     this.leading,
     required this.label,
     required this.onTap,
     this.googleStyle = false,
-    this.animateGoogle = false,
     this.busy = false,
     this.enabled = true,
   });
@@ -726,7 +847,6 @@ class _AuthButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool googleStyle;
-  final bool animateGoogle;
   final bool busy;
   final bool enabled;
 
@@ -752,56 +872,24 @@ class _AuthButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         child: SizedBox(
           height: googleStyle ? 40 : 50,
-          child: googleStyle && busy && animateGoogle
-              ? TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: 1),
-                  duration: const Duration(milliseconds: 320),
-                  curve: Curves.easeInOutCubic,
-                  builder: (context, value, _) => Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Opacity(
-                        opacity: 1 - value,
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: foreground,
-                          ),
-                        ),
-                      ),
-                      Transform.translate(
-                        offset: Offset(104 * value, 0),
-                        child: leading ?? const SizedBox.shrink(),
-                      ),
-                      Opacity(
-                        opacity: value,
-                        child: _Spinner(color: foreground),
-                      ),
-                    ],
-                  ),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (busy)
-                      _Spinner(color: foreground)
-                    else if (leading != null)
-                      leading!,
-                    const SizedBox(width: Gap.md),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: googleStyle
-                            ? FontWeight.w500
-                            : FontWeight.w600,
-                        color: foreground,
-                      ),
-                    ),
-                  ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (busy)
+                _Spinner(color: foreground)
+              else if (leading != null)
+                leading!,
+              const SizedBox(width: Gap.md),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: googleStyle ? FontWeight.w500 : FontWeight.w600,
+                  color: foreground,
                 ),
+              ),
+            ],
+          ),
         ),
       ),
     );

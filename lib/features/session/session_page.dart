@@ -227,6 +227,28 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                   !_panelVisible &&
                   _settings.experience == SessionExperience.desktop)
                 _DesktopControls(compact: compact),
+              if (!_keyboardVisible && !_panelVisible) ...[
+                Positioned(
+                  left: 0,
+                  top: constraints.maxHeight / 2 - 44,
+                  child: _EdgePanelHandle(
+                    icon: LucideIcons.chevronRight,
+                    tooltip: 'Buka kontrol',
+                    visible: _overlayVisible,
+                    onTap: () => _openPanel(SessionPanelSection.controls),
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  top: constraints.maxHeight / 2 - 44,
+                  child: _EdgePanelHandle(
+                    icon: LucideIcons.chevronLeft,
+                    tooltip: 'Buka pengaturan',
+                    visible: _overlayVisible,
+                    onTap: () => _openPanel(SessionPanelSection.stream),
+                  ),
+                ),
+              ],
               _fadePositioned(
                 top: MediaQuery.paddingOf(context).top + 8,
                 left: 12,
@@ -600,6 +622,47 @@ class _AmbientGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _EdgePanelHandle extends StatelessWidget {
+  const _EdgePanelHandle({
+    required this.icon,
+    required this.tooltip,
+    required this.visible,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool visible;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: visible ? 0.72 : 0,
+      duration: D.fast,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: Tooltip(
+          message: tooltip,
+          child: Material(
+            color: Colors.black.withValues(alpha: 0.34),
+            borderRadius: BorderRadius.circular(R.sm),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(R.sm),
+              child: SizedBox(
+                width: 34,
+                height: 88,
+                child: Icon(icon, size: 21, color: Colors.white70),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TopBar extends StatelessWidget {

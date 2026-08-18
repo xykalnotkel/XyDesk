@@ -32,16 +32,18 @@ class MappedElement {
     this.scale = 1.0, // 0.6 - 2.0
     this.opacity = 0.85, // 0.2 - 1.0
     this.mode = PressMode.normal,
+    this.shortcut = 'F1',
   });
 
   final String id;
-  final String label;
+  String label;
   final HudGlyph glyph;
   double x;
   double y;
   double scale;
   double opacity;
   PressMode mode;
+  String shortcut;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -52,6 +54,7 @@ class MappedElement {
     'scale': scale,
     'opacity': opacity,
     'mode': mode.name,
+    'shortcut': shortcut,
   };
 
   factory MappedElement.fromJson(Map<String, dynamic> j) => MappedElement(
@@ -69,6 +72,7 @@ class MappedElement {
       (m) => m.name == j['mode'],
       orElse: () => PressMode.normal,
     ),
+    shortcut: j['shortcut'] as String? ?? j['label'] as String? ?? 'F1',
   );
 }
 
@@ -172,8 +176,9 @@ class _ControlMappingEditorPageState
     setState(() {
       final newElem = MappedElement(
         id: 'btn_${DateTime.now().millisecondsSinceEpoch}',
-        label: 'KEY',
-        glyph: HudGlyph.combo4,
+        label: 'F1',
+        glyph: HudGlyph.keycap,
+        shortcut: 'F1',
         x: 0.5,
         y: 0.5,
       );
@@ -186,6 +191,7 @@ class _ControlMappingEditorPageState
 
   void _showElementConfigModal(MappedElement elem) {
     final c = context.c;
+    final shortcutController = TextEditingController(text: elem.shortcut);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: c.overlay,
@@ -239,6 +245,32 @@ class _ControlMappingEditorPageState
                         },
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Tombol atau kombinasi keyboard',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: c.textMid,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: shortcutController,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: const InputDecoration(
+                      hintText: 'Contoh: F1, K, Ctrl+V, Ctrl+Shift+S',
+                      prefixIcon: Icon(LucideIcons.keyboard, size: 18),
+                    ),
+                    onChanged: (value) {
+                      final shortcut = value.trim();
+                      setModalState(() {
+                        elem.shortcut = shortcut.isEmpty ? 'F1' : shortcut;
+                        elem.label = elem.shortcut;
+                      });
+                      setState(() {});
+                    },
                   ),
                   const SizedBox(height: 12),
                   // ── Mode Tekan ──
@@ -357,7 +389,7 @@ class _ControlMappingEditorPageState
           );
         },
       ),
-    );
+    ).whenComplete(shortcutController.dispose);
   }
 
   @override
@@ -474,25 +506,43 @@ class _ControlMappingEditorPageState
                   width: isSelected ? 2.0 : 1.2,
                 ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  HudIcon(
-                    elem.glyph,
-                    size: 20,
-                    color: isSelected ? context.c.accent : Colors.white,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    elem.label,
-                    style: TextStyle(
-                      fontSize: 8,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? context.c.accent : Colors.white,
+              child: elem.glyph == HudGlyph.keycap
+                  ? SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(
+                        child: Text(
+                          elem.shortcut,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          style: TextStyle(
+                            fontSize: elem.shortcut.length > 5 ? 8 : 12,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected ? context.c.accent : Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        HudIcon(
+                          elem.glyph,
+                          size: 20,
+                          color: isSelected ? context.c.accent : Colors.white,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          elem.label,
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? context.c.accent : Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         ),
