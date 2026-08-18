@@ -8,6 +8,7 @@ import {
   UserProfile,
   verifyOtp,
 } from './api';
+import { detectDevicePackage, initialDevicePackage } from './device';
 import { GOOGLE_CLIENT_ID, renderGoogleButton } from './google';
 import { InputCodec, RtcPhase, RtcSession } from './rtc';
 
@@ -164,6 +165,10 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           <img className="float-item float-controller" src="/float-controller.webp" alt="" />
           <img className="float-item float-keyboard" src="/float-keyboard.webp" alt="" />
           <img className="float-item float-mouse" src="/float-mouse.webp" alt="" />
+          <img className="float-item float-cursor" src="/float-cursor.webp" alt="" />
+          <img className="float-item float-rocket" src="/float-rocket.webp" alt="" />
+          <img className="float-item float-cloud" src="/float-cloud.webp" alt="" />
+          <img className="float-item float-wifi" src="/float-wifi.webp" alt="" />
           <i className="orbit-dot orbit-dot-a" />
           <i className="orbit-dot orbit-dot-b" />
           <i className="orbit-dot orbit-dot-c" />
@@ -178,8 +183,8 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           <div className="hero-actions">
             {recommended.file ? (
               <a className="primary-cta platform-cta" href={`${RELEASE_BASE}/${recommended.file}`}>
-                <PlatformIcon platform={recommended.label.startsWith('Windows') ? 'windows' : 'android'} />
-                Download For {recommended.label.startsWith('Windows') ? 'Windows' : 'Android'}
+                <PlatformIcon platform={recommended.platform === 'windows' ? 'windows' : 'android'} />
+                Download For {recommended.platform === 'windows' ? 'Windows' : 'Android'}
               </a>
             ) : (
               <button className="primary-cta" onClick={() => navigate('/connect')}>
@@ -236,55 +241,10 @@ function FeatureCard({ index, title, children }: { index: string; title: string;
   );
 }
 
-interface RecommendedDownload {
-  file: string | null;
-  label: string;
-}
-
-function detectRecommendedDownload(): RecommendedDownload {
-  const ua = navigator.userAgent.toLowerCase();
-  if (/iphone|ipad|ipod/.test(ua)) return { file: null, label: 'iPhone atau iPad' };
-  if (ua.includes('android')) {
-    return { file: 'XyDesk-Android-arm64-v8a.apk', label: 'Android ARM64' };
-  }
-  if (ua.includes('windows')) {
-    return { file: 'XyDesk-Windows-x64-Setup.exe', label: 'Windows x64' };
-  }
-  return { file: null, label: 'browser' };
-}
-
 function useRecommendedDownload() {
-  const [recommended, setRecommended] = useState<RecommendedDownload>(
-    detectRecommendedDownload,
-  );
+  const [recommended, setRecommended] = useState(initialDevicePackage);
   useEffect(() => {
-    const nav = navigator as Navigator & {
-      userAgentData?: {
-        platform?: string;
-        getHighEntropyValues?: (
-          hints: string[],
-        ) => Promise<{ architecture?: string; bitness?: string; platform?: string }>;
-      };
-    };
-    void nav.userAgentData?.getHighEntropyValues?.([
-      'architecture',
-      'bitness',
-      'platform',
-    ]).then((data) => {
-      const platform = (data.platform || nav.userAgentData?.platform || '').toLowerCase();
-      const architecture = (data.architecture || '').toLowerCase();
-      if (platform.includes('android') && data.bitness === '32') {
-        setRecommended({
-          file: 'XyDesk-Android-armeabi-v7a.apk',
-          label: 'Android 32-bit',
-        });
-      } else if (platform.includes('windows') && architecture.includes('arm')) {
-        setRecommended({
-          file: 'XyDesk-Windows-arm64-Setup.exe',
-          label: 'Windows Arm64',
-        });
-      }
-    });
+    void detectDevicePackage().then(setRecommended);
   }, []);
   return recommended;
 }
@@ -331,8 +291,8 @@ function DownloadPage() {
       </p>
       {recommended.file ? (
         <a className="primary-cta centered-cta platform-cta" href={`${RELEASE_BASE}/${recommended.file}`}>
-          <PlatformIcon platform={recommended.label.startsWith('Windows') ? 'windows' : 'android'} />
-          Download For {recommended.label.startsWith('Windows') ? 'Windows' : 'Android'}
+          <PlatformIcon platform={recommended.platform === 'windows' ? 'windows' : 'android'} />
+          Download For {recommended.platform === 'windows' ? 'Windows' : 'Android'}
         </a>
       ) : (
         <a className="primary-cta centered-cta" href="/connect">

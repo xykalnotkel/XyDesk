@@ -82,6 +82,10 @@ button:not(:disabled):active, .primary-cta:active, .secondary-cta:active { trans
 .float-controller { width: clamp(150px, 19vw, 285px); right: 2%; top: 7%; animation: gravity-b 8.2s ease-in-out infinite; }
 .float-keyboard { width: clamp(170px, 21vw, 320px); left: 2%; bottom: 1%; animation: gravity-c 10.5s ease-in-out infinite; }
 .float-mouse { width: clamp(120px, 15vw, 220px); right: 7%; bottom: 3%; animation: gravity-d 7.6s ease-in-out infinite; }
+.float-cursor { width: clamp(62px, 7vw, 105px); left: 23%; top: 35%; opacity: .76; animation: gravity-b 7.3s ease-in-out -2s infinite; }
+.float-cloud { width: clamp(78px, 9vw, 130px); right: 21%; top: 34%; opacity: .72; animation: gravity-a 9.4s ease-in-out -4s infinite; }
+.float-rocket { width: clamp(72px, 8vw, 118px); left: 25%; bottom: 16%; opacity: .78; animation: gravity-d 8.8s ease-in-out -3s infinite; }
+.float-wifi { width: clamp(64px, 7vw, 106px); right: 24%; bottom: 17%; opacity: .72; animation: gravity-c 10s ease-in-out -6s infinite; }
 .orbit-dot { position: absolute; display: block; width: 9px; height: 9px; border-radius: 50%; background: linear-gradient(145deg,#bfc0c7,#5147a7); box-shadow: 0 8px 15px rgba(0,0,0,.35); }
 .orbit-dot-a { left: 24%; top: 27%; animation: orbit-a 8s ease-in-out infinite; }
 .orbit-dot-b { right: 25%; top: 31%; width: 6px; height: 6px; animation: orbit-a 10s ease-in-out -3s infinite reverse; }
@@ -190,6 +194,9 @@ footer button, footer a { padding: 0; color: var(--muted); text-decoration: none
   .float-controller { right: -18%; top: 12%; }
   .float-keyboard { left: -22%; bottom: 5%; }
   .float-mouse { right: -12%; bottom: 8%; }
+  .float-cursor { left: 6%; top: 31%; }
+  .float-cloud { right: 5%; top: 32%; }
+  .float-rocket, .float-wifi { display: none; }
   .hero h1 { font-size: clamp(74px, 24vw, 112px); }
   .platform-tables, .feature-grid, .blog-grid { grid-template-columns: 1fr; }
   .platform-tables.compact { margin-top: -18px; }
