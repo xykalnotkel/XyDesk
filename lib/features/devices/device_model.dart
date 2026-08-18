@@ -138,10 +138,15 @@ class DeviceRepo extends StateNotifier<List<Device>> {
   void _load() {
     final raw = _s.getList(_key);
     if (raw.isEmpty) {
-      // Contoh awal supaya aplikasi tidak terasa kosong saat pertama dibuka.
-      state = _seed;
-      _persist();
-      DevLog.i('devices', 'Memakai daftar contoh', '${_seed.length} perangkat');
+      // Daftar kosong = memang belum ada perangkat.
+      //
+      // Sebelumnya di sini diisi empat perangkat contoh berstatus "online"
+      // (GAMING-RIG RTX 4090, dst) lalu LANGSUNG DISIMPAN ke penyimpanan.
+      // Akibatnya user baru melihat perangkat yang tidak mereka miliki,
+      // mencoba menyambung, dan gagal tanpa penjelasan. UI menampilkan
+      // empty state yang mengarahkan user menambah perangkat.
+      state = const [];
+      DevLog.i('devices', 'Belum ada perangkat tersimpan', '0 perangkat');
     } else {
       state = raw.map(Device.fromJson).toList();
       DevLog.i(
@@ -151,51 +156,6 @@ class DeviceRepo extends StateNotifier<List<Device>> {
       );
     }
   }
-
-  static final _seed = <Device>[
-    Device(
-      id: '123456789',
-      name: 'GAMING-RIG',
-      os: 'Windows 11 Pro',
-      gpu: 'NVIDIA RTX 4090',
-      status: DeviceStatus.online,
-      pingMs: 8,
-      lastSeen: DateTime.now(),
-      resolution: '3840×2160',
-      remembered: true,
-    ),
-    Device(
-      id: '234567890',
-      name: 'XYCLOUD-RTX4080-01',
-      os: 'Windows 11 Pro',
-      gpu: 'NVIDIA RTX 4080',
-      status: DeviceStatus.online,
-      pingMs: 11,
-      lastSeen: DateTime.now(),
-      resolution: '2560×1440',
-      remembered: true,
-    ),
-    Device(
-      id: '345678901',
-      name: 'XYCLOUD-PRO-RIG',
-      os: 'Windows 11 Pro',
-      gpu: 'NVIDIA RTX 4070 Ti',
-      status: DeviceStatus.online,
-      pingMs: 14,
-      lastSeen: DateTime.now(),
-      resolution: '2560×1440',
-    ),
-    Device(
-      id: '456789012',
-      name: 'XYCLOUD-ESPORT-360HZ',
-      os: 'Windows 11 Pro',
-      gpu: 'NVIDIA RTX 4070',
-      status: DeviceStatus.busy,
-      pingMs: 6,
-      lastSeen: DateTime.now().subtract(const Duration(minutes: 15)),
-      resolution: '1920×1080',
-    ),
-  ];
 
   Future<void> _persist() =>
       _s.setList(_key, state.map((d) => d.toJson()).toList());

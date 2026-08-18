@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/app_version.dart';
 import '../../core/devlog.dart';
 import '../../core/l10n_bridge.dart';
 import '../../core/responsive.dart';
@@ -101,7 +102,7 @@ class AccountPage extends ConsumerWidget {
         const SizedBox(height: Gap.sm),
         Center(
           child: Text(
-            'XyDesk 1.2.0 · Build 4',
+            AppVersion.labeled,
             style: TextStyle(fontSize: 10.5, color: c.textLow),
           ),
         ),
@@ -338,7 +339,7 @@ class LegalSettingsPage extends StatelessWidget {
           title: context.tr('settings_about'),
           subtitle: 'Versi, catatan rilis, dan diagnostik',
           icon: LucideIcons.info,
-          value: 'v1.2.0',
+          value: AppVersion.short,
           trailing: _chevron(context),
           onTap: () => _open(context, const AboutPage()),
         ),
@@ -371,7 +372,7 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: Gap.md),
           Center(
             child: Text(
-              'Versi 1.2.0 · Build 4',
+              AppVersion.versiFull,
               style: TextStyle(fontSize: 11.5, color: c.textLow),
             ),
           ),

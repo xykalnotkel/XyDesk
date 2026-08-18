@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'core/app_version.dart';
 import 'core/devlog.dart';
 import 'core/responsive.dart';
 import 'core/store.dart';
@@ -18,7 +19,13 @@ void main() {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
       DevLog.install();
-      DevLog.i('app', 'XyDesk mulai', 'versi 1.2.0+4');
+      // Versi dibaca dari metadata paket, bukan ditulis tangan.
+      await AppVersion.load();
+      DevLog.i(
+        'app',
+        'XyDesk mulai',
+        'versi ${AppVersion.version}+${AppVersion.build}',
+      );
 
       // Edge-to-edge: background mengalir dari status bar sampai nav bar.
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
