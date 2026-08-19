@@ -86,7 +86,6 @@ Name: "desktopicon"; \
 Name: "vddinstall"; \
   Description: "Pasang driver display virtual (untuk PC tanpa monitor, +FPS optimal)"; \
   GroupDescription: "Driver tambahan:"; \
-  Flags: unchecked; \
   Check: VddAvailable
 Name: "quicklaunch"; \
   Description: "Jalankan XyDesk saat Windows startup"; \
@@ -124,9 +123,11 @@ Source: "{#SourceDir}\drivers\README-VDD.txt"; \
   Tasks: vddinstall
 
 [Icons]
+; SATU shortcut aplikasi langsung di Programs. Dulu ada juga folder
+; "XyDesk\Uninstall..." — nama folder bentrok dengan nama shortcut sehingga
+; shortcut app gagal dibuat senyap dan Start Menu hanya berisi Uninstall.
+; Uninstall cukup lewat Settings > Apps (terdaftar otomatis).
 Name: "{autoprograms}\XyDesk"; Filename: "{app}\xydesk.exe"
-Name: "{autoprograms}\XyDesk\Uninstall XyDesk"; Filename: "{uninstallexe}"
-Name: "{group}\{cm:UninstallProgram,XyDesk}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\XyDesk"; Filename: "{app}\xydesk.exe"; Tasks: desktopicon
 ; Autostart lewat registry Run milik MESIN, bukan shortcut {userstartup}.
 ; Installer berjalan sebagai admin, jadi menulis ke area per-user akan mendarat
@@ -240,8 +241,11 @@ begin
     UninstallProgressForm.StatusLabel.Caption := 'Membersihkan instalasi XyDesk...';
 end;
 
-// Restart hanya diminta kalau driver BENAR-BENAR terpasang.
+// Restart TIDAK diminta. Indirect Display Driver (IddSampleDriver) aktif
+// tanpa reboot pada praktik umum; prompt restart hanya menakut-nakuti user.
+// Bila layar virtual belum muncul, cabut-pasang lewat Device Manager atau
+// restart manual — dicatat di README-postinstall.
 function NeedRestart: Boolean;
 begin
-  Result := WizardIsTaskSelected('vddinstall') and (not VddInstallFailed) and VddFilesInstalled;
+  Result := False;
 end;

@@ -239,6 +239,20 @@ jobs:
       - run: flutter pub get
       - name: Configure Windows Platform
         run: flutter create . --platforms=windows
+      - name: Pasang identitas Windows (icon + metadata EXE)
+        shell: pwsh
+        run: |
+          # flutter create menghasilkan runner default: icon Flutter dan
+          # metadata com.example. Ganti dengan identitas XyDesk sebelum build.
+          Copy-Item packaging/windows/xydesk.ico windows/runner/resources/app_icon.ico -Force
+          $rc = 'windows/runner/Runner.rc'
+          (Get-Content $rc) `
+            -replace 'VALUE "CompanyName", "[^"]*"', 'VALUE "CompanyName", "XySpace Tch"' `
+            -replace 'VALUE "FileDescription", "[^"]*"', 'VALUE "FileDescription", "XyDesk Remote Desktop"' `
+            -replace 'VALUE "ProductName", "[^"]*"', 'VALUE "ProductName", "XyDesk"' `
+            -replace 'VALUE "LegalCopyright", "[^"]*"', 'VALUE "LegalCopyright", "Copyright (C) 2026 XySpace Tch"' |
+            Set-Content $rc
+          Write-Host 'Icon dan metadata EXE XyDesk terpasang.'
       - name: Build Windows ${{ matrix.arch }}
         run: flutter build windows --release --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID"
       - name: Pastikan output arsitektur tersedia
