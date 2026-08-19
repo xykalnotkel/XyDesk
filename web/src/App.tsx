@@ -419,6 +419,7 @@ function RemoteApp() {
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [editingName, setEditingName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!jwt || sessionStorage.getItem(GUEST_TOKEN_KEY) === jwt) return;
@@ -535,19 +536,7 @@ function RemoteApp() {
               type="button"
               className="account-name"
               title="Klik untuk ganti nama"
-              onClick={async () => {
-                const name = window.prompt(
-                  'Nama tampilan baru:',
-                  profile.name ?? '',
-                );
-                if (!name || !jwt) return;
-                try {
-                  const r = await updateProfileName(jwt, name.trim());
-                  setProfile(r.user);
-                } catch {
-                  window.alert('Gagal menyimpan nama.');
-                }
-              }}
+              onClick={() => setEditingName(profile.name ?? '')}
             >
               {profile.name || profile.email.split('@')[0]}
             </button>
@@ -582,8 +571,53 @@ function RemoteApp() {
         )}
       </div>
       <ConnectScreen ensureToken={ensureToken} />
+      {editingName !== null && (
+        <div className="modal-backdrop" onClick={() => setEditingName(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2>Ganti nama tampilan</h2>
+            <input
+              autoFocus
+              maxLength={60}
+              placeholder="Nama baru"
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setEditingName(null);
+                if (e.key === 'Enter' && editingName.trim().length >= 2) {
+                  void saveName();
+                }
+              }}
+            />
+            <div className="modal-actions">
+              <button className="ghost-btn" onClick={() => setEditingName(null)}>
+                Batal
+              </button>
+              <button
+                disabled={busy || editingName.trim().length < 2}
+                onClick={() => void saveName()}
+              >
+                {busy ? 'Menyimpan…' : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
+
+  async function saveName() {
+    if (!jwt || editingName === null) return;
+    setBusy(true);
+    try {
+      const r = await updateProfileName(jwt, editingName.trim());
+      setProfile(r.user);
+      setEditingName(null);
+    } catch {
+      // Biarkan modal terbuka; pengguna bisa coba lagi.
+    } finally {
+      setBusy(false);
+    }
+  }
 }
 
 interface AuthPanelProps {

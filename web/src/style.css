@@ -299,3 +299,11 @@ input.host-id { font-size: 19px; letter-spacing: 2.5px; font-variant-numeric: ta
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
 }
+
+/* ── Modal ── */
+.modal-backdrop { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: rgba(5,4,10,.62); backdrop-filter: blur(6px); }
+.modal-card { width: min(380px, calc(100% - 40px)); padding: 24px; display: flex; flex-direction: column; gap: 14px; background: var(--surface); border-radius: 20px; border: 1px solid rgba(255,255,255,.07); }
+.modal-card h2 { font-size: 17px; letter-spacing: -.02em; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.modal-actions .ghost-btn { background: transparent; color: var(--muted); }
+.modal-actions .ghost-btn:hover { color: var(--text); background: rgba(255,255,255,.06); }

@@ -262,6 +262,21 @@ jobs:
           if (-not (Test-Path "$path/xydesk.exe")) {
             throw "Output Windows ${{ matrix.arch }} tidak ditemukan di $path"
           }
+      - name: Bundel VC++ runtime (wajib — tanpa ini app mati senyap)
+        shell: pwsh
+        run: |
+          # Flutter Windows release bergantung pada msvcp140/vcruntime140/
+          # vcruntime140_1. PC tanpa VC++ Redistributable = app tidak
+          # membuka jendela sama sekali. Salin dari System32 runner
+          # (arsitekturnya cocok: runner x64 -> DLL x64, runner arm64 -> arm64).
+          $dest = "build/windows/${{ matrix.output }}/runner/Release"
+          $dlls = @('msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll')
+          foreach ($d in $dlls) {
+            $src = "C:\Windows\System32\$d"
+            if (-not (Test-Path $src)) { throw "DLL $d tidak ditemukan di runner" }
+            Copy-Item $src $dest -Force
+            Write-Host "Dibundel: $d"
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Windows-${{ matrix.arch }}
