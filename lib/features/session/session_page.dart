@@ -144,6 +144,25 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     }
   }
 
+  /// Kirim isi clipboard perangkat ini ke host — host mengetikkannya
+  /// sebagai unicode (protokol TEXT 0x06, bebas layout keyboard).
+  Future<void> _sendClipboard() async {
+    if (!_transport.state.live) {
+      _showUnavailable('Clipboard butuh sesi yang tersambung.');
+      return;
+    }
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text;
+    if (text == null || text.isEmpty) {
+      _showUnavailable('Clipboard kosong.');
+      return;
+    }
+    // Batasi 32 KB per kiriman agar data channel tidak tersedak.
+    final clipped = text.length > 32768 ? text.substring(0, 32768) : text;
+    _transport.sendInput(InputCodec.text(clipped));
+    _showUnavailable('Clipboard terkirim ke PC.');
+  }
+
   void _leaveSession() {
     // Offline previews are deliberately not added to remote-session history.
     // History should begin only after a real negotiated transport is active.
@@ -230,7 +249,14 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                   !_panelVisible &&
                   _settings.experience == SessionExperience.gaming &&
                   _settings.showGamingControls)
-                _GamingControls(compact: compact),
+                _GamingControls(
+                  compact: compact,
+                  onKey: (vk, down) {
+                    if (_transport.state.live) {
+                      _transport.sendInput(InputCodec.key(vk, down: down));
+                    }
+                  },
+                ),
               if (!_keyboardVisible &&
                   !_panelVisible &&
                   _settings.experience == SessionExperience.desktop)
@@ -284,8 +310,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                       onAudio: () => _openPanel(SessionPanelSection.audio),
                       onMicrophone: () => _openPanel(SessionPanelSection.audio),
                       onKeyboard: _showKeyboard,
-                      onClipboard: () =>
-                          _showUnavailable('Clipboard transport belum aktif.'),
+                      onClipboard: _sendClipboard,
                       onSettings: () => _openPanel(),
                       onDisconnect: _confirmDisconnect,
                     ),
@@ -526,18 +551,33 @@ class _RemoteVideoSurface extends StatelessWidget {
           _click(MouseButton.left);
         },
         onSecondaryTap: () => _click(MouseButton.right),
-        onPanUpdate: (d) {
+        // Satu handler scale untuk dua gestur (pan & scale tidak boleh
+        // dipasang bersamaan di GestureDetector yang sama):
+        //   1 jari  = gerak pointer (rel/abs sesuai mode),
+        //   2 jari  = scroll trackpad (WHEEL_DELTA konvensi Windows).
+        onScaleUpdate: (d) {
+          if (d.pointerCount >= 2) {
+            final dy = (d.focalPointDelta.dy * 5).round();
+            final dx = (d.focalPointDelta.dx * 5).round();
+            if (dx != 0 || dy != 0) {
+              transport.sendInput(InputCodec.scroll(dx, dy));
+            }
+            return;
+          }
           if (relativeMouse) {
             transport.sendInput(
-              InputCodec.mouseMoveRel(d.delta.dx.round(), d.delta.dy.round()),
+              InputCodec.mouseMoveRel(
+                d.focalPointDelta.dx.round(),
+                d.focalPointDelta.dy.round(),
+              ),
             );
           } else {
             // Mode absolut: posisi jari dipetakan langsung ke layar host
             // (fraksi 0..1 dari permukaan video).
             transport.sendInput(
               InputCodec.mouseMoveAbs(
-                d.localPosition.dx / constraints.maxWidth,
-                d.localPosition.dy / constraints.maxHeight,
+                d.localFocalPoint.dx / constraints.maxWidth,
+                d.localFocalPoint.dy / constraints.maxHeight,
               ),
             );
           }
@@ -987,61 +1027,143 @@ class _DockButton extends StatelessWidget {
 }
 
 class _GamingControls extends StatelessWidget {
-  const _GamingControls({required this.compact});
+  const _GamingControls({required this.compact, required this.onKey});
 
   final bool compact;
+
+  /// Kirim tombol keyboard (vk, down) ke host. Pemetaan default game PC:
+  /// D-pad = WASD; A=Space (lompat), B=Shift (lari), X=E (aksi), Y=Q.
+  final void Function(int vk, bool down) onKey;
 
   @override
   Widget build(BuildContext context) {
     final bottom = compact ? 76.0 : 88.0;
     return Positioned.fill(
-      child: IgnorePointer(
-        ignoring: false,
-        child: Stack(
-          children: [
-            Positioned(
-              left: 24,
-              bottom: bottom,
-              child: _TouchControl(
-                size: compact ? 82 : 98,
-                glyph: HudGlyph.dpad,
-                label: 'Gerak',
+      child: Stack(
+        children: [
+          Positioned(
+            left: 24,
+            bottom: bottom,
+            child: _DpadControl(size: compact ? 82 : 98, onKey: onKey),
+          ),
+          Positioned(
+            right: 30,
+            bottom: bottom + 4,
+            child: SizedBox(
+              width: compact ? 126 : 150,
+              height: compact ? 92 : 108,
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: 0,
+                    top: 22,
+                    child: _ActionButton(
+                      label: 'B',
+                      compact: compact,
+                      vk: 0xA0, // Shift kiri
+                      onKey: onKey,
+                    ),
+                  ),
+                  Positioned(
+                    right: compact ? 52 : 62,
+                    top: 0,
+                    child: _ActionButton(
+                      label: 'Y',
+                      compact: compact,
+                      vk: 0x51, // Q
+                      onKey: onKey,
+                    ),
+                  ),
+                  Positioned(
+                    right: compact ? 52 : 62,
+                    bottom: 0,
+                    child: _ActionButton(
+                      label: 'A',
+                      compact: compact,
+                      vk: 0x20, // Space
+                      onKey: onKey,
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    top: 22,
+                    child: _ActionButton(
+                      label: 'X',
+                      compact: compact,
+                      vk: 0x45, // E
+                      onKey: onKey,
+                    ),
+                  ),
+                ],
               ),
             ),
-            Positioned(
-              right: 30,
-              bottom: bottom + 4,
-              child: SizedBox(
-                width: compact ? 126 : 150,
-                height: compact ? 92 : 108,
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: 0,
-                      top: 22,
-                      child: _ActionButton(label: 'B', compact: compact),
-                    ),
-                    Positioned(
-                      right: compact ? 52 : 62,
-                      top: 0,
-                      child: _ActionButton(label: 'Y', compact: compact),
-                    ),
-                    Positioned(
-                      right: compact ? 52 : 62,
-                      bottom: 0,
-                      child: _ActionButton(label: 'A', compact: compact),
-                    ),
-                    Positioned(
-                      left: 0,
-                      top: 22,
-                      child: _ActionButton(label: 'X', compact: compact),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// D-pad virtual: sentuhan pada kuadran diterjemahkan ke WASD hold/release.
+class _DpadControl extends StatefulWidget {
+  const _DpadControl({required this.size, required this.onKey});
+
+  final double size;
+  final void Function(int vk, bool down) onKey;
+
+  @override
+  State<_DpadControl> createState() => _DpadControlState();
+}
+
+class _DpadControlState extends State<_DpadControl> {
+  static const _w = 0x57, _a = 0x41, _s = 0x53, _d = 0x44;
+  final Set<int> _held = {};
+
+  void _update(Offset local) {
+    final c = widget.size / 2;
+    final dx = local.dx - c;
+    final dy = local.dy - c;
+    final dead = widget.size * 0.12;
+    final next = <int>{};
+    if (dy < -dead) next.add(_w);
+    if (dy > dead) next.add(_s);
+    if (dx < -dead) next.add(_a);
+    if (dx > dead) next.add(_d);
+    for (final vk in _held.difference(next)) {
+      widget.onKey(vk, false);
+    }
+    for (final vk in next.difference(_held)) {
+      widget.onKey(vk, true);
+    }
+    _held
+      ..clear()
+      ..addAll(next);
+  }
+
+  void _releaseAll() {
+    for (final vk in _held) {
+      widget.onKey(vk, false);
+    }
+    _held.clear();
+  }
+
+  @override
+  void dispose() {
+    _releaseAll();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onPanDown: (d) => _update(d.localPosition),
+      onPanUpdate: (d) => _update(d.localPosition),
+      onPanEnd: (_) => _releaseAll(),
+      onPanCancel: _releaseAll,
+      child: _TouchControl(
+        size: widget.size,
+        glyph: HudGlyph.dpad,
+        label: 'Gerak',
       ),
     );
   }
@@ -1086,30 +1208,67 @@ class _TouchControl extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.label, required this.compact});
+class _ActionButton extends StatefulWidget {
+  const _ActionButton({
+    required this.label,
+    required this.compact,
+    required this.vk,
+    required this.onKey,
+  });
 
   final String label;
   final bool compact;
+  final int vk;
+  final void Function(int vk, bool down) onKey;
+
+  @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> {
+  bool _down = false;
+
+  void _set(bool down) {
+    if (_down == down) return;
+    _down = down;
+    widget.onKey(widget.vk, down);
+    if (down) HapticFeedback.selectionClick();
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    if (_down) widget.onKey(widget.vk, false);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? 42.0 : 50.0;
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.2),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.34)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: Colors.white70,
+    final size = widget.compact ? 42.0 : 50.0;
+    return Listener(
+      onPointerDown: (_) => _set(true),
+      onPointerUp: (_) => _set(false),
+      onPointerCancel: (_) => _set(false),
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: _down
+              ? AppColors.accentDark.withValues(alpha: 0.45)
+              : Colors.black.withValues(alpha: 0.2),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: _down ? 0.7 : 0.34),
+          ),
+        ),
+        child: Text(
+          widget.label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Colors.white70,
+          ),
         ),
       ),
     );

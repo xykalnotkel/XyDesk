@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Pindai QR host (mobile_scanner). Kamera tidak dipakai untuk hal lain. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <!-- Tetap memerlukan konfirmasi pengguna melalui installer Android. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 

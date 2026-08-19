@@ -416,8 +416,22 @@ async fn main() -> Result<()> {
                         };
                         println!("[xydesk-host] track video siap — streaming");
 
+                        // Channel std (blocking) dari capture TIDAK boleh
+                        // di-recv langsung di task async — itu membekukan
+                        // worker tokio. Jembatan: thread blocking meneruskan
+                        // frame ke channel tokio berkapasitas 1 (frame usang
+                        // dibuang, latency menang).
                         let frames = xydesk_host::screen::spawn_frame_source();
-                        while let Ok(data) = frames.recv() {
+                        let (vtx, mut vrx) = tokio::sync::mpsc::channel::<Vec<u8>>(1);
+                        std::thread::spawn(move || {
+                            while let Ok(data) = frames.recv() {
+                                if vtx.blocking_send(data).is_err() {
+                                    break;
+                                }
+                            }
+                        });
+
+                        while let Some(data) = vrx.recv().await {
                             let sample = webrtc::media::Sample {
                                 data: bytes::Bytes::from(data),
                                 timestamp: std::time::SystemTime::now(),

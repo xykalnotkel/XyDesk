@@ -124,7 +124,10 @@ pub fn capture_status() -> &'static str {
 mod windows {
     use std::sync::mpsc;
 
-    use openh264::encoder::{Encoder, EncoderConfig};
+    use openh264::encoder::{
+        BitRate, Complexity, Encoder, EncoderConfig, FrameRate, IntraFramePeriod, Profile,
+        RateControlMode, SpsPpsStrategy, UsageType,
+    };
     use openh264::formats::{RgbaSliceU8, YUVBuffer};
     use windows_capture::capture::{Context, GraphicsCaptureApiHandler};
     use windows_capture::frame::Frame;
@@ -135,11 +138,22 @@ mod windows {
         MinimumUpdateIntervalSettings, SecondaryWindowSettings, Settings,
     };
 
+    /// Bitrate target. 8 Mbps cukup untuk 1080p screen content dengan
+    /// openh264; angka ini disengaja konservatif agar Wi-Fi rumah kuat.
+    const TARGET_BPS: u32 = 8_000_000;
+
+    /// Keyframe (IDR) tiap ~2 detik @60fps: pemulihan cepat setelah packet
+    /// loss tanpa membebani bitrate (IDR jauh lebih besar dari P-frame).
+    const IDR_INTERVAL_FRAMES: u32 = 120;
+
     /// Penangkap layar primer: tiap frame → konversi RGBA→I420 → encode H264
     /// → kirim ke channel (mpsc::Sender<Vec<u8>>).
     struct ScreenCapturer {
         encoder: Encoder,
         sender: mpsc::SyncSender<Vec<u8>>,
+        /// Buffer strip padding — dialokasi sekali, dipakai ulang tiap frame.
+        packed: Vec<u8>,
+        frames: u64,
     }
 
     impl GraphicsCaptureApiHandler for ScreenCapturer {
@@ -147,13 +161,31 @@ mod windows {
         type Error = Box<dyn std::error::Error + Send + Sync>;
 
         fn new(ctx: Context<Self::Flags>) -> Result<Self, Self::Error> {
-            let encoder = Encoder::with_api_config(
-                openh264::OpenH264API::from_source(),
-                EncoderConfig::new(),
-            )?;
+            // Tuning untuk konten layar real-time — bukan default kamera:
+            //   - ScreenContentRealTime: mode deteksi konten teks/UI openh264.
+            //   - Bitrate mode + target 8 Mbps: kualitas konsisten, bukan
+            //     default 120 kbps yang membuat layar jadi bubur.
+            //   - skip_frames(false): frame skip menambah judder di remote
+            //     desktop; biarkan rate control menurunkan kualitas, bukan
+            //     membuang frame.
+            //   - IDR berkala agar viewer pulih cepat dari packet loss.
+            let config = EncoderConfig::new()
+                .usage_type(UsageType::ScreenContentRealTime)
+                .rate_control_mode(RateControlMode::Bitrate)
+                .bitrate(BitRate::from_bps(TARGET_BPS))
+                .max_frame_rate(FrameRate::from_hz(60.0))
+                .skip_frames(false)
+                .profile(Profile::Baseline)
+                .complexity(Complexity::Low)
+                .sps_pps_strategy(SpsPpsStrategy::ConstantId)
+                .intra_frame_period(IntraFramePeriod::from_num_frames(IDR_INTERVAL_FRAMES))
+                .num_threads(2);
+            let encoder = Encoder::with_api_config(openh264::OpenH264API::from_source(), config)?;
             Ok(Self {
                 encoder,
                 sender: ctx.flags,
+                packed: Vec::new(),
+                frames: 0,
             })
         }
 
@@ -167,14 +199,37 @@ mod windows {
             let height = frame.height() as usize;
 
             let mut buffer = frame.buffer()?; // FrameBuffer (RGBA, ColorFormat::Rgba8)
+            let row_pitch = buffer.row_pitch() as usize;
+            let has_padding = buffer.has_padding();
             let raw = buffer.as_raw_buffer(); // &[u8]
-                                              // Catatan: bila buffer.has_padding() true (row_pitch > width*4),
-                                              // perlu strip padding per baris. Untuk PoC resolusi umum padding
-                                              // biasanya nol. Lihat TODO di bawah.
-            let rgba = RgbaSliceU8::new(raw, (width, height));
+
+            // GPU sering menambah padding per baris (row_pitch > width*4),
+            // terutama pada resolusi yang bukan kelipatan 64. Encoder butuh
+            // baris rapat — strip padding ke buffer packed yang dipakai ulang.
+            let tight: &[u8] = if has_padding {
+                let row_bytes = width * 4;
+                self.packed.resize(row_bytes * height, 0);
+                for y in 0..height {
+                    let src = &raw[y * row_pitch..y * row_pitch + row_bytes];
+                    self.packed[y * row_bytes..(y + 1) * row_bytes].copy_from_slice(src);
+                }
+                &self.packed
+            } else {
+                raw
+            };
+
+            let rgba = RgbaSliceU8::new(tight, (width, height));
             let yuv = YUVBuffer::from_rgb_source(rgba);
             let encoded = self.encoder.encode(&yuv)?.to_vec();
-            // Kirim; bila channel penuh, buang frame lama (try_send).
+            self.frames = self.frames.wrapping_add(1);
+            if self.frames % 600 == 0 {
+                println!(
+                    "[xydesk-host] capture {}x{} frame ke-{}",
+                    width, height, self.frames
+                );
+            }
+            // Kirim; bila channel penuh, buang frame terbaru (try_send) —
+            // frame usang tidak boleh mengantre (latency > kelengkapan).
             let _ = self.sender.try_send(encoded);
             Ok(())
         }
@@ -192,8 +247,8 @@ mod windows {
         let monitor = Monitor::primary()?;
         let settings = Settings::new(
             monitor,
-            CursorCaptureSettings::Default,
-            DrawBorderSettings::Default,
+            CursorCaptureSettings::WithCursor,
+            DrawBorderSettings::WithoutBorder,
             SecondaryWindowSettings::Default,
             MinimumUpdateIntervalSettings::Default,
             DirtyRegionSettings::Default,
@@ -205,9 +260,5 @@ mod windows {
     }
 }
 
-// TODO(Fase 0, Windows — optimasi): ganti openh264 (software) dengan NVENC:
-//   1. Encode jalur cepat: FFmpeg (`ffmpeg-next`) `-c:v h264_nvenc -preset p1 -tune ll`.
-//   2. Zero-copy ideal: frame DXGI (ID3D11Texture2D) → CUDA → NVENC, tanpa
-//      melewati CPU (RGBA→I420 di GPU).
-//   Struktur `ScreenCapturer` sudah benar — tinggal ganti isi on_frame_arrived
-//   untuk memanggil NVENC, bukan openh264.
+// TODO(optimasi lanjutan): NVENC zero-copy (ID3D11Texture2D → CUDA → NVENC)
+// menggantikan jalur CPU RGBA→I420→openh264 bila profil latency menuntutnya.

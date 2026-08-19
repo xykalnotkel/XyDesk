@@ -920,6 +920,18 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       >
         <video ref={videoRef} autoPlay playsInline muted />
         <div className="session-actions">
+          <button
+            onClick={async () => {
+              try {
+                const text = await navigator.clipboard.readText();
+                if (text) send(InputCodec.text(text.slice(0, 32768)));
+              } catch {
+                // Izin clipboard ditolak — abaikan diam-diam.
+              }
+            }}
+          >
+            Kirim clipboard
+          </button>
           <button onClick={() => setKbOpen((v) => !v)}>Keyboard</button>
           <button onClick={() => void enterImmersive()}>Layar penuh</button>
           <button className="danger-action" onClick={disconnect}>Putuskan</button>

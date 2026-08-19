@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/l10n_bridge.dart';
@@ -489,48 +490,116 @@ class _RecentsList extends StatelessWidget {
   }
 }
 
-/// Layar scanner QR mockup. Kamera/server belum dibutuhkan di fase UI.
-class QrScanDemoPage extends StatelessWidget {
+/// Pemindai QR nyata (kamera + MLKit). Menerima QR host yang berisi ID
+/// 9 digit — polos ("123456789") atau URI xydesk://connect?id=123456789.
+class QrScanDemoPage extends StatefulWidget {
   const QrScanDemoPage({super.key});
+
+  @override
+  State<QrScanDemoPage> createState() => _QrScanDemoPageState();
+}
+
+class _QrScanDemoPageState extends State<QrScanDemoPage> {
+  final MobileScannerController _controller = MobileScannerController(
+    formats: const [BarcodeFormat.qrCode],
+  );
+  bool _handled = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// Ekstrak ID 9 digit dari payload QR; null bila bukan QR XyDesk.
+  static String? parseHostId(String raw) {
+    final uri = Uri.tryParse(raw);
+    final candidate = (uri != null && uri.scheme == 'xydesk')
+        ? (uri.queryParameters['id'] ?? '')
+        : raw;
+    final digits = candidate.replaceAll(RegExp(r'\D'), '');
+    return digits.length == 9 ? digits : null;
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_handled) return;
+    for (final barcode in capture.barcodes) {
+      final id = parseHostId(barcode.rawValue ?? '');
+      if (id != null) {
+        _handled = true;
+        HapticFeedback.mediumImpact();
+        Navigator.pop(context, id);
+        return;
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     return Scaffold(
-      backgroundColor: c.bg,
+      backgroundColor: Colors.black,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         title: const Text('Pindai QR'),
         leading: IconButton(
-          icon: Icon(LucideIcons.arrowLeft, color: c.textMid),
+          icon: const Icon(LucideIcons.arrowLeft, color: Colors.white70),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Senter',
+            icon: const Icon(LucideIcons.flashlight, size: 19),
+            onPressed: () => _controller.toggleTorch(),
+          ),
+        ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(Gap.screen, 8, Gap.screen, 32),
+      extendBodyBehindAppBar: true,
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          const SizedBox(height: Gap.lg),
-          const Center(child: Illus(Img.qrScan, size: 260)),
-          const SizedBox(height: Gap.lg),
-          Text(
-            'Arahkan kamera ke QR host',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: c.textHi,
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
+            errorBuilder: (context, error) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  'Kamera tidak tersedia. Beri izin kamera untuk XyDesk, '
+                  'atau masukkan ID secara manual.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, height: 1.6, color: c.textMid),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: Gap.sm),
-          Text(
-            'Di versi demo, tombol di bawah mensimulasikan QR berhasil dibaca.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12.5, height: 1.5, color: c.textMid),
+          // Bingkai target sederhana di tengah.
+          Center(
+            child: Container(
+              width: 230,
+              height: 230,
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  width: 2,
+                ),
+                borderRadius: BorderRadius.circular(R.xl),
+              ),
+            ),
           ),
-          const SizedBox(height: Gap.xxl),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(context, '987654321'),
-            icon: const Icon(LucideIcons.scanLine, size: 18),
-            label: const Text('Simulasikan QR berhasil'),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 36,
+            child: Text(
+              'Arahkan kamera ke QR pada aplikasi XyDesk Host di PC.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.5,
+                color: Colors.white.withValues(alpha: 0.75),
+              ),
+            ),
           ),
         ],
       ),

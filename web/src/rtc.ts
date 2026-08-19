@@ -68,6 +68,15 @@ export const InputCodec = {
     b[3] = down ? 1 : 0;
     return b;
   },
+  /// Teks bebas (clipboard/keyboard virtual) — host mengetik sebagai
+  /// unicode, bebas layout keyboard host.
+  text(s: string): Uint8Array {
+    const utf8 = new TextEncoder().encode(s);
+    const b = new Uint8Array(1 + utf8.length);
+    b[0] = 0x06;
+    b.set(utf8, 1);
+    return b;
+  },
 };
 
 export class RtcSession {

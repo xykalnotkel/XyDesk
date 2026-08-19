@@ -13,11 +13,9 @@ class NotificationConfig {
   static const updateRouteName = '/app-update';
   static const updateRoutePayload = 'app_update';
 
-  /// Nama/version slug yang disiapkan untuk rekaman suara pengguna nanti.
-  /// Channel belum boleh dibuat sebelum berkas suara final dibundel karena
-  /// Android mengunci perilaku suara channel setelah channel pertama dibuat.
-  static const updateVoiceChannelV1 = 'xydesk_updates_voice_v1';
-  static const updateVoiceSoundV1 = 'xydesk_update_voice_v1';
+  // Keputusan owner (2026-08): notifikasi memakai suara default perangkat.
+  // Scaffolding channel suara custom dihapus — channel Android mengunci
+  // suara permanen, jadi tidak boleh ada channel spekulatif tanpa aset.
 
   static bool get isSupportedPlatform =>
       !kIsWeb &&
