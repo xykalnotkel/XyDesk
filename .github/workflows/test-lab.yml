@@ -9,11 +9,13 @@ name: Test Lab (RDP via Tailscale)
 #      disarankan ephemeral+reusable) dan RDP_PASSWORD (password kuat).
 #   2. Actions -> "Test Lab" -> Run workflow (isi durasi menit).
 #   3. Tunggu step "Info koneksi" menampilkan IP Tailscale runner.
-#   4. RDP dari perangkat mana pun di tailnet: user `runneradmin`,
+#   4. RDP dari perangkat mana pun di tailnet: user `xydesk`,
 #      password = RDP_PASSWORD, alamat = IP Tailscale tersebut.
+#      JANGAN login sebagai runneradmin — itu akun milik runner GitHub;
+#      mengambil alih sesinya MEMBUNUH job (pelajaran dari lab pertama).
 #   5. Di dalam RDP: jalankan XyDesk (sudah terinstal), buka mode Host,
 #      catat ID + password, lalu konek dari HP/web seperti biasa.
-#   6. Selesai lebih awal? Buat file C:\xydesk\stop.txt atau cancel run.
+#   6. Lab berjalan penuh sesuai durasi; hentikan hanya lewat Cancel run.
 #
 # Catatan: menutup jendela RDP me-lock sesi (capture bisa beku). Untuk
 # melepas tanpa lock, jalankan di PowerShell admin DI DALAM sesi RDP:
@@ -23,9 +25,9 @@ on:
   workflow_dispatch:
     inputs:
       duration:
-        description: 'Durasi lab dalam menit (maks 320)'
+        description: 'Durasi lab dalam menit (maks 340; batas keras GitHub 6 jam)'
         required: false
-        default: '120'
+        default: '340'
 
 permissions:
   contents: read
@@ -34,7 +36,7 @@ jobs:
   lab:
     name: Windows lab
     runs-on: windows-latest
-    timeout-minutes: 330
+    timeout-minutes: 355
     steps:
       - name: Validasi secrets
         shell: pwsh
@@ -57,14 +59,19 @@ jobs:
           & 'C:\Program Files\Tailscale\tailscale.exe' up --authkey $env:TS_AUTHKEY --hostname 'xydesk-lab' --accept-dns=false
           & 'C:\Program Files\Tailscale\tailscale.exe' ip -4
 
-      - name: Aktifkan RDP
+      - name: Aktifkan RDP (user terpisah — runneradmin TIDAK disentuh)
         shell: pwsh
         env:
           RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
           Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
-          net user runneradmin $env:RDP_PASSWORD
+          # User RDP TERPISAH. Login sebagai runneradmin mengambil alih sesi
+          # console milik proses runner dan MEMATIKAN job — akar matinya lab
+          # pertama. Akun xydesk aman: sesi RDP-nya berdiri sendiri.
+          net user xydesk $env:RDP_PASSWORD /add /y
+          net localgroup Administrators xydesk /add
+          net localgroup 'Remote Desktop Users' xydesk /add
 
       - name: Diagnostik prasyarat runtime
         shell: pwsh
@@ -145,21 +152,22 @@ jobs:
         run: |
           $ip = (& 'C:\Program Files\Tailscale\tailscale.exe' ip -4).Trim()
           Write-Host '=========================================='
-          Write-Host " RDP  : $ip  (user: runneradmin)"
+          Write-Host " RDP  : $ip  (user: xydesk — BUKAN runneradmin!)"
           Write-Host ' Pass : secret RDP_PASSWORD'
           Write-Host ' App  : XyDesk (Start Menu) -> mode Host'
           Write-Host '=========================================='
-          "## XyDesk Test Lab`n`n- RDP: ``$ip`` user ``runneradmin```n- Durasi: ${{ inputs.duration }} menit" >> $env:GITHUB_STEP_SUMMARY
+          "## XyDesk Test Lab`n`n- RDP: ``$ip`` user ``xydesk```n- Durasi: ${{ inputs.duration }} menit" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Tahan runner selama durasi lab
         shell: pwsh
         run: |
-          $minutes = [Math]::Min([int]'${{ inputs.duration }}', 320)
+          # Tanpa mekanisme stop apa pun (permintaan owner): lab berjalan
+          # penuh sesuai durasi. Hentikan hanya lewat Cancel run di UI.
+          $minutes = [Math]::Min([int]'${{ inputs.duration }}', 340)
           $deadline = (Get-Date).AddMinutes($minutes)
-          Write-Host "Lab aktif sampai $deadline (atau buat C:\xydesk\stop.txt)."
+          Write-Host "Lab aktif sampai $deadline."
           while ((Get-Date) -lt $deadline) {
-            if (Test-Path C:\xydesk\stop.txt) { Write-Host 'stop.txt ditemukan — lab selesai.'; break }
-            Start-Sleep -Seconds 30
+            Start-Sleep -Seconds 60
           }
 
       - name: Putus Tailscale
