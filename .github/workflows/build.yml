@@ -203,7 +203,7 @@ jobs:
 
   # ── 3. Windows Native Desktop: x64 dan Arm64 resmi Flutter ──
   windows:
-    name: Windows ${{ matrix.arch }}
+    name: Windows ${{ matrix.arch }} (Tauri)
     needs: check
     strategy:
       fail-fast: false
@@ -211,83 +211,55 @@ jobs:
         include:
           - arch: x64
             runner: windows-latest
-            output: x64
+            target: x86_64-pc-windows-msvc
           - arch: arm64
             runner: windows-11-arm
-            output: arm64
+            target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        if: matrix.arch == 'x64'
+      - uses: actions/setup-node@v4
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      # flutter-action belum mengenali archive Windows Arm64 untuk versi pin.
-      # Flutter sendiri mendukungnya; clone tag resmi membiarkan bootstrap
-      # memilih engine Arm64 native dari arsitektur runner.
-      - name: Siapkan Flutter resmi pada Windows Arm64
-        if: matrix.arch == 'arm64'
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Cache Cargo (desktop)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: tauri-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
+          restore-keys: tauri-${{ runner.os }}-${{ matrix.arch }}-
+      - name: Pasang dependensi UI desktop
+        working-directory: desktop
+        run: npm ci
+      - name: Build XyDesk Desktop (Tauri)
+        working-directory: desktop
+        run: npx tauri build --target ${{ matrix.target }} --no-bundle
+      - name: Kumpulkan output
         shell: pwsh
         run: |
-          git clone --depth 1 --branch $env:FLUTTER_VERSION https://github.com/flutter/flutter.git "$env:RUNNER_TEMP/flutter"
-          "$env:RUNNER_TEMP/flutter/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          & "$env:RUNNER_TEMP/flutter/bin/flutter.bat" --version
-          & "$env:RUNNER_TEMP/flutter/bin/flutter.bat" config --no-analytics
-      - run: flutter pub get
-      - name: Configure Windows Platform
-        run: flutter create . --platforms=windows
-      - name: Pasang identitas Windows (icon + metadata EXE)
-        shell: pwsh
-        run: |
-          # flutter create menghasilkan runner default: icon Flutter dan
-          # metadata com.example. Ganti dengan identitas XyDesk sebelum build.
-          Copy-Item packaging/windows/xydesk.ico windows/runner/resources/app_icon.ico -Force
-          $rc = 'windows/runner/Runner.rc'
-          (Get-Content $rc) `
-            -replace 'VALUE "CompanyName", "[^"]*"', 'VALUE "CompanyName", "XySpace Tch"' `
-            -replace 'VALUE "FileDescription", "[^"]*"', 'VALUE "FileDescription", "XyDesk Remote Desktop"' `
-            -replace 'VALUE "ProductName", "[^"]*"', 'VALUE "ProductName", "XyDesk"' `
-            -replace 'VALUE "LegalCopyright", "[^"]*"', 'VALUE "LegalCopyright", "Copyright (C) 2026 XySpace Tch"' |
-            Set-Content $rc
-          Write-Host 'Icon dan metadata EXE XyDesk terpasang.'
-      - name: Build Windows ${{ matrix.arch }}
-        run: flutter build windows --release --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID"
-      - name: Pastikan output arsitektur tersedia
-        shell: pwsh
-        run: |
-          $path = "build/windows/${{ matrix.output }}/runner/Release"
-          if (-not (Test-Path "$path/xydesk.exe")) {
-            throw "Output Windows ${{ matrix.arch }} tidak ditemukan di $path"
-          }
-      - name: Bundel VC++ runtime (wajib — tanpa ini app mati senyap)
-        shell: pwsh
-        run: |
-          # Flutter Windows release bergantung pada msvcp140/vcruntime140/
-          # vcruntime140_1. PC tanpa VC++ Redistributable = app tidak
-          # membuka jendela sama sekali. Salin dari System32 runner
-          # (arsitekturnya cocok: runner x64 -> DLL x64, runner arm64 -> arm64).
-          $dest = "build/windows/${{ matrix.output }}/runner/Release"
-          $dlls = @('msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll')
-          foreach ($d in $dlls) {
-            $src = "C:\Windows\System32\$d"
-            if (-not (Test-Path $src)) { throw "DLL $d tidak ditemukan di runner" }
-            Copy-Item $src $dest -Force
-            Write-Host "Dibundel: $d"
-          }
+          $exe = "desktop/src-tauri/target/${{ matrix.target }}/release/xydesk-desktop.exe"
+          if (-not (Test-Path $exe)) { throw "EXE Tauri tidak ditemukan: $exe" }
+          New-Item -ItemType Directory -Force -Path out-desktop | Out-Null
+          Copy-Item $exe out-desktop/XyDesk.exe
+          # WebView2Loader wajib disertakan di samping EXE.
+          $loader = Get-ChildItem "desktop/src-tauri/target/${{ matrix.target }}/release" -Filter 'WebView2Loader.dll' -ErrorAction SilentlyContinue
+          if ($loader) { Copy-Item $loader.FullName out-desktop/ }
+          Get-ChildItem out-desktop | ForEach-Object { Write-Host "OUT: $($_.Name) ($([math]::Round($_.Length/1MB,2)) MB)" }
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Windows-${{ matrix.arch }}
-          path: build/windows/${{ matrix.output }}/runner/Release/*
+          path: out-desktop/*
           retention-days: 30
           if-no-files-found: error
 
-  # ── 5. Web Application Bundle (Vite + React — bukan Flutter Web) ──
-  # Flutter Web ditinggalkan untuk browser: bundle CanvasKit terlalu berat
-  # (unduhan MB-an sebelum layar pertama). Client web ringan di web/
-  # memakai backend Worker yang sama.
   web:
     name: Web Application
     needs: check

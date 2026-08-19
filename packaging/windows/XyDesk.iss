@@ -42,7 +42,7 @@ SolidCompression=yes
 WizardStyle=modern
 WizardSizePercent=120
 SetupIconFile={#SourcePath}\xydesk.ico
-UninstallDisplayIcon={app}\xydesk.exe
+UninstallDisplayIcon={app}\XyDesk.exe
 PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=dialog
 CloseApplications=yes
@@ -127,8 +127,8 @@ Source: "{#SourceDir}\drivers\README-VDD.txt"; \
 ; "XyDesk\Uninstall..." — nama folder bentrok dengan nama shortcut sehingga
 ; shortcut app gagal dibuat senyap dan Start Menu hanya berisi Uninstall.
 ; Uninstall cukup lewat Settings > Apps (terdaftar otomatis).
-Name: "{autoprograms}\XyDesk"; Filename: "{app}\xydesk.exe"
-Name: "{autodesktop}\XyDesk"; Filename: "{app}\xydesk.exe"; Tasks: desktopicon
+Name: "{autoprograms}\XyDesk"; Filename: "{app}\XyDesk.exe"
+Name: "{autodesktop}\XyDesk"; Filename: "{app}\XyDesk.exe"; Tasks: desktopicon
 ; Autostart lewat registry Run milik MESIN, bukan shortcut {userstartup}.
 ; Installer berjalan sebagai admin, jadi menulis ke area per-user akan mendarat
 ; di profil admin — bukan profil user yang memakai XyDesk.
@@ -138,7 +138,7 @@ Name: "{autodesktop}\XyDesk"; Filename: "{app}\xydesk.exe"; Tasks: desktopicon
 ; Autostart untuk semua user (installer admin). Dihapus otomatis saat uninstall.
 Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "XyDesk"; \
-  ValueData: """{app}\xydesk.exe"""; \
+  ValueData: """{app}\XyDesk.exe"""; \
   Flags: uninsdeletevalue; \
   Tasks: quicklaunch
 
@@ -150,7 +150,7 @@ Filename: "{app}\drivers\IddSampleDriver\install.bat"; \
   Tasks: vddinstall; \
   Check: VddFilesInstalled
 
-Filename: "{app}\xydesk.exe"; \
+Filename: "{app}\XyDesk.exe"; \
   Description: "Buka XyDesk"; \
   Flags: nowait postinstall skipifsilent; \
   Tasks: launchapp
