@@ -57,12 +57,14 @@ function fallback(): DeviceRecommendation {
   }
   if (ua.includes('android')) {
     const explicit32 = /armv7|armeabi|; 32-bit/.test(ua);
+    // Penanda 64-bit eksplisit di UA = kepastian, bukan tebakan.
+    const explicit64 = /aarch64|arm64|arm_64|armv8/.test(ua);
     return {
       file: explicit32 ? ANDROID_ARMV7 : ANDROID_ARM64,
       label: explicit32 ? 'Android 32-bit' : 'Android ARM64',
       platform: 'android',
       architecture: explicit32 ? 'armv7' : 'arm64',
-      confidence: explicit32 ? 'high' : 'fallback',
+      confidence: explicit32 || explicit64 ? 'high' : 'fallback',
     };
   }
   if (ua.includes('windows')) {

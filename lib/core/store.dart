@@ -243,10 +243,19 @@ final langProvider = Provider<AppLang>((ref) {
 
 @immutable
 class UserSession {
-  const UserSession({this.email, this.name, this.token, this.isGuest = false});
+  const UserSession({
+    this.email,
+    this.name,
+    this.picture,
+    this.token,
+    this.isGuest = false,
+  });
 
   final String? email;
   final String? name;
+
+  /// URL foto profil (dari Google), null bila tidak ada.
+  final String? picture;
 
   /// JWT sesi backend. Tidak pernah ditulis ke SharedPreferences/log.
   final String? token;
@@ -279,6 +288,7 @@ class AuthNotifier extends StateNotifier<UserSession> {
       state = UserSession(
         email: email,
         name: _s.getStr('user_name'),
+        picture: _s.getStr('user_picture'),
         token: initialToken,
       );
       DevLog.i('auth', 'JWT backend dipulihkan', email ?? 'menunggu profil');
@@ -299,6 +309,7 @@ class AuthNotifier extends StateNotifier<UserSession> {
     required String email,
     required String token,
     String? name,
+    String? picture,
   }) async {
     // Simpan token lebih dahulu; jangan buka shell bila secure storage gagal.
     await _vault.writeToken(token);
@@ -308,8 +319,18 @@ class AuthNotifier extends StateNotifier<UserSession> {
     } else {
       await _s.remove('user_name');
     }
+    if (picture != null) {
+      await _s.setStr('user_picture', picture);
+    } else {
+      await _s.remove('user_picture');
+    }
     await _s.setBool('user_guest', false);
-    state = UserSession(email: email, name: name, token: token);
+    state = UserSession(
+      email: email,
+      name: name,
+      picture: picture,
+      token: token,
+    );
     DevLog.ok('auth', 'Sesi backend aktif', email);
   }
 
@@ -317,6 +338,7 @@ class AuthNotifier extends StateNotifier<UserSession> {
   Future<void> refreshAuthenticatedProfile({
     required String email,
     String? name,
+    String? picture,
   }) async {
     final token = state.token;
     if (token == null) return;
@@ -326,14 +348,25 @@ class AuthNotifier extends StateNotifier<UserSession> {
     } else {
       await _s.remove('user_name');
     }
+    if (picture != null) {
+      await _s.setStr('user_picture', picture);
+    } else {
+      await _s.remove('user_picture');
+    }
     await _s.setBool('user_guest', false);
-    state = UserSession(email: email, name: name, token: token);
+    state = UserSession(
+      email: email,
+      name: name,
+      picture: picture,
+      token: token,
+    );
   }
 
   Future<void> signInGuest() async {
     await _vault.deleteToken();
     await _s.remove('user_email');
     await _s.remove('user_name');
+    await _s.remove('user_picture');
     await _s.setBool('user_guest', true);
     state = const UserSession(isGuest: true);
     DevLog.ok('auth', 'Masuk sebagai tamu');
@@ -343,6 +376,7 @@ class AuthNotifier extends StateNotifier<UserSession> {
     await _vault.deleteToken();
     await _s.remove('user_email');
     await _s.remove('user_name');
+    await _s.remove('user_picture');
     await _s.setBool('user_guest', false);
     state = const UserSession();
     DevLog.i('auth', 'Keluar');

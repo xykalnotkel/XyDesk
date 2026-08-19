@@ -15,7 +15,6 @@ import 'features/account/account_page.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/auth/auth_service.dart';
 import 'features/connect/connect_page.dart';
-import 'features/control/control_page.dart';
 import 'features/devices/history_page.dart';
 import 'features/home/home_page.dart';
 import 'features/notifications/app_update_details.dart';
@@ -126,7 +125,11 @@ class _BootState extends ConsumerState<_Boot> {
         final user = await ref.read(authServiceProvider).me(token);
         await ref
             .read(authProvider.notifier)
-            .refreshAuthenticatedProfile(email: user.email, name: user.name);
+            .refreshAuthenticatedProfile(
+              email: user.email,
+              name: user.name,
+              picture: user.picture,
+            );
         DevLog.ok('auth', 'Sesi dipastikan oleh server', user.email);
       } on AuthException catch (error) {
         if (error.statusCode == 401 || error.statusCode == 404) {
@@ -301,7 +304,6 @@ class _AppShellState extends ConsumerState<AppShell> {
     final titles = [
       context.tr('home_devices'),
       context.tr('nav_connect'),
-      context.tr('nav_control'),
       context.tr('nav_account'),
     ];
 
@@ -310,12 +312,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       actions: _actions(context),
       body: IndexedStack(
         index: _index,
-        children: const [
-          HomePage(),
-          ConnectPage(),
-          ControlPage(),
-          AccountPage(),
-        ],
+        children: const [HomePage(), ConnectPage(), AccountPage()],
       ),
       bottomNav: NavigationBar(
         selectedIndex: _index,
@@ -346,19 +343,6 @@ class _AppShellState extends ConsumerState<AppShell> {
               height: 26,
             ),
             label: context.tr('nav_connect'),
-          ),
-          NavigationDestination(
-            icon: Image.asset(
-              'assets/libraryicons/nav_control_inactive.webp',
-              width: 26,
-              height: 26,
-            ),
-            selectedIcon: Image.asset(
-              'assets/libraryicons/nav_control_active.webp',
-              width: 26,
-              height: 26,
-            ),
-            label: context.tr('nav_control'),
           ),
           NavigationDestination(
             icon: Image.asset(
@@ -429,7 +413,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
         ),
       );
-    } else if (_index == 3) {
+    } else if (_index == 2) {
       actions.insert(
         0,
         IconButton(

@@ -38,6 +38,7 @@ class AccountPage extends ConsumerWidget {
       children: [
         _ProfileHero(
           initial: user.initial,
+          picture: user.picture,
           name: user.isGuest
               ? context.tr('account_guest')
               : (user.name ?? context.tr('account_user')),
@@ -276,13 +277,6 @@ class SystemSettingsPage extends StatelessWidget {
           trailing: _chevron(context),
           onTap: () => _open(context, const PermissionsPage()),
         ),
-        ListRow(
-          title: 'Notifikasi pembaruan',
-          subtitle: 'Izin dan status subscription OneSignal',
-          icon: LucideIcons.bell,
-          trailing: _chevron(context),
-          onTap: () => _open(context, const NotificationPreferencesPage()),
-        ),
         const SectionLabel('Aplikasi'),
         ListRow(
           title: 'Pusat pembaruan',
@@ -377,26 +371,6 @@ class AboutPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Gap.xl),
-          ListRow(
-            title: context.tr('about_release_notes'),
-            subtitle: 'Pusat pembaruan dan catatan rilis',
-            icon: LucideIcons.list,
-            trailing: _chevron(context),
-            onTap: () => _open(
-              context,
-              UpdatePage(details: AppUpdateDetails.updateCenter()),
-            ),
-          ),
-          ListRow(
-            title: context.tr('about_check_updates'),
-            subtitle: 'Bandingkan dengan Release resmi',
-            icon: LucideIcons.refreshCw,
-            trailing: _chevron(context),
-            onTap: () => _open(
-              context,
-              UpdatePage(details: AppUpdateDetails.updateCenter()),
-            ),
-          ),
           const SectionLabel('Diagnostik'),
           ListRow(
             title: 'Salin ID diagnostik',
@@ -465,12 +439,16 @@ class _ProfileHero extends StatelessWidget {
     required this.name,
     required this.email,
     required this.badge,
+    this.picture,
   });
 
   final String initial;
   final String name;
   final String email;
   final String badge;
+
+  /// URL foto profil (Google); fallback ke inisial bila null/gagal dimuat.
+  final String? picture;
 
   @override
   Widget build(BuildContext context) {
@@ -483,13 +461,14 @@ class _ProfileHero extends StatelessWidget {
             width: 52,
             height: 52,
             alignment: Alignment.center,
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [c.accent, const Color(0xFF8A5CF6)],
               ),
-              borderRadius: BorderRadius.circular(R.md),
+              shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
                   color: c.accent.withValues(alpha: 0.22),
@@ -498,14 +477,29 @@ class _ProfileHero extends StatelessWidget {
                 ),
               ],
             ),
-            child: Text(
-              initial,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 19,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            child: picture == null
+                ? Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                : Image.network(
+                    picture!,
+                    width: 52,
+                    height: 52,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Text(
+                      initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
           ),
           const SizedBox(width: Gap.md),
           Expanded(

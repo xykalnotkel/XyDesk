@@ -269,11 +269,19 @@ class AuthSession {
 }
 
 class AuthUser {
-  const AuthUser({required this.id, required this.email, this.name});
+  const AuthUser({
+    required this.id,
+    required this.email,
+    this.name,
+    this.picture,
+  });
 
   final String id;
   final String email;
   final String? name;
+
+  /// URL foto profil (Google), null untuk akun email murni.
+  final String? picture;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
@@ -284,7 +292,12 @@ class AuthUser {
         'Data pengguna dari server tidak valid.',
       );
     }
-    return AuthUser(id: id, email: email, name: json['name'] as String?);
+    return AuthUser(
+      id: id,
+      email: email,
+      name: json['name'] as String?,
+      picture: json['picture'] as String?,
+    );
   }
 }
 

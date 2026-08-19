@@ -152,7 +152,7 @@ function PlatformIcon({ platform }: { platform: 'android' | 'windows' }) {
   return (
     <img
       className="platform-image-icon"
-      src={platform === 'android' ? '/platform-android.webp' : '/platform-windows.webp'}
+      src={platform === 'android' ? '/platform-android.svg' : '/platform-windows.svg'}
       alt=""
       aria-hidden="true"
     />
@@ -178,7 +178,6 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           <i className="orbit-dot orbit-dot-c" />
         </div>
         <div className="hero-copy">
-          <p className="eyebrow">REMOTE DESKTOP, TANPA RIBET</p>
           <h1>XyDesk</h1>
           <p className="hero-description">
             Akses PC untuk kerja dan bermain dari Android, Windows, atau browser.
@@ -186,16 +185,16 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           </p>
           <div className="hero-actions">
             {recommended.file ? (
-              <a className="primary-cta platform-cta" href={`${RELEASE_BASE}/${recommended.file}`}>
+              <a className="hero-btn primary-cta platform-cta" href={`${RELEASE_BASE}/${recommended.file}`}>
                 <PlatformIcon platform={recommended.platform === 'windows' ? 'windows' : 'android'} />
-                Download For {recommended.platform === 'windows' ? 'Windows' : 'Android'}
+                Download {recommended.platform === 'windows' ? 'Windows' : 'Android'}
               </a>
             ) : (
-              <button className="primary-cta" onClick={() => navigate('/connect')}>
+              <button className="hero-btn primary-cta" onClick={() => navigate('/connect')}>
                 Buka XyDesk Web
               </button>
             )}
-            <button className="secondary-cta" onClick={() => navigate('/connect')}>
+            <button className="hero-btn secondary-cta" onClick={() => navigate('/connect')}>
               Connect dari Browser
             </button>
           </div>
@@ -508,7 +507,20 @@ function RemoteApp() {
   return (
     <main className="connect-page">
       <div className="connect-account-bar">
-        <span>{profile ? `Masuk sebagai ${profile.name || profile.email}` : 'Mode tamu siap digunakan'}</span>
+        {profile ? (
+          <div className="account-chip">
+            {profile.picture ? (
+              <img src={profile.picture} alt="" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="avatar-fallback">
+                {(profile.name || profile.email)[0]?.toUpperCase()}
+              </span>
+            )}
+            <span className="account-name">{profile.name || profile.email.split('@')[0]}</span>
+          </div>
+        ) : (
+          <span>Mode tamu siap digunakan</span>
+        )}
         {profile ? (
           <button className="text-action" onClick={signOut}>Keluar</button>
         ) : (
@@ -712,8 +724,9 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     pairing: 'Menghubungi host…',
     negotiating: 'Menyiapkan koneksi langsung…',
     connected: 'Tersambung',
-    rejected: 'Password pairing ditolak',
-    'peer-offline': 'Host tidak online',
+    rejected: 'ID atau password salah. Periksa keduanya lalu coba lagi.',
+    'peer-offline':
+      'ID tidak ditemukan. Pastikan ID benar dan XyDesk Host sedang berjalan di PC.',
     ended: 'Sesi berakhir',
   };
 
@@ -721,7 +734,6 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     <section className={connected ? 'remote-session' : 'connect-card surface-card'}>
       {!connected && (
         <div className="connect-form">
-          <p className="eyebrow">GUEST CONNECT</p>
           <h1>Kendalikan PC dari browser.</h1>
           <p className="muted">Tidak perlu akun. Ambil ID dan password dari XyDesk Host di PC.</p>
           <div className="field-head">

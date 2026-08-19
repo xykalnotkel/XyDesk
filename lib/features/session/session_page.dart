@@ -104,6 +104,12 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       'Transport',
       '${s.status}${s.message == null ? '' : ' - ${s.message}'}',
     );
+    // Begitu live, HUD disembunyikan supaya layar remote bersih; pengguna
+    // memunculkannya lewat handle kecil di tepi kanan.
+    if (s.live && _overlayVisible) {
+      _overlayVisible = false;
+      _idleTimer?.cancel();
+    }
     setState(() {});
   }
 
@@ -207,7 +213,9 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     ? _RemoteVideoSurface(
                         transport: _transport,
                         relativeMouse: _settings.pointerLock,
-                        onWake: _wake,
+                        // Saat live, tap adalah klik kiri murni — overlay
+                        // dibuka lewat _EdgeHandle, bukan tap layar.
+                        onWake: () {},
                       )
                     : GestureDetector(
                         behavior: HitTestBehavior.opaque,
@@ -283,6 +291,50 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     ),
                   ),
                 ),
+              // Handle kecil di tepi kanan-tengah: satu-satunya kontrol yang
+              // selalu terlihat (redup) saat HUD tersembunyi. Mobile-friendly:
+              // tidak menutupi area game/kerja di tengah, atas, atau bawah.
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      if (_overlayVisible) {
+                        setState(() => _overlayVisible = false);
+                        _idleTimer?.cancel();
+                      } else {
+                        _wake();
+                      }
+                    },
+                    child: AnimatedOpacity(
+                      duration: D.fade,
+                      opacity: _overlayVisible ? 0.9 : 0.28,
+                      child: Container(
+                        width: 22,
+                        height: 64,
+                        margin: const EdgeInsets.only(right: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xC818191D),
+                          borderRadius: BorderRadius.circular(R.pill),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.14),
+                          ),
+                        ),
+                        child: Icon(
+                          _overlayVisible
+                              ? LucideIcons.chevronRight
+                              : LucideIcons.chevronLeft,
+                          size: 15,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               AnimatedPositioned(
                 duration: D.panel,
                 curve: D.curve,

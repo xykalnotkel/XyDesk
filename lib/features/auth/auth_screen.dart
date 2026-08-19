@@ -155,6 +155,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           .signInAuthenticated(
             email: session.user.email,
             name: session.user.name,
+            picture: session.user.picture,
             token: session.token,
           );
       DevLog.ok('auth', 'Google Sign-In berhasil', session.user.email);
@@ -312,6 +313,7 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
           .signInAuthenticated(
             email: session.user.email,
             name: session.user.name,
+            picture: session.user.picture,
             token: session.token,
           );
       DevLog.ok('auth', 'OTP berhasil diverifikasi', session.user.email);
