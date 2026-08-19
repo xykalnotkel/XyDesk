@@ -1,0 +1,105 @@
+name: Test Lab (RDP via Tailscale)
+
+# Lab uji fungsional XyDesk host di runner Windows GitHub, diakses via RDP
+# melalui Tailscale. BUKAN benchmark latency (CPU virtual, tanpa GPU) —
+# gunanya memverifikasi: pairing, video muncul, input/clipboard jalan.
+#
+# Cara pakai:
+#   1. Set secrets repo: TAILSCALE_AUTHKEY (auth key dari admin Tailscale,
+#      disarankan ephemeral+reusable) dan RDP_PASSWORD (password kuat).
+#   2. Actions -> "Test Lab" -> Run workflow (isi durasi menit).
+#   3. Tunggu step "Info koneksi" menampilkan IP Tailscale runner.
+#   4. RDP dari perangkat mana pun di tailnet: user `runneradmin`,
+#      password = RDP_PASSWORD, alamat = IP Tailscale tersebut.
+#   5. Di dalam RDP: jalankan XyDesk (sudah terinstal), buka mode Host,
+#      catat ID + password, lalu konek dari HP/web seperti biasa.
+#   6. Selesai lebih awal? Buat file C:\xydesk\stop.txt atau cancel run.
+#
+# Catatan: menutup jendela RDP me-lock sesi (capture bisa beku). Untuk
+# melepas tanpa lock, jalankan di PowerShell admin DI DALAM sesi RDP:
+#   tscon $env:SESSIONNAME /dest:console
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Durasi lab dalam menit (maks 320)'
+        required: false
+        default: '120'
+
+permissions:
+  contents: read
+
+jobs:
+  lab:
+    name: Windows lab
+    runs-on: windows-latest
+    timeout-minutes: 330
+    steps:
+      - name: Validasi secrets
+        shell: pwsh
+        env:
+          TS_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+          RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
+        run: |
+          if (-not $env:TS_AUTHKEY) { Write-Error 'Secret TAILSCALE_AUTHKEY belum diatur.'; exit 1 }
+          if (-not $env:RDP_PASSWORD -or $env:RDP_PASSWORD.Length -lt 12) {
+            Write-Error 'Secret RDP_PASSWORD belum diatur / kurang dari 12 karakter.'; exit 1
+          }
+
+      - name: Pasang Tailscale
+        shell: pwsh
+        env:
+          TS_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+        run: |
+          Invoke-WebRequest -Uri 'https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi' -OutFile "$env:TEMP\ts.msi"
+          Start-Process msiexec -ArgumentList '/i',"$env:TEMP\ts.msi",'/quiet','/norestart' -Wait
+          & 'C:\Program Files\Tailscale\tailscale.exe' up --authkey $env:TS_AUTHKEY --hostname 'xydesk-lab' --accept-dns=false
+          & 'C:\Program Files\Tailscale\tailscale.exe' ip -4
+
+      - name: Aktifkan RDP
+        shell: pwsh
+        env:
+          RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
+          Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
+          net user runneradmin $env:RDP_PASSWORD
+
+      - name: Pasang XyDesk rilis terbaru
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path C:\xydesk | Out-Null
+          Invoke-WebRequest -Uri 'https://github.com/xykalnotkel/XyDesk/releases/latest/download/XyDesk-x64.exe' -OutFile C:\xydesk\XyDesk-Setup.exe
+          # Installer Inno Setup: pasang senyap untuk semua user.
+          Start-Process C:\xydesk\XyDesk-Setup.exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait
+          Write-Host 'XyDesk terpasang. Jalankan dari Start Menu di dalam sesi RDP.'
+
+      - name: Info koneksi
+        shell: pwsh
+        run: |
+          $ip = (& 'C:\Program Files\Tailscale\tailscale.exe' ip -4).Trim()
+          Write-Host '=========================================='
+          Write-Host " RDP  : $ip  (user: runneradmin)"
+          Write-Host ' Pass : secret RDP_PASSWORD'
+          Write-Host ' App  : XyDesk (Start Menu) -> mode Host'
+          Write-Host '=========================================='
+          "## XyDesk Test Lab`n`n- RDP: ``$ip`` user ``runneradmin```n- Durasi: ${{ inputs.duration }} menit" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Tahan runner selama durasi lab
+        shell: pwsh
+        run: |
+          $minutes = [Math]::Min([int]'${{ inputs.duration }}', 320)
+          $deadline = (Get-Date).AddMinutes($minutes)
+          Write-Host "Lab aktif sampai $deadline (atau buat C:\xydesk\stop.txt)."
+          while ((Get-Date) -lt $deadline) {
+            if (Test-Path C:\xydesk\stop.txt) { Write-Host 'stop.txt ditemukan — lab selesai.'; break }
+            Start-Sleep -Seconds 30
+          }
+
+      - name: Putus Tailscale
+        if: always()
+        shell: pwsh
+        run: |
+          & 'C:\Program Files\Tailscale\tailscale.exe' logout
+          Write-Host 'Node lab keluar dari tailnet.'
