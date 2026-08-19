@@ -9,7 +9,11 @@ import {
   verifyOtp,
 } from './api';
 import { detectDevicePackage, initialDevicePackage } from './device';
-import { GOOGLE_CLIENT_ID, renderGoogleButton } from './google';
+import {
+  beginGoogleLogin,
+  consumeGoogleRedirect,
+  GOOGLE_CLIENT_ID,
+} from './google';
 import { InputCodec, RtcPhase, RtcSession } from './rtc';
 
 type Route = '/' | '/connect' | '/download' | '/legal' | '/blog';
@@ -412,6 +416,14 @@ function RemoteApp() {
       });
   }, [jwt]);
 
+  // Kembali dari halaman login Google (redirect flow): tukar id_token
+  // menjadi sesi XyDesk lalu bersihkan URL.
+  useEffect(() => {
+    const idToken = consumeGoogleRedirect();
+    if (idToken) void doGoogle(idToken);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const finishAuth = (token: string, user?: UserProfile) => {
     sessionStorage.removeItem(GUEST_TOKEN_KEY);
     localStorage.setItem(TOKEN_KEY, token);
@@ -489,7 +501,6 @@ function RemoteApp() {
         error={error}
         requestOtp={doRequestOtp}
         verify={doVerify}
-        google={doGoogle}
       />
     );
   }
@@ -522,7 +533,6 @@ interface AuthPanelProps {
   error: string;
   requestOtp: () => void;
   verify: () => void;
-  google: (token: string) => void;
 }
 
 function AuthPanel(props: AuthPanelProps) {
@@ -533,7 +543,7 @@ function AuthPanel(props: AuthPanelProps) {
       <h1>{props.step === 'otp' ? 'Kode verifikasi' : 'Masuk ke XyDesk'}</h1>
       {props.step === 'login' ? (
         <>
-          <GoogleButton onCredential={props.google} />
+          <GoogleButton />
           <p className="or-label">atau dengan email</p>
           <input placeholder="Nama lengkap" value={props.name} onChange={(e) => props.setName(e.target.value)} />
           <input type="email" placeholder="email@contoh.com" value={props.email} onChange={(e) => props.setEmail(e.target.value)} />
@@ -557,24 +567,78 @@ function AuthPanel(props: AuthPanelProps) {
   );
 }
 
-function GoogleButton({ onCredential }: { onCredential: (idToken: string) => void }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [failed, setFailed] = useState(!GOOGLE_CLIENT_ID);
-  useEffect(() => {
-    if (!ref.current || !GOOGLE_CLIENT_ID) return;
-    renderGoogleButton(ref.current, onCredential).catch(() => setFailed(true));
-  }, [onCredential]);
-  return failed ? null : <div ref={ref} className="google-btn" />;
+function GoogleButton() {
+  if (!GOOGLE_CLIENT_ID) return null;
+  // Redirect flow: tanpa popup/iframe — aman untuk Safari iOS dan in-app
+  // browser yang memblokir popup GIS (gejala "mentok di about:blank").
+  return (
+    <button type="button" className="google-btn" onClick={beginGoogleLogin}>
+      <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden>
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+      </svg>
+      Lanjutkan dengan Google
+    </button>
+  );
 }
 
 function formatHostId(raw: string): string {
   return raw.replace(/\D/g, '').slice(0, 9).replace(/(\d{3})(?=\d)/g, '$1 ');
 }
 
+// ── Riwayat koneksi (maks 5, terbaru di atas) ──
+// Password disimpan ter-encode ringan di localStorage perangkat ini —
+// murni kenyamanan; browser profile pribadi adalah asumsinya.
+interface RecentEntry {
+  id: string;
+  pw: string;
+  at: number;
+}
+
+const RECENTS_KEY = 'xydesk.web.recents';
+
+function loadRecents(): RecentEntry[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENTS_KEY) ?? '[]') as RecentEntry[];
+    return raw.map((r) => ({ ...r, pw: atob(r.pw) })).slice(0, 5);
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(id: string, pw: string) {
+  const cleaned = id.replace(/\s/g, '');
+  const next: RecentEntry[] = [
+    { id: cleaned, pw, at: Date.now() },
+    ...loadRecents().filter((r) => r.id !== cleaned),
+  ].slice(0, 5);
+  localStorage.setItem(
+    RECENTS_KEY,
+    JSON.stringify(next.map((r) => ({ ...r, pw: btoa(r.pw) }))),
+  );
+}
+
+function clearRecents() {
+  localStorage.removeItem(RECENTS_KEY);
+}
+
+function HistoryIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+
 function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) {
   const [hostId, setHostId] = useState(() => localStorage.getItem(LAST_HOST_KEY) ?? '');
   const [pin, setPin] = useState('');
   const [phase, setPhase] = useState<RtcPhase | ''>('');
+  const [recents, setRecents] = useState<RecentEntry[]>(loadRecents);
+  const [recentsOpen, setRecentsOpen] = useState(false);
   const sessionRef = useRef<RtcSession | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
@@ -600,7 +664,9 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const connect = async () => {
     localStorage.setItem(LAST_HOST_KEY, hostId);
     setPhase('pairing');
-    void enterImmersive();
+    // PENTING: fullscreen + rotasi landscape TIDAK dipanggil di sini.
+    // Selama pairing/negosiasi pengguna tetap di layar form; layar baru
+    // berputar setelah transport benar-benar connected.
     try {
       const jwt = await ensureToken();
       const session = new RtcSession();
@@ -608,6 +674,8 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       session.onPhase = (next) => {
         setPhase(next);
         if (next === 'connected') {
+          saveRecent(hostId, pin);
+          setRecents(loadRecents());
           window.history.replaceState({}, '', '/connect#session');
           void enterImmersive();
         }
@@ -656,14 +724,59 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           <p className="eyebrow">GUEST CONNECT</p>
           <h1>Kendalikan PC dari browser.</h1>
           <p className="muted">Tidak perlu akun. Ambil ID dan password dari XyDesk Host di PC.</p>
+          <div className="field-head">
+            <span className="field-label">ID perangkat</span>
+            {recents.length > 0 && (
+              <button
+                type="button"
+                className={recentsOpen ? 'recents-toggle open' : 'recents-toggle'}
+                onClick={() => setRecentsOpen((v) => !v)}
+                aria-expanded={recentsOpen}
+              >
+                <HistoryIcon />
+                Riwayat
+              </button>
+            )}
+          </div>
+          {recentsOpen && (
+            <div className="recents-list">
+              {recents.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className="recent-item"
+                  onClick={() => {
+                    setHostId(formatHostId(r.id));
+                    setPin(r.pw);
+                    setRecentsOpen(false);
+                  }}
+                >
+                  <span className="recent-id">{formatHostId(r.id)}</span>
+                  <span className="recent-pw">password tersimpan</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                className="recent-clear"
+                onClick={() => {
+                  clearRecents();
+                  setRecents([]);
+                  setRecentsOpen(false);
+                }}
+              >
+                Hapus riwayat
+              </button>
+            </div>
+          )}
           <input className="host-id" inputMode="numeric" placeholder="123 456 789" value={hostId} autoFocus={!hostId} onChange={(e) => {
             const value = formatHostId(e.target.value);
             setHostId(value);
             if (value.replace(/\s/g, '').length === 9) pinRef.current?.focus();
           }} />
+          <span className="field-label">Password pairing</span>
           <input ref={pinRef} type="password" placeholder="Password pairing" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && canConnect && connect()} />
           {phase && <p className="status-text">{labels[phase] ?? phase}</p>}
-          <button disabled={!canConnect} onClick={connect}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
+          <button className="connect-cta" disabled={!canConnect} onClick={connect}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
           <p className="microcopy">Sesi tamu berlaku dua jam dan tidak menyimpan identitas.</p>
         </div>
       )}

@@ -4,14 +4,14 @@
 @font-face { font-family: 'InterXy'; src: url('/fonts/inter-bold.woff2') format('woff2'); font-weight: 700 900; font-display: swap; }
 
 :root {
-  --bg: #0b0c10;
-  --surface: #14151a;
-  --surface-high: #1b1c22;
+  --bg: #0b0a12;
+  --surface: #16141f;
+  --surface-high: #1e1b2a;
   --text: #f2f2f4;
   --muted: #a2a2ab;
   --low: #6e6f78;
-  --accent: #6658d9;
-  --accent-high: #7b6de8;
+  --accent: #7654f6;
+  --accent-high: #9a7bff;
   --danger: #d85f68;
   font-family: InterXy, Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   color: var(--text);
@@ -25,7 +25,7 @@ body, #root { min-height: 100%; }
 body {
   min-width: 320px;
   background:
-    radial-gradient(900px 480px at 50% -150px, rgba(91, 78, 184, 0.18), transparent 70%),
+    radial-gradient(900px 480px at 50% -150px, rgba(118, 84, 246, 0.16), transparent 70%),
     var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -59,10 +59,11 @@ a { color: inherit; }
 .nav-link:hover, .nav-link.active { color: var(--text); background: rgba(255,255,255,.06); }
 .header-cta { justify-self: end; }
 
+/* Rounded penuh: tombol dan input berbentuk kapsul, mengikuti logo. */
 button, .primary-cta, .secondary-cta {
   border: 0;
-  border-radius: 12px;
-  padding: 13px 18px;
+  border-radius: 999px;
+  padding: 13px 20px;
   font-weight: 650;
   font-size: 14px;
   cursor: pointer;
@@ -162,15 +163,60 @@ button:not(:disabled):active, .primary-cta:active, .secondary-cta:active { trans
 .muted, .microcopy { color: var(--muted); line-height: 1.6; font-size: 13px; }
 .microcopy { color: var(--low); font-size: 11px; text-align: center; }
 .status-text { color: #aaa3ed; font-size: 12px; }
-input { width: 100%; border: 0; outline: 0; border-radius: 12px; padding: 14px 16px; background: var(--surface-high); color: var(--text); }
-input:focus { box-shadow: 0 0 0 1px var(--accent-high); }
-input.host-id { text-align: center; font-size: 25px; letter-spacing: 4px; font-variant-numeric: tabular-nums; }
+input { width: 100%; border: 0; outline: 0; border-radius: 999px; padding: 14px 20px; background: var(--surface-high); color: var(--text); }
+input:focus { box-shadow: 0 0 0 1.5px var(--accent-high); }
+/* ID host: rata kiri seperti kolom password, ukuran sedang agar sejajar. */
+input.host-id { font-size: 19px; letter-spacing: 2.5px; font-variant-numeric: tabular-nums; }
 .error { color: var(--danger); font-size: 12px; }
 .auth-panel { width: min(420px, calc(100% - 32px)); margin: 44px auto 80px; padding: 28px; display: flex; flex-direction: column; gap: 13px; }
 .auth-panel h1 { text-align: center; font-size: 24px; }
 .auth-logo { width: 66px; height: 66px; object-fit: contain; align-self: center; }
 .back-action { align-self: flex-start; }
-.google-btn { min-height: 44px; display: flex; justify-content: center; }
+.google-btn {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+  font-weight: 600;
+}
+.google-btn:hover { background: rgba(255, 255, 255, 0.11); }
+
+/* ── Label + riwayat koneksi ── */
+.field-head { display: flex; align-items: center; justify-content: space-between; }
+.field-label { font-size: 11.5px; font-weight: 650; letter-spacing: .4px; text-transform: uppercase; color: var(--accent-high); }
+.recents-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--accent-high);
+  background: rgba(118, 84, 246, 0.14);
+}
+.recents-toggle:hover, .recents-toggle.open { background: rgba(118, 84, 246, 0.26); color: #cbb8ff; }
+.recents-list { display: flex; flex-direction: column; gap: 6px; padding: 10px; background: var(--surface-high); border-radius: 22px; }
+.recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 16px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+}
+.recent-item:hover { background: rgba(118, 84, 246, 0.18); }
+.recent-id { font-variant-numeric: tabular-nums; letter-spacing: 1.5px; font-weight: 650; font-size: 14px; }
+.recent-pw { font-size: 10.5px; color: var(--low); }
+.recent-clear { align-self: center; padding: 6px 14px; font-size: 11px; color: var(--muted); background: transparent; }
+.recent-clear:hover { color: var(--danger); }
+.connect-cta { background: var(--accent); color: #fff; }
+.connect-cta:hover:not(:disabled) { background: var(--accent-high); }
 .or-label { text-align: center; color: var(--low); font-size: 11px; }
 
 .remote-session { position: fixed; inset: 0; z-index: 100; background: black; }

@@ -12,7 +12,8 @@ class AppColors {
   static const raisedDark = Color(0xFF1B1B1E);
   static const overlayDark = Color(0xFF232326);
   static const inputDark = Color(0xFF202023);
-  static const accentDark = Color(0xFF5B7FE8);
+  // Ungu brand — diambil dari logo X (gradasi #7654F6..#9A7BFF).
+  static const accentDark = Color(0xFF7654F6);
   static const textHiDark = Color(0xFFEDEDEF);
   static const textMidDark = Color(0xFFA0A0A8);
   static const textLowDark = Color(0xFF6B6B73);
@@ -22,7 +23,8 @@ class AppColors {
   static const raisedLight = Color(0xFFFFFFFF);
   static const overlayLight = Color(0xFFFFFFFF);
   static const inputLight = Color(0xFFF2F2F0);
-  static const accentLight = Color(0xFF3D63D8);
+  // Ungu brand versi light — lebih pekat agar kontras di latar Paper.
+  static const accentLight = Color(0xFF6142D6);
   static const textHiLight = Color(0xFF18181B);
   static const textMidLight = Color(0xFF52525B);
   static const textLowLight = Color(0xFF9A9AA2);

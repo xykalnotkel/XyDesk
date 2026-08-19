@@ -113,39 +113,37 @@ class AppTheme {
         ),
       ),
 
-      // ── Input: rounded rectangle 12dp, bukan kapsul ──
-      // Bentuk yang lebih tegas membuat field mudah dibedakan dari tombol,
-      // status pill, dan kontrol pilihan.
+      // ── Input: kapsul penuh (rounded full), selaras bahasa bentuk logo ──
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: p.input,
         hintStyle: TextStyle(color: p.textLow, fontSize: 14),
         constraints: const BoxConstraints(minHeight: 56),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(R.pill),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(R.pill),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
-          borderSide: BorderSide(color: p.accent, width: 1),
+          borderRadius: BorderRadius.circular(R.pill),
+          borderSide: BorderSide(color: p.accent, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(R.pill),
           borderSide: BorderSide(color: p.dangerText, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(R.md),
+          borderRadius: BorderRadius.circular(R.pill),
           borderSide: BorderSide(color: p.dangerText, width: 1),
         ),
         errorStyle: TextStyle(color: p.dangerText, fontSize: 11.5),
       ),
 
-      // ── Tombol aksi: radius sedang; pill hanya untuk status/pilihan ──
+      // ── Tombol aksi: kapsul penuh, mengikuti bahasa bentuk logo ──
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: p.accent,
@@ -156,9 +154,7 @@ class AppTheme {
           disabledForegroundColor: Colors.white.withValues(alpha: 0.45),
           minimumSize: const Size.fromHeight(50),
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.md),
-          ),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
@@ -178,9 +174,7 @@ class AppTheme {
           minimumSize: const Size.fromHeight(50),
           foregroundColor: p.textHi,
           side: BorderSide(color: p.textLow.withValues(alpha: 0.30)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.md),
-          ),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),

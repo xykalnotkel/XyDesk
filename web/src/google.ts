@@ -1,71 +1,53 @@
-// Google Identity Services (GIS) — tombol "Sign in with Google" resmi.
+// Login Google via OAuth 2.0 redirect flow (OpenID Connect implicit).
 //
-// Client ID WEB dipasok saat build via VITE_GOOGLE_CLIENT_ID (bukan secret;
-// audience diverifikasi server-side di Worker). Tanpa client id, tombol
-// Google disembunyikan dan login email OTP tetap jalan.
+// Kenapa redirect, bukan popup GIS: popup Google Identity Services sering
+// macet di about:blank pada Safari iOS, in-app browser (WA/IG), dan browser
+// dengan popup blocker. Redirect flow bebas popup: halaman pindah ke
+// accounts.google.com, kembali ke /connect dengan id_token di URL fragment.
+// Fragment tidak pernah dikirim ke server — dibaca client, diverifikasi
+// signature + audience di Worker (/auth/google), lalu dibuang dari URL.
+//
+// Client ID WEB dipasok saat build via VITE_GOOGLE_CLIENT_ID (bukan secret).
 
 export const GOOGLE_CLIENT_ID =
   (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? '';
 
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize(config: {
-            client_id: string;
-            callback: (response: { credential: string }) => void;
-            ux_mode?: string;
-          }): void;
-          renderButton(
-            parent: HTMLElement,
-            options: {
-              theme?: string;
-              size?: string;
-              text?: string;
-              shape?: string;
-              width?: number;
-              logo_alignment?: string;
-            },
-          ): void;
-        };
-      };
-    };
-  }
-}
+const STATE_KEY = 'xydesk.google.state';
+const RETURN_PATH = '/connect';
 
-let loader: Promise<void> | null = null;
-
-/// Muat script GIS sekali; resolve saat window.google siap.
-export function loadGis(): Promise<void> {
-  if (!GOOGLE_CLIENT_ID) return Promise.reject(new Error('no-client-id'));
-  if (loader) return loader;
-  loader = new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://accounts.google.com/gsi/client';
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error('gis-load-failed'));
-    document.head.appendChild(s);
-  });
-  return loader;
-}
-
-/// Render tombol Google resmi ke [el]; [onCredential] menerima ID token.
-export async function renderGoogleButton(
-  el: HTMLElement,
-  onCredential: (idToken: string) => void,
-): Promise<void> {
-  await loadGis();
-  window.google!.accounts.id.initialize({
+/// Arahkan browser ke halaman login Google. Tidak ada popup.
+export function beginGoogleLogin(): void {
+  if (!GOOGLE_CLIENT_ID) return;
+  const state = crypto.randomUUID();
+  const nonce = crypto.randomUUID();
+  sessionStorage.setItem(STATE_KEY, state);
+  const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
-    callback: (r) => onCredential(r.credential),
+    redirect_uri: `${window.location.origin}${RETURN_PATH}`,
+    response_type: 'id_token',
+    scope: 'openid email profile',
+    state,
+    nonce,
+    prompt: 'select_account',
   });
-  window.google!.accounts.id.renderButton(el, {
-    theme: 'filled_black',
-    size: 'large',
-    text: 'continue_with',
-    shape: 'pill',
-    width: 320,
-  });
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+
+/// Baca id_token dari fragment saat kembali dari Google.
+/// Mengembalikan null bila tidak ada/tidak valid; URL selalu dibersihkan.
+export function consumeGoogleRedirect(): string | null {
+  const hash = window.location.hash;
+  if (!hash.includes('id_token=')) return null;
+
+  const params = new URLSearchParams(hash.slice(1));
+  const idToken = params.get('id_token');
+  const state = params.get('state');
+  const saved = sessionStorage.getItem(STATE_KEY);
+  sessionStorage.removeItem(STATE_KEY);
+
+  // Bersihkan fragment dari URL apa pun hasilnya (jangan tinggalkan token).
+  window.history.replaceState({}, '', window.location.pathname);
+
+  if (!idToken || !state || state !== saved) return null;
+  return idToken;
 }

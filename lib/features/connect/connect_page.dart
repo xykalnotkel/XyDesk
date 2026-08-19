@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/l10n_bridge.dart';
+import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
 import '../devices/device_model.dart';
@@ -63,14 +64,35 @@ class ConnectPage extends ConsumerStatefulWidget {
 }
 
 class _ConnectPageState extends ConsumerState<ConnectPage> {
+  static const _recentsKey = 'connect_recents';
+  static const _recentsMax = 5;
+
   final _id = TextEditingController();
   final _pw = TextEditingController();
   bool _obscure = true;
   bool _remember = false;
+  bool _recentsOpen = false;
   String? _error;
 
   bool get _valid =>
       _id.text.replaceAll(' ', '').length == 9 && _pw.text.isNotEmpty;
+
+  List<Map<String, dynamic>> get _recents =>
+      ref.read(storeProvider).getList(_recentsKey);
+
+  /// Simpan pasangan ID+kata sandi ke riwayat (terbaru di depan, maks 5).
+  /// Kenyamanan lokal perangkat — bukan sinkron akun.
+  Future<void> _saveRecent(String id, String pw) async {
+    final store = ref.read(storeProvider);
+    final list = store.getList(_recentsKey)
+      ..removeWhere((e) => e['id'] == id)
+      ..insert(0, {
+        'id': id,
+        'pw': pw,
+        'at': DateTime.now().millisecondsSinceEpoch,
+      });
+    await store.setList(_recentsKey, list.take(_recentsMax).toList());
+  }
 
   @override
   void initState() {
@@ -100,6 +122,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     setState(() => _error = null);
 
     final id = _id.text.replaceAll(' ', '');
+    await _saveRecent(id, _pw.text);
     final device = await ref
         .read(deviceRepoProvider.notifier)
         .connect(id: id, name: _demoName(id), remembered: _remember);
@@ -173,19 +196,71 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
           style: TextStyle(fontSize: 12.5, color: c.textMid, height: 1.5),
         ),
         const SizedBox(height: Gap.xxl),
-        _label('ID Perangkat'),
+        Row(
+          children: [
+            Expanded(child: _label('ID Perangkat')),
+            if (_recents.isNotEmpty)
+              InkWell(
+                onTap: () => setState(() => _recentsOpen = !_recentsOpen),
+                borderRadius: BorderRadius.circular(R.pill),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: c.accent.withValues(
+                      alpha: _recentsOpen ? 0.28 : 0.14,
+                    ),
+                    borderRadius: BorderRadius.circular(R.pill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(LucideIcons.history, size: 13, color: c.accent),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Riwayat',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: c.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+        if (_recentsOpen) ...[
+          const SizedBox(height: 6),
+          _RecentsList(
+            entries: _recents,
+            onPick: (id, pw) {
+              _id.text = _prettify(id);
+              _pw.text = pw;
+              setState(() => _recentsOpen = false);
+            },
+            onClear: () async {
+              await ref.read(storeProvider).setList(_recentsKey, []);
+              setState(() => _recentsOpen = false);
+            },
+          ),
+          const SizedBox(height: 6),
+        ],
         ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 56),
           child: TextField(
             controller: _id,
             keyboardType: TextInputType.number,
             inputFormatters: [DeviceIdFormatter()],
-            textAlign: TextAlign.center,
+            // Rata kiri — konsisten dengan kolom kata sandi di bawahnya.
             textAlignVertical: TextAlignVertical.center,
             style: TextStyle(
-              fontSize: 25,
+              fontSize: 19,
               fontWeight: FontWeight.w600,
-              letterSpacing: 1,
+              letterSpacing: 2,
               color: c.textHi,
               // Angka tabular supaya digit tidak bergoyang saat diketik.
               fontFeatures: const [FontFeature.tabularFigures()],
@@ -302,6 +377,13 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     );
   }
 
+  /// "123456789" -> "123 456 789" untuk ditampilkan kembali di kolom ID.
+  static String _prettify(String id) {
+    final d = id.replaceAll(RegExp(r'\D'), '');
+    if (d.length != 9) return id;
+    return '${d.substring(0, 3)} ${d.substring(3, 6)} ${d.substring(6)}';
+  }
+
   Widget _label(String s) => Padding(
     padding: const EdgeInsets.only(left: 2, bottom: 6),
     child: Text(
@@ -338,6 +420,70 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Daftar riwayat koneksi: ketuk untuk mengisi ID + kata sandi sekaligus.
+class _RecentsList extends StatelessWidget {
+  const _RecentsList({
+    required this.entries,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final List<Map<String, dynamic>> entries;
+  final void Function(String id, String pw) onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: c.input,
+        borderRadius: BorderRadius.circular(R.xl),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final e in entries)
+            InkWell(
+              onTap: () => onPick(e['id'] as String, e['pw'] as String? ?? ''),
+              borderRadius: BorderRadius.circular(R.pill),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 11,
+                ),
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.monitor, size: 15, color: c.textMid),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _ConnectPageState._prettify(e['id'] as String),
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.2,
+                          color: c.textHi,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'sandi tersimpan',
+                      style: TextStyle(fontSize: 10.5, color: c.textLow),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          TextButton(onPressed: onClear, child: const Text('Hapus riwayat')),
+        ],
       ),
     );
   }
