@@ -224,7 +224,11 @@ input.host-id { font-size: 19px; letter-spacing: 2.5px; font-variant-numeric: ta
 .account-chip { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .account-chip img, .account-chip .avatar-fallback { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
 .account-chip .avatar-fallback { display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; }
-.account-name { font-weight: 650; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.account-name { padding: 0; font-weight: 650; font-size: 13.5px; color: var(--text); background: transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.account-name:hover { color: var(--accent-high); }
+.account-actions { display: flex; gap: 4px; }
+.danger-text { color: var(--danger); opacity: .8; }
+.danger-text:hover { opacity: 1; }
 .connect-cta:hover:not(:disabled) { background: var(--accent-high); }
 .or-label { text-align: center; color: var(--low); font-size: 11px; }
 
@@ -235,6 +239,11 @@ input.host-id { font-size: 19px; letter-spacing: 2.5px; font-variant-numeric: ta
 .video-surface:hover .session-actions, .session-actions:focus-within { opacity: 1; }
 .session-actions button { padding: 9px 12px; background: rgba(20,21,26,.85); backdrop-filter: blur(12px); font-size: 12px; }
 .session-actions .danger-action:hover { background: var(--danger); }
+.session-retry { position: absolute; top: max(64px, calc(env(safe-area-inset-top) + 50px)); left: 50%; transform: translateX(-50%); padding: 8px 16px; background: rgba(20,21,26,.88); border-radius: 999px; color: #cbb8ff; font-size: 12px; }
+.touch-kb { position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; padding: 10px; background: rgba(16,15,24,.92); backdrop-filter: blur(14px); border-radius: 20px; border: 1px solid rgba(255,255,255,.08); }
+.touch-kb-row { display: flex; gap: 6px; }
+.touch-kb-row button { min-width: 52px; padding: 11px 10px; font-size: 12.5px; font-weight: 600; color: var(--text); background: rgba(255,255,255,.08); border-radius: 12px; }
+.touch-kb-row button:active { background: var(--accent); }
 
 .site-footer { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 48px 0 34px; display: grid; grid-template-columns: 1.7fr repeat(3, 1fr); gap: 42px; color: var(--low); font-size: 12px; }
 .footer-brand { max-width: 300px; }

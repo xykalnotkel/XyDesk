@@ -89,6 +89,29 @@ export async function signalToken(token: string, deviceId: string) {
   return (await res.text()).trim();
 }
 
+/// Ganti nama tampilan profil.
+export async function updateProfileName(token: string, name: string) {
+  const res = await fetch(`${API_BASE}/auth/profile`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new ApiError(res.status, 'profile', 'Gagal menyimpan nama.');
+  return (await res.json()) as { user: UserProfile };
+}
+
+/// Hapus akun permanen.
+export async function deleteAccount(token: string) {
+  const res = await fetch(`${API_BASE}/auth/delete`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new ApiError(res.status, 'delete', 'Gagal menghapus akun.');
+}
+
 /// Kredensial TURN ber-TTL; null bila belum dikonfigurasi (cukup STUN).
 export async function turnIce(
   deviceId: string,

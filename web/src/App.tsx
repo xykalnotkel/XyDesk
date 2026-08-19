@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ApiError,
   createGuestSession,
+  deleteAccount,
   me,
   requestOtp,
   signInWithGoogle,
+  updateProfileName,
   UserProfile,
   verifyOtp,
 } from './api';
@@ -15,6 +17,7 @@ import {
   GOOGLE_CLIENT_ID,
 } from './google';
 import { InputCodec, RtcPhase, RtcSession } from './rtc';
+import { TOUCH_ROWS, vkFromCode } from './vk';
 
 type Route = '/' | '/connect' | '/download' | '/legal' | '/blog';
 type AuthStep = 'closed' | 'login' | 'otp';
@@ -528,13 +531,52 @@ function RemoteApp() {
                 {(profile.name || profile.email)[0]?.toUpperCase()}
               </span>
             )}
-            <span className="account-name">{profile.name || profile.email.split('@')[0]}</span>
+            <button
+              type="button"
+              className="account-name"
+              title="Klik untuk ganti nama"
+              onClick={async () => {
+                const name = window.prompt(
+                  'Nama tampilan baru:',
+                  profile.name ?? '',
+                );
+                if (!name || !jwt) return;
+                try {
+                  const r = await updateProfileName(jwt, name.trim());
+                  setProfile(r.user);
+                } catch {
+                  window.alert('Gagal menyimpan nama.');
+                }
+              }}
+            >
+              {profile.name || profile.email.split('@')[0]}
+            </button>
           </div>
         ) : (
           <span>Mode tamu siap digunakan</span>
         )}
         {profile ? (
-          <button className="text-action" onClick={signOut}>Keluar</button>
+          <span className="account-actions">
+            <button
+              className="text-action danger-text"
+              onClick={async () => {
+                if (!jwt) return;
+                const ok = window.confirm(
+                  'Hapus akun XyDesk secara permanen? Tindakan ini tidak bisa dibatalkan.',
+                );
+                if (!ok) return;
+                try {
+                  await deleteAccount(jwt);
+                  signOut();
+                } catch {
+                  window.alert('Gagal menghapus akun.');
+                }
+              }}
+            >
+              Hapus akun
+            </button>
+            <button className="text-action" onClick={signOut}>Keluar</button>
+          </span>
         ) : (
           <button className="text-action" onClick={() => setAuthStep('login')}>Masuk akun</button>
         )}
@@ -663,7 +705,10 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const [phase, setPhase] = useState<RtcPhase | ''>('');
   const [recents, setRecents] = useState<RecentEntry[]>(loadRecents);
   const [recentsOpen, setRecentsOpen] = useState(false);
+  const [kbOpen, setKbOpen] = useState(false);
+  const [retryInfo, setRetryInfo] = useState('');
   const sessionRef = useRef<RtcSession | null>(null);
+  const retryRef = useRef({ tries: 0, timer: 0 as ReturnType<typeof setTimeout> | 0, wasConnected: false });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const pinRef = useRef<HTMLInputElement | null>(null);
@@ -685,9 +730,14 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     }
   }, []);
 
-  const connect = async () => {
+  const connect = async (isRetry = false) => {
     localStorage.setItem(LAST_HOST_KEY, hostId);
     setPhase('pairing');
+    if (!isRetry) {
+      retryRef.current.tries = 0;
+      retryRef.current.wasConnected = false;
+      setRetryInfo('');
+    }
     // PENTING: fullscreen + rotasi landscape TIDAK dipanggil di sini.
     // Selama pairing/negosiasi pengguna tetap di layar form; layar baru
     // berputar setelah transport benar-benar connected.
@@ -698,10 +748,30 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       session.onPhase = (next) => {
         setPhase(next);
         if (next === 'connected') {
+          retryRef.current.tries = 0;
+          retryRef.current.wasConnected = true;
+          setRetryInfo('');
           saveRecent(hostId, pin);
           setRecents(loadRecents());
           window.history.replaceState({}, '', '/connect#session');
           void enterImmersive();
+        }
+        // Reconnect otomatis HANYA bila sesi pernah live lalu putus
+        // (jaringan goyah) — bukan untuk pairing gagal/password salah.
+        if (
+          next === 'ended' &&
+          retryRef.current.wasConnected &&
+          retryRef.current.tries < 3 &&
+          sessionRef.current === session
+        ) {
+          retryRef.current.tries += 1;
+          const wait = retryRef.current.tries * 2000;
+          setRetryInfo(
+            `Koneksi terputus — mencoba ulang (${retryRef.current.tries}/3)…`,
+          );
+          retryRef.current.timer = setTimeout(() => void connect(true), wait);
+        } else if (next === 'ended' && retryRef.current.tries >= 3) {
+          setRetryInfo('Gagal menyambung ulang. Coba konek manual.');
         }
       };
       session.onTrack = (stream) => {
@@ -714,8 +784,11 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   };
 
   const disconnect = useCallback(() => {
+    if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
+    retryRef.current.tries = 3; // blok retry setelah putus manual
     sessionRef.current?.stop();
     sessionRef.current = null;
+    setKbOpen(false);
     setPhase('');
     if (window.location.hash === '#session') {
       window.history.replaceState({}, '', '/connect');
@@ -725,6 +798,36 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   useEffect(() => disconnect, [disconnect]);
 
   const send = (bytes: Uint8Array) => sessionRef.current?.sendInput(bytes);
+
+  // Keyboard fisik -> host. Aktif hanya saat sesi live; preventDefault agar
+  // shortcut browser (Ctrl+W dsb.) tidak membajak sesi.
+  useEffect(() => {
+    if (!connected) return;
+    const down = (e: KeyboardEvent) => {
+      const vk = vkFromCode(e.code);
+      if (vk === null) return;
+      e.preventDefault();
+      send(InputCodec.key(vk, true));
+    };
+    const up = (e: KeyboardEvent) => {
+      const vk = vkFromCode(e.code);
+      if (vk === null) return;
+      e.preventDefault();
+      send(InputCodec.key(vk, false));
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected]);
+
+  const tapKey = (vk: number) => {
+    send(InputCodec.key(vk, true));
+    send(InputCodec.key(vk, false));
+  };
   const onPointerMove = (event: React.PointerEvent) => {
     const element = surfaceRef.current;
     if (!element) return;
@@ -800,7 +903,8 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           <span className="field-label">Password pairing</span>
           <input ref={pinRef} type="password" placeholder="Password pairing" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && canConnect && connect()} />
           {phase && <p className="status-text">{labels[phase] ?? phase}</p>}
-          <button className="connect-cta" disabled={!canConnect} onClick={connect}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
+          {retryInfo && <p className="status-text">{retryInfo}</p>}
+          <button className="connect-cta" disabled={!canConnect} onClick={() => void connect()}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
           <p className="microcopy">Sesi tamu berlaku dua jam dan tidak menyimpan identitas.</p>
         </div>
       )}
@@ -816,9 +920,24 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       >
         <video ref={videoRef} autoPlay playsInline muted />
         <div className="session-actions">
+          <button onClick={() => setKbOpen((v) => !v)}>Keyboard</button>
           <button onClick={() => void enterImmersive()}>Layar penuh</button>
           <button className="danger-action" onClick={disconnect}>Putuskan</button>
         </div>
+        {retryInfo && <p className="session-retry">{retryInfo}</p>}
+        {kbOpen && (
+          <div className="touch-kb" onPointerDown={(e) => e.stopPropagation()}>
+            {TOUCH_ROWS.map((row, i) => (
+              <div className="touch-kb-row" key={i}>
+                {row.map(([label, vk]) => (
+                  <button key={label} onClick={() => tapKey(vk)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

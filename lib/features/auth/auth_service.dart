@@ -115,6 +115,56 @@ class AuthService {
     }
   }
 
+  /// Ganti nama tampilan profil di server.
+  Future<AuthUser> updateName(String token, String name) async {
+    try {
+      final response = await _client
+          .post(
+            _uri('/auth/profile'),
+            headers: {
+              'content-type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({'name': name}),
+          )
+          .timeout(const Duration(seconds: 10));
+      final body = _decode(response);
+      if (response.statusCode != 200) {
+        throw AuthException.fromBody(response.statusCode, body);
+      }
+      return AuthUser.fromJson(body['user'] as Map<String, dynamic>);
+    } on TimeoutException {
+      throw const AuthException('timeout', 'Server terlalu lama merespons.');
+    } on http.ClientException {
+      throw const AuthException(
+        'network',
+        'Tidak dapat terhubung ke server. Periksa koneksi internet.',
+      );
+    }
+  }
+
+  /// Hapus akun permanen di server.
+  Future<void> deleteAccount(String token) async {
+    try {
+      final response = await _client
+          .post(
+            _uri('/auth/delete'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) {
+        throw AuthException.fromBody(response.statusCode, _decode(response));
+      }
+    } on TimeoutException {
+      throw const AuthException('timeout', 'Server terlalu lama merespons.');
+    } on http.ClientException {
+      throw const AuthException(
+        'network',
+        'Tidak dapat terhubung ke server. Periksa koneksi internet.',
+      );
+    }
+  }
+
   Future<AuthUser> me(String token) async {
     try {
       final response = await _client

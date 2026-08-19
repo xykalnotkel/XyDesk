@@ -67,6 +67,12 @@ export class AuthStore {
     if (path === '/auth/me' && request.method === 'GET') {
       return this.me(request);
     }
+    if (path === '/auth/profile' && request.method === 'POST') {
+      return this.updateProfile(request);
+    }
+    if (path === '/auth/delete' && request.method === 'POST') {
+      return this.deleteAccount(request);
+    }
     return json({ error: 'not-found' }, 404);
   }
 
@@ -374,5 +380,48 @@ export class AuthStore {
       name: user.name || null,
       picture: user.picture || null,
     };
+  }
+
+  /// Ganti nama tampilan. Nama 2-60 karakter, tanpa kontrol karakter.
+  async updateProfile(request) {
+    const user = await this.userFromRequest(request);
+    if (!user) return json({ error: 'unauthorized' }, 401);
+
+    let name;
+    try {
+      ({ name } = await request.json());
+    } catch {
+      return json({ error: 'bad-json' }, 400);
+    }
+    name = String(name || '').trim().replace(/[\u0000-\u001f\u007f]/g, '');
+    if (name.length < 2 || name.length > 60) {
+      return json({ error: 'invalid-name' }, 400);
+    }
+
+    user.name = name;
+    await this.ctx.storage.put(`user:${user.email}`, user);
+    return json({ user: this.publicUser(user) }, 200);
+  }
+
+  /// Hapus akun permanen. JWT lama otomatis tidak berguna karena record
+  /// user hilang (me() akan menjawab 404).
+  async deleteAccount(request) {
+    const user = await this.userFromRequest(request);
+    if (!user) return json({ error: 'unauthorized' }, 401);
+    await this.ctx.storage.delete(`user:${user.email}`);
+    await this.ctx.storage.delete(`otp:${user.email}`);
+    return json({ ok: true }, 200);
+  }
+
+  /// Resolusi user dari Bearer JWT; null bila token tidak sah.
+  async userFromRequest(request) {
+    const auth = request.headers.get('Authorization') || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    const payload = await verifyJwt(token, this.secret());
+    if (!payload) return null;
+    const user = await this.ctx.storage.get(`user:${payload.email}`);
+    // sub harus cocok — token lama dari akun terhapus/dibuat ulang ditolak.
+    if (!user || user.id !== payload.sub) return null;
+    return user;
   }
 }

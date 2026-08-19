@@ -36,14 +36,20 @@ class AccountPage extends ConsumerWidget {
         bottom: 112,
       ),
       children: [
-        _ProfileHero(
-          initial: user.initial,
-          picture: user.picture,
-          name: user.isGuest
-              ? context.tr('account_guest')
-              : (user.name ?? context.tr('account_user')),
-          email: user.email ?? context.tr('account_local_data'),
-          badge: user.isGuest ? 'MODE TAMU' : 'AKUN AKTIF',
+        InkWell(
+          onTap: user.isGuest ? null : () => _editName(context, ref, user),
+          borderRadius: BorderRadius.circular(R.lg),
+          child: _ProfileHero(
+            initial: user.initial,
+            picture: user.picture,
+            name: user.isGuest
+                ? context.tr('account_guest')
+                : (user.name ?? context.tr('account_user')),
+            email: user.email ?? context.tr('account_local_data'),
+            badge: user.isGuest
+                ? 'MODE TAMU'
+                : 'AKUN AKTIF · ketuk untuk ganti nama',
+          ),
         ),
         const SectionLabel('Preferensi'),
         _CategoryRow(
@@ -100,6 +106,14 @@ class AccountPage extends ConsumerWidget {
             await ref.read(authProvider.notifier).signOut();
           },
         ),
+        if (!user.isGuest && user.token != null)
+          ListRow(
+            title: 'Hapus akun',
+            subtitle: 'Permanen — data akun di server ikut terhapus',
+            icon: LucideIcons.trash2,
+            danger: true,
+            onTap: () => _deleteAccount(context, ref),
+          ),
         const SizedBox(height: Gap.sm),
         Center(
           child: Text(
@@ -430,6 +444,96 @@ class _SettingsScaffold extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+Future<void> _editName(
+  BuildContext context,
+  WidgetRef ref,
+  UserSession user,
+) async {
+  final controller = TextEditingController(text: user.name ?? '');
+  final name = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Ganti nama tampilan', style: TextStyle(fontSize: 16)),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        maxLength: 60,
+        decoration: const InputDecoration(hintText: 'Nama baru'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Batal'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+          child: const Text('Simpan'),
+        ),
+      ],
+    ),
+  );
+  if (name == null || name.length < 2) return;
+  final token = user.token;
+  if (token == null) return;
+  try {
+    final updated = await ref.read(authServiceProvider).updateName(token, name);
+    await ref
+        .read(authProvider.notifier)
+        .refreshAuthenticatedProfile(
+          email: updated.email,
+          name: updated.name,
+          picture: updated.picture,
+        );
+  } on AuthException catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+}
+
+Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Hapus akun?', style: TextStyle(fontSize: 16)),
+      content: const Text(
+        'Akun dan data profil di server dihapus permanen. Tindakan ini '
+        'tidak dapat dibatalkan.',
+        style: TextStyle(fontSize: 13, height: 1.5),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Batal'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text(
+            'Hapus permanen',
+            style: TextStyle(color: AppColors.danger),
+          ),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  final token = ref.read(authProvider).token;
+  if (token == null) return;
+  try {
+    await ref.read(authServiceProvider).deleteAccount(token);
+    await ref.read(googleAuthServiceProvider).signOut();
+    await ref.read(authProvider.notifier).signOut();
+  } on AuthException catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
   }
 }
 
