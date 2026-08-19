@@ -10,10 +10,14 @@ import { open } from '@tauri-apps/plugin-shell';
 const SIGNALING_URL = 'wss://signal.xystudio.my.id/ws';
 
 interface Identity {
-  id?: string;
-  pretty_id?: string;
+  deviceId?: string;
   password?: string;
-  name?: string;
+}
+
+/// "123456789" -> "123 456 789".
+function prettyId(id: string): string {
+  const d = id.replace(/\D/g, '');
+  return d.length === 9 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : id;
 }
 
 interface EngineStatus {
@@ -31,14 +35,19 @@ function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
+let cachedIdentity: Identity | null = null;
+let cachedIdentityError = '';
+
 async function render(): Promise<void> {
-  let identity: Identity = {};
-  let identityError = '';
-  try {
-    identity = await invoke<Identity>('host_identity');
-  } catch (e) {
-    identityError = String(e);
+  if (cachedIdentity === null && !cachedIdentityError) {
+    try {
+      cachedIdentity = await invoke<Identity>('host_identity');
+    } catch (e) {
+      cachedIdentityError = String(e);
+    }
   }
+  const identity: Identity = cachedIdentity ?? {};
+  const identityError = cachedIdentityError;
   let status: EngineStatus = { running: false, pid: null };
   try {
     status = await invoke<EngineStatus>('engine_status');
@@ -46,7 +55,7 @@ async function render(): Promise<void> {
     /* engine belum pernah jalan */
   }
 
-  const prettyId = identity.pretty_id ?? identity.id ?? '—';
+  const shownId = identity.deviceId ? prettyId(identity.deviceId) : '—';
   const password = identity.password ?? '—';
 
   h(`
@@ -70,7 +79,7 @@ async function render(): Promise<void> {
              </section>`
           : `<section class="card">
                <label>ID perangkat</label>
-               <p class="big-id">${esc(prettyId)}</p>
+               <p class="big-id">${esc(shownId)}</p>
                <label>Password pairing</label>
                <div class="pw-row">
                  <code id="pw" data-hidden="1">••••••••</code>
