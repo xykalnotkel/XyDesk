@@ -107,6 +107,10 @@ button:not(:disabled):active, .primary-cta:active, .secondary-cta:active { trans
 .hero-description { max-width: 660px; margin-top: 26px; color: var(--muted); font-size: clamp(16px, 2vw, 19px); line-height: 1.65; }
 .hero-actions { display: flex; gap: 10px; margin-top: 30px; flex-wrap: wrap; justify-content: center; }
 .hero-btn { min-width: 240px; min-height: 52px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; }
+.detect-chip { margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; color: var(--low); font-size: 12px; }
+.detect-chip strong { color: var(--muted); font-weight: 650; }
+.detect-chip .abi-correction { padding: 5px 12px; font-size: 11px; color: var(--accent-high); background: rgba(118,84,246,.13); }
+.detect-chip .abi-correction:hover { background: rgba(118,84,246,.24); }
 .channel-link { margin-top: 18px; color: var(--muted); font-size: 13px; text-underline-offset: 4px; }
 .channel-link:hover { color: var(--text); }
 .abi-correction { margin-top: 10px; padding: 7px 10px; color: #b9b4ea; background: transparent; font-size: 11px; font-weight: 600; }

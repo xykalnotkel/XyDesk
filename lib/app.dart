@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'core/app_version.dart';
 import 'core/devlog.dart';
 import 'core/l10n_bridge.dart';
 import 'core/responsive.dart';
@@ -243,8 +244,12 @@ class _AppShellState extends ConsumerState<AppShell> {
     final service = NotificationService.instance;
     if (!mounted || !service.supported) return;
     final store = ref.read(storeProvider);
-    if (store.getBool('notification_offer_seen')) return;
-    await store.setBool('notification_offer_seen', true);
+    // Tawaran diulang sekali per build baru selama notifikasi belum aktif.
+    // Flag lama yang permanen membuat pengguna yang memilih "Nanti" tidak
+    // pernah ditanya lagi — lalu update rilis tidak pernah sampai.
+    final offerKey = 'notification_offer_${AppVersion.build}';
+    if (store.getBool(offerKey)) return;
+    await store.setBool(offerKey, true);
     await service.refresh();
     if (!mounted || service.active) return;
 
@@ -306,6 +311,73 @@ class _AppShellState extends ConsumerState<AppShell> {
       context.tr('nav_connect'),
       context.tr('nav_account'),
     ];
+
+    // Windows/tablet (layar lebar): navigasi pindah ke rail kiri — pola
+    // desktop yang benar; bottom nav hanya untuk genggaman ponsel.
+    final wide = Responsive.isTablet(context);
+    if (wide) {
+      return SeamlessScaffold(
+        title: titles[_index],
+        actions: _actions(context),
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: _index,
+              onDestinationSelected: (i) => setState(() => _index = i),
+              labelType: NavigationRailLabelType.all,
+              backgroundColor: Colors.transparent,
+              destinations: [
+                NavigationRailDestination(
+                  icon: Image.asset(
+                    'assets/libraryicons/nav_home_inactive.webp',
+                    width: 24,
+                    height: 24,
+                  ),
+                  selectedIcon: Image.asset(
+                    'assets/libraryicons/nav_home_active.webp',
+                    width: 24,
+                    height: 24,
+                  ),
+                  label: Text(context.tr('nav_home')),
+                ),
+                NavigationRailDestination(
+                  icon: Image.asset(
+                    'assets/libraryicons/nav_connect_inactive.webp',
+                    width: 24,
+                    height: 24,
+                  ),
+                  selectedIcon: Image.asset(
+                    'assets/libraryicons/nav_connect_active.webp',
+                    width: 24,
+                    height: 24,
+                  ),
+                  label: Text(context.tr('nav_connect')),
+                ),
+                NavigationRailDestination(
+                  icon: Image.asset(
+                    'assets/libraryicons/nav_account_inactive.webp',
+                    width: 24,
+                    height: 24,
+                  ),
+                  selectedIcon: Image.asset(
+                    'assets/libraryicons/nav_account_active.webp',
+                    width: 24,
+                    height: 24,
+                  ),
+                  label: Text(context.tr('nav_account')),
+                ),
+              ],
+            ),
+            Expanded(
+              child: IndexedStack(
+                index: _index,
+                children: const [HomePage(), ConnectPage(), AccountPage()],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return SeamlessScaffold(
       title: titles[_index],

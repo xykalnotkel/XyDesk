@@ -83,6 +83,8 @@ class _SplashScene extends StatelessWidget {
   static const _leftEnd = 0.78;
   static const _wordStart = 0.60;
   static const _wordEnd = 0.88;
+  static const _shineStart = 0.86;
+  static const _shineEnd = 1.0;
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +115,13 @@ class _SplashScene extends StatelessWidget {
       _frac(t, _leftStart, _leftEnd),
     );
     final wordT = Curves.easeOutCubic.transform(_frac(t, _wordStart, _wordEnd));
+    // Sapuan kilau tipis melintasi wordmark begitu reveal selesai — sentuhan
+    // premium kecil tanpa menambah durasi total.
+    final shineT = Curves.easeInOut.transform(_frac(t, _shineStart, _shineEnd));
+    // Glow denyut halus di logo pada keadaan lockup akhir.
+    final settleGlow = t >= _leftEnd
+        ? 0.5 + 0.5 * math.sin(spin * 2 * math.pi)
+        : 0.0;
 
     // Ukuran lockup akhir: [logo][jeda][wordmark] berpusat di tengah layar.
     const wordWidth = 132.0;
@@ -205,6 +214,27 @@ class _SplashScene extends StatelessWidget {
                               ),
                             ),
                           ),
+                        // Glow denyut lembut di belakang logo saat lockup.
+                        if (settleGlow > 0)
+                          Transform.translate(
+                            offset: Offset(logoDx, 0),
+                            child: Opacity(
+                              opacity: 0.10 + 0.10 * settleGlow,
+                              child: Container(
+                                width: logoSize * 1.7,
+                                height: logoSize * 1.7,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      Color(0xFF9A7BFF),
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         // Logo.
                         Transform.translate(
                           offset: Offset(logoDx, 0),
@@ -237,16 +267,37 @@ class _SplashScene extends StatelessWidget {
                                   sigmaX: 12 * (1 - wordT),
                                   sigmaY: 0.4 * (1 - wordT),
                                 ),
-                                child: const Text(
-                                  'XyDesk',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 38,
-                                    height: 1.08,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -1.9,
-                                    color: Color(0xFFF4F2FA),
-                                    decoration: TextDecoration.none,
+                                child: ShaderMask(
+                                  blendMode: BlendMode.srcATop,
+                                  shaderCallback: (bounds) => LinearGradient(
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                    stops: [
+                                      (shineT * 1.4 - 0.35).clamp(0.0, 1.0),
+                                      (shineT * 1.4 - 0.2).clamp(0.0, 1.0),
+                                      (shineT * 1.4 - 0.05).clamp(0.0, 1.0),
+                                    ],
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.white.withValues(
+                                        alpha: shineT > 0 && shineT < 1
+                                            ? 0.35
+                                            : 0,
+                                      ),
+                                      Colors.transparent,
+                                    ],
+                                  ).createShader(bounds),
+                                  child: const Text(
+                                    'XyDesk',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 38,
+                                      height: 1.08,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -1.9,
+                                      color: Color(0xFFF4F2FA),
+                                      decoration: TextDecoration.none,
+                                    ),
                                   ),
                                 ),
                               ),

@@ -201,18 +201,30 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           <a className="channel-link" href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
             Join saluran WhatsApp
           </a>
-          {recommended.platform === 'android' &&
-            recommended.confidence === 'fallback' && (
-              <button
-                className="abi-correction"
-                onClick={() => {
-                  localStorage.setItem('xydesk.download.arch', 'android-armv7');
-                  window.location.reload();
-                }}
-              >
-                HP Android 32-bit? Gunakan ARMv7
-              </button>
-            )}
+          {recommended.file && (
+            <p className="detect-chip">
+              Terdeteksi: <strong>{recommended.label}</strong>
+              {recommended.confidence === 'fallback' && ' (perkiraan)'}
+              {recommended.platform === 'android' && (
+                <button
+                  className="abi-correction"
+                  onClick={() => {
+                    localStorage.setItem(
+                      'xydesk.download.arch',
+                      recommended.architecture === 'arm64'
+                        ? 'android-armv7'
+                        : 'android-arm64',
+                    );
+                    window.location.reload();
+                  }}
+                >
+                  {recommended.architecture === 'arm64'
+                    ? 'HP 32-bit? Pakai ARMv7'
+                    : 'HP 64-bit? Pakai ARM64'}
+                </button>
+              )}
+            </p>
+          )}
         </div>
       </section>
 

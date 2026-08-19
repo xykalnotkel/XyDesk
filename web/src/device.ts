@@ -91,7 +91,22 @@ export async function detectDevicePackage(): Promise<DeviceRecommendation> {
   if (localStorage.getItem('xydesk.download.arch')) return basic;
   const nav = navigator as Navigator & { userAgentData?: NavigatorUAData };
   const uaData = nav.userAgentData;
-  if (!uaData?.getHighEntropyValues) return basic;
+  if (!uaData?.getHighEntropyValues) {
+    // Tanpa Client Hints (Firefox/Safari): coba validasi silang ringan.
+    // RAM <= 2 GB pada Android tua sering berarti perangkat 32-bit; kalau
+    // sinyal ini muncul sementara UA tidak menyebut arsitektur, turunkan
+    // kepercayaan agar UI menawarkan pilihan manual dengan jelas.
+    const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+    if (
+      basic.platform === 'android' &&
+      basic.confidence === 'fallback' &&
+      typeof mem === 'number' &&
+      mem <= 2
+    ) {
+      return { ...basic, label: `${basic.label} (perkiraan)`, confidence: 'fallback' };
+    }
+    return basic;
+  }
 
   try {
     const high = await uaData.getHighEntropyValues([
