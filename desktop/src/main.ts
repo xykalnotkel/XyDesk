@@ -55,7 +55,9 @@ async function render(): Promise<void> {
     /* engine belum pernah jalan */
   }
 
-  const shownId = identity.deviceId ? prettyId(identity.deviceId) : '—';
+  const shownId = identity.deviceId
+    ? prettyId(identity.deviceId)
+    : 'ID belum terbaca — Nyalakan Ulang';
   const password = identity.password ?? '—';
 
   h(`
@@ -93,12 +95,12 @@ async function render(): Promise<void> {
 
       <section class="card">
         <button id="engine-btn" class="${status.running ? 'danger' : 'primary'}">
-          ${status.running ? 'Hentikan Host' : 'Mulai Host'}
+          ${status.running ? 'Hentikan Host' : 'Nyalakan Ulang'}
         </button>
         <p class="hint">${
           status.running
-            ? `Engine berjalan (PID ${status.pid}). Perangkat lain dapat terhubung.`
-            : 'Engine berhenti. Mulai untuk menerima koneksi.'
+            ? `Host aktif otomatis (PID ${status.pid}). Perangkat lain dapat terhubung.`
+            : 'Host berhenti. Nyalakan ulang untuk menerima koneksi.'
         }</p>
       </section>
 
@@ -139,6 +141,20 @@ async function render(): Promise<void> {
   });
 }
 
-void render();
+// Auto-start: PC ini adalah host — engine langsung nyala saat app dibuka,
+// tanpa perlu klik apa pun (permintaan owner). Tombol hanya untuk stop.
+async function boot(): Promise<void> {
+  try {
+    const st = await invoke<EngineStatus>('engine_status');
+    if (!st.running) {
+      await invoke('start_engine', { url: SIGNALING_URL, token: '' });
+    }
+  } catch {
+    /* start gagal akan terlihat dari status NONAKTIF di UI */
+  }
+  await render();
+}
+
+void boot();
 // Segarkan status engine tiap 5 detik (murah: satu invoke).
 setInterval(() => void render(), 5000);
