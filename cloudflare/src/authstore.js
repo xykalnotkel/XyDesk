@@ -64,6 +64,9 @@ export class AuthStore {
     if (path === '/auth/authorize-host' && request.method === 'POST') {
       return this.authorizeHost(request);
     }
+    if (path === '/auth/claim-device' && request.method === 'POST') {
+      return this.claimDevice(request);
+    }
     if (path === '/auth/me' && request.method === 'GET') {
       return this.me(request);
     }
@@ -333,6 +336,50 @@ export class AuthStore {
 
     await this.ctx.storage.put(key, {
       owner,
+      claim_hash: claimHash,
+      claimed_at: Math.floor(Date.now() / 1000),
+    });
+    return json({ ok: true, claimed: true }, 200);
+  }
+
+  /// Klaim device tanpa akun (trust-on-first-use) untuk host desktop.
+  ///
+  /// Pertama kali: pasangan device+claim dikunci (owner = 'tofu').
+  /// Selanjutnya: claim wajib cocok dengan hash tersimpan. Device yang
+  /// diikat akun via authorize-host memakai jalur verifikasi yang sama —
+  /// claim (password pairing) tetap kuncinya.
+  async claimDevice(request) {
+    if (request.headers.get('X-XyDesk-Internal') !== this.env.XYDESK_SECRET) {
+      return json({ error: 'forbidden' }, 403);
+    }
+    let device_id, claim;
+    try {
+      ({ device_id, claim } = await request.json());
+    } catch {
+      return json({ error: 'bad-json' }, 400);
+    }
+    if (
+      typeof device_id !== 'string' ||
+      !/^\d{9}$/.test(device_id) ||
+      typeof claim !== 'string' ||
+      claim.length < 6 ||
+      claim.length > 128
+    ) {
+      return json({ error: 'invalid-claim' }, 400);
+    }
+
+    const key = `device:${device_id}`;
+    const claimHash = await hashOtp(this.secret(), `device:${device_id}`, claim);
+    const existing = await this.ctx.storage.get(key);
+    if (existing) {
+      if (!timingSafeEqual(existing.claim_hash, claimHash)) {
+        return json({ error: 'claim-mismatch' }, 403);
+      }
+      return json({ ok: true, claimed: false }, 200);
+    }
+
+    await this.ctx.storage.put(key, {
+      owner: 'tofu',
       claim_hash: claimHash,
       claimed_at: Math.floor(Date.now() / 1000),
     });

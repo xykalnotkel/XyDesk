@@ -1,17 +1,24 @@
-// UI XyDesk Desktop (Tauri) — mode Host.
+// UI XyDesk Desktop (Tauri) — mode Host, ALWAYS-ON.
 //
-// PC ini menjadi host: tampilkan ID + password pairing, tombol start/stop
-// engine. Untuk MENGENDALIKAN PC lain dari sini, buka app.xystudio.my.id
-// (tombol tersedia) — viewer WebRTC berjalan lebih baik di browser penuh.
+// Tidak ada tombol start/stop: begitu app dibuka, engine host dinyalakan
+// otomatis dan dijaga tetap hidup (watchdog menyalakan ulang bila mati).
+// Alur token: id+password pairing (dari engine) ditukar ke /host-token
+// Worker menjadi token signaling role=host, lalu engine dijalankan.
 
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-shell';
 
+const API_BASE = 'https://signal.xystudio.my.id';
 const SIGNALING_URL = 'wss://signal.xystudio.my.id/ws';
 
 interface Identity {
   deviceId?: string;
   password?: string;
+}
+
+interface EngineStatus {
+  running: boolean;
+  pid: number | null;
 }
 
 /// "123456789" -> "123 456 789".
@@ -20,56 +27,79 @@ function prettyId(id: string): string {
   return d.length === 9 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : id;
 }
 
-interface EngineStatus {
-  running: boolean;
-  pid: number | null;
-}
-
 const app = document.getElementById('app')!;
-
-function h(html: string): void {
-  app.innerHTML = html;
-}
 
 function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-let cachedIdentity: Identity | null = null;
-let cachedIdentityError = '';
+let identity: Identity | null = null;
+let identityError = '';
+let lastEngineError = '';
+let status: EngineStatus = { running: false, pid: null };
 
-async function render(): Promise<void> {
-  if (cachedIdentity === null && !cachedIdentityError) {
-    try {
-      cachedIdentity = await invoke<Identity>('host_identity');
-    } catch (e) {
-      cachedIdentityError = String(e);
-    }
+async function loadIdentity(): Promise<void> {
+  if (identity !== null) return;
+  try {
+    identity = await invoke<Identity>('host_identity');
+  } catch (e) {
+    identityError = String(e);
   }
-  const identity: Identity = cachedIdentity ?? {};
-  const identityError = cachedIdentityError;
-  let status: EngineStatus = { running: false, pid: null };
+}
+
+/// Tukar id+password menjadi token signaling host di Worker.
+async function fetchHostToken(): Promise<string> {
+  const res = await fetch(`${API_BASE}/host-token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      id: identity?.deviceId ?? '',
+      claim: identity?.password ?? '',
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(
+      res.status === 403
+        ? 'Password pairing tidak cocok dengan klaim device di server.'
+        : `Server menolak token host (HTTP ${res.status}).`,
+    );
+  }
+  return (await res.text()).trim();
+}
+
+/// Watchdog: pastikan engine hidup; nyalakan (ulang) bila mati.
+async function ensureEngine(): Promise<void> {
   try {
     status = await invoke<EngineStatus>('engine_status');
-  } catch {
-    /* engine belum pernah jalan */
+    if (status.running) {
+      lastEngineError = '';
+      return;
+    }
+    const token = await fetchHostToken();
+    status = await invoke<EngineStatus>('start_engine', {
+      url: SIGNALING_URL,
+      token,
+    });
+    lastEngineError = '';
+  } catch (e) {
+    lastEngineError = String(e);
   }
+}
 
-  const shownId = identity.deviceId
-    ? prettyId(identity.deviceId)
-    : 'ID belum terbaca — Nyalakan Ulang';
-  const password = identity.password ?? '—';
+function render(): void {
+  const shownId = identity?.deviceId ? prettyId(identity.deviceId) : '—';
+  const password = identity?.password ?? '—';
 
-  h(`
+  app.innerHTML = `
     <main class="shell">
       <header>
         <img src="/logo.png" alt="" class="logo" />
         <div>
           <h1>XyDesk</h1>
-          <p class="sub">Mode Host — PC ini dikendalikan dari perangkat lain</p>
+          <p class="sub">Mode Host — selalu aktif selama aplikasi terbuka</p>
         </div>
         <span class="pill ${status.running ? 'pill-live' : 'pill-off'}">
-          ${status.running ? 'AKTIF' : 'NONAKTIF'}
+          ${status.running ? 'AKTIF' : 'MENYAMBUNG…'}
         </span>
       </header>
 
@@ -93,22 +123,20 @@ async function render(): Promise<void> {
              </section>`
       }
 
-      <section class="card">
-        <button id="engine-btn" class="${status.running ? 'danger' : 'primary'}">
-          ${status.running ? 'Hentikan Host' : 'Nyalakan Ulang'}
-        </button>
-        <p class="hint">${
-          status.running
-            ? `Host aktif otomatis (PID ${status.pid}). Perangkat lain dapat terhubung.`
-            : 'Host berhenti. Nyalakan ulang untuk menerima koneksi.'
-        }</p>
-      </section>
+      ${
+        lastEngineError
+          ? `<section class="card error-card">
+               <p>${esc(lastEngineError)}</p>
+               <p class="hint">Dicoba ulang otomatis…</p>
+             </section>`
+          : ''
+      }
 
       <footer>
         <button id="open-web" class="ghost">Kendalikan PC lain → XyDesk Web</button>
       </footer>
     </main>
-  `);
+  `;
 
   document.getElementById('toggle-pw')?.addEventListener('click', () => {
     const el = document.getElementById('pw')!;
@@ -122,39 +150,19 @@ async function render(): Promise<void> {
     void navigator.clipboard.writeText(password);
   });
 
-  document.getElementById('engine-btn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('engine-btn') as HTMLButtonElement;
-    btn.disabled = true;
-    try {
-      if (status.running) {
-        await invoke('stop_engine');
-      } else {
-        await invoke('start_engine', { url: SIGNALING_URL, token: '' });
-      }
-    } finally {
-      void render();
-    }
-  });
-
   document.getElementById('open-web')?.addEventListener('click', () => {
     void open('https://app.xystudio.my.id/connect');
   });
 }
 
-// Auto-start: PC ini adalah host — engine langsung nyala saat app dibuka,
-// tanpa perlu klik apa pun (permintaan owner). Tombol hanya untuk stop.
-async function boot(): Promise<void> {
-  try {
-    const st = await invoke<EngineStatus>('engine_status');
-    if (!st.running) {
-      await invoke('start_engine', { url: SIGNALING_URL, token: '' });
-    }
-  } catch {
-    /* start gagal akan terlihat dari status NONAKTIF di UI */
-  }
-  await render();
+async function tick(): Promise<void> {
+  await loadIdentity();
+  await ensureEngine();
+  render();
 }
 
-void boot();
-// Segarkan status engine tiap 5 detik (murah: satu invoke).
-setInterval(() => void render(), 5000);
+void tick();
+// Watchdog + refresh status tiap 5 detik. Token host berumur 5 menit di
+// worker, tetapi hanya dibutuhkan SAAT connect — engine yang sudah
+// tersambung tidak butuh token baru; restart otomatis mengambil yang baru.
+setInterval(() => void tick(), 5000);

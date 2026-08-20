@@ -41,6 +41,10 @@ export default {
       return handleIssue(request, url, env);
     }
 
+    if (path === '/host-token') {
+      return corsResponse(await handleHostToken(request, env), request, env);
+    }
+
     if (path === '/signal-token') {
       return corsResponse(await handleSignalToken(request, url, env), request, env);
     }
@@ -174,6 +178,50 @@ async function handleIssue(request, url, env) {
     await signSignalToken(purpose, role, env.XYDESK_SECRET),
     { status: 200 },
   );
+}
+
+// ── Endpoint token signaling untuk HOST (TOFU, tanpa akun) ──────────────
+//
+// App desktop tidak punya UI login, tetapi host butuh token role=host untuk
+// /ws. Model trust-on-first-use: host menukar {id, claim=password pairing}
+// menjadi token. Pemakaian pertama mengunci pasangan device+claim di
+// storage; permintaan berikutnya wajib membawa claim yang sama. Device yang
+// sudah diikat ke akun (authorize-host) tetap terlindungi: claim harus
+// cocok dengan hash tersimpan.
+async function handleHostToken(request, env) {
+  if (request.method !== 'POST') {
+    return new Response('method not allowed', { status: 405 });
+  }
+  let id, claim;
+  try {
+    const body = await request.json();
+    id = String(body.id || '').trim();
+    claim = String(body.claim || '');
+  } catch {
+    return new Response('bad json', { status: 400 });
+  }
+  if (!/^\d{9}$/.test(id) || claim.length < 6 || claim.length > 128) {
+    return new Response('bad request', { status: 400 });
+  }
+
+  const authStore = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'));
+  const res = await authStore.fetch(
+    new Request('https://internal/auth/claim-device', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'X-XyDesk-Internal': env.XYDESK_SECRET,
+      },
+      body: JSON.stringify({ device_id: id, claim }),
+    }),
+  );
+  if (!res.ok) {
+    return new Response('claim rejected', { status: res.status });
+  }
+  return new Response(await signSignalToken(id, 'host', env.XYDESK_SECRET), {
+    status: 200,
+    headers: { 'content-type': 'text/plain' },
+  });
 }
 
 // ── Endpoint token signaling untuk client ber-JWT ────────────────────────
