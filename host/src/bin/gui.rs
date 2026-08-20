@@ -22,12 +22,13 @@ mod win {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Mutex;
 
-    use windows::core::{w, PCWSTR};
+    use windows::core::w;
     use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, WPARAM};
     use windows::Win32::Graphics::Gdi::{
         BeginPaint, CreateFontW, CreateSolidBrush, DeleteObject, EndPaint, FillRect,
         InvalidateRect, SelectObject, SetBkMode, SetTextColor, TextOutW, CLEARTYPE_QUALITY,
-        FF_DONTCARE, FW_BOLD, FW_NORMAL, HBRUSH, HFONT, HGDIOBJ, PAINTSTRUCT, TRANSPARENT,
+        CLIP_DEFAULT_PRECIS, DEFAULT_CHARSET, FF_DONTCARE, FW_BOLD, FW_NORMAL, HBRUSH, HFONT,
+        HGDIOBJ, OUT_DEFAULT_PRECIS, PAINTSTRUCT, TRANSPARENT,
     };
     use windows::Win32::System::DataExchange::{
         CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData,
@@ -195,11 +196,11 @@ mod win {
                 0,
                 0,
                 0,
-                0,
-                0,
-                0,
-                CLEARTYPE_QUALITY.0 as u32,
-                FF_DONTCARE.0 as u32,
+                DEFAULT_CHARSET,
+                OUT_DEFAULT_PRECIS,
+                CLIP_DEFAULT_PRECIS,
+                CLEARTYPE_QUALITY,
+                FF_DONTCARE.0.into(),
                 w!("Segoe UI"),
             )
         }
