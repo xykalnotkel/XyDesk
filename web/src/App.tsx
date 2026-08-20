@@ -955,6 +955,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
         <video ref={videoRef} autoPlay playsInline muted />
         <div className="session-actions">
           <button
+            title="Kirim clipboard"
             onClick={async () => {
               try {
                 const text = await navigator.clipboard.readText();
@@ -964,11 +965,33 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
               }
             }}
           >
-            Kirim clipboard
+            Clipboard
           </button>
-          <button onClick={() => setKbOpen((v) => !v)}>Keyboard</button>
-          <button onClick={() => void enterImmersive()}>Layar penuh</button>
-          <button className="danger-action" onClick={disconnect}>Putuskan</button>
+          <button title="Keyboard" onClick={() => setKbOpen((v) => !v)}>Keyboard</button>
+          <button title="Layar penuh" onClick={() => void enterImmersive()}>Fullscreen</button>
+          <button className="hud-icon-btn danger-action" title="Putuskan" onClick={disconnect}>
+            <img src="/hud-disconnect.png" alt="Putuskan" />
+          </button>
+        </div>
+        <div className="hud-mouse" aria-hidden="false">
+          <button
+            className="hud-icon-btn"
+            title="Klik kiri (tahan untuk drag)"
+            onPointerDown={() => send(InputCodec.mouseButton(0, true))}
+            onPointerUp={() => send(InputCodec.mouseButton(0, false))}
+            onPointerCancel={() => send(InputCodec.mouseButton(0, false))}
+          >
+            <img src="/hud-mouse-left.png" alt="Klik kiri" />
+          </button>
+          <button
+            className="hud-icon-btn"
+            title="Klik kanan"
+            onPointerDown={() => send(InputCodec.mouseButton(1, true))}
+            onPointerUp={() => send(InputCodec.mouseButton(1, false))}
+            onPointerCancel={() => send(InputCodec.mouseButton(1, false))}
+          >
+            <img src="/hud-mouse-right.png" alt="Klik kanan" />
+          </button>
         </div>
         {retryInfo && <p className="session-retry">{retryInfo}</p>}
         {kbOpen && (

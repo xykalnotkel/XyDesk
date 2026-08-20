@@ -28,7 +28,7 @@ export default {
     // (client web di app.xystudio.my.id berbeda origin dari Worker ini).
     if (
       request.method === 'OPTIONS' &&
-      (path.startsWith('/auth/') || path === '/signal-token' || path === '/turn-ice')
+      (path.startsWith('/auth/') || path === '/signal-token' || path === '/turn-ice' || path === '/host-token')
     ) {
       return corsResponse(new Response(null, { status: 204 }), request, env);
     }

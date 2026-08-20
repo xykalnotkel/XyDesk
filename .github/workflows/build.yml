@@ -203,7 +203,7 @@ jobs:
 
   # ── 3. Windows Native Desktop: x64 dan Arm64 resmi Flutter ──
   windows:
-    name: Windows ${{ matrix.arch }} (Tauri)
+    name: Windows ${{ matrix.arch }} (native)
     needs: check
     strategy:
       fail-fast: false
@@ -219,39 +219,31 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: desktop/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      - name: Cache Cargo (desktop)
+      - name: Cache Cargo (host)
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            desktop/src-tauri/target
-          key: tauri-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
-          restore-keys: tauri-${{ runner.os }}-${{ matrix.arch }}-
-      - name: Pasang dependensi UI desktop
-        working-directory: desktop
-        run: npm ci
-      - name: Build XyDesk Desktop (Tauri)
-        working-directory: desktop
-        run: npx tauri build --target ${{ matrix.target }} --no-bundle
+            host/target
+          key: native-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: native-${{ runner.os }}-${{ matrix.arch }}-
+      - name: Build GUI native + engine (satu crate)
+        working-directory: host
+        run: cargo build --release --target ${{ matrix.target }} --bins
       - name: Kumpulkan output
         shell: pwsh
         run: |
-          $exe = "desktop/src-tauri/target/${{ matrix.target }}/release/xydesk-desktop.exe"
-          if (-not (Test-Path $exe)) { throw "EXE Tauri tidak ditemukan: $exe" }
+          $dir = "host/target/${{ matrix.target }}/release"
+          foreach ($f in @("xydesk.exe","xydesk-host.exe")) {
+            if (-not (Test-Path "$dir/$f")) { throw "$f tidak ditemukan" }
+          }
           New-Item -ItemType Directory -Force -Path out-desktop | Out-Null
-          Copy-Item $exe out-desktop/XyDesk.exe
-          # WebView2Loader wajib disertakan di samping EXE.
-          $loader = Get-ChildItem "desktop/src-tauri/target/${{ matrix.target }}/release" -Filter 'WebView2Loader.dll' -ErrorAction SilentlyContinue
-          if ($loader) { Copy-Item $loader.FullName out-desktop/ }
+          Copy-Item "$dir/xydesk.exe" out-desktop/XyDesk.exe
+          Copy-Item "$dir/xydesk-host.exe" out-desktop/XyDesk-Host.exe
           Get-ChildItem out-desktop | ForEach-Object { Write-Host "OUT: $($_.Name) ($([math]::Round($_.Length/1MB,2)) MB)" }
       - uses: actions/upload-artifact@v4
         with:
