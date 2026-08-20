@@ -1,6 +1,6 @@
 [package]
 name = "xydesk-desktop"
-version = "2.2.1"
+version = "2.3.0"
 description = "XyDesk untuk Windows — host & connect"
 authors = ["XySpace Tch"]
 edition = "2021"
