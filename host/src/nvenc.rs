@@ -19,15 +19,21 @@
 use std::ffi::c_void;
 use std::sync::OnceLock;
 
-use windows::core::{w, s, Interface, PCSTR, PCWSTR};
-use windows::Win32::Graphics::Direct3D11::{
-    D3D11CreateDevice, D3D11_BIND_DECODER, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC,
-    D3D11_USAGE_DEFAULT, ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D,
-};
+use windows::core::{s, w, Interface, PCSTR, PCWSTR};
 use windows::Win32::Graphics::Direct3D::{D3D_DRIVER_TYPE_HARDWARE, D3D_FEATURE_LEVEL_11_0};
+use windows::Win32::Graphics::Direct3D11::{
+    D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D, D3D11_BIND_DECODER,
+    D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT,
+};
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_NV12;
 use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
 
+#[allow(
+    non_camel_case_types,
+    dead_code,
+    non_snake_case,
+    clippy::upper_case_acronyms
+)]
 mod types {
     include!("nvenc_types.rs");
 }
@@ -58,14 +64,31 @@ const NV_ENCODE_API_FUNCTION_LIST_VER: u32 = struct_ver(2);
 
 /// GUID — konstanta dari nvEncodeAPI.h n12.2.
 const fn guid(d1: u32, d2: u16, d3: u16, d4: [u8; 8]) -> GUID {
-    GUID { Data1: d1, Data2: d2, Data3: d3, Data4: d4 }
+    GUID {
+        Data1: d1,
+        Data2: d2,
+        Data3: d3,
+        Data4: d4,
+    }
 }
-const NV_ENC_CODEC_H264_GUID: GUID =
-    guid(0x6bc82762, 0x4e63, 0x4ca4, [0xaa, 0x85, 0x1e, 0x50, 0xf3, 0x21, 0xf6, 0xbf]);
-const NV_ENC_H264_PROFILE_BASELINE_GUID: GUID =
-    guid(0x0727bcaa, 0x78c4, 0x4c83, [0x8c, 0x2f, 0xef, 0x3d, 0xff, 0x26, 0x7c, 0x6a]);
-const NV_ENC_PRESET_P4_GUID: GUID =
-    guid(0x90a7b826, 0xdf06, 0x4862, [0xb9, 0xd2, 0xcd, 0x6d, 0x73, 0xa0, 0x86, 0x81]);
+const NV_ENC_CODEC_H264_GUID: GUID = guid(
+    0x6bc82762,
+    0x4e63,
+    0x4ca4,
+    [0xaa, 0x85, 0x1e, 0x50, 0xf3, 0x21, 0xf6, 0xbf],
+);
+const NV_ENC_H264_PROFILE_BASELINE_GUID: GUID = guid(
+    0x0727bcaa,
+    0x78c4,
+    0x4c83,
+    [0x8c, 0x2f, 0xef, 0x3d, 0xff, 0x26, 0x7c, 0x6a],
+);
+const NV_ENC_PRESET_P4_GUID: GUID = guid(
+    0x90a7b826,
+    0xdf06,
+    0x4862,
+    [0xb9, 0xd2, 0xcd, 0x6d, 0x73, 0xa0, 0x86, 0x81],
+);
 
 // Enum (nilai dari header):
 const NV_ENC_DEVICE_TYPE_DIRECTX: u32 = 0;
@@ -90,7 +113,8 @@ type FnInitialize = unsafe extern "system" fn(*mut c_void, *mut NV_ENC_INITIALIZ
 type FnCreateBitstream =
     unsafe extern "system" fn(*mut c_void, *mut NV_ENC_CREATE_BITSTREAM_BUFFER) -> i32;
 type FnDestroyBitstream = unsafe extern "system" fn(*mut c_void, *mut c_void) -> i32;
-type FnRegisterResource = unsafe extern "system" fn(*mut c_void, *mut NV_ENC_REGISTER_RESOURCE) -> i32;
+type FnRegisterResource =
+    unsafe extern "system" fn(*mut c_void, *mut NV_ENC_REGISTER_RESOURCE) -> i32;
 type FnUnregisterResource = unsafe extern "system" fn(*mut c_void, *mut c_void) -> i32;
 type FnMapInput = unsafe extern "system" fn(*mut c_void, *mut NV_ENC_MAP_INPUT_RESOURCE) -> i32;
 type FnUnmapInput = unsafe extern "system" fn(*mut c_void, *mut c_void) -> i32;
@@ -153,8 +177,7 @@ fn load_impl() -> Result<ApiFns, String> {
         })?;
         let proc = GetProcAddress(dll, PCSTR(s!("NvEncodeAPICreateInstance").as_ptr()))
             .ok_or_else(|| "NvEncodeAPICreateInstance tidak ditemukan".to_string())?;
-        let create: unsafe extern "system" fn(*mut NvEncApiList) -> i32 =
-            std::mem::transmute(proc);
+        let create: unsafe extern "system" fn(*mut NvEncApiList) -> i32 = std::mem::transmute(proc);
         let mut list: NvEncApiList = std::mem::zeroed();
         list.version = NV_ENCODE_API_FUNCTION_LIST_VER;
         let status = create(&mut list);
@@ -170,8 +193,14 @@ fn load_impl() -> Result<ApiFns, String> {
         Ok(ApiFns {
             open_session: take_fn(list.nvEncOpenEncodeSession, "nvEncOpenEncodeSession")?,
             initialize: take_fn(list.nvEncInitializeEncoder, "nvEncInitializeEncoder")?,
-            create_bb: take_fn(list.nvEncCreateBitstreamBuffer, "nvEncCreateBitstreamBuffer")?,
-            destroy_bb: take_fn(list.nvEncDestroyBitstreamBuffer, "nvEncDestroyBitstreamBuffer")?,
+            create_bb: take_fn(
+                list.nvEncCreateBitstreamBuffer,
+                "nvEncCreateBitstreamBuffer",
+            )?,
+            destroy_bb: take_fn(
+                list.nvEncDestroyBitstreamBuffer,
+                "nvEncDestroyBitstreamBuffer",
+            )?,
             register: take_fn(list.nvEncRegisterResource, "nvEncRegisterResource")?,
             unregister: take_fn(list.nvEncUnregisterResource, "nvEncUnregisterResource")?,
             map: take_fn(list.nvEncMapInputResource, "nvEncMapInputResource")?,
@@ -191,7 +220,7 @@ pub fn available() -> bool {
 
 /// Alasan NVENC tidak tersedia (untuk log/status).
 pub fn unavailable_reason() -> Option<String> {
-    load_api().err().map(|e| e.clone())
+    load_api().err()
 }
 
 /// Encoder NVENC. Resource D3D11 dipegang sebagai objek COM; dilepas otomatis
@@ -226,7 +255,7 @@ impl NvEnc {
     /// Buat encoder H264 hardware [width]x[height] (harus genap).
     pub fn new(width: u32, height: u32, bitrate_bps: u32) -> Result<Self, String> {
         let fns = load_api()?;
-        if width % 2 != 0 || height % 2 != 0 {
+        if !width.is_multiple_of(2) || !height.is_multiple_of(2) {
             return Err(format!("dimensi NVENC harus genap: {width}x{height}"));
         }
 
@@ -252,8 +281,12 @@ impl NvEnc {
             // 2) Buka session NVENC.
             let device_raw = device.as_raw();
             let mut encoder: *mut c_void = std::ptr::null_mut();
-            ok((fns.open_session)(device_raw, NV_ENC_DEVICE_TYPE_DIRECTX, &mut encoder))
-                .map_err(|e| format!("NvEncOpenEncodeSession: {e}"))?;
+            ok((fns.open_session)(
+                device_raw,
+                NV_ENC_DEVICE_TYPE_DIRECTX,
+                &mut encoder,
+            ))
+            .map_err(|e| format!("NvEncOpenEncodeSession: {e}"))?;
 
             // 3) Inisialisasi: H264 baseline, CBR, low-latency.
             let mut cfg: NV_ENC_CONFIG = std::mem::zeroed();
@@ -275,7 +308,10 @@ impl NvEnc {
                 H264_FLAG_REPEAT_SPSPPS;
             // Layar = full-range (RGB 0..255 dipetakan langsung), bukan
             // studio swing — kalau tidak, kontras gambar jadi pudar.
-            cfg.encodeCodecConfig.h264Config.h264VUIParameters.videoFullRangeFlag = 1;
+            cfg.encodeCodecConfig
+                .h264Config
+                .h264VUIParameters
+                .videoFullRangeFlag = 1;
 
             let mut init: NV_ENC_INITIALIZE_PARAMS = std::mem::zeroed();
             init.version = NV_ENC_INITIALIZE_PARAMS_VER;
@@ -329,7 +365,11 @@ impl NvEnc {
             };
             let mut texture: Option<ID3D11Texture2D> = None;
             device
-                .CreateTexture2D(&desc, None, Some(&mut texture as *mut Option<ID3D11Texture2D>))
+                .CreateTexture2D(
+                    &desc,
+                    None,
+                    Some(&mut texture as *mut Option<ID3D11Texture2D>),
+                )
                 .map_err(|e| format!("CreateTexture2D NV12 gagal: {e}"))?;
             let texture = texture.ok_or("texture null")?;
 
@@ -403,7 +443,11 @@ impl NvEnc {
             pp.inputWidth = self.width;
             pp.inputHeight = self.height;
             pp.inputPitch = self.width;
-            pp.encodePicFlags = if self.frame_idx == 0 { NV_ENC_PIC_FLAG_FORCEIDR } else { 0 };
+            pp.encodePicFlags = if self.frame_idx == 0 {
+                NV_ENC_PIC_FLAG_FORCEIDR
+            } else {
+                0
+            };
             pp.frameIdx = self.frame_idx;
             pp.inputTimeStamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -437,7 +481,7 @@ impl NvEnc {
             self.mapped_resource = std::ptr::null_mut();
 
             self.frame_idx = self.frame_idx.wrapping_add(1);
-            if self.frame_idx % 300 == 0 {
+            if self.frame_idx.is_multiple_of(300) {
                 println!(
                     "[xydesk-host] nvenc: frame ke-{} ({}x{}, {size} B)",
                     self.frame_idx, self.width, self.height

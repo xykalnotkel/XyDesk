@@ -186,11 +186,17 @@ mod windows {
     /// diketahui saat itu.
     enum EncoderKind {
         Nvenc(crate::nvenc::NvEnc),
-        Soft(Encoder),
+        Soft(Box<Encoder>),
     }
 
     impl EncoderKind {
-        fn encode(&mut self, rgba_tight: &[u8], width: usize, height: usize, nv12: &mut Vec<u8>) -> Result<Vec<u8>, String> {
+        fn encode(
+            &mut self,
+            rgba_tight: &[u8],
+            width: usize,
+            height: usize,
+            nv12: &mut Vec<u8>,
+        ) -> Result<Vec<u8>, String> {
             match self {
                 EncoderKind::Nvenc(enc) => {
                     rgba_to_nv12(rgba_tight, width, height, nv12);
@@ -230,8 +236,11 @@ mod windows {
                 let (r1, g1, b1) = (rgba[i01] as u32, rgba[i01 + 1] as u32, rgba[i01 + 2] as u32);
                 let (r2, g2, b2) = (rgba[i10] as u32, rgba[i10 + 1] as u32, rgba[i10 + 2] as u32);
                 let (r3, g3, b3) = (rgba[i11] as u32, rgba[i11 + 1] as u32, rgba[i11 + 2] as u32);
-                let (rr, gg, bb) =
-                    ((r0 + r1 + r2 + r3) / 4, (g0 + g1 + g2 + g3) / 4, (b0 + b1 + b2 + b3) / 4);
+                let (rr, gg, bb) = (
+                    (r0 + r1 + r2 + r3) / 4,
+                    (g0 + g1 + g2 + g3) / 4,
+                    (b0 + b1 + b2 + b3) / 4,
+                );
                 // Y untuk keempat piksel; U/V dari rata-rata 2x2 (BT.601
                 // full-range — cocok untuk layar; VUI full-range di-set di
                 // NVENC agar decoder tidak menerapkan studio swing).
@@ -240,7 +249,8 @@ mod windows {
                 y_dst[y_row + width + x] = ((77 * r2 + 150 * g2 + 29 * b2 + 128) >> 8) as u8;
                 y_dst[y_row + width + x + 1] = ((77 * r3 + 150 * g3 + 29 * b3 + 128) >> 8) as u8;
                 let c_u = ((128i32 * bb as i32 - 43 * rr as i32 - 85 * gg as i32 + 128) >> 8) + 128;
-                let c_v = ((128i32 * rr as i32 - 107 * gg as i32 - 21 * bb as i32 + 128) >> 8) + 128;
+                let c_v =
+                    ((128i32 * rr as i32 - 107 * gg as i32 - 21 * bb as i32 + 128) >> 8) + 128;
                 let uv = uv_row + x;
                 uv_dst[uv] = c_u.clamp(0, 255) as u8;
                 uv_dst[uv + 1] = c_v.clamp(0, 255) as u8;
@@ -278,7 +288,7 @@ mod windows {
                 super::prod_encoder_config(),
             )?;
             Ok(Self {
-                encoder: EncoderKind::Soft(encoder),
+                encoder: EncoderKind::Soft(Box::new(encoder)),
                 sender: ctx.flags,
                 packed: Vec::new(),
                 nv12: Vec::new(),
@@ -322,12 +332,14 @@ mod windows {
             // butuh dimensi genap; kalau tidak cocok atau gagal (tidak ada
             // GPU NVIDIA / driver < R550), tetap di openh264 — tidak crash.
             if self.frames == 0 {
-                if width % 2 == 0 && height % 2 == 0 {
+                if width.is_multiple_of(2) && height.is_multiple_of(2) {
                     match crate::nvenc::NvEnc::new(width as u32, height as u32, super::TARGET_BPS) {
                         Ok(enc) => {
                             println!(
                                 "[xydesk-host] NVENC aktif: H264 hardware {}x{} @ {} kbps CBR",
-                                width, height, super::TARGET_BPS / 1000
+                                width,
+                                height,
+                                super::TARGET_BPS / 1000
                             );
                             self.encoder = EncoderKind::Nvenc(enc);
                         }
@@ -361,7 +373,7 @@ mod windows {
             self.encode_count += 1;
 
             self.frames = self.frames.wrapping_add(1);
-            if self.frames % 300 == 0 {
+            if self.frames.is_multiple_of(300) {
                 let avg_ms = self.encode_us_sum as f64 / self.encode_count as f64 / 1000.0;
                 let max_ms = self.encode_us_max as f64 / 1000.0;
                 println!(
