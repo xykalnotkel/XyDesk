@@ -98,6 +98,16 @@ struct Args {
     /// Generasi ulang password acak (persisten), lalu keluar
     #[arg(long)]
     new_password: bool,
+    /// Benchmark durasi encode (pola uji, konfigurasi produksi): cetak
+    /// avg/p50/p95/max lalu keluar. Ukur budget latency sisi encode.
+    #[arg(long, value_name = "FRAME")]
+    bench: Option<usize>,
+    /// Lebar frame benchmark (default 320; pakai 1920 untuk 1080p)
+    #[arg(long, value_name = "PX", default_value_t = xydesk_host::screen::TEST_WIDTH)]
+    bench_w: usize,
+    /// Tinggi frame benchmark (default 180; pakai 1080 untuk 1080p)
+    #[arg(long, value_name = "PX", default_value_t = xydesk_host::screen::TEST_HEIGHT)]
+    bench_h: usize,
 }
 
 #[tokio::main]
@@ -121,6 +131,42 @@ async fn main() -> Result<()> {
         let pw = xydesk_host::identity::generate_password();
         xydesk_host::identity::set_password(&pw)?;
         println!("[OK] Password pairing baru: {pw}");
+        return Ok(());
+    }
+
+    // ── Benchmark encode: ukur budget latency sisi encode, lalu keluar ──
+    if let Some(n) = args.bench {
+        let n = n.clamp(10, 100_000);
+        let (w, h) = (args.bench_w.max(64), args.bench_h.max(64));
+        let mut enc = xydesk_host::screen::TestPatternEncoder::with_config(
+            xydesk_host::screen::prod_encoder_config(),
+        )?;
+        let mut samples: Vec<f64> = Vec::with_capacity(n);
+        for _ in 0..n {
+            let t = std::time::Instant::now();
+            let data = enc.encode_next(w, h)?;
+            samples.push(t.elapsed().as_secs_f64() * 1000.0);
+            let _ = data; // hanya ukur kecepatan, frame dibuang
+        }
+        samples.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let avg = samples.iter().sum::<f64>() / samples.len() as f64;
+        let p50 = samples[n / 2];
+        let p95 = samples[(n as f64 * 0.95) as usize - 1];
+        let max = *samples.last().unwrap_or(&0.0);
+        println!("Benchmark encode openh264 (konfigurasi produksi, pola uji {w}x{h}, {n} frame):");
+        println!("  avg {avg:.2} ms | p50 {p50:.2} ms | p95 {p95:.2} ms | max {max:.2} ms");
+        if avg < 10.0 && w * h >= 1280 * 720 {
+            println!("  Target roadmap (<10 ms @1080p60): TERPENUHI di resolusi ini.");
+        } else if avg < 10.0 {
+            println!("  Target roadmap (<10 ms @1080p60): TERPENUHI di {w}x{h} — ukur ulang @1080p untuk angka final.");
+        } else {
+            println!(
+                "  Target roadmap (<10 ms @1080p60): BELUM — pertimbangkan NVENC/AMF/QuickSync."
+            );
+        }
+        println!(
+            "  Catatan: angka ini hanya waktu encode (CPU). Capture DXGI + jaringan + decode client belum terukur."
+        );
         return Ok(());
     }
 
@@ -325,7 +371,10 @@ async fn main() -> Result<()> {
                 println!("[xydesk-host] menerima offer dari {client}");
 
                 let session = Arc::new(Session::new(vec![stun.clone()], vec![]).await?);
-                let answer = session.answer(&sdp.sdp).await?;
+                // Track WAJIB didaftarkan sebelum answer (dilakukan di dalam
+                // `answer`): kalau tidak, SDP jawaban tidak berisi m-line video
+                // dan client tidak pernah mendapat gambar. Lihat session.rs.
+                let (answer, video_track) = session.answer(&sdp.sdp).await?;
 
                 send_msg(
                     &mut ws,
@@ -403,17 +452,11 @@ async fn main() -> Result<()> {
                 }
 
                 // Sumber video: capture layar (Windows DXGI) atau pola uji.
-                // Frame H264 ter-encode diambil dari channel, ditulis ke track.
+                // Frame H264 ter-encode diambil dari channel, ditulis ke track
+                // yang sudah terdaftar di dalam `Session::answer` di atas.
                 {
-                    let session = session.clone();
                     tokio::spawn(async move {
-                        let track = match session.add_video_track().await {
-                            Ok(t) => t,
-                            Err(e) => {
-                                eprintln!("[xydesk-host] gagal add track video: {e:#}");
-                                return;
-                            }
-                        };
+                        let track = video_track;
                         println!("[xydesk-host] track video siap — streaming");
 
                         // Channel std (blocking) dari capture TIDAK boleh

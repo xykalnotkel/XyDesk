@@ -9,13 +9,54 @@
 
 use std::sync::mpsc;
 
-use openh264::encoder::{Encoder, EncoderConfig};
+use openh264::encoder::{
+    BitRate, Complexity, Encoder, EncoderConfig, FrameRate, IntraFramePeriod, Profile,
+    RateControlMode, SpsPpsStrategy, UsageType,
+};
 use openh264::formats::YUVBuffer;
 
 /// Lebar/tinggi default pola uji (kecil agar encode cepat; cukup untuk
 /// membuktikan jalur video).
 pub const TEST_WIDTH: usize = 320;
 pub const TEST_HEIGHT: usize = 180;
+
+/// Bitrate target jalur produksi. 8 Mbps cukup untuk 1080p screen content
+/// dengan openh264; disengaja konservatif agar Wi-Fi rumah kuat.
+pub const TARGET_BPS: u32 = 8_000_000;
+
+/// Keyframe (IDR) tiap ~2 detik @60fps: pemulihan cepat setelah packet loss
+/// tanpa membebani bitrate (IDR jauh lebih besar dari P-frame).
+pub const IDR_INTERVAL_FRAMES: u32 = 120;
+
+/// Konfigurasi encoder yang dipakai jalur produksi (capture layar Windows
+/// dan benchmark `--bench`). Dipisah agar benchmark mengukur konfigurasi
+/// yang SAMA dengan yang dipakai sesi nyata — bukan default pabrik.
+///
+/// Alasan tiap tuner (lihat juga `ScreenCapturer::new`):
+///   - ScreenContentRealTime: mode deteksi konten teks/UI openh264.
+///   - Bitrate + 8 Mbps: kualitas konsisten, bukan default 120 kbps.
+///   - skip_frames(true): WAJIB. OpenH264 mengeluarkan peringatan
+///     "bitrate can't be controlled ... without enabling skip frame" —
+///     dengan skip mati, mode bitrate tidak berfungsi dan stream bisa
+///     meledak jauh di atas 8 Mbps (memacetkan Wi-Fi rumah).
+///   - IDR berkala 120 frame (~2 dtk @60fps): pulih cepat dari packet loss.
+///
+/// Catatan jujur dari `--bench`: openh264 (software) tidak kuat menembus
+/// target <10 ms @1080p60 (di 640x360 saja sudah ~30 ms). Hardware encode
+/// (NVENC/AMF/QuickSync) adalah prasyarat target itu — bukan opsi.
+pub fn prod_encoder_config() -> EncoderConfig {
+    EncoderConfig::new()
+        .usage_type(UsageType::ScreenContentRealTime)
+        .rate_control_mode(RateControlMode::Bitrate)
+        .bitrate(BitRate::from_bps(TARGET_BPS))
+        .max_frame_rate(FrameRate::from_hz(60.0))
+        .skip_frames(true)
+        .profile(Profile::Baseline)
+        .complexity(Complexity::Low)
+        .sps_pps_strategy(SpsPpsStrategy::ConstantId)
+        .intra_frame_period(IntraFramePeriod::from_num_frames(IDR_INTERVAL_FRAMES))
+        .num_threads(2)
+}
 
 /// Encoder pola uji — menghasilkan frame H264 (Annex-B) dari pola I420.
 pub struct TestPatternEncoder {
@@ -25,7 +66,12 @@ pub struct TestPatternEncoder {
 
 impl TestPatternEncoder {
     pub fn new() -> Result<Self, openh264::Error> {
-        let config = EncoderConfig::new();
+        Self::with_config(EncoderConfig::new())
+    }
+
+    /// Encoder dengan konfigurasi eksplisit (dipakai benchmark `--bench`
+    /// agar mengukur konfigurasi produksi yang sebenarnya).
+    pub fn with_config(config: EncoderConfig) -> Result<Self, openh264::Error> {
         let encoder = Encoder::with_api_config(openh264::OpenH264API::from_source(), config)?;
         Ok(Self {
             encoder,
@@ -124,10 +170,7 @@ pub fn capture_status() -> &'static str {
 mod windows {
     use std::sync::mpsc;
 
-    use openh264::encoder::{
-        BitRate, Complexity, Encoder, EncoderConfig, FrameRate, IntraFramePeriod, Profile,
-        RateControlMode, SpsPpsStrategy, UsageType,
-    };
+    use openh264::encoder::Encoder;
     use openh264::formats::{RgbaSliceU8, YUVBuffer};
     use windows_capture::capture::{Context, GraphicsCaptureApiHandler};
     use windows_capture::frame::Frame;
@@ -138,14 +181,6 @@ mod windows {
         MinimumUpdateIntervalSettings, SecondaryWindowSettings, Settings,
     };
 
-    /// Bitrate target. 8 Mbps cukup untuk 1080p screen content dengan
-    /// openh264; angka ini disengaja konservatif agar Wi-Fi rumah kuat.
-    const TARGET_BPS: u32 = 8_000_000;
-
-    /// Keyframe (IDR) tiap ~2 detik @60fps: pemulihan cepat setelah packet
-    /// loss tanpa membebani bitrate (IDR jauh lebih besar dari P-frame).
-    const IDR_INTERVAL_FRAMES: u32 = 120;
-
     /// Penangkap layar primer: tiap frame → konversi RGBA→I420 → encode H264
     /// → kirim ke channel (mpsc::Sender<Vec<u8>>).
     struct ScreenCapturer {
@@ -154,6 +189,11 @@ mod windows {
         /// Buffer strip padding — dialokasi sekali, dipakai ulang tiap frame.
         packed: Vec<u8>,
         frames: u64,
+        /// Statistik durasi encode (mikrodetik) — bahan ukur target
+        /// roadmap: encode < 10 ms @1080p60.
+        encode_us_sum: u128,
+        encode_us_max: u128,
+        encode_count: u64,
     }
 
     impl GraphicsCaptureApiHandler for ScreenCapturer {
@@ -161,31 +201,21 @@ mod windows {
         type Error = Box<dyn std::error::Error + Send + Sync>;
 
         fn new(ctx: Context<Self::Flags>) -> Result<Self, Self::Error> {
-            // Tuning untuk konten layar real-time — bukan default kamera:
-            //   - ScreenContentRealTime: mode deteksi konten teks/UI openh264.
-            //   - Bitrate mode + target 8 Mbps: kualitas konsisten, bukan
-            //     default 120 kbps yang membuat layar jadi bubur.
-            //   - skip_frames(false): frame skip menambah judder di remote
-            //     desktop; biarkan rate control menurunkan kualitas, bukan
-            //     membuang frame.
-            //   - IDR berkala agar viewer pulih cepat dari packet loss.
-            let config = EncoderConfig::new()
-                .usage_type(UsageType::ScreenContentRealTime)
-                .rate_control_mode(RateControlMode::Bitrate)
-                .bitrate(BitRate::from_bps(TARGET_BPS))
-                .max_frame_rate(FrameRate::from_hz(60.0))
-                .skip_frames(false)
-                .profile(Profile::Baseline)
-                .complexity(Complexity::Low)
-                .sps_pps_strategy(SpsPpsStrategy::ConstantId)
-                .intra_frame_period(IntraFramePeriod::from_num_frames(IDR_INTERVAL_FRAMES))
-                .num_threads(2);
-            let encoder = Encoder::with_api_config(openh264::OpenH264API::from_source(), config)?;
+            // Konfigurasi produksi terpusat di `super::prod_encoder_config`
+            // (dipakai juga oleh benchmark `--bench`, supaya angka benchmark
+            // mencerminkan sesi nyata). Komentar tuning ada di sana.
+            let encoder = Encoder::with_api_config(
+                openh264::OpenH264API::from_source(),
+                super::prod_encoder_config(),
+            )?;
             Ok(Self {
                 encoder,
                 sender: ctx.flags,
                 packed: Vec::new(),
                 frames: 0,
+                encode_us_sum: 0,
+                encode_us_max: 0,
+                encode_count: 0,
             })
         }
 
@@ -220,11 +250,22 @@ mod windows {
 
             let rgba = RgbaSliceU8::new(tight, (width, height));
             let yuv = YUVBuffer::from_rgb_source(rgba);
+
+            // Ukur encode: roadmap menargetkan < 10 ms @1080p60. Kalau
+            // angka ini jebol, openh264 di CPU harus diganti NVENC.
+            let t0 = std::time::Instant::now();
             let encoded = self.encoder.encode(&yuv)?.to_vec();
+            let encode_us = t0.elapsed().as_micros();
+            self.encode_us_sum += encode_us;
+            self.encode_us_max = self.encode_us_max.max(encode_us);
+            self.encode_count += 1;
+
             self.frames = self.frames.wrapping_add(1);
-            if self.frames % 600 == 0 {
+            if self.frames % 300 == 0 {
+                let avg_ms = self.encode_us_sum as f64 / self.encode_count as f64 / 1000.0;
+                let max_ms = self.encode_us_max as f64 / 1000.0;
                 println!(
-                    "[xydesk-host] capture {}x{} frame ke-{}",
+                    "[xydesk-host] capture {}x{} frame ke-{} | encode avg {avg_ms:.2} ms, max {max_ms:.2} ms",
                     width, height, self.frames
                 );
             }

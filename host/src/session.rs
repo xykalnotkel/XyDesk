@@ -92,8 +92,17 @@ impl Session {
     }
 
     /// Menyetujui offer client; mengembalikan SDP jawaban (kandidat sudah
-    /// tergabung karena kita menunggu ICE gathering selesai — non-trickle).
-    pub async fn answer(&self, offer_sdp: &str) -> Result<String> {
+    /// tergabung karena kita menunggu ICE gathering selesai — non-trickle)
+    /// beserta track video yang dipakai untuk menulis frame.
+    ///
+    /// **Urutan penting:** `add_video_track` dipanggil SEBELUM `create_answer`.
+    /// Kalau track didaftarkan setelah answer dibuat (dan dikirim), m-line
+    /// video tidak ada di SDP jawaban — client tidak pernah menerima gambar,
+    /// walau koneksi "berhasil". Bug ini pernah lolos karena tidak ada test
+    /// loopback; lihat `tests/loopback.rs`.
+    pub async fn answer(&self, offer_sdp: &str) -> Result<(String, Arc<TrackLocalStaticSample>)> {
+        let track = self.add_video_track().await?;
+
         let offer =
             RTCSessionDescription::offer(offer_sdp.to_string()).context("SDP offer tidak valid")?;
         self.pc
@@ -114,12 +123,14 @@ impl Session {
             .context("gagal set local description")?;
         let _ = gather.recv().await;
 
-        Ok(self
+        let sdp = self
             .pc
             .local_description()
             .await
             .map(|d| d.sdp)
-            .unwrap_or_default())
+            .unwrap_or_default();
+
+        Ok((sdp, track))
     }
 
     /// Menambah kandidat ICE dari client (via signaling).

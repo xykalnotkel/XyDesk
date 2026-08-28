@@ -36,10 +36,32 @@ demi gengsi.
 1. **Host (Rust + Tauri)**: capture layar via Desktop Duplication API (DXGI),
    encode NVENC, kirim via WebRTC. Lihat `host/`.
 2. **Client (Flutter)**: terima via `flutter_webrtc`, render ke `RTCVideoView`,
-   kirim input (mouse/keyboard) balik lewat data channel. Lihat `client/`.
-3. **Signaling**: sudah DIBANGUN di `signaling/` (Go, self-host, gratis).
-4. **Uji latency** dengan overlay timestamp di layar (cara paling jujur: foto
-   layar host + layar client berjejer, baca selisih jam di frame).
+   kirim input (mouse/keyboard) balik lewat data channel. Lihat `lib/webrtc/`.
+3. **Signaling**: sudah DIBANGUN (Cloudflare Workers + Durable Object, gratis);
+   ada juga `signaling/` cadangan.
+4. **Uji latency** dengan overlay timestamp di layar (paling jujur: foto layar
+   host + layar client berjejer, baca selisih jam di frame). Protokol lengkap
+   ada di `docs/LATENCY.md`.
+
+**Progres Fase 0 (28 Agu 2026):**
+
+- [x] Loop `capture → encode → RTP → client` terbukti di **test loopback
+      otomatis** (`host/tests/loopback.rs`): SDP jawaban memuat video, paket
+      RTP sampai ke client, data channel input dua arah (PING/PONG).
+- [x] Bug urutan `add_video_track` vs `create_answer` diperbaiki — dulu track
+      didaftarkan setelah SDP jawaban dibuat, akibatnya **0 paket video**
+      (koneksi sukses, layar kosong). Sekarang dijaga test regresi.
+- [x] Instrumen ukur: `xydesk-host --bench` (encode avg/p50/p95/max) + log
+      statistik encode di jalur capture.
+- [x] Konfigurasi encoder dibeneri: `skip_frames(true)` — sebelumnya
+      OpenH264 memperingatkan mode bitrate tidak berfungsi (bitrate bisa
+      meledak jauh di atas 8 Mbps).
+- [ ] **Belum:** capture DXGI nyata diverifikasi di lab Windows (runner
+      tanpa GPU; lihat `.github/workflows/test-lab.yml`).
+- [ ] **Belum:** angka glass-to-glass terukur (foto 10 pasang layar).
+- [ ] **TERBUKTI TIDAK LULUS:** openh264 CPU ~30 ms @640x360 — JAUH di atas
+      target <10 ms @1080p60. **NVENC/AMF/QuickSync wajib** untuk target
+      latency, openh264 hanya untuk PoC/fungsional.
 
 **Kriteria lulus (go/no-go):** 1080p60, < 40 ms di LAN, < 80 ms via internet
 dengan TURN, stabil 30 menit tanpa re-buffer.

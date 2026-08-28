@@ -20,7 +20,13 @@ Lapisan WebRTC client kini tersambung ke layar sesi: setelah login dan pairing
 diterima host, `RTCVideoView` menampilkan video host dan input (trackpad +
 keyboard virtual) terkirim lewat data channel biner. Tanpa login (mode tamu)
 layar sesi berjalan sebagai preview dengan status transport yang jujur.
-Yang belum terbukti: capture layar nyata di host (masih pola uji) dan angka
+
+**Status loop inti (per 28 Agu 2026):** jalur `capture → encode → RTP →
+client` sekarang **terbukti di test loopback otomatis** (`host/tests/
+loopback.rs`): track video didaftarkan SEBELUM `create_answer` (bug urutan
+yang dulu membuat SDP jawaban tanpa arah video — koneksi sukses tapi layar
+kosong — sudah diperbaiki dan dijaga test regresi). Yang masih perlu
+dibuktikan di perangkat nyata: capture layar DXGI di Windows dan angka
 latency end-to-end.
 
 | Bagian | Status |
@@ -37,9 +43,10 @@ latency end-to-end.
 | Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker; JWT dan OTP punya test otomatis |
 | Gerbang signaling | Role terikat HMAC, relay client-host divalidasi, daftar host global ditutup |
 | TURN (kredensial Cloudflare ber-TTL) | Selesai |
-| Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Jalur encode→RTP→decode tersedia; capture nyata belum selesai |
-| Wiring `RTCVideoView` di client Flutter | Selesai — `lib/webrtc/` tersambung ke `SessionPage` |
-| Benchmark latency end-to-end di jaringan nyata | Belum — prioritas berikutnya |
+| Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Loop RTP terbukti di test loopback; capture DXGI nyata menunggu verifikasi lab Windows |
+| Test loopback host (SDP + video + data channel) | Selesai — `cargo test` hijau; jaga bug regresi SDP |
+| Benchmark encode (`xydesk-host --bench`) | Selesai — **~30 ms @640x360**: openh264 CPU TIDAK tembus <10 ms @1080p, hardware encode (NVENC/AMF/QSV) wajib untuk target itu |
+| Benchmark latency end-to-end di jaringan nyata | Belum — protokolnya ada di `docs/LATENCY.md` |
 
 ---
 
