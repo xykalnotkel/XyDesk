@@ -114,6 +114,8 @@ class SessionTransport extends ChangeNotifier {
           _set(TransportStatus.peerOffline, 'Host tidak online.');
         case RtcPhase.ended:
           _set(TransportStatus.ended);
+        case RtcPhase.error:
+          _set(TransportStatus.error, rtc.lastError ?? 'Koneksi gagal.');
       }
     });
 
@@ -129,6 +131,20 @@ class SessionTransport extends ChangeNotifier {
       DevLog.e('rtc', 'startSession gagal', e);
       _set(TransportStatus.error, 'Koneksi WebRTC gagal dimulai.');
     }
+  }
+
+  /// Ulangi sesi setelah kegagalan: matikan transport lama (bila ada),
+  /// lalu mulai ulang ke [hostId] dengan [password] yang sama.
+  Future<void> retry({required String hostId, required String password}) async {
+    if (_disposed) return;
+    await _phaseSub?.cancel();
+    _phaseSub = null;
+    final old = _rtc;
+    _rtc = null;
+    if (old != null) await old.stop();
+    _state = const TransportState();
+    notifyListeners();
+    await start(hostId: hostId, password: password);
   }
 
   /// Kirim event input biner (lihat `input_codec.dart`).
