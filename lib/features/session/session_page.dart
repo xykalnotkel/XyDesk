@@ -242,6 +242,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                         child: _RemoteScreenPlaceholder(
                           experience: _settings.experience,
                           transport: _transport.state,
+                          onRetry: () => _transport.retry(
+                            hostId: widget.deviceId,
+                            password: widget.password,
+                          ),
                         ),
                       ),
               ),
@@ -372,6 +376,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                   initialSection: _panelSection,
                   deviceName: widget.deviceName,
                   state: _settings,
+                  transport: _transport.state,
                   onChanged: (value) => setState(() => _settings = value),
                   onClose: _closePanel,
                   onDisconnect: _confirmDisconnect,
@@ -595,10 +600,14 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
   const _RemoteScreenPlaceholder({
     required this.experience,
     required this.transport,
+    this.onRetry,
   });
 
   final SessionExperience experience;
   final TransportState transport;
+
+  /// Dipanggil tombol "Coba lagi" (hanya tampil pada status error).
+  final VoidCallback? onRetry;
 
   String get _statusLabel => switch (transport.status) {
     TransportStatus.preview => 'PREVIEW • TRANSPORT OFFLINE',
@@ -610,6 +619,71 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
     TransportStatus.ended => 'SESI BERAKHIR',
     TransportStatus.error => 'KONEKSI GAGAL',
   };
+
+  /// Konten saat status error: kegagalan ditampilkan terang-terangan
+  /// (bukan ilustrasi dekoratif) + tombol coba lagi.
+  List<Widget> _errorContent() {
+    return [
+      Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: AppColors.danger.withValues(alpha: 0.16),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: AppColors.danger.withValues(alpha: 0.45),
+            width: 1.5,
+          ),
+        ),
+        child: const Icon(
+          LucideIcons.alertTriangle,
+          size: 34,
+          color: AppColors.danger,
+        ),
+      ),
+      const SizedBox(height: 14),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.danger.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(R.sm),
+          border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+        ),
+        child: const Text(
+          'KONEKSI GAGAL',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: AppColors.danger,
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Text(
+        transport.message ?? 'Tidak dapat terhubung ke host.',
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Color(0xD9FFFFFF),
+        ),
+      ),
+      const SizedBox(height: 16),
+      FilledButton(
+        onPressed: onRetry,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.danger.withValues(alpha: 0.9),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+        ),
+        child: const Text(
+          'Coba lagi',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+        ),
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -631,61 +705,63 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
               offset: const Offset(0, -4),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  Opacity(
-                    opacity: 0.52,
-                    child: Image.asset(
-                      experience == SessionExperience.gaming
-                          ? Img.gaming
-                          : Img.screen,
-                      width: 112,
-                      height: 112,
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(R.sm),
-                      border: Border.all(
-                        color: AppColors.warning.withValues(alpha: 0.32),
-                      ),
-                    ),
-                    child: Text(
-                      _statusLabel,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                        color: AppColors.warning,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Layar remote akan tampil di sini',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xA6FFFFFF),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    transport.message ??
-                        'HUD dapat dipreview, tetapi belum mengirim input atau audio.',
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      color: Color(0x66FFFFFF),
-                    ),
-                  ),
-                ],
+                children: transport.status == TransportStatus.error
+                    ? _errorContent()
+                    : [
+                        Opacity(
+                          opacity: 0.52,
+                          child: Image.asset(
+                            experience == SessionExperience.gaming
+                                ? Img.gaming
+                                : Img.screen,
+                            width: 112,
+                            height: 112,
+                            fit: BoxFit.contain,
+                            filterQuality: FilterQuality.high,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(R.sm),
+                            border: Border.all(
+                              color: AppColors.warning.withValues(alpha: 0.32),
+                            ),
+                          ),
+                          child: Text(
+                            _statusLabel,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Layar remote akan tampil di sini',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xA6FFFFFF),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          transport.message ??
+                              'HUD dapat dipreview, tetapi belum mengirim input atau audio.',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            color: Color(0x66FFFFFF),
+                          ),
+                        ),
+                      ],
               ),
             ),
           ),

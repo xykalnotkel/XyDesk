@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/store.dart';
 import '../../core/tokens.dart';
+import '../../webrtc/session_transport.dart';
 import 'media_capabilities.dart';
 
 enum SessionExperience { gaming, desktop }
@@ -108,6 +109,7 @@ class SessionControlPanel extends ConsumerStatefulWidget {
     required this.onClose,
     required this.onDisconnect,
     this.initialSection = SessionPanelSection.stream,
+    this.transport = const TransportState(),
   });
 
   final String deviceName;
@@ -116,6 +118,10 @@ class SessionControlPanel extends ConsumerStatefulWidget {
   final VoidCallback onClose;
   final VoidCallback onDisconnect;
   final SessionPanelSection initialSection;
+
+  /// Status transport nyata — dipakai panel Stream supaya tidak menampilkan
+  /// teks dummy statis saat koneksi gagal/offline.
+  final TransportState transport;
 
   @override
   ConsumerState<SessionControlPanel> createState() =>
@@ -198,7 +204,9 @@ class _SessionControlPanelState extends ConsumerState<SessionControlPanel> {
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                   child: switch (_section) {
-                    SessionPanelSection.stream => const _StreamPanel(),
+                    SessionPanelSection.stream => _StreamPanel(
+                      transport: widget.transport,
+                    ),
                     SessionPanelSection.audio => _AudioPanel(
                       state: widget.state,
                       onChanged: _update,
@@ -364,7 +372,9 @@ class _SectionTabs extends StatelessWidget {
 }
 
 class _StreamPanel extends ConsumerWidget {
-  const _StreamPanel();
+  const _StreamPanel({this.transport = const TransportState()});
+
+  final TransportState transport;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -402,12 +412,25 @@ class _StreamPanel extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         const _SectionTitle(title: 'Status transport'),
-        const _StatusCard(
-          icon: LucideIcons.video,
-          title: 'Video WebRTC belum terhubung',
-          body:
-              'Layar saat ini adalah demo UI. Statistik jaringan dan kualitas '
-              'tidak ditampilkan sebagai data nyata sampai telemetry hadir.',
+        _StatusCard(
+          icon: transport.status == TransportStatus.error
+              ? LucideIcons.wifiOff
+              : LucideIcons.video,
+          title: switch (transport.status) {
+            TransportStatus.connected => 'Video terhubung ke host',
+            TransportStatus.pairing => 'Menghubungi host…',
+            TransportStatus.negotiating => 'Negosiasi koneksi…',
+            TransportStatus.rejected => 'Pairing ditolak',
+            TransportStatus.peerOffline => 'Host tidak online',
+            TransportStatus.ended => 'Sesi berakhir',
+            TransportStatus.error => 'Koneksi gagal',
+            TransportStatus.preview => 'Transport tidak aktif',
+          },
+          body: transport.status == TransportStatus.connected
+              ? 'Video diterima dari host. Statistik jaringan & kualitas akan '
+                    'tampil di sini saat telemetry hadir.'
+              : (transport.message ??
+                    'Tidak ada sesi aktif. Mulai sesi dari daftar perangkat.'),
         ),
       ],
     );

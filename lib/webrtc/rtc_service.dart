@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/devlog.dart';
 import 'signaling_client.dart';
 
 /// Fase koneksi sesi remote — dikonsumsi UI untuk menampilkan status jujur.
@@ -26,6 +27,11 @@ enum RtcPhase {
 
   /// Sesi berakhir (bye, gagal, atau ditutup lokal).
   ended,
+
+  /// Kegagalan nyata: signaling putus, timeout, atau ICE gagal. UI wajib
+  /// menampilkan error jelas (pesan di [RtcService.lastError]) — bukan
+  /// konten dummy / layar diam yang membingungkan.
+  error,
 }
 
 /// Layanan WebRTC client XyDesk.
@@ -52,8 +58,32 @@ class RtcService {
   Stream<RtcPhase> get phases => _phaseCtrl.stream;
   final _phaseCtrl = StreamController<RtcPhase>.broadcast();
 
+  /// Fase terakhir yang dipancarkan (dipakai watchdog timeout).
+  RtcPhase _phase = RtcPhase.pairing;
+
+  /// Pesan kegagalan terakhir — dibaca UI saat fase [RtcPhase.error].
+  String? _lastError;
+
+  /// Watchdog: pairing/negosiasi yang menggantung tidak boleh berputar
+  /// selamanya menampilkan "MENGHUBUNGI HOST…".
+  Timer? _watchdog;
+
+  /// Pesan kegagalan terakhir (null bila tidak ada kesalahan).
+  String? get lastError => _lastError;
+
   void _emit(RtcPhase phase) {
+    _phase = phase;
+    if (phase != RtcPhase.pairing && phase != RtcPhase.negotiating) {
+      _watchdog?.cancel();
+      _watchdog = null;
+    }
     if (!_phaseCtrl.isClosed) _phaseCtrl.add(phase);
+  }
+
+  /// Transisi ke fase error dengan pesan yang bisa ditampilkan UI.
+  void _fail(String message) {
+    _lastError = message;
+    _emit(RtcPhase.error);
   }
 
   /// Memulai sesi sebagai client terhadap [hostId].
@@ -80,12 +110,20 @@ class RtcService {
         _emit(RtcPhase.rejected);
         return;
       }
+      _lastError = null;
       _emit(RtcPhase.negotiating);
-      await _negotiate(hostId);
+      try {
+        await _negotiate(hostId);
+      } catch (e) {
+        DevLog.e('rtc', 'negosiasi gagal', e);
+        _fail('Negosiasi WebRTC gagal dimulai.');
+      }
     };
 
     sig.onDisconnected = () {
-      if (!_stopped) _emit(RtcPhase.ended);
+      // Selama sesi masih hidup, putusnya soket signaling adalah kegagalan
+      // nyata (bukan akhir normal — akhir normal lewat 'bye' → stop()).
+      if (!_stopped) _fail('Koneksi signaling terputus.');
     };
 
     sig.onMessage = (m) async {
@@ -122,6 +160,16 @@ class RtcService {
     _emit(RtcPhase.pairing);
     await sig.connect(signalingUrl, token);
     sig.sendPair(hostId, pin);
+
+    // Watchdog: kalau host tidak menjawab atau jawaban tidak pernah sampai,
+    // jangan biarkan UI menggantung di "MENGHUBUNGI HOST…" selamanya.
+    _watchdog?.cancel();
+    _watchdog = Timer(const Duration(seconds: 20), () {
+      if (_stopped) return;
+      if (_phase == RtcPhase.pairing || _phase == RtcPhase.negotiating) {
+        _fail('Host tidak merespons (timeout 20 detik). Coba lagi.');
+      }
+    });
   }
 
   Future<void> _negotiate(String hostId) async {
@@ -169,10 +217,13 @@ class RtcService {
     pc.onConnectionState = (state) {
       switch (state) {
         case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
+          _lastError = null;
           _emit(RtcPhase.connected);
         case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
+          _fail('Koneksi peer gagal (ICE) — tidak bisa menembus jaringan.');
         case RTCPeerConnectionState.RTCPeerConnectionStateClosed:
-          _emit(RtcPhase.ended);
+          // Close tanpa 'bye' = kegagalan, bukan akhir yang rapi.
+          if (!_stopped) _fail('Koneksi peer ditutup paksa.');
         default:
           break;
       }
@@ -236,6 +287,8 @@ class RtcService {
   Future<void> stop() async {
     if (_stopped) return;
     _stopped = true;
+    _watchdog?.cancel();
+    _watchdog = null;
     await _inputChannel?.close();
     await _pc?.close();
     await _renderer.dispose();

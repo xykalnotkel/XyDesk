@@ -45,6 +45,10 @@ windows = { version = "0.61", features = [
   "Win32_System_LibraryLoader",
   "Win32_System_DataExchange",
   "Win32_System_Memory",
+  # NVENC: device D3D11 + texture NV12 (host/src/nvenc.rs)
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Dxgi_Common",
 ] }
 # HTTP kecil untuk tukar token host (GUI native) — rustls, tanpa OpenSSL.
 ureq = { version = "2", features = ["json"] }
@@ -52,6 +56,14 @@ ureq = { version = "2", features = ["json"] }
 # ── Fase capture/encode (Windows-only) — aktifkan saat implementasi ──
 # windows-capture = "1"              # DXGI Desktop Duplication
 # ffmpeg-next = "6"                  # encode NVENC/AMF/QuickSync (jalur cepat PoC)
+
+# Test loopback end-to-end: client (offerer) ↔ Session host (answerer) di
+# satu proses. Memakai dependency yang sama dengan binary.
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+webrtc = "0.11"
+bytes = "1"
+anyhow = "1"
 
 [profile.release]
 opt-level = 3
