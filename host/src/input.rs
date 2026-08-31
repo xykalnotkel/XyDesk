@@ -86,9 +86,7 @@ pub fn decode(data: &[u8]) -> Option<InputEvent> {
         (&tag::TEXT, n) if n >= 2 => std::str::from_utf8(&data[1..])
             .ok()
             .map(|s| InputEvent::Text(s.to_string())),
-        (&tag::DISPLAY_SELECT, n) if n >= 2 => {
-            Some(InputEvent::DisplaySelect(data[1] as usize))
-        }
+        (&tag::DISPLAY_SELECT, n) if n >= 2 => Some(InputEvent::DisplaySelect(data[1] as usize)),
         _ => None,
     }
 }

@@ -27,11 +27,7 @@ extern "C" {
         max_data_bytes: i32,
     ) -> i32;
     fn opus_encoder_destroy(st: *mut OpusEncoderState);
-    fn opus_decoder_create(
-        fs: i32,
-        channels: i32,
-        error: *mut i32,
-    ) -> *mut OpusDecoderState;
+    fn opus_decoder_create(fs: i32, channels: i32, error: *mut i32) -> *mut OpusDecoderState;
     fn opus_decode(
         st: *mut OpusDecoderState,
         data: *const u8,
@@ -121,9 +117,7 @@ unsafe impl Send for Decoder {}
 impl Decoder {
     pub fn new(sample_rate: u32, channels: usize) -> Result<Self, String> {
         let mut err: i32 = 0;
-        let st = unsafe {
-            opus_decoder_create(sample_rate as i32, channels as i32, &mut err)
-        };
+        let st = unsafe { opus_decoder_create(sample_rate as i32, channels as i32, &mut err) };
         if st.is_null() || err != 0 {
             return Err(format!("opus_decoder_create gagal (kode {err})"));
         }

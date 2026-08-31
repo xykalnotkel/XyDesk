@@ -141,11 +141,7 @@ impl Session {
     /// Seperti [`Session::answer`], tetapi boleh menyertakan track audio
     /// (forward host → client). Track audio harus terdaftar SEBELUM
     /// `create_answer` — alasan yang sama dengan video di atas.
-    pub async fn answer_media(
-        &self,
-        offer_sdp: &str,
-        with_audio: bool,
-    ) -> Result<MediaTracks> {
+    pub async fn answer_media(&self, offer_sdp: &str, with_audio: bool) -> Result<MediaTracks> {
         let video = self.add_video_track().await?;
         let audio = if with_audio {
             Some(self.add_audio_track().await?)
@@ -180,11 +176,7 @@ impl Session {
             .map(|d| d.sdp)
             .unwrap_or_default();
 
-        Ok(MediaTracks {
-            sdp,
-            video,
-            audio,
-        })
+        Ok(MediaTracks { sdp, video, audio })
     }
 
     /// Menambah track audio Opus (48 kHz stereo) untuk forward host → client.

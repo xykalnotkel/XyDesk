@@ -3132,11 +3132,12 @@ dependencies = [
 
 [[package]]
 name = "xydesk-host"
-version = "0.1.0"
+version = "6.1.0"
 dependencies = [
  "anyhow",
  "axum",
  "bytes",
+ "cc",
  "clap",
  "futures-util",
  "openh264",

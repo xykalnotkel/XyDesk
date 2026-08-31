@@ -475,9 +475,7 @@ async fn main() -> Result<()> {
                                 // Kirim META ke client: daftar layar + status
                                 // audio host. Client memakai ini untuk
                                 // pemilihan monitor dan label audio jujur.
-                                let _ = dc
-                                    .send_text(meta_json().to_string())
-                                    .await;
+                                let _ = dc.send_text(meta_json().to_string()).await;
                                 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
                                 dc.on_message(Box::new(move |m| {
                                     if !m.is_string {
@@ -504,7 +502,8 @@ async fn main() -> Result<()> {
                                     if let Some(ev) = xydesk_host::input::decode(&data) {
                                         // Pindah monitor = bukan injeksi: setel
                                         // pilihan + kirim meta terbaru.
-                                        if let xydesk_host::input::InputEvent::DisplaySelect(i) = ev {
+                                        if let xydesk_host::input::InputEvent::DisplaySelect(i) = ev
+                                        {
                                             xydesk_host::screen::select_display(i);
                                             let _ = dc.send_text(meta_json().to_string()).await;
                                             continue;

@@ -183,7 +183,7 @@ mod windows {
 
     /// Daftar ID endpoint output aktif.
     pub fn list_outputs() -> Vec<String> {
-        use windows::Win32::Media::Audio::{DEVICE_STATE_ACTIVE, IMMDeviceCollection};
+        use windows::Win32::Media::Audio::{IMMDeviceCollection, DEVICE_STATE_ACTIVE};
         let Ok(device) = device() else {
             return Vec::new();
         };
@@ -222,8 +222,7 @@ mod windows {
     pub fn set_master_volume(vol: f32) -> bool {
         use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
         let Ok(device) = device() else { return false };
-        let Ok(volume) =
-            (unsafe { device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None) })
+        let Ok(volume) = (unsafe { device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None) })
         else {
             return false;
         };
@@ -372,7 +371,8 @@ mod windows {
                     std::thread::sleep(std::time::Duration::from_millis(2));
                     continue;
                 }
-                let want = (avail / usize::from(CHANNELS)).min(pcm_queue.len() / usize::from(CHANNELS));
+                let want =
+                    (avail / usize::from(CHANNELS)).min(pcm_queue.len() / usize::from(CHANNELS));
                 let take = want * usize::from(CHANNELS);
                 let chunk: Vec<i16> = pcm_queue.drain(..take).collect();
                 unsafe {
@@ -380,8 +380,7 @@ mod windows {
                     let data = render
                         .GetBuffer(want as u32)
                         .map_err(|e| anyhow::anyhow!("render GetBuffer: {e:?}"))?;
-                    let dst =
-                        std::slice::from_raw_parts_mut(data as *mut i16, chunk.len());
+                    let dst = std::slice::from_raw_parts_mut(data as *mut i16, chunk.len());
                     dst.copy_from_slice(&chunk);
                     render
                         .ReleaseBuffer(want as u32, 0)

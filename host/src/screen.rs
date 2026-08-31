@@ -120,17 +120,12 @@ pub fn spawn_frame_source() -> mpsc::Receiver<Vec<u8>> {
             let mut current = wanted_display();
             loop {
                 if let Err(e) = windows::start_monitor(tx.clone(), current) {
-                    eprintln!(
-                        "[xydesk-host] capture layar (monitor {current}) gagal: {e}"
-                    );
+                    eprintln!("[xydesk-host] capture layar (monitor {current}) gagal: {e}");
                 }
                 // Ada permintaan pindah monitor? Respawn dengan indeks baru.
                 // Tanpa permintaan, capture berakhir karena sesi selesai
                 // (handler berhenti) — thread ini pun keluar.
-                let next = SWITCH_TO.swap(
-                    usize::MAX,
-                    std::sync::atomic::Ordering::Relaxed,
-                );
+                let next = SWITCH_TO.swap(usize::MAX, std::sync::atomic::Ordering::Relaxed);
                 if next == usize::MAX {
                     break;
                 }
@@ -207,14 +202,12 @@ pub fn list_displays() -> Vec<DisplayInfo> {
 }
 
 /// Monitor yang sedang dipilih untuk capture (default 0 = primer).
-static WANTED_MONITOR: std::sync::atomic::AtomicUsize =
-    std::sync::atomic::AtomicUsize::new(0);
+static WANTED_MONITOR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 /// Permintaan pindah monitor DI TENGAH SESI. Dibaca thread capture
 /// (`on_frame_arrived` menghentikan handler → thread respawn dengan monitor
 /// baru). `usize::MAX` = tidak ada permintaan.
-static SWITCH_TO: std::sync::atomic::AtomicUsize =
-    std::sync::atomic::AtomicUsize::new(usize::MAX);
+static SWITCH_TO: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(usize::MAX);
 
 /// Pilih monitor. Berlaku langsung bila ada sesi berjalan (capture di-respawn);
 /// selain itu menjadi pilihan sesi berikutnya.
@@ -506,8 +499,7 @@ mod windows {
         use windows::core::BOOL;
         use windows::Win32::Foundation::LPARAM;
         use windows::Win32::Graphics::Gdi::{
-            EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO,
-            MONITORINFOEXW,
+            EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO, MONITORINFOEXW,
         };
 
         unsafe extern "system" fn collect(
