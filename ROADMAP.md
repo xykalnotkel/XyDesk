@@ -108,9 +108,11 @@ dengan TURN, stabil 30 menit tanpa re-buffer.
 - Identitas ungu menonjol di semua platform (hero web ungu pekat, tombol
   utama ungu, aksen di Android/Desktop); logo X memakai tile seperti
   sampul berita (tanpa glow/bayangan).
-- **Push notifikasi DIPERBAIKI**: plugin OneSignal Gradle kini terpasang
-  (sebelumnya SDK tidak masuk APK → push mati). Artikel baru memicu push
-  OneSignal + email Resend otomatis (endpoint admin `waitUntil`).
+- **Push notifikasi DIPERIKSA & DIHIDUPKAN**: jalur server (REST OneSignal,
+  teruji dari Worker berita) kini terpasang — artikel baru memicu push
+  OneSignal + email Resend otomatis (endpoint admin `waitUntil`). SDK
+  klien masuk lewat onesignal_flutter (Maven, tanpa plugin Gradle);
+  izin tetap opt-in dari aplikasi.
 - Berita: balas komentar (1 tingkat), username acak per perangkat (tanpa
   kolom nama), like optimistik, langganan email, **slug hash acak** untuk
   artikel baru.
@@ -130,7 +132,7 @@ dengan TURN, stabil 30 menit tanpa re-buffer.
 | Pairing + tendang peer kedua | Jalan | `HostBusy` di gerbang pairing, teruji |
 | Control API lokal + shell desktop | Jalan | status/sesi/video/log/password/stop |
 | Berita lintas platform | Jalan | like/komentar/balasan/bagikan/OG per konten/langganan email |
-| Push notifikasi (rilis + berita) | Jalan | plugin Gradle terpasang; jalur OneSignal REST teruji |
+| Push notifikasi (rilis + berita) | Jalan | jalur server REST OneSignal teruji; SDK klien via onesignal_flutter (opt-in) |
 | Notifikasi email berita | Jalan | Resend + tabel subscribers; domain terverifikasi |
 | Akun (email OTP + Google) | Jalan | signaling worker + web connect |
 | QR scan pairing | Jalan | mobile_scanner (CameraX/MLKit) |

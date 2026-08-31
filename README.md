@@ -50,7 +50,7 @@ latency end-to-end.
 | OpenGraph web per konten | Live — renderer worker di `web_deploy/worker/` (crawler dapat meta berita), CSP mengizinkan `news.xystudio.my.id` |
 | Tema aplikasi Android | Terang (Paper) saja — mode gelap dihapus agar satu set kontras teruji |
 | Identitas visual 6.0 | Ungu menonjol sebagai warna khas; logo X tile seperti sampul berita tanpa glow — `design/x-white.png`, `design/x-black.png` |
-| Push notifikasi | Jalan — plugin OneSignal Gradle terpasang; rilis & berita baru memicu push (dan email Resend untuk pelanggan berita) |
+| Push notifikasi | Jalan — jalur server REST OneSignal teruji; rilis & berita baru memicu push (dan email Resend untuk pelanggan berita) |
 | Lisensi | **Proprietary** (`LICENSE` — EULA, larangan clone) + daftar lisensi pihak ketiga lengkap di `docs/LEGAL.md` dan Legal di semua platform |
 | Sesi tunggal (anti-ambil alih) | Selesai — koneksi kedua ditolak `host-sibuk` meski password benar; client menampilkan status "perangkat sedang dipakai" |
 | Test loopback host (SDP + video + data channel) | Selesai — `cargo test` hijau; jaga bug regresi SDP |

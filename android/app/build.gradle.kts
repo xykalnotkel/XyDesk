@@ -4,10 +4,6 @@ import java.io.FileInputStream
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
-    // Plugin OneSignal — memasang SDK notifikasi push ke APK.
-    // Izin notifikasi tetap diminta lewat opt-in di Pengaturan aplikasi,
-    // bukan saat pemasangan.
-    id("com.onesignal.onesignal-gradle-plugin")
 }
 
 // ── Signing rilis: baca key.properties bila ada (CI menyediakannya) ──
