@@ -18,6 +18,32 @@ menjalankan format, analisis statis, dan build agar artefak yang diterbitkan
 berasal dari source yang dapat dikompilasi. Pengujian perilaku dilakukan manual
 setelah APK/EXE dipasang.
 
+## Cross-check Windows sebelum push (`tool/check-host-windows.sh`)
+
+Seluruh jalur WASAPI, DXGI, dan GDI berada di balik `cfg(target_os =
+"windows")`. `cargo check` di Linux tidak menyentuh satu baris pun dari kode
+itu — yang dikompilasi hanyalah stub non-Windows. Konsekuensinya nyata: salah
+ketik dan salah tanda tangan API windows-rs baru ketahuan di GitHub Actions,
+dengan siklus umpan balik ~8 menit per percobaan. Pada 31 Agu 2026 pola itu
+menghasilkan tujuh commit `fix(host)` beruntun dalam satu jam di `main`,
+semuanya error kompilasi sepele.
+
+```bash
+rustup target add x86_64-pc-windows-gnu
+sudo apt-get install -y mingw-w64      # brew install mingw-w64 di macOS
+
+tool/check-host-windows.sh             # detik, bukan menit
+tool/check-host-windows.sh --clippy    # + lint
+```
+
+Target `-gnu` dipilih karena `-msvc` menuntut Windows SDK + CRT Microsoft
+(~1 GB lewat cargo-xwin). Untuk MEMERIKSA kode keduanya setara — parser, type
+checker, dan binding windows-rs identik; yang berbeda cuma ABI dan linker, dan
+itu tetap diverifikasi runner Windows asli di `build.yml`.
+
+Yang skrip ini TIDAK buktikan: linking MSVC, perilaku runtime, dan apakah
+audionya benar-benar terdengar. Itu tetap tugas lab Windows.
+
 ## Build biasa
 
 Push ke `main` menjalankan:
