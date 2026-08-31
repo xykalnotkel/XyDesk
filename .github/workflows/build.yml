@@ -201,10 +201,57 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+  # ── 2b. Gerbang mutu host (Rust) ──
+  #
+  # Dijalankan di Linux karena jauh lebih cepat dan murah daripada runner
+  # Windows; modul yang diuji (pairguard, identity, input, loopback) tidak
+  # bergantung pada API Windows.
+  #
+  # Pertahanan brute force pairing tidak boleh mundur diam-diam. Kalau job ini
+  # merah, host bisa diambil alih — dan karena job `windows` sekarang
+  # `needs` job ini, tidak ada .exe maupun Release yang bisa lolos di atasnya.
+  host-test:
+    name: Uji Logika Host (Rust)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            host/target
+          key: test-${{ runner.os }}-cargo-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: test-${{ runner.os }}-cargo-
+
+      - name: Cek format
+        working-directory: host
+        run: cargo fmt --check
+
+      - name: Clippy tanpa toleransi peringatan
+        working-directory: host
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Uji unit
+        working-directory: host
+        run: cargo test --all-targets
+
   # ── 3. Windows Native Desktop: x64 dan Arm64 resmi Flutter ──
   windows:
     name: Windows ${{ matrix.arch }} (native)
-    needs: check
+    # Gerbang mutu host WAJIB hijau sebelum ada .exe yang lahir. Sebelumnya
+    # fmt/clippy/cargo test tinggal di workflow terpisah (build-host.yml) yang
+    # bukan syarat rilis apa pun — akibatnya v6.1.0 sempat terbit sementara
+    # gerbang itu merah pada commit yang sama. Sekarang satu rantai.
+    needs: [check, host-test]
     strategy:
       fail-fast: false
       matrix:
@@ -322,7 +369,7 @@ jobs:
 
   summary:
     name: Ringkasan
-    needs: [android, windows, web, installer-lint]
+    needs: [host-test, android, windows, web, installer-lint]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -333,6 +380,7 @@ jobs:
             echo ""
             echo "| Target | Status | Artefak |"
             echo "|---|---|---|"
+            echo "| Uji Logika Host (Rust)      | ${{ needs['host-test'].result }} | gerbang mutu, tanpa artefak |"
             echo "| Android APK (ARM Universal) | ${{ needs.android.result }} | \`XyDesk-Android-APK\` |"
             echo "| Windows Desktop (EXE)       | ${{ needs.windows.result }} | \`XyDesk-Windows-EXE\` |"
             echo "| Web Application             | ${{ needs.web.result }}     | \`XyDesk-Web\`         |"

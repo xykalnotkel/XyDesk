@@ -7,16 +7,24 @@ perlu menjalankan Flutter, Android SDK, Rust, atau Visual Studio secara lokal.
 
 | Berkas | Pemicu | Hasil |
 |---|---|---|
-| `.github/workflows/build.yml` | push/PR ke `main`, manual | APK Android, aplikasi Flutter Windows, bundle Web |
-| `.github/workflows/build-host.yml` | perubahan `host/**`, manual | `xydesk-host.exe` |
+| `.github/workflows/build.yml` | push/PR ke `main`, manual | gerbang mutu host (fmt/clippy/test), APK Android, `XyDesk.exe` + `XyDesk-Host.exe`, bundle Web |
 | `.github/workflows/deploy-signaling.yml` | perubahan `cloudflare/**`, manual | deploy Cloudflare Worker API/signaling |
 | `.github/workflows/deploy-web.yml` | Build `main` sukses, manual recovery | deploy bundle Flutter Web terverifikasi ke Cloudflare Static Assets |
 | `.github/workflows/release.yml` | Build `main` sukses + nilai `version` berubah, manual recovery | GitHub Release multi-platform + push OneSignal |
 
-Sesuai keputusan proyek, repositori tidak memiliki suite test otomatis. CI tetap
-menjalankan format, analisis statis, dan build agar artefak yang diterbitkan
-berasal dari source yang dapat dikompilasi. Pengujian perilaku dilakukan manual
-setelah APK/EXE dipasang.
+Sejak 1 Sep 2026 seluruh gerbang host berada di dalam `build.yml`. Sebelumnya
+fmt/clippy/`cargo test` host tinggal di `build-host.yml` yang berdiri sendiri
+dan tidak menjadi syarat rilis apa pun; akibatnya v6.1.0 sempat terbit pada
+16:21 sementara gerbang itu merah pada commit yang sama pukul 16:15. Job
+`windows` sekarang `needs: [check, host-test]`, dan `release.yml` hanya jalan
+setelah run **Build** sukses — jadi tidak ada jalan memutar: gerbang merah =
+tidak ada `.exe`, tidak ada Release.
+
+Sebagai bonus, kompilasi host Windows tidak lagi dobel di dua workflow.
+
+Test otomatis yang wajib hijau: `cargo test` host (loopback WebRTC +
+pairguard) dan `node --test` Worker. Pengujian perilaku perangkat keras
+(capture DXGI, audio WASAPI) tetap manual setelah EXE dipasang.
 
 ## Build biasa
 

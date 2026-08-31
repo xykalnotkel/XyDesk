@@ -4,7 +4,6 @@ Aplikasi remote desktop low-latency untuk **gaming dan kerja**.
 Gaya visual **Quiet Surface** — clean, modern, tanpa satu pun garis pemisah.
 
 [![Build](https://github.com/xykalnotkel/XyDesk/actions/workflows/build.yml/badge.svg)](https://github.com/xykalnotkel/XyDesk/actions/workflows/build.yml)
-[![Host tests](https://github.com/xykalnotkel/XyDesk/actions/workflows/build-host.yml/badge.svg?branch=main)](https://github.com/xykalnotkel/XyDesk/actions/workflows/build-host.yml)
 [![Signaling](https://github.com/xykalnotkel/XyDesk/actions/workflows/deploy-signaling.yml/badge.svg)](https://github.com/xykalnotkel/XyDesk/actions/workflows/deploy-signaling.yml)
 [![Release](https://img.shields.io/github/v/release/xykalnotkel/XyDesk?display_name=tag&sort=semver)](https://github.com/xykalnotkel/XyDesk/releases)
 [![Flutter](https://img.shields.io/badge/Flutter-3.44%2B-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
