@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/app_version.dart';
 import '../../core/l10n_bridge.dart';
 import '../../core/tokens.dart';
 
@@ -175,36 +176,60 @@ class LegalPage extends StatelessWidget {
     ),
   ];
 
+  /// Lisensi pihak ketiga.
+  ///
+  /// Sebelumnya bagian ini memuat 18 komponen yang diketik tangan. Jumlah
+  /// sebenarnya yang ikut terkirim ke perangkat pengguna ada 482 (90 paket
+  /// Dart, 324 crate Rust, 58 paket npm, 10 aset & layanan) — daftar tangan
+  /// tidak pernah bisa mengejarnya, dan daftar lisensi yang tidak lengkap
+  /// adalah masalah hukum, bukan sekadar dokumentasi yang kurang rapi.
+  ///
+  /// Karena itu halaman ini menampilkan komponen inti saja, lalu menyerahkan
+  /// daftar penuhnya ke [showLicensePage] — registry lisensi bawaan Flutter
+  /// yang membaca teks LICENSE dari BINER YANG SEDANG BERJALAN. Isinya
+  /// mustahil ketinggalan zaman: kalau sebuah paket ikut ter-bundle, teks
+  /// lisensinya pasti ikut tampil.
   List<Widget> _licenses(BuildContext c) => [
     _para(
       c,
       'XyDesk adalah perangkat lunak proprietary (bukan sumber terbuka): '
       'bebas dipakai, tetapi dilarang meng-clone, menyalin, merekayasa '
       'balik, atau mendistribusikan ulang kode sumbernya tanpa izin '
-      'tertulis dari XySpace Tech. Semua UI/UX dirancang sendiri oleh tim '
-      'XyDesk. Berikut perangkat lunak pihak ketiga yang dipakai beserta '
-      'lisensinya masing-masing:',
+      'tertulis dari XySpace Tech. Seluruh UI/UX dirancang sendiri oleh tim '
+      'XyDesk.',
+    ),
+    _para(
+      c,
+      'XyDesk memakai 482 komponen pihak ketiga: 90 paket Dart/Flutter, '
+      '324 crate Rust di aplikasi Host, 58 paket npm di web dan layanan, '
+      'serta 10 aset, SDK, dan layanan awan. Semuanya didaftar lengkap '
+      'beserta lisensinya — tidak ada yang disembunyikan.',
     ),
     const SizedBox(height: Gap.md),
+    _sec(c, 'Komponen inti'),
     for (final l in const [
-      ('Flutter SDK', 'BSD-3-Clause', 'Google'),
-      ('Dart SDK', 'BSD-3-Clause', 'Google'),
-      ('flutter_riverpod', 'MIT', 'Remi Rousselet'),
-      ('go_router', 'BSD-3-Clause', 'Flutter Team'),
-      ('Lucide Icons', 'ISC', 'Lucide Contributors'),
-      ('Inter', 'SIL Open Font License 1.1', 'Rasmus Andersson'),
-      ('shared_preferences', 'BSD-3-Clause', 'Flutter Team'),
-      ('http', 'BSD-3-Clause', 'Dart Team'),
-      ('google_sign_in', 'BSD-3-Clause', 'Flutter Team'),
-      ('flutter_secure_storage', 'BSD-3-Clause', 'Flutter Team'),
-      ('flutter_webrtc', 'MIT', 'Flutter WebRTC'),
-      ('libwebrtc', 'BSD-3-Clause', 'Google'),
-      ('web_socket_channel', 'BSD-3-Clause', 'Dart Team'),
-      ('package_info_plus', 'BSD-3-Clause', 'Flutter Community'),
-      ('url_launcher', 'BSD-3-Clause', 'Flutter Team'),
-      ('mobile_scanner', 'BSD-3-Clause', 'Mobile Scanner'),
-      ('OneSignal SDK', 'Ketentuan OneSignal', 'OneSignal'),
-      ('NVENC SDK', 'Lisensi SDK NVIDIA', 'NVIDIA'),
+      ('Flutter & Dart SDK', 'BSD-3-Clause', 'Google'),
+      ('libwebrtc', 'BSD-3-Clause', 'Google — media peer-to-peer'),
+      ('libopus 1.5.2', 'BSD-3-Clause', 'Xiph.Org — codec audio'),
+      ('OpenH264', 'BSD-2-Clause', 'Cisco — encode video'),
+      (
+        'windows-rs / windows-capture',
+        'MIT atau Apache-2.0',
+        'Microsoft & kontributor',
+      ),
+      ('Inter', 'SIL OFL 1.1', 'Rasmus Andersson — font'),
+      ('Lucide Icons', 'ISC', 'Kontributor Lucide'),
+      (
+        'NVIDIA Video Codec SDK',
+        'Lisensi SDK NVIDIA',
+        'Opsional saat GPU NVIDIA ada',
+      ),
+      ('OneSignal SDK', 'Ketentuan OneSignal', 'Push notifikasi'),
+      (
+        'Cloudflare Workers, D1, TURN',
+        'Ketentuan Cloudflare',
+        'Signaling & berita',
+      ),
     ])
       Padding(
         padding: const EdgeInsets.only(bottom: 14),
@@ -227,7 +252,61 @@ class LegalPage extends StatelessWidget {
           ],
         ),
       ),
+    const SizedBox(height: Gap.md),
+    _LicenseRegistryButton(),
+    const SizedBox(height: Gap.md),
+    _para(
+      c,
+      'Tombol di atas membuka teks lisensi lengkap setiap paket, dibaca '
+      'langsung dari aplikasi yang sedang kamu jalankan. Inventaris penuh '
+      'lintas platform (termasuk crate Rust dan paket npm) ada di dokumen '
+      'THIRD-PARTY-LICENSES pada repositori proyek.',
+    ),
   ];
+}
+
+/// Tombol menuju registry lisensi bawaan Flutter.
+///
+/// Dipisah jadi widget sendiri supaya bisa memakai [showLicensePage] dengan
+/// [BuildContext] yang benar tanpa mengubah [LegalPage] jadi stateful.
+class _LicenseRegistryButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Material(
+      color: c.input,
+      borderRadius: BorderRadius.circular(R.lg),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(R.lg),
+        onTap: () => showLicensePage(
+          context: context,
+          applicationName: 'XyDesk',
+          applicationVersion: AppVersion.full,
+          applicationLegalese: '© 2026 XySpace Tech. Proprietary.',
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+          child: Row(
+            children: [
+              Icon(LucideIcons.scrollText, size: 17, color: c.accent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Lisensi pihak ketiga lengkap',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: c.textHi,
+                  ),
+                ),
+              ),
+              Icon(LucideIcons.chevronRight, size: 16, color: c.textLow),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── potongan kecil ──

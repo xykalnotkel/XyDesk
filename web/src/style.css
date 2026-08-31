@@ -1118,3 +1118,178 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   border-color: var(--accent-deep);
   color: #fff;
 }
+
+/* ── Pra-beta: unduhan ditahan ───────────────────────────────── */
+/* Tombol mati harus TERLIHAT mati. Tombol pudar yang tetap bisa diklik
+   adalah cara tercepat membuat orang merasa dibohongi. */
+.btn:disabled,
+.btn.primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: grayscale(0.35);
+  box-shadow: none;
+}
+.soon-chip {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-low);
+  border: 1px dashed var(--line-strong);
+  border-radius: 999px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+.stage-card {
+  max-width: 460px;
+  margin: 26px auto 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--raised);
+  overflow: hidden;
+}
+.stage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 18px;
+  font-size: 13.5px;
+}
+.stage-row + .stage-row { border-top: 1px solid var(--line); }
+.stage-row span { color: var(--text-mid); }
+.stage-row strong { color: var(--ink); }
+.stage-heading { margin: 34px 0 12px; font-size: 17px; }
+.stage-list {
+  max-width: 620px;
+  margin: 0 auto 8px;
+  padding-left: 20px;
+  text-align: left;
+}
+.stage-list li {
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--text-mid);
+  margin-bottom: 6px;
+}
+
+/* ── Versi di footer: tombol menuju changelog ────────────────── */
+.footer-version {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-2);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.footer-version:hover { color: #fff; }
+
+/* ── Inventaris lisensi ──────────────────────────────────────── */
+.license-inventory { margin-top: 6px; }
+.license-inventory h3 {
+  margin: 26px 0 12px;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.license-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.license-chip {
+  font-size: 12px;
+  color: var(--text-mid);
+  background: var(--overlay);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+.license-chip b { color: var(--accent-deep); margin-left: 3px; }
+
+.license-group { margin-bottom: 10px; }
+.license-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.license-toggle:hover { border-color: var(--line-strong); }
+.license-count {
+  margin-left: auto;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-low);
+}
+.license-caret { font-size: 16px; color: var(--accent); width: 12px; }
+
+.license-table {
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  /* Ratusan baris: batasi tingginya supaya halaman tetap bisa digulir
+     dengan waras, tanpa membuang satu entri pun. */
+  max-height: 420px;
+  overflow-y: auto;
+}
+.license-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px minmax(0, 190px);
+  gap: 10px;
+  align-items: center;
+  padding: 9px 14px;
+  font-size: 12.5px;
+}
+.license-row + .license-row { border-top: 1px solid var(--line); }
+.license-row code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.license-version { color: var(--text-low); font-variant-numeric: tabular-nums; }
+.license-spdx { color: var(--text-mid); text-align: right; overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .license-row {
+    grid-template-columns: 1fr auto;
+    row-gap: 2px;
+  }
+  .license-spdx { grid-column: 1 / -1; text-align: left; font-size: 11.5px; }
+}
+
+/* ── Badge penulis resmi ─────────────────────────────────────── */
+.author-name { display: inline-flex; align-items: center; gap: 6px; }
+.author-name.official strong { font-weight: 650; color: var(--ink); }
+.author-badge {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex: none;
+}
+.author-name.md .author-badge { width: 19px; height: 19px; border-radius: 5px; }
+.official-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 2px 7px;
+  line-height: 1.5;
+}
+.comment-head .author-name { min-width: 0; }

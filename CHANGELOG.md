@@ -11,6 +11,78 @@ Kebijakan rilis:
   panjang (lihat `news/README.md` untuk alur penerbitan).
 - File ini otomatis dilampirkan ke GitHub Release oleh `release.yml`.
 
+## [6.2.0] - 2026-09-01
+
+> Rilis kejujuran. Tidak ada fitur media baru di sini; yang berubah adalah
+> apa yang produk ini **katakan tentang dirinya sendiri** — status rilis,
+> nomor versi, daftar lisensi, dan siapa yang berbicara di kolom komentar.
+> Tombol unduh sengaja dimatikan sampai gerbang beta di `docs/VERSIONING.md`
+> lulus.
+
+### Ditambahkan
+
+- **Gerbang tahap rilis terpusat** (`lib/core/release_stage.dart`,
+  `web/src/version.ts`). Satu konstanta menentukan apakah produk berstatus
+  pra-beta, beta, atau stabil; UI membaca darinya, bukan menebak.
+- **Inventaris lisensi lengkap yang dibangkitkan mesin** (`tool/gen-licenses.mjs`).
+  Memindai `pubspec.lock`, `Cargo.lock`, dan `package-lock.json` di empat
+  workspace, lalu menulis `docs/THIRD-PARTY-LICENSES.md` dan
+  `web/src/licenses.generated.ts`. Hasil: **482 komponen** — sebelumnya
+  halaman legal hanya menyebut 9 di web dan 18 di aplikasi.
+- **Registry lisensi bawaan Flutter** di layar Tentang → Lisensi. Membaca
+  berkas LICENSE dari biner yang sedang berjalan, jadi mustahil basi.
+- **Badge penulis resmi** di berita dan komentar (web + Android). Nama tim
+  didampingi logo XyDesk dan label "Resmi".
+- **`docs/VERSIONING.md`** — kebijakan versi dan rilis yang mengikat.
+- **`tool/gen_logo.py`** — logo dibangkitkan dari kode untuk seluruh 20+
+  ukuran sekaligus.
+- **`news/test/comments.test.js`** — 6 uji yang memastikan badge resmi tidak
+  bisa diminta klien.
+
+### Diubah
+
+- **Tombol Download dimatikan** di seluruh permukaan web. Halaman Unduh kini
+  menampilkan status rilis sebenarnya dan enam syarat yang harus lulus dulu.
+- **Menekan Connect langsung membuka layar sesi** dengan status "Menyambung…".
+  Halaman perantara `PairSuccessPage` dihapus.
+- **Splash screen** dirombak: durasi 1250 ms, rel progres nyata, dan chip
+  tahap rilis + versi.
+- **Panel Riwayat** di halaman Connect diberi ruang napas dan hierarki.
+- **Nomor versi punya satu sumber**: `pubspec.yaml`. Vite membacanya saat
+  build; footer web tidak lagi memajang angka yang diketik tangan.
+- **Ikon Android**: lapisan foreground adaptive icon kini berukuran 108dp
+  yang benar (432 px di xxxhdpi), bukan 192 px yang di-upscale peluncur.
+
+### Diperbaiki
+
+- **Paragraf artikel tidak lagi hilang.** `adminPublish` memakai `clean()`
+  yang meratakan semua whitespace, sehingga artikel yang diterbitkan lewat API
+  menjadi satu blok tanpa jeda — hanya artikel dari `seed.sql` yang punya
+  paragraf. Kini ada `cleanBody()` yang mempertahankan pemisah paragraf.
+- **Nama tim tidak bisa dipakai orang lain.** Komentar publik dengan nama yang
+  menyerupai anggota tim (termasuk penyamaran spasi dan tanda baca) ditolak
+  403, bukan sekadar tampil tanpa badge.
+- Tautan **GitHub Releases dihapus dari footer**, diganti tautan Lisensi
+  Pihak Ketiga.
+
+### Keamanan
+
+- Kolom `official` hanya bisa disetel server saat `x-admin-token` cocok
+  dengan `ADMIN_TOKEN`. Body request tidak pernah dipercaya; mengirim
+  `official: true` tidak berpengaruh apa pun (diuji).
+- Slug yang bisa ditentukan sendiri dibatasi pada pola
+  `changelog-v<major>-<minor>-<patch>` saja.
+
+### Yang masih belum
+
+Disebut terbuka supaya tidak ada yang mengira sudah selesai:
+
+- Layar sesi, HUD kontrol, mouse dan keyboard virtual **belum terverifikasi**
+  mengendalikan host sungguhan. Butuh PC Windows nyata.
+- Audio WASAPI dan multi-monitor DXGI belum diuji dengar/lihat di perangkat keras.
+- Push notifikasi belum dibuktikan terkirim dan terbuka di perangkat uji.
+- Latency ujung-ke-ujung di jaringan nyata belum terukur.
+
 ## [6.1.0] - 2026-08-31
 
 > Rilis ini menyentuh jalur media HOST (Rust) — biner host & APK/EXE client

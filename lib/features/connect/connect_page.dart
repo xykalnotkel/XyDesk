@@ -8,7 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/l10n_bridge.dart';
 import '../../core/store.dart';
 import '../../core/tokens.dart';
-import '../../widgets/brand.dart';
 import '../devices/device_model.dart';
 import '../devices/history_page.dart';
 import 'guide_page.dart';
@@ -73,6 +72,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
   bool _obscure = true;
   bool _remember = false;
   bool _recentsOpen = false;
+  bool _connecting = false;
   String? _error;
 
   bool get _valid =>
@@ -109,22 +109,46 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     super.dispose();
   }
 
+  /// Tekan Sambungkan → LANGSUNG ke layar sesi.
+  ///
+  /// Sebelumnya alur ini menyisipkan `PairSuccessPage` — halaman konfirmasi
+  /// "Perangkat terhubung / Mulai sesi" — di antara tombol dan sesi. Itu
+  /// ketukan tambahan yang tidak membawa informasi baru: pengguna sudah
+  /// menekan Sambungkan, jadi niatnya sudah jelas. Lebih buruk lagi, halaman
+  /// itu berbohong: ia menulis "Perangkat terhubung" padahal transport belum
+  /// dimulai sama sekali — koneksi baru benar-benar dicoba setelah "Mulai
+  /// sesi" ditekan. SessionPage punya status menyambung yang jujur, jadi
+  /// biarkan layar itu yang bicara. Halaman perantara itu ikut dihapus —
+  /// tidak ada rute lain yang memakainya.
   Future<void> _connect() async {
-    if (!_valid) return;
-    setState(() => _error = null);
+    if (!_valid || _connecting) return;
+    setState(() {
+      _error = null;
+      _connecting = true;
+    });
 
     final id = _id.text.replaceAll(' ', '');
-    await _saveRecent(id, _pw.text);
-    final device = await ref
-        .read(deviceRepoProvider.notifier)
-        .connect(id: id, name: _pendingName(id), remembered: _remember);
-    if (!mounted) return;
+    final password = _pw.text;
+    try {
+      await _saveRecent(id, password);
+      final device = await ref
+          .read(deviceRepoProvider.notifier)
+          .connect(id: id, name: _pendingName(id), remembered: _remember);
+      if (!mounted) return;
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PairSuccessPage(device: device, password: _pw.text),
-      ),
-    );
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SessionPage(
+            deviceName: device.name,
+            deviceId: device.id,
+            password: password,
+          ),
+        ),
+      );
+    } finally {
+      // Dipulihkan setelah kembali dari sesi supaya tombol bisa dipakai lagi.
+      if (mounted) setState(() => _connecting = false);
+    }
   }
 
   String _pendingName(String id) => 'PC-${id.substring(id.length - 4)}';
@@ -196,7 +220,10 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
           ],
         ),
         if (_recentsOpen) ...[
-          const SizedBox(height: 6),
+          // Panel riwayat sebelumnya berjarak 6 px dari label DAN 6 px dari
+          // kolom ID — terlihat menempel pada keduanya sehingga ketiganya
+          // membaur jadi satu blok. Diberi ruang napas yang jelas.
+          const SizedBox(height: Gap.md),
           _RecentsList(
             entries: _recents,
             onPick: (id, pw) {
@@ -209,7 +236,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
               setState(() => _recentsOpen = false);
             },
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: Gap.lg),
         ],
         ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 56),
@@ -295,8 +322,28 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
         ),
         const SizedBox(height: Gap.lg),
         FilledButton(
-          onPressed: _valid ? _connect : null,
-          child: Text(context.tr('connect_btn')),
+          onPressed: _valid && !_connecting ? _connect : null,
+          child: _connecting
+              // Umpan balik langsung di tombol: penekanan pertama harus
+              // terasa, bukan diam sampai layar berganti.
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: Gap.sm),
+                    const Text('Menyambung…'),
+                  ],
+                )
+              : Text(context.tr('connect_btn')),
         ),
         const SizedBox(height: Gap.lg),
         Row(
@@ -403,7 +450,7 @@ class _RecentsList extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
       decoration: BoxDecoration(
         color: c.input,
         borderRadius: BorderRadius.circular(R.xl),
@@ -411,40 +458,97 @@ class _RecentsList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            child: Text(
+              'Perangkat terakhir',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.8,
+                color: c.textLow,
+              ),
+            ),
+          ),
           for (final e in entries)
-            InkWell(
-              onTap: () => onPick(e['id'] as String, e['pw'] as String? ?? ''),
-              borderRadius: BorderRadius.circular(R.pill),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 11,
-                ),
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.monitor, size: 15, color: c.textMid),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _ConnectPageState._prettify(e['id'] as String),
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.2,
-                          color: c.textHi,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+            Padding(
+              // Tiap baris punya jarak vertikalnya sendiri. Sebelumnya baris
+              // saling menempel sehingga daftar terbaca sebagai satu blok
+              // padat, bukan beberapa pilihan yang bisa diketuk.
+              padding: const EdgeInsets.only(bottom: 4),
+              child: InkWell(
+                onTap: () =>
+                    onPick(e['id'] as String, e['pw'] as String? ?? ''),
+                borderRadius: BorderRadius.circular(R.lg),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 13,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: c.accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(R.sm),
+                        ),
+                        child: Icon(
+                          LucideIcons.monitor,
+                          size: 15,
+                          color: c.accent,
                         ),
                       ),
-                    ),
-                    Text(
-                      'sandi tersimpan',
-                      style: TextStyle(fontSize: 10.5, color: c.textLow),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _ConnectPageState._prettify(e['id'] as String),
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.2,
+                                color: c.textHi,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              (e['pw'] as String? ?? '').isEmpty
+                                  ? 'sandi tidak disimpan'
+                                  : 'sandi tersimpan',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: c.textLow,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        LucideIcons.chevronRight,
+                        size: 16,
+                        color: c.textLow,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          TextButton(onPressed: onClear, child: const Text('Hapus riwayat')),
+          const SizedBox(height: 2),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onClear,
+              child: const Text('Hapus riwayat'),
+            ),
+          ),
         ],
       ),
     );
@@ -563,75 +667,6 @@ class _QrScanPageState extends State<QrScanPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Konfirmasi pairing sebelum masuk ke layar session.
-class PairSuccessPage extends StatelessWidget {
-  const PairSuccessPage({super.key, required this.device, this.password = ''});
-
-  final Device device;
-
-  /// Password pairing yang dimasukkan pengguna — diteruskan ke SessionPage
-  /// agar host dapat memverifikasinya saat transport dimulai.
-  final String password;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return Scaffold(
-      backgroundColor: c.bg,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(Gap.screen, 24, Gap.screen, 32),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                icon: Icon(LucideIcons.arrowLeft, color: c.textMid),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-            const SizedBox(height: Gap.lg),
-            const Center(child: Illus(Img.pairSuccess, size: 250)),
-            const SizedBox(height: Gap.lg),
-            Text(
-              'Perangkat terhubung',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: c.textHi,
-              ),
-            ),
-            const SizedBox(height: Gap.sm),
-            Text(
-              '${device.name} siap digunakan.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: c.textMid),
-            ),
-            const SizedBox(height: Gap.xxl),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) => SessionPage(
-                    deviceName: device.name,
-                    deviceId: device.id,
-                    password: password,
-                  ),
-                ),
-              ),
-              child: const Text('Mulai sesi'),
-            ),
-            const SizedBox(height: Gap.md),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Nanti saja'),
-            ),
-          ],
-        ),
       ),
     );
   }

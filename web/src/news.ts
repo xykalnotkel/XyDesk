@@ -30,6 +30,9 @@ export interface NewsComment {
   content: string;
   parentId?: number | null;
   createdAt: string;
+  /// Ditetapkan SERVER dari ADMIN_TOKEN — klien tidak bisa memintanya.
+  /// Lihat `news/src/worker.js` dan `news/test/comments.test.js`.
+  official?: boolean;
 }
 
 export const NEWS_CATEGORIES = ['semua', 'rilis', 'teknik', 'umum'] as const;

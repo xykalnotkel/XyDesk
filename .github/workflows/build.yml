@@ -70,6 +70,21 @@ jobs:
       - name: Analisis statis tanpa toleransi diagnostic
         run: flutter analyze --fatal-infos --fatal-warnings
 
+      # Inventaris lisensi wajib mencerminkan lockfile saat ini. Kalau
+      # dependensi berubah tanpa regenerasi, dokumen legal jadi bohong —
+      # dan itu kewajiban hukum, bukan sekadar dokumentasi.
+      - name: Verifikasi inventaris lisensi mutakhir
+        run: node tool/gen-licenses.mjs --check
+
+      # Badge "Resmi" hanya berarti bila mustahil diminta klien.
+      - name: Uji gerbang badge resmi (news worker)
+        run: node --test news/test/
+
+      # Nomor versi hidup di satu tempat. Kalau turunannya melenceng, footer
+      # web pernah memajang v2.5.0 selama empat rilis.
+      - name: Verifikasi versi konsisten di semua manifest
+        run: python3 tool/check_version.py
+
       - name: Audit ilustrasi transparan untuk semua tema
         run: |
           python3 -m pip install --quiet Pillow

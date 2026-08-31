@@ -62,6 +62,7 @@ class NewsComment {
     required this.content,
     required this.createdAt,
     this.parentId,
+    this.official = false,
   });
 
   final int id;
@@ -72,12 +73,18 @@ class NewsComment {
   /// ID komentar induk — non-null berarti ini balasan.
   final int? parentId;
 
+  /// Badge resmi tim XyDesk. Ditetapkan SERVER dari ADMIN_TOKEN; klien tidak
+  /// bisa memintanya lewat body. Nama tim juga dikunci di worker, jadi tidak
+  /// ada komentar publik yang bisa tampil sebagai "Haekal Saputra".
+  final bool official;
+
   factory NewsComment.fromJson(Map<String, dynamic> j) => NewsComment(
     id: j['id'] as int? ?? 0,
     author: j['author'] as String? ?? '',
     content: j['content'] as String? ?? '',
     createdAt: j['createdAt'] as String? ?? '',
     parentId: j['parentId'] as int?,
+    official: j['official'] as bool? ?? false,
   );
 }
 

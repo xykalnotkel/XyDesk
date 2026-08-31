@@ -48,7 +48,7 @@ export default {
       m = path.match(/^\/api\/news\/([a-z0-9-]+)\/comments$/);
       if (m && request.method === 'GET') return listComments(env, m[1]);
       if (m && request.method === 'POST') {
-        return addComment(env, m[1], await readJson(request));
+        return addComment(env, m[1], await readJson(request), request);
       }
       m = path.match(/^\/n\/([a-z0-9-]+)$/);
       if (m) return sharePage(env, m[1], url);
@@ -79,6 +79,25 @@ function clean(v) {
   return String(v ?? '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 }
 
+/// Pembersih untuk isi artikel — sama dengan `clean()`, tetapi MEMPERTAHANKAN
+/// pemisah paragraf.
+///
+/// `clean()` meratakan `\s+` menjadi satu spasi. Itu benar untuk judul, tetapi
+/// pada isi artikel ia menggabungkan seluruh tulisan menjadi satu blok tanpa
+/// jeda — persis yang terjadi pada artikel yang diterbitkan lewat endpoint
+/// admin, sementara artikel dari `seed.sql` tetap punya paragraf. Selisih itu
+/// yang membuat berita hasil publish terlihat berantakan di aplikasi.
+function cleanBody(v) {
+  return String(v ?? '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.replace(/[^\S\n]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function rowToPost(r) {
   return {
     slug: r.slug,
@@ -101,7 +120,45 @@ function rowToComment(c) {
     content: c.content,
     parentId: c.parent_id ?? null,
     createdAt: c.created_at,
+    // Selalu boolean, tidak pernah undefined — klien memakainya untuk
+    // memutuskan menampilkan badge, dan `undefined` di sana berarti badge
+    // hilang diam-diam pada baris lama.
+    official: c.official === 1,
   };
+}
+
+// ── Nama yang dilindungi ─────────────────────────────────────────────────
+//
+// Badge resmi tidak ada gunanya bila nama di sebelahnya bisa ditiru. Orang
+// tidak membaca "badge + nama" sebagai dua hal terpisah; mereka membaca
+// keseluruhannya sebagai "ini dia". Jadi nama tim ikut dikunci: komentar
+// publik yang memakainya ditolak, bukan sekadar tidak diberi badge.
+//
+// Perbandingan mengabaikan huruf besar/kecil, spasi berlebih, dan karakter
+// non-alfanumerik supaya "haekal.saputra" dan "H A E K A L SAPUTRA" ikut
+// tertangkap.
+const PROTECTED_NAMES = [
+  'haekalsaputra',
+  'haekal',
+  'xydesk',
+  'timxydesk',
+  'xyspace',
+  'xyspacetech',
+  'admin',
+  'administrator',
+  'official',
+  'resmi',
+  'moderator',
+];
+
+function nameKey(v) {
+  return String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+export function isProtectedName(author) {
+  const key = nameKey(author);
+  if (!key) return false;
+  return PROTECTED_NAMES.some((p) => key === p || key.startsWith(p));
 }
 
 const POST_SELECT = `
@@ -138,7 +195,7 @@ async function postDetail(env, slug) {
   const p = await getPost(env, slug);
   if (!p) return json({ error: 'post-not-found' }, 404);
   const comments = await env.DB.prepare(
-    `SELECT id, author, content, parent_id, created_at FROM comments WHERE post_id = ? ORDER BY created_at ASC, id ASC LIMIT 200`
+    `SELECT id, author, content, parent_id, official, created_at FROM comments WHERE post_id = ? ORDER BY created_at ASC, id ASC LIMIT 200`
   ).bind(p.id).all();
   return json({
     post: rowToPost(p),
@@ -170,12 +227,12 @@ async function listComments(env, slug) {
   const p = await getPost(env, slug);
   if (!p) return json({ error: 'post-not-found' }, 404);
   const rows = await env.DB.prepare(
-    `SELECT id, author, content, parent_id, created_at FROM comments WHERE post_id = ? ORDER BY created_at ASC, id ASC LIMIT 200`
+    `SELECT id, author, content, parent_id, official, created_at FROM comments WHERE post_id = ? ORDER BY created_at ASC, id ASC LIMIT 200`
   ).bind(p.id).all();
   return json({ comments: rows.results.map(rowToComment) });
 }
 
-async function addComment(env, slug, body) {
+export async function addComment(env, slug, body, request) {
   const p = await getPost(env, slug);
   if (!p) return json({ error: 'post-not-found' }, 404);
   const author = clean(body.author).slice(0, 40);
@@ -184,6 +241,24 @@ async function addComment(env, slug, body) {
   if (!author) return json({ error: 'nama tidak boleh kosong' }, 400);
   if (content.length < 2) return json({ error: 'komentar terlalu pendek' }, 400);
   if (!fp) return json({ error: 'fingerprint diperlukan' }, 400);
+
+  // Badge resmi ditentukan SERVER dari ADMIN_TOKEN, tidak pernah dari body.
+  // Kalau klien boleh mengirim `official: true`, badge itu cuma dekorasi
+  // yang bisa dipasang siapa saja lewat curl.
+  const adminToken = request?.headers?.get('x-admin-token') || '';
+  const official =
+    Boolean(env.ADMIN_TOKEN) && adminToken === env.ADMIN_TOKEN;
+
+  if (!official && isProtectedName(author)) {
+    return json(
+      {
+        error:
+          'Nama itu dipakai tim XyDesk. Pilih nama lain supaya tidak ada ' +
+          'yang salah mengira komentarmu berasal dari kami.',
+      },
+      403,
+    );
+  }
 
   // Balasan: satu tingkat, induk harus ada di artikel yang sama.
   let parentId = null;
@@ -198,22 +273,27 @@ async function addComment(env, slug, body) {
     if (!parent) return json({ error: 'komentar induk tidak ditemukan' }, 404);
   }
 
-  // Batas laju: 5 komentar per 10 menit per fp.
-  const recent = await env.DB.prepare(
-    `SELECT COUNT(*) AS c FROM comments WHERE post_id = ? AND fp = ? AND created_at > datetime('now', '-10 minutes')`
-  ).bind(p.id, fp).first();
-  if (recent.c >= 5) {
-    return json({ error: 'terlalu banyak komentar. Coba lagi nanti.' }, 429);
+  // Batas laju: 5 komentar per 10 menit per fp. Tim dikecualikan — membalas
+  // sepuluh komentar berturut-turut saat rilis adalah pekerjaan normal,
+  // bukan spam.
+  if (!official) {
+    const recent = await env.DB.prepare(
+      `SELECT COUNT(*) AS c FROM comments WHERE post_id = ? AND fp = ? AND created_at > datetime('now', '-10 minutes')`
+    ).bind(p.id, fp).first();
+    if (recent.c >= 5) {
+      return json({ error: 'terlalu banyak komentar. Coba lagi nanti.' }, 429);
+    }
   }
 
   const now = new Date().toISOString();
+  const flag = official ? 1 : 0;
   const r = parentId != null
     ? await env.DB.prepare(
-        'INSERT INTO comments (post_id, author, content, fp, parent_id) VALUES (?, ?, ?, ?, ?)'
-      ).bind(p.id, author, content, fp, parentId).run()
+        'INSERT INTO comments (post_id, author, content, fp, parent_id, official) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(p.id, author, content, fp, parentId, flag).run()
     : await env.DB.prepare(
-        'INSERT INTO comments (post_id, author, content, fp) VALUES (?, ?, ?, ?)'
-      ).bind(p.id, author, content, fp).run();
+        'INSERT INTO comments (post_id, author, content, fp, official) VALUES (?, ?, ?, ?, ?)'
+      ).bind(p.id, author, content, fp, flag).run();
   return json({
     comment: {
       id: Number(r.meta.last_row_id),
@@ -221,6 +301,7 @@ async function addComment(env, slug, body) {
       content,
       parentId,
       createdAt: now,
+      official,
     },
   });
 }
@@ -249,15 +330,26 @@ async function adminPublish(env, request, body) {
   }
   const title = clean(body.title).slice(0, 160);
   const excerpt = clean(body.excerpt).slice(0, 300);
-  const content = clean(body.content).slice(0, 20000);
+  const content = cleanBody(body.content).slice(0, 20000);
   const cover = clean(body.cover).slice(0, 300);
   const category = (clean(body.category) || 'umum').slice(0, 24);
   const author = (clean(body.author) || 'Haekal Saputra (XySpace)').slice(0, 60);
   if (title.length < 4 || content.length < 10) {
     return json({ error: 'judul dan isi wajib diisi' }, 400);
   }
-  // Slug HASH acak — tidak menebak urutan, tidak membocorkan judul di URL.
-  const slug = 'p-' + crypto.randomUUID().replaceAll('-', '').slice(0, 12);
+  // Slug: acak secara bawaan — tidak menebak urutan, tidak membocorkan judul
+  // di URL. Pengecualiannya artikel changelog: footer web dan layar "Tentang"
+  // menautkan versi ke `changelog-v<major>-<minor>-<patch>`, jadi slug-nya
+  // harus bisa ditentukan. Hanya pola itu yang boleh dipilih sendiri, supaya
+  // slug tebakan tidak bisa dipakai untuk artikel sembarangan.
+  const requested = clean(body.slug).toLowerCase();
+  const slug = /^changelog-v\d+-\d+-\d+$/.test(requested)
+    ? requested
+    : 'p-' + crypto.randomUUID().replaceAll('-', '').slice(0, 12);
+  const dup = await env.DB.prepare('SELECT id FROM posts WHERE slug = ?')
+    .bind(slug)
+    .first();
+  if (dup) return json({ error: 'slug sudah dipakai', slug }, 409);
   const r = await env.DB.prepare(
     `INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published)
      VALUES (?, ?, ?, ?, ?, ?, ?, 1)`
