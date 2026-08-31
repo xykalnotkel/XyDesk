@@ -1,21 +1,24 @@
-/* XyDesk Desktop — gaya visual "Quiet Surface".
-   Token identik dengan lib/core/tokens.dart (sumber kebenaran desain). */
+/* XyDesk Desktop — desain "Monokrom" v2.5: putih dominan, hitam untuk
+   kontras kuat, ungu hanya aksen. Token identik dengan palet terang di
+   lib/core/tokens.dart (sumber kebenaran desain). */
 
 :root {
-  --bg: #131315;
-  --raised: #1b1b1e;
-  --overlay: #232326;
-  --input: #202023;
-  --accent: #7654f6;
-  --accent-soft: rgba(118, 84, 246, 0.12);
-  --text-hi: #ededef;
-  --text-mid: #a0a0a8;
-  --text-low: #6b6b73;
-  --success: #4fa97a;
-  --warning: #c9963f;
-  --danger: #d9646e;
-  --radius: 16px;
-  --radius-sm: 12px;
+  --bg: #fafaf9;
+  --raised: #ffffff;
+  --overlay: #ffffff;
+  --input: #f2f2f0;
+  --line: #e7e7e4;
+  --ink: #18181b;
+  --accent: #6142d6;
+  --accent-soft: rgba(97, 66, 214, 0.1);
+  --text-hi: #18181b;
+  --text-mid: #52525b;
+  --text-low: #9a9aa2;
+  --success: #167347;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --radius: 14px;
+  --radius-sm: 10px;
   --sidebar-w: 224px;
 }
 
@@ -70,9 +73,16 @@ img { display: block; max-width: 100%; }
   flex-direction: column;
   padding: 18px 14px;
   gap: 20px;
-  background: #101013;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background: #0a0a0a;
+  border-right: 1px solid #27272a;
 }
+.sidebar .brand h1 { color: #ffffff; }
+.sidebar .brand .sub { color: #71717a; }
+.sidebar .nav button { color: #a1a1aa; }
+.sidebar .nav button:hover { background: #1f1f23; color: #ffffff; }
+.sidebar .nav button.active { background: rgba(97, 66, 214, 0.28); color: #ffffff; }
+.sidebar .nav button.active svg { color: #a78bfa; }
+.sidebar .side-status { background: #18181b; color: #a1a1aa; }
 
 .brand {
   display: flex;
@@ -142,7 +152,7 @@ img { display: block; max-width: 100%; }
   align-items: center;
   gap: 14px;
   padding: 16px 26px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--line);
 }
 .topbar h2 { font-size: 17px; font-weight: 600; flex: 1; }
 .topbar .flash {
@@ -247,12 +257,12 @@ button {
   gap: 8px;
   transition: background 120ms ease-out;
 }
-button:hover { background: #2a2a2e; }
-button:active { background: #2f2f34; }
+button:hover { background: #ecebe8; }
+button:active { background: #e2e1dd; }
 button:disabled { opacity: 0.45; cursor: default; }
 
 button.primary { background: var(--accent); }
-button.primary:hover { background: #6a47f0; }
+button.primary:hover { background: #4f35b8; }
 
 button.danger { background: rgba(217, 100, 110, 0.16); color: var(--danger); }
 button.danger:hover { background: rgba(217, 100, 110, 0.26); }
@@ -288,7 +298,7 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
   padding: 9px 14px;
   border-radius: 10px;
 }
-.btn-ghost-link:hover { color: var(--text-hi); background: #2a2a2e; }
+.btn-ghost-link:hover { color: var(--text-hi); background: #ecebe8; }
 
 /* ── Identitas ────────────────────────────────────────────────── */
 .id-row { display: flex; align-items: center; gap: 12px; }
@@ -391,7 +401,7 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
   width: 150px;
   height: 84px;
   border-radius: var(--radius-sm);
-  background: linear-gradient(100deg, #1f1f23 40%, #26262b 50%, #1f1f23 60%);
+  background: linear-gradient(100deg, #ecebe8 40%, #e0dfdb 50%, #ecebe8 60%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
   flex-shrink: 0;
@@ -399,7 +409,7 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .sk-line {
   height: 12px;
   border-radius: 6px;
-  background: linear-gradient(100deg, #1f1f23 40%, #26262b 50%, #1f1f23 60%);
+  background: linear-gradient(100deg, #ecebe8 40%, #e0dfdb 50%, #ecebe8 60%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
   margin: 4px 0;

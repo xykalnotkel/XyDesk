@@ -1,5 +1,6 @@
 # XyDesk Web (Vite + React) — frontend statis terpisah dari Worker API/signaling.
 name = "xydesk-web"
+main = "./worker/index.js"
 compatibility_date = "2026-08-17"
 workers_dev = true
 preview_urls = true

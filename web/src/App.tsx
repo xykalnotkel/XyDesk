@@ -149,23 +149,7 @@ export default function App() {
 
 function Logo({ size = 30 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <defs>
-        <linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#7654F6" />
-          <stop offset="1" stopColor="#9A7BFF" />
-        </linearGradient>
-      </defs>
-      <rect x="3" y="3" width="26" height="26" rx="7" fill="url(#logo-g)" opacity="0.16" />
-      <path
-        d="M9.5 10.5 L16 22.5 L22.5 10.5 M16 22.5 L16 14.5"
-        stroke="url(#logo-g)"
-        strokeWidth="2.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </svg>
+    <img src="/logo.png" alt="XyDesk" width={size} height={size} aria-hidden="true" />
   );
 }
 
@@ -252,7 +236,7 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           <div className="hero-screen">
             <div className="screen-top">
               <span className="screen-logo">
-                <Logo size={14} /> XyDesk
+                <img src="/logo-white.png" alt="" /> XyDesk
               </span>
               <span className="screen-live">LIVE · 9 ms</span>
             </div>
@@ -485,6 +469,58 @@ function LegalPage() {
           memberi izin. Jangan memakai layanan untuk mengambil alih, mengganggu, atau
           mengakses data pihak lain tanpa hak.
         </p>
+      </section>
+      <section>
+        <h2>Lisensi proyek</h2>
+        <p>
+          Kode sumber XyDesk dirilis di bawah lisensi{' '}
+          <strong>Apache License 2.0</strong>. Kamu bebas memakai, memodifikasi, dan
+          mendistribusikannya — dengan tetap menyertakan lisensi dan pemberitahuan
+          perubahan. Teks lengkap tersedia di repositori GitHub.
+        </p>
+      </section>
+      <section>
+        <h2>Lisensi pihak ketiga</h2>
+        <p>
+          Semua UI/UX XyDesk dirancang sendiri oleh tim. Berikut komponen pihak ketiga
+          yang dipakai beserta lisensinya:
+        </p>
+        <div className="license-card">
+          <strong>Inter</strong><span>OFL 1.1</span>
+          <p>Font antarmuka — Rasmus Andersson, SIL Open Font License 1.1.</p>
+        </div>
+        <div className="license-card">
+          <strong>Lucide Icons</strong><span>ISC</span>
+          <p>Set ikon garis konsisten — proyek Lucide.</p>
+        </div>
+        <div className="license-card">
+          <strong>Flutter &amp; Dart</strong><span>BSD-3</span>
+          <p>Kerangka UI lintas platform — Google, BSD 3-Clause.</p>
+        </div>
+        <div className="license-card">
+          <strong>React &amp; Vite</strong><span>MIT</span>
+          <p>Perpustakaan UI dan bundler aplikasi web.</p>
+        </div>
+        <div className="license-card">
+          <strong>Electron &amp; Next.js</strong><span>MIT</span>
+          <p>Cangkang aplikasi desktop Windows.</p>
+        </div>
+        <div className="license-card">
+          <strong>libwebrtc</strong><span>BSD-3</span>
+          <p>Implementasi WebRTC untuk media peer-to-peer.</p>
+        </div>
+        <div className="license-card">
+          <strong>Cloudflare Workers &amp; D1</strong><span>Layanan</span>
+          <p>Runtime signaling dan basis data berita (layanan Cloudflare).</p>
+        </div>
+        <div className="license-card">
+          <strong>NVIDIA NVENC SDK</strong><span>NVIDIA</span>
+          <p>Encode hardware saat GPU NVIDIA tersedia (lisensi SDK NVIDIA).</p>
+        </div>
+        <div className="license-card">
+          <strong>OneSignal SDK</strong><span>OneSignal</span>
+          <p>Notifikasi pembaruan di Android (ketentuan OneSignal).</p>
+        </div>
       </section>
     </main>
   );
@@ -1415,34 +1451,36 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
 function SiteFooter({ navigate }: { navigate: (r: Route) => void }) {
   return (
     <footer className="site-footer">
-      <div className="footer-brand">
-        <div className="brand">
-          <Logo size={22} />
+      <div className="footer-inner">
+        <div className="footer-brand">
+          <img src="/logo-white.png" alt="XyDesk" />
           <strong>XyDesk</strong>
+          <p>Remote desktop ringan untuk kerja, bermain, dan mengakses PC dari mana saja.</p>
         </div>
-        <p>Remote desktop ringan untuk kerja, bermain, dan mengakses PC dari mana saja.</p>
-      </div>
-      <div className="footer-column">
-        <strong>Produk</strong>
-        <button onClick={() => navigate('/connect')}>Connect Web</button>
-        <button onClick={() => navigate('/download')}>Download</button>
-        <button onClick={() => navigate('/news')}>Berita</button>
-      </div>
-      <div className="footer-column">
-        <strong>Platform</strong>
-        <a href={`${RELEASE_BASE}/XyDesk-Android-arm64-v8a.apk`}>Android</a>
-        <a href={`${RELEASE_BASE}/XyDesk-Windows-x64-Setup.exe`}>Windows</a>
-        <button onClick={() => navigate('/connect')}>iPhone & iPad</button>
-      </div>
-      <div className="footer-column">
-        <strong>Dukungan</strong>
-        <button onClick={() => navigate('/legal')}>Legal & Privasi</button>
-        <a href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">Saluran WhatsApp</a>
-        <a href="https://github.com/xykalnotkel/XyDesk/releases" target="_blank" rel="noreferrer">GitHub Releases</a>
-      </div>
-      <div className="footer-bottom">
-        <span>© 2026 XySpace Tch. XyDesk.</span>
-        <span>Media sesi tidak disimpan oleh server.</span>
+        <div className="footer-columns">
+          <div className="footer-column">
+            <strong>Produk</strong>
+            <button onClick={() => navigate('/connect')}>Connect Web</button>
+            <button onClick={() => navigate('/download')}>Download</button>
+            <button onClick={() => navigate('/news')}>Berita</button>
+          </div>
+          <div className="footer-column">
+            <strong>Platform</strong>
+            <a href={`${RELEASE_BASE}/XyDesk-Android-arm64-v8a.apk`}>Android</a>
+            <a href={`${RELEASE_BASE}/XyDesk-Windows-x64-Setup.exe`}>Windows</a>
+            <button onClick={() => navigate('/connect')}>iPhone & iPad</button>
+          </div>
+          <div className="footer-column">
+            <strong>Dukungan</strong>
+            <button onClick={() => navigate('/legal')}>Legal & Privasi</button>
+            <a href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">Saluran WhatsApp</a>
+            <a href="https://github.com/xykalnotkel/XyDesk/releases" target="_blank" rel="noreferrer">GitHub Releases</a>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <span>© 2026 XySpace Tch. XyDesk v2.5.0.</span>
+          <span>Media sesi tidak disimpan oleh server.</span>
+        </div>
       </div>
     </footer>
   );

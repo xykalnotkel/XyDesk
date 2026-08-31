@@ -3,7 +3,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: geolocation=(), payment=(), usb=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self' https://signal.xystudio.my.id wss://signal.xystudio.my.id; img-src 'self' data: https://*.googleusercontent.com; style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self' https://accounts.google.com
+  Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self' https://signal.xystudio.my.id wss://signal.xystudio.my.id https://news.xystudio.my.id; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self' https://accounts.google.com
 
 /index.html
   Cache-Control: no-cache

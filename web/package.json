@@ -1,7 +1,7 @@
 {
   "name": "xydesk-web",
   "private": true,
-  "version": "1.6.0",
+  "version": "2.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,5 +18,6 @@
     "@vitejs/plugin-react": "^6.0.5",
     "typescript": "^7.0.2",
     "vite": "^8.2.1"
-  }
+  },
+  "license": "Apache-2.0"
 }

@@ -55,6 +55,22 @@ const DEMO_LOGS: LogEntry[] = [
 
 type Page = 'home' | 'connect' | 'news' | 'profile' | 'settings';
 
+/// Lisensi pihak ketiga — data statis, ditampilkan di Pengaturan.
+const LICENSES: [string, string, string][] = [
+  ['Flutter SDK', 'BSD-3-Clause', 'Google'],
+  ['Dart SDK', 'BSD-3-Clause', 'Google'],
+  ['Next.js', 'MIT', 'Vercel'],
+  ['React', 'MIT', 'Meta'],
+  ['Electron', 'MIT', 'OpenJS Foundation'],
+  ['Lucide Icons', 'ISC', 'Lucide Contributors'],
+  ['Inter', 'SIL OFL 1.1', 'Rasmus Andersson'],
+  ['flutter_riverpod', 'MIT', 'Remi Rousselet'],
+  ['flutter_webrtc & libwebrtc', 'MIT / BSD-3', 'Flutter WebRTC / Google'],
+  ['OneSignal SDK', 'Ketentuan OneSignal', 'OneSignal'],
+  ['NVENC SDK', 'Lisensi SDK NVIDIA', 'NVIDIA'],
+  ['Cloudflare Workers & D1', 'Layanan', 'Cloudflare'],
+];
+
 const NAV: { id: Page; label: string; icon: typeof Home }[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'connect', label: 'Connect', icon: Cable },
@@ -620,7 +636,7 @@ function ProfilePage({ status, info }: { status: StatusPayload | null; info: Inf
         <div className="kv-grid">
           <div className="kv">
             <span>Versi shell</span>
-            <strong>v{info?.appVersion || '0.1.0'}</strong>
+            <strong>v{info?.appVersion || '—'}</strong>
           </div>
           <div className="kv">
             <span>Mode</span>
@@ -749,6 +765,24 @@ function SettingsPage({
         <p className="hint">
           Engine dimulai ulang dengan token signaling baru. Sesi yang sedang berjalan akan putus.
         </p>
+      </section>
+
+      <section className="card">
+        <h3>Lisensi &amp; legal</h3>
+        <p className="hint">
+          XyDesk dirilis di bawah <strong>Apache License 2.0</strong>. Seluruh UI/UX
+          dirancang sendiri oleh tim; berikut perangkat lunak pihak ketiga yang dipakai:
+        </p>
+        <div className="kv-grid">
+          {LICENSES.map((l) => (
+            <div className="kv" key={l[0]}>
+              <span>{l[0]}</span>
+              <strong>
+                {l[1]} · {l[2]}
+              </strong>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="card logs-card">

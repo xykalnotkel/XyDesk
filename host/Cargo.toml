@@ -1,6 +1,6 @@
 [package]
 name = "xydesk-host"
-version = "0.1.0"
+version = "2.5.0"
 edition = "2021"
 description = "XyDesk host — capture & stream layar Windows via WebRTC"
 

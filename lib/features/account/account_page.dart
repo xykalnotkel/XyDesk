@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -383,18 +382,6 @@ class AboutPage extends StatelessWidget {
           ),
           const SizedBox(height: Gap.xl),
           const SectionLabel('Diagnostik'),
-          ListRow(
-            title: 'Salin ID diagnostik',
-            subtitle: 'a7f3-9c21-4e88',
-            icon: LucideIcons.key,
-            trailing: Icon(LucideIcons.copy, size: 15, color: c.textLow),
-            onTap: () {
-              Clipboard.setData(const ClipboardData(text: 'a7f3-9c21-4e88'));
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(context.tr('copied'))));
-            },
-          ),
           ListRow(
             title: context.tr('settings_devlog'),
             icon: LucideIcons.bug,

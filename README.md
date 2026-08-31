@@ -47,7 +47,10 @@ latency end-to-end.
 | Control API lokal host (HTTP 127.0.0.1 + token) | Selesai — status, password, stop-session untuk shell desktop; 8 test otomatis |
 | Desktop shell (Electron + Next.js, engine tetap Rust) | Selesai — sidebar Home/Connect/News/Profile/Settings; installer Windows dibangun CI |
 | News (Web + Android + Desktop) | Live — Worker publik + D1 di `news.xystudio.my.id`; like, komentar, berbagi sosial + OpenGraph per konten |
+| OpenGraph web per konten | Live — renderer worker di `web_deploy/worker/` (crawler dapat meta berita), CSP mengizinkan `news.xystudio.my.id` |
 | Tema aplikasi Android | Terang (Paper) saja — mode gelap dihapus agar satu set kontras teruji |
+| Identitas visual 2.5 | Monokrom (hitam-putih) dengan aksen ungu; logo X resmi tanpa glow — `design/x-white.png`, `design/x-black.png` |
+| Lisensi | **Apache-2.0** (`LICENSE`) + daftar lisensi pihak ketiga di Legal (Web/Android/Desktop) |
 | Sesi tunggal (anti-ambil alih) | Selesai — koneksi kedua ditolak `host-sibuk` meski password benar; client menampilkan status "perangkat sedang dipakai" |
 | Test loopback host (SDP + video + data channel) | Selesai — `cargo test` hijau; jaga bug regresi SDP |
 | Benchmark encode (`xydesk-host --bench`) | Selesai — **~30 ms @640x360**: openh264 CPU TIDAK tembus <10 ms @1080p, hardware encode (NVENC/AMF/QSV) wajib untuk target itu |

@@ -85,6 +85,41 @@ dengan TURN, stabil 30 menit tanpa re-buffer.
 - Signaling multi-node (NATS/Redis pub-sub) kalau user base tumbuh — protokol
   sudah tidak berubah, ganti `Hub.clients` saja.
 
+## Rilis 2.5.0 — Monokrom, berita, lisensi (31 Agu 2026)
+
+- Tampilan semua platform: dominan hitam-putih, ungu hanya aksen. Logo X resmi
+  tanpa glow/bayangan (sumber: `design/x-white.png` & `design/x-black.png`).
+- Berita satu umpan (Worker `news/` + D1) untuk Android, Desktop, Web —
+  like/komentar/bagikan; halaman share `news.xystudio.my.id/n/<slug>` dan
+  renderer OpenGraph baru di web (`web_deploy/worker/`) memberi meta per konten.
+- Perbaikan bug: berita web gagal dimuat ("Failed to fetch") karena CSP belum
+  mengizinkan `news.xystudio.my.id` — sudah ditambahkan di `_headers`.
+- Lisensi proyek: **Apache-2.0** (file `LICENSE`); daftar lisensi pihak ketiga
+  tampil di Legal (Web) / Pengaturan (Android & Desktop).
+- Kebijakan rilis (berlaku mulai sekarang):
+  1. Setiap update aplikasi **wajib menaikkan versi** (pubspec `X.Y.Z+NN`,
+     web & desktop `package.json`).
+  2. Setiap rilis **wajib punya artikel Berita** (seed `news/seed.sql`,
+     idempoten `INSERT OR IGNORE`).
+
+## Audit fitur — status implementasi (31 Agu 2026)
+
+| Fitur | Status | Catatan |
+|---|---|---|
+| Capture → encode → RTP → client | Jalan | loopback test otomatis; DXGI/NVENC menunggu lab Windows |
+| Pairing + tendang peer kedua | Jalan | `HostBusy` di gerbang pairing, teruji |
+| Control API lokal + shell desktop | Jalan | status/sesi/video/log/password/stop |
+| Berita lintas platform | Jalan | like/komentar/bagikan/OG per konten |
+| Notifikasi (OneSignal) + update checker | Jalan | opt-in di Pengaturan |
+| Akun (email OTP + Google) | Jalan | signaling worker + web connect |
+| QR scan pairing | Jalan | mobile_scanner (CameraX/MLKit) |
+| Audio forward (host → client) | **Belum** | Fase 2 — butuh capture WASAPI + Opus; UI menampilkan status jujur |
+| Mic passthrough | **Belum** | Fase 2 — consent per-sesi |
+| Multi-monitor | **Belum** | Fase 2 |
+| Gamepad passthrough | **Belum** | Fase 2 |
+| Remap kontrol (profil) | **Belum** | Fase 2 — kerangka UI ada |
+| Installer signed + auto-update host | **Belum** | Fase 3 |
+
 ## Keputusan stack shell desktop (Agu 2026)
 
 Shell host Windows kini **Electron + Next.js (static export)** menggantikan

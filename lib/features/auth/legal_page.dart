@@ -176,14 +176,34 @@ class LegalPage extends StatelessWidget {
   ];
 
   List<Widget> _licenses(BuildContext c) => [
-    _para(c, 'XyDesk dibangun di atas perangkat lunak sumber terbuka berikut.'),
+    _para(
+      c,
+      'XyDesk sendiri dirilis di bawah Apache License 2.0 — bebas '
+      'dipakai, dimodifikasi, dan didistribusikan dengan menyertakan '
+      'lisensi serta pemberitahuan perubahan. Semua UI/UX dirancang '
+      'sendiri oleh tim XyDesk. Berikut perangkat lunak pihak ketiga '
+      'yang dipakai:',
+    ),
     const SizedBox(height: Gap.md),
     for (final l in const [
-      ('Flutter', 'BSD-3-Clause', 'Google'),
-      ('Riverpod', 'MIT', 'Remi Rousselet'),
+      ('Flutter SDK', 'BSD-3-Clause', 'Google'),
+      ('Dart SDK', 'BSD-3-Clause', 'Google'),
+      ('flutter_riverpod', 'MIT', 'Remi Rousselet'),
+      ('go_router', 'BSD-3-Clause', 'Flutter Team'),
       ('Lucide Icons', 'ISC', 'Lucide Contributors'),
       ('Inter', 'SIL Open Font License 1.1', 'Rasmus Andersson'),
       ('shared_preferences', 'BSD-3-Clause', 'Flutter Team'),
+      ('http', 'BSD-3-Clause', 'Dart Team'),
+      ('google_sign_in', 'BSD-3-Clause', 'Flutter Team'),
+      ('flutter_secure_storage', 'BSD-3-Clause', 'Flutter Team'),
+      ('flutter_webrtc', 'MIT', 'Flutter WebRTC'),
+      ('libwebrtc', 'BSD-3-Clause', 'Google'),
+      ('web_socket_channel', 'BSD-3-Clause', 'Dart Team'),
+      ('package_info_plus', 'BSD-3-Clause', 'Flutter Community'),
+      ('url_launcher', 'BSD-3-Clause', 'Flutter Team'),
+      ('mobile_scanner', 'BSD-3-Clause', 'Mobile Scanner'),
+      ('OneSignal SDK', 'Ketentuan OneSignal', 'OneSignal'),
+      ('NVENC SDK', 'Lisensi SDK NVIDIA', 'NVIDIA'),
     ])
       Padding(
         padding: const EdgeInsets.only(bottom: 14),

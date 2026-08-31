@@ -44,4 +44,14 @@ Status hari ini: loop capture-encode-RTP-terima sudah terbukti di test loopback 
   'teknik',
   'Tim XyDesk',
   1
+),
+(
+  'xydesk-25-monokrom-dan-lisensi-terbuka',
+  'XyDesk 2.5 — monokrom, berita di mana-mana, lisensi terbuka',
+  'Tampilan baru dominan hitam-putih dengan aksen ungu, berita yang sama di Android/Desktop/Web, logo X tanpa glow, dan kode sumber berlisensi Apache 2.0.',
+  'Versi 2.5 adalah rilis "beres-beres": tampilan, konsistensi, dan keterbukaan.\n\nTampilan. Semua platform kini memakai bahasa visual yang sama — dominan hitam-putih dengan ungu hanya sebagai aksen kecil. Logo X yang selama ini dipakai di sampul berita menjadi logo resmi, tanpa glow dan tanpa bayangan. Splash Android mengikuti tema terang, ikon navigasi mengikuti warna tema.\n\nBerita. Satu umpan berita yang sama tampil di Android, Desktop, dan Web — lengkap dengan like, komentar, dan bagikan. Di web, setiap berita punya meta OpenGraph sendiri sehingga tautan yang dibagikan ke WhatsApp atau X tampil dengan judul, ringkasan, dan sampul yang benar. Perbaikan penting: sebelumnya berita di web gagal dimuat ("Failed to fetch") karena aturan Content-Security-Policy belum mengizinkan domain berita — sekarang sudah diizinkan dan diverifikasi live.\n\nLisensi. Kode sumber XyDesk kini berlisensi Apache 2.0. Daftar lisensi perangkat lunak pihak ketiga (Flutter, Electron, Lucide, Inter, dan lain-lain) bisa dibaca di halaman Legal di semua platform.\n\nVersi: Android 2.5.0 (build 19), Web 2.5.0, Desktop 2.5.0. Setiap rilis berikutnya akan selalu punya catatan seperti ini di Berita.',
+  'https://app.xystudio.my.id/news/covers/v25.jpg',
+  'rilis',
+  'Tim XyDesk',
+  1
 );
