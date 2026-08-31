@@ -24,6 +24,7 @@ fn main() {
     let mut src: Vec<std::path::PathBuf> = Vec::new();
     for name in [
         "analysis.c",
+        "extensions.c",
         "mlp.c",
         "mlp_data.c",
         "opus.c",
