@@ -466,3 +466,63 @@ button.share { background: var(--accent); border-radius: 999px; font-weight: 700
 }
 .logs div { white-space: pre-wrap; word-break: break-all; }
 .logs .t { color: var(--text-low); margin-right: 8px; }
+
+/* ── Berita 6.0: balasan komentar + langganan email ───────────── */
+.reply-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--accent);
+}
+.reply-banner button {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--accent);
+  padding: 0 4px;
+}
+.reply-link {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 8px;
+}
+.reply-link:hover { text-decoration: underline; }
+.replies {
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 3px solid var(--accent);
+  display: grid;
+  gap: 10px;
+}
+.replies .reply {
+  background: var(--input);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.subscribe-box {
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+.subscribe-box h4 { margin-bottom: 4px; }
+.subscribe-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.subscribe-row input {
+  flex: 1;
+  font: inherit;
+  font-size: 14px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  outline: none;
+}
+.subscribe-row input:focus { border-color: var(--accent); }

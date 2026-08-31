@@ -25,6 +25,7 @@ import {
   NewsComment,
   NewsPost,
   postComment,
+  subscribeNews,
   toggleLike,
 } from './news';
 
@@ -478,10 +479,12 @@ function NewsDetail({ post, onBack }: { post: NewsPost; onBack: () => void }) {
   const [data, setData] = useState<{ post: NewsPost; comments: NewsComment[] } | null>(null);
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [liked, setLiked] = useState(localStorage.getItem(`xydesk.desktop.liked.${post.slug}`) === '1');
-  const [author, setAuthor] = useState(localStorage.getItem('xydesk.desktop.author') ?? '');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [replyTo, setReplyTo] = useState<NewsComment | null>(null);
+  const [email, setEmail] = useState('');
+  const [subBusy, setSubBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -495,18 +498,23 @@ function NewsDetail({ post, onBack }: { post: NewsPost; onBack: () => void }) {
     };
   }, [post.slug]);
 
-  const like = async () => {
-    setBusy(true);
-    try {
-      const r = await toggleLike(post.slug);
-      setLikeCount(r.likeCount);
-      setLiked(r.liked);
-      localStorage.setItem(`xydesk.desktop.liked.${post.slug}`, r.liked ? '1' : '0');
-    } catch (e) {
-      setNotice(e instanceof Error ? e.message : 'Gagal memproses like.');
-    } finally {
-      setBusy(false);
-    }
+  // Like OPTIMISTIK: UI berubah seketika, server menyusul.
+  const like = () => {
+    if (busy) return;
+    const target = !liked;
+    setLiked(target);
+    setLikeCount((n) => n + (target ? 1 : -1));
+    toggleLike(post.slug)
+      .then((r) => {
+        setLiked(r.liked);
+        setLikeCount(r.likeCount);
+        localStorage.setItem(`xydesk.desktop.liked.${post.slug}`, r.liked ? '1' : '0');
+      })
+      .catch((e) => {
+        setLiked(!target);
+        setLikeCount((n) => n + (target ? -1 : 1));
+        setNotice(e instanceof Error ? e.message : 'Gagal memproses like.');
+      });
   };
 
   const submit = async () => {
@@ -514,16 +522,31 @@ function NewsDetail({ post, onBack }: { post: NewsPost; onBack: () => void }) {
     setBusy(true);
     setNotice('');
     try {
-      const name = author.trim() || 'Anonim';
-      localStorage.setItem('xydesk.desktop.author', name);
-      const r = await postComment(post.slug, name, text.trim());
+      // Username acak per instalasi — tanpa kolom nama manual.
+      const r = await postComment(post.slug, text.trim(), replyTo?.id ?? null);
       setData((d) => (d ? { post: d.post, comments: [...d.comments, r.comment] } : d));
       setText('');
+      setReplyTo(null);
       setNotice('Komentar terkirim.');
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'Gagal mengirim komentar.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const subscribe = async () => {
+    if (!email.includes('@') || subBusy) return;
+    setSubBusy(true);
+    setNotice('');
+    try {
+      await subscribeNews(email.trim());
+      setEmail('');
+      setNotice('Berhasil! Email kamu terdaftar untuk berita XyDesk.');
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Gagal mendaftar email.');
+    } finally {
+      setSubBusy(false);
     }
   };
 
@@ -538,6 +561,8 @@ function NewsDetail({ post, onBack }: { post: NewsPost; onBack: () => void }) {
   };
 
   const p = data?.post ?? post;
+  const comments = data?.comments ?? [];
+  const topLevel = comments.filter((c) => c.parentId == null);
 
   return (
     <div className="pg news-detail">
@@ -566,14 +591,16 @@ function NewsDetail({ post, onBack }: { post: NewsPost; onBack: () => void }) {
         </div>
 
         <div className="comments">
-          <h4>Komentar ({data?.comments.length ?? 0})</h4>
+          <h4>Komentar ({comments.length})</h4>
           <div className="comment-form">
-            <input
-              placeholder="Nama kamu"
-              maxLength={40}
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-            />
+            {replyTo && (
+              <div className="reply-banner">
+                <span>
+                  Membalas <strong>{replyTo.author}</strong>
+                </span>
+                <button onClick={() => setReplyTo(null)}>×</button>
+              </div>
+            )}
             <textarea
               placeholder="Tulis komentar…"
               maxLength={1000}
@@ -587,16 +614,51 @@ function NewsDetail({ post, onBack }: { post: NewsPost; onBack: () => void }) {
             </button>
           </div>
           <div className="comment-list">
-            {(data?.comments ?? []).length === 0 && <p className="hint">Belum ada komentar.</p>}
-            {(data?.comments ?? []).map((c) => (
-              <div className="comment" key={c.id}>
-                <div className="comment-head">
-                  <strong>{c.author}</strong>
-                  <span>{formatNewsDate(c.createdAt)}</span>
+            {comments.length === 0 && <p className="hint">Belum ada komentar.</p>}
+            {topLevel.map((c) => {
+              const replies = comments.filter((r) => r.parentId === c.id);
+              return (
+                <div className="comment" key={c.id}>
+                  <div className="comment-head">
+                    <strong>{c.author}</strong>
+                    <span>{formatNewsDate(c.createdAt)}</span>
+                  </div>
+                  <p>{c.content}</p>
+                  <button className="reply-link" onClick={() => { setReplyTo(c); setNotice(''); }}>
+                    Balas
+                  </button>
+                  {replies.length > 0 && (
+                    <div className="replies">
+                      {replies.map((r) => (
+                        <div className="reply" key={r.id}>
+                          <div className="comment-head">
+                            <strong>{r.author}</strong>
+                            <span>{formatNewsDate(r.createdAt)}</span>
+                          </div>
+                          <p>{r.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <p>{c.content}</p>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="subscribe-box">
+          <h4>Berita lewat email</h4>
+          <p className="hint">Artikel baru dikirim langsung ke email kamu.</p>
+          <div className="subscribe-row">
+            <input
+              type="email"
+              placeholder="alamat@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <button className="primary" onClick={subscribe} disabled={subBusy}>
+              {subBusy ? 'Mendaftar…' : 'Langganan'}
+            </button>
           </div>
         </div>
       </article>
@@ -770,7 +832,8 @@ function SettingsPage({
       <section className="card">
         <h3>Lisensi &amp; legal</h3>
         <p className="hint">
-          XyDesk dirilis di bawah <strong>Apache License 2.0</strong>. Seluruh UI/UX
+          XyDesk adalah perangkat lunak <strong>proprietary</strong> — bebas dipakai,
+          dilarang di-clone / direkayasa balik tanpa izin tertulis. Seluruh UI/UX
           dirancang sendiri oleh tim; berikut perangkat lunak pihak ketiga yang dipakai:
         </p>
         <div className="kv-grid">

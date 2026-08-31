@@ -1,25 +1,24 @@
-import 'dart:math' as math;
-import 'dart:ui';
+//! Splash XyDesk — revisi total 6.0: koreografi pendek dan halus.
+//!
+//! Alur (total 1800 ms):
+//!   1. Tile logo (gelap + X putih + garis aksen ungu) muncul membesar
+//!      dari 0.82 → 1.0 dengan easeOutQuart — seperti "bernapas masuk".
+//!   2. Wordmark "XyDesk" naik pelan sambil memudar masuk (fade + 14 px).
+//!   3. Garis aksen ungu tumbuh dari kiri ke kanan di bawah wordmark.
+//!   4. Tagline muncul terakhir, lalu diam 200 ms sebelum diganti gate app.
+//!
+//! Tanpa glow mencolok, tanpa bayangan, tanpa animasi berlebihan —
+//! kurva easeOutQuart konsisten supaya terasa mahal, bukan sibuk.
+//! Saat pengguna mengaktifkan "kurangi gerakan", splash langsung tampil
+//! pada keadaan akhir (t = 1) tanpa animasi.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/store.dart';
+import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
 
-/// Pembuka aplikasi — seluruh animasi milik Flutter (splash native hanya
-/// warna latar, tanpa logo, supaya tidak ada kesan splash dobel).
-///
-/// Koreografi:
-///   1. Logo muncul kecil lalu membesar (blur gerak menipis saat tiba).
-///   2. Di puncak ukurannya ada efek "klik": scale menekan sekejap dan
-///      cincin denyut memancar keluar.
-///   3. Logo bergeser ke kanan sedikit (ancang-ancang), lalu meluncur ke
-///      kiri menuju posisi lockup.
-///   4. Bersamaan dengan luncuran logo ke kiri, wordmark "XyDesk" terungkap
-///      dari kiri ke kanan. Arah keduanya sengaja berlawanan.
-///   5. Cincin ala kipas CPU berputar cepat di belakang logo selama fase
-///      awal, lalu memudar setelah efek klik.
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
@@ -28,22 +27,16 @@ class SplashPage extends ConsumerStatefulWidget {
 }
 
 class _SplashPageState extends ConsumerState<SplashPage>
-    with TickerProviderStateMixin {
-  late final AnimationController _intro = AnimationController(
+    with SingleTickerProviderStateMixin {
+  /// Total durasi koreografi: 1800 ms + jeda tenang diatur oleh gate.
+  late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2450),
+    duration: const Duration(milliseconds: 1800),
   )..forward();
-
-  /// Putaran kontinu untuk cincin CPU dan pergeseran glow ambient.
-  late final AnimationController _spin = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1100),
-  )..repeat();
 
   @override
   void dispose() {
-    _intro.dispose();
-    _spin.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
@@ -54,340 +47,131 @@ class _SplashPageState extends ConsumerState<SplashPage>
         MediaQuery.disableAnimationsOf(context);
 
     if (reduceMotion) {
-      return const _SplashScene(t: 1, spin: 0);
+      return const _SplashScene(t: 1);
     }
 
     return AnimatedBuilder(
-      animation: Listenable.merge([_intro, _spin]),
-      builder: (context, _) => _SplashScene(t: _intro.value, spin: _spin.value),
+      animation: _ctrl,
+      builder: (context, _) => _SplashScene(t: _ctrl.value),
     );
   }
 }
 
-class _SplashScene extends StatelessWidget {
-  const _SplashScene({required this.t, required this.spin});
+/// Kurva halus per fase — semua easeOutQuart supaya tidak ada sentakan.
+double _quart(double t) => 1 - (1 - t) * (1 - t) * (1 - t) * (1 - t);
 
-  /// Progres koreografi 0..1 (linear; kurva diberikan per fase).
+double _frac(double t, double a, double b) {
+  if (t <= a) return 0;
+  if (t >= b) return 1;
+  return (t - a) / (b - a);
+}
+
+class _SplashScene extends StatelessWidget {
+  const _SplashScene({required this.t});
+
+  /// Progres koreografi 0..1.
   final double t;
 
-  /// Progres putaran 0..1 yang berulang (cincin CPU + glow).
-  final double spin;
-
-  // ── Fase koreografi (fraksi dari total durasi) ──
-  static const _growEnd = 0.34;
-  static const _clickStart = 0.34;
-  static const _clickEnd = 0.46;
-  static const _rightStart = 0.46;
-  static const _rightEnd = 0.58;
-  static const _leftStart = 0.58;
-  static const _leftEnd = 0.78;
-  static const _wordStart = 0.60;
-  static const _wordEnd = 0.88;
-  static const _shineStart = 0.86;
-  static const _shineEnd = 1.0;
+  // Fase (fraksi total durasi).
+  static const _logoEnd = 0.42;
+  static const _wordStart = 0.30;
+  static const _wordEnd = 0.62;
+  static const _lineStart = 0.56;
+  static const _lineEnd = 0.80;
+  static const _tagStart = 0.72;
+  static const _tagEnd = 0.92;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     final size = MediaQuery.sizeOf(context);
-    final shortSide = math.min(size.width, size.height);
-    final logoSize = (shortSide * 0.23).clamp(82.0, 104.0).toDouble();
-    final glowShift = (spin - 0.5) * 14;
+    final shortSide = size.width < size.height ? size.width : size.height;
+    final logoSize = (shortSide * 0.22).clamp(78.0, 108.0).toDouble();
 
-    // 1. Membesar: 0.30 -> 1.05 dengan easeOutCubic; blur gerak menipis.
-    final growT = Curves.easeOutCubic.transform(_frac(t, 0, _growEnd));
-    final growScale = 0.30 + 0.75 * growT;
-    final arriveBlur = 10 * (1 - growT);
+    // 1. Logo tile: membesar + memudar masuk.
+    final logoT = _quart(_frac(t, 0, _logoEnd));
+    final logoScale = 0.82 + 0.18 * logoT;
+    final logoOpacity = logoT.clamp(0.0, 1.0);
 
-    // 2. Efek klik: tekan ke 0.90 lalu kembali ke 1.0 (punch), disertai
-    //    cincin denyut yang memancar dan memudar.
-    final clickT = _frac(t, _clickStart, _clickEnd);
-    final punch = clickT == 0
-        ? 0.0
-        : math.sin(clickT * math.pi) * (clickT < 0.5 ? 1 : 0.55);
-    final clickScale = 1.05 - 0.15 * punch;
-    final pulseR = Curves.easeOut.transform(clickT);
+    // 2. Wordmark naik + fade.
+    final wordT = _quart(_frac(t, _wordStart, _wordEnd));
+    final wordDy = 14.0 * (1 - wordT);
+    final wordOpacity = wordT.clamp(0.0, 1.0);
 
-    // 3-4. Geser kanan (ancang-ancang) lalu meluncur ke kiri menuju lockup.
-    final rightT = Curves.easeOutCubic.transform(
-      _frac(t, _rightStart, _rightEnd),
-    );
-    final leftT = Curves.easeInOutCubic.transform(
-      _frac(t, _leftStart, _leftEnd),
-    );
-    final wordT = Curves.easeOutCubic.transform(_frac(t, _wordStart, _wordEnd));
-    // Sapuan kilau tipis melintasi wordmark begitu reveal selesai — sentuhan
-    // premium kecil tanpa menambah durasi total.
-    final shineT = Curves.easeInOut.transform(_frac(t, _shineStart, _shineEnd));
-    // Glow denyut halus di logo pada keadaan lockup akhir.
-    final settleGlow = t >= _leftEnd
-        ? 0.5 + 0.5 * math.sin(spin * 2 * math.pi)
-        : 0.0;
+    // 3. Garis aksen ungu tumbuh horizontal.
+    final lineT = _quart(_frac(t, _lineStart, _lineEnd));
+    final lineW = 96.0 * lineT;
 
-    // Ukuran lockup akhir: [logo][jeda][wordmark] berpusat di tengah layar.
-    const wordWidth = 132.0;
-    const lockupGap = 18.0;
-    const lockupShift = (wordWidth + lockupGap) / 2;
-    final nudgeRight = 30.0 * rightT;
-    final logoDx = nudgeRight - (nudgeRight + lockupShift) * leftT;
+    // 4. Tagline memudar masuk.
+    final tagT = _frac(t, _tagStart, _tagEnd);
+    final tagOpacity = tagT.clamp(0.0, 1.0);
 
-    final logoScale = t < _clickStart ? growScale : clickScale;
-
-    // 5. Cincin CPU: berputar cepat selama fase tumbuh, memudar usai klik.
-    final ringOpacity = t < _growEnd
-        ? growT * 0.5
-        : 0.5 * (1 - _frac(t, _clickEnd, _rightEnd));
-
-    return ColoredBox(
-      color: const Color(0xFFFAFAF9),
-      child: ClipRect(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(0, -0.10),
-                  radius: 1.06,
-                  colors: [
-                    Color(0xFFFFFFFF),
-                    Color(0xFFF3F0FD),
-                    Color(0xFFFAFAF9),
-                  ],
-                  stops: [0, 0.48, 1],
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Opacity(
+                opacity: logoOpacity,
+                child: Transform.scale(
+                  scale: logoScale,
+                  child: Image.asset(
+                    Img.logo,
+                    width: logoSize,
+                    height: logoSize,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              left: -80 + glowShift,
-              top: size.height * 0.18,
-              child: _BlurOrb(
-                size: 210,
-                color: const Color(0xFF6142D6).withValues(alpha: 0.14),
-              ),
-            ),
-            Positioned(
-              right: -96 - glowShift,
-              bottom: size.height * 0.12,
-              child: _BlurOrb(
-                size: 250,
-                color: const Color(0xFF3B7CFF).withValues(alpha: 0.10),
-              ),
-            ),
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: logoSize * 1.6,
-                    width: size.width,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Cincin denyut efek klik.
-                        if (clickT > 0 && pulseR < 1)
-                          Opacity(
-                            opacity: (1 - pulseR) * 0.55,
-                            child: Container(
-                              width: logoSize * (1.1 + 0.9 * pulseR),
-                              height: logoSize * (1.1 + 0.9 * pulseR),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: const Color(0xFF9A7BFF),
-                                  width: 2 * (1 - pulseR) + 0.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        // Cincin CPU berputar cepat di belakang logo.
-                        if (ringOpacity > 0.01)
-                          Transform.translate(
-                            offset: Offset(logoDx, 0),
-                            child: Opacity(
-                              opacity: ringOpacity,
-                              child: Transform.rotate(
-                                angle: spin * 2 * math.pi,
-                                child: CustomPaint(
-                                  size: Size.square(logoSize * 1.42),
-                                  painter: const _CpuRingPainter(),
-                                ),
-                              ),
-                            ),
-                          ),
-                        // Glow denyut lembut di belakang logo saat lockup.
-                        if (settleGlow > 0)
-                          Transform.translate(
-                            offset: Offset(logoDx, 0),
-                            child: Opacity(
-                              opacity: 0.10 + 0.10 * settleGlow,
-                              child: Container(
-                                width: logoSize * 1.7,
-                                height: logoSize * 1.7,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: RadialGradient(
-                                    colors: [
-                                      Color(0xFF9A7BFF),
-                                      Colors.transparent,
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        // Logo.
-                        Transform.translate(
-                          offset: Offset(logoDx, 0),
-                          child: Opacity(
-                            opacity: growT.clamp(0.0, 1.0),
-                            child: Transform.scale(
-                              scale: logoScale,
-                              child: ImageFiltered(
-                                imageFilter: ImageFilter.blur(
-                                  sigmaX: arriveBlur,
-                                  sigmaY: arriveBlur,
-                                ),
-                                child: BrandLogo(size: logoSize),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Logo bergerak kanan ke kiri; teks terungkap dari
-                        // kiri ke kanan pada posisi akhirnya.
-                        if (wordT > 0)
-                          Transform.translate(
-                            offset: Offset(
-                              logoDx + lockupShift + logoSize / 2,
-                              0,
-                            ),
-                            child: ClipRect(
-                              clipper: _LeftToRightReveal(wordT),
-                              child: ImageFiltered(
-                                imageFilter: ImageFilter.blur(
-                                  sigmaX: 12 * (1 - wordT),
-                                  sigmaY: 0.4 * (1 - wordT),
-                                ),
-                                child: ShaderMask(
-                                  blendMode: BlendMode.srcATop,
-                                  shaderCallback: (bounds) => LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    stops: [
-                                      (shineT * 1.4 - 0.35).clamp(0.0, 1.0),
-                                      (shineT * 1.4 - 0.2).clamp(0.0, 1.0),
-                                      (shineT * 1.4 - 0.05).clamp(0.0, 1.0),
-                                    ],
-                                    colors: [
-                                      Colors.transparent,
-                                      const Color(0xFF18181B).withValues(
-                                        alpha: shineT > 0 && shineT < 1
-                                            ? 0.14
-                                            : 0,
-                                      ),
-                                      Colors.transparent,
-                                    ],
-                                  ).createShader(bounds),
-                                  child: const Text(
-                                    'XyDesk',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 38,
-                                      height: 1.08,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: -1.9,
-                                      color: Color(0xFF18181B),
-                                      decoration: TextDecoration.none,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+              const SizedBox(height: 26),
+              Opacity(
+                opacity: wordOpacity,
+                child: Transform.translate(
+                  offset: Offset(0, wordDy),
+                  child: const Text(
+                    'XyDesk',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1.4,
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              // Garis aksen ungu — identitas warna XyDesk.
+              SizedBox(
+                width: 96,
+                height: 4,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: lineW,
+                    decoration: BoxDecoration(
+                      color: c.accent,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Opacity(
+                opacity: tagOpacity,
+                child: Text(
+                  'PC kamu, di tangan kamu',
+                  style: TextStyle(
+                    fontSize: 13,
+                    letterSpacing: 0.2,
+                    color: c.textMid,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-}
-
-class _LeftToRightReveal extends CustomClipper<Rect> {
-  const _LeftToRightReveal(this.progress);
-
-  final double progress;
-
-  @override
-  Rect getClip(Size size) =>
-      Rect.fromLTWH(0, 0, size.width * progress, size.height);
-
-  @override
-  bool shouldReclip(covariant _LeftToRightReveal oldClipper) =>
-      oldClipper.progress != progress;
-}
-
-/// Cincin putus-putus ala kipas pendingin CPU: beberapa busur dengan celah,
-/// intensitas menurun ke arah ekor agar terasa berputar cepat.
-class _CpuRingPainter extends CustomPainter {
-  const _CpuRingPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final center = rect.center;
-    final radius = size.width / 2 - 2;
-    const segments = 5;
-    const sweep = (2 * math.pi / segments) * 0.62;
-
-    for (var i = 0; i < segments; i++) {
-      final start = (2 * math.pi / segments) * i;
-      final paint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.4
-        ..strokeCap = StrokeCap.round
-        ..shader = SweepGradient(
-          startAngle: start,
-          endAngle: start + sweep,
-          colors: const [Color(0x005B8CFF), Color(0xFF7E5CF6)],
-        ).createShader(rect);
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        start,
-        sweep,
-        false,
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _BlurOrb extends StatelessWidget {
-  const _BlurOrb({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return ImageFiltered(
-      imageFilter: ImageFilter.blur(sigmaX: 42, sigmaY: 42),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      ),
-    );
-  }
-}
-
-/// Fraksi progres [value] di antara [begin]..[end], di-clamp 0..1.
-double _frac(double value, double begin, double end) {
-  return ((value - begin) / (end - begin)).clamp(0, 1).toDouble();
 }

@@ -1,10 +1,17 @@
 // XyDesk News — Worker publik (D1): feed berita + halaman berbagi OpenGraph.
 //
-// TERPISAH dari Worker signaling. Semua endpoint publik — berita tidak butuh
-// akun. Batas-batas kecil dipasang biar murah dan tidak bisa disalahgunakan:
-//   - like: idempoten per sidik jari (fingerprint) yang dibuat client
+// TERPISAH dari Worker signaling. Endpoint publik berita tidak butuh akun.
+// Batas kecil dipasang biar murah dan tidak disalahgunakan:
+//   - like: idempoten per sidik jari (fingerprint) buatan client
 //   - komentar: maks 5 per 10 menit per fingerprint, panjang terbatas
+//   - balasan komentar: satu tingkat (parent_id), divalidasi
 //   - seluruh input disanitasi (tag HTML dibuang)
+//
+// Fitur rilis 6.0:
+//   - POST /api/admin/publish  → terbitkan artikel baru dengan slug HASH acak
+//     (token ADMIN_TOKEN), lalu kirim notifikasi push (OneSignal) dan email
+//     (Resend) ke pelanggan — semuanya asinkron lewat waitUntil.
+//   - POST /api/subscribe      → daftar email langganan berita (unix email).
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +32,12 @@ export default {
     try {
       if (path === '/api/news' && request.method === 'GET') {
         return listPosts(env, url);
+      }
+      if (path === '/api/subscribe' && request.method === 'POST') {
+        return subscribe(env, await readJson(request));
+      }
+      if (path === '/api/admin/publish' && request.method === 'POST') {
+        return adminPublish(env, request, await readJson(request));
       }
       let m = path.match(/^\/api\/news\/([a-z0-9-]+)$/);
       if (m && request.method === 'GET') return postDetail(env, m[1]);
@@ -81,6 +94,16 @@ function rowToPost(r) {
   };
 }
 
+function rowToComment(c) {
+  return {
+    id: c.id,
+    author: c.author,
+    content: c.content,
+    parentId: c.parent_id ?? null,
+    createdAt: c.created_at,
+  };
+}
+
 const POST_SELECT = `
   SELECT p.*,
     (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS like_count,
@@ -115,16 +138,11 @@ async function postDetail(env, slug) {
   const p = await getPost(env, slug);
   if (!p) return json({ error: 'post-not-found' }, 404);
   const comments = await env.DB.prepare(
-    `SELECT id, author, content, created_at FROM comments WHERE post_id = ? ORDER BY created_at ASC, id ASC LIMIT 200`
+    `SELECT id, author, content, parent_id, created_at FROM comments WHERE post_id = ? ORDER BY created_at ASC, id ASC LIMIT 200`
   ).bind(p.id).all();
   return json({
     post: rowToPost(p),
-    comments: comments.results.map((c) => ({
-      id: c.id,
-      author: c.author,
-      content: c.content,
-      createdAt: c.created_at,
-    })),
+    comments: comments.results.map(rowToComment),
   });
 }
 
@@ -152,16 +170,9 @@ async function listComments(env, slug) {
   const p = await getPost(env, slug);
   if (!p) return json({ error: 'post-not-found' }, 404);
   const rows = await env.DB.prepare(
-    `SELECT id, author, content, created_at FROM comments WHERE post_id = ? ORDER BY created_at ASC, id ASC LIMIT 200`
+    `SELECT id, author, content, parent_id, created_at FROM comments WHERE post_id = ? ORDER BY created_at ASC, id ASC LIMIT 200`
   ).bind(p.id).all();
-  return json({
-    comments: rows.results.map((c) => ({
-      id: c.id,
-      author: c.author,
-      content: c.content,
-      createdAt: c.created_at,
-    })),
-  });
+  return json({ comments: rows.results.map(rowToComment) });
 }
 
 async function addComment(env, slug, body) {
@@ -173,6 +184,20 @@ async function addComment(env, slug, body) {
   if (!author) return json({ error: 'nama tidak boleh kosong' }, 400);
   if (content.length < 2) return json({ error: 'komentar terlalu pendek' }, 400);
   if (!fp) return json({ error: 'fingerprint diperlukan' }, 400);
+
+  // Balasan: satu tingkat, induk harus ada di artikel yang sama.
+  let parentId = null;
+  if (body.parentId != null && body.parentId !== '') {
+    parentId = Number(body.parentId);
+    if (!Number.isInteger(parentId) || parentId <= 0) {
+      return json({ error: 'parentId tidak valid' }, 400);
+    }
+    const parent = await env.DB.prepare(
+      'SELECT id FROM comments WHERE id = ? AND post_id = ?'
+    ).bind(parentId, p.id).first();
+    if (!parent) return json({ error: 'komentar induk tidak ditemukan' }, 404);
+  }
+
   // Batas laju: 5 komentar per 10 menit per fp.
   const recent = await env.DB.prepare(
     `SELECT COUNT(*) AS c FROM comments WHERE post_id = ? AND fp = ? AND created_at > datetime('now', '-10 minutes')`
@@ -180,17 +205,142 @@ async function addComment(env, slug, body) {
   if (recent.c >= 5) {
     return json({ error: 'terlalu banyak komentar. Coba lagi nanti.' }, 429);
   }
-  const r = await env.DB.prepare(
-    'INSERT INTO comments (post_id, author, content, fp) VALUES (?, ?, ?, ?)'
-  ).bind(p.id, author, content, fp).run();
+
+  const now = new Date().toISOString();
+  const r = parentId != null
+    ? await env.DB.prepare(
+        'INSERT INTO comments (post_id, author, content, fp, parent_id) VALUES (?, ?, ?, ?, ?)'
+      ).bind(p.id, author, content, fp, parentId).run()
+    : await env.DB.prepare(
+        'INSERT INTO comments (post_id, author, content, fp) VALUES (?, ?, ?, ?)'
+      ).bind(p.id, author, content, fp).run();
   return json({
     comment: {
       id: Number(r.meta.last_row_id),
       author,
       content,
-      createdAt: new Date().toISOString(),
+      parentId,
+      createdAt: now,
     },
   });
+}
+
+// ── Langganan email ─────────────────────────────────────────────────────
+async function subscribe(env, body) {
+  const email = clean(body.email).slice(0, 120).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    return json({ error: 'alamat email tidak valid' }, 400);
+  }
+  const existing = await env.DB.prepare(
+    'SELECT id FROM subscribers WHERE email = ?'
+  ).bind(email).first();
+  if (existing) {
+    return json({ ok: true, subscribed: false, reason: 'sudah terdaftar' });
+  }
+  await env.DB.prepare('INSERT INTO subscribers (email) VALUES (?)').bind(email).run();
+  return json({ ok: true, subscribed: true });
+}
+
+// ── Terbitkan artikel (admin) + notifikasi push & email ─────────────────
+async function adminPublish(env, request, body) {
+  const token = request.headers.get('x-admin-token') || '';
+  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
+    return json({ error: 'unauthorized' }, 401);
+  }
+  const title = clean(body.title).slice(0, 160);
+  const excerpt = clean(body.excerpt).slice(0, 300);
+  const content = clean(body.content).slice(0, 20000);
+  const cover = clean(body.cover).slice(0, 300);
+  const category = (clean(body.category) || 'umum').slice(0, 24);
+  const author = (clean(body.author) || 'Tim XyDesk').slice(0, 60);
+  if (title.length < 4 || content.length < 10) {
+    return json({ error: 'judul dan isi wajib diisi' }, 400);
+  }
+  // Slug HASH acak — tidak menebak urutan, tidak membocorkan judul di URL.
+  const slug = 'p-' + crypto.randomUUID().replaceAll('-', '').slice(0, 12);
+  const r = await env.DB.prepare(
+    `INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1)`
+  ).bind(slug, title, excerpt, content, cover, category, author).run();
+  const postId = Number(r.meta.last_row_id);
+
+  // Notifikasi berjalan asinkron — balasan API tidak menunggu kiriman push/email.
+  request.ctx?.waitUntil?.(notifySubscribers(env, {
+    slug,
+    title,
+    excerpt: excerpt || title,
+    cover,
+  }));
+
+  return json({ ok: true, slug, id: postId });
+}
+
+async function notifySubscribers(env, post) {
+  const results = await Promise.allSettled([
+    sendPush(env, post),
+    sendEmails(env, post),
+  ]);
+  // Kegagalan dicatat di log worker; tidak menggagalkan publikasi.
+  for (const r of results) {
+    if (r.status === 'rejected') console.error('notify gagal:', r.reason);
+  }
+}
+
+/// Push OneSignal: semua pengguna yang sudah opt-in notifikasi.
+async function sendPush(env, post) {
+  if (!env.ONESIGNAL_APP_ID || !env.ONESIGNAL_API_KEY) return;
+  const res = await fetch('https://onesignal.com/api/v1/notifications', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Basic ${env.ONESIGNAL_API_KEY}`,
+    },
+    body: JSON.stringify({
+      app_id: env.ONESIGNAL_APP_ID,
+      included_segments: ['Subscribed Users'],
+      headings: { id: 'XyDesk News', en: 'XyDesk News' },
+      contents: {
+        id: post.title,
+        en: post.excerpt || post.title,
+      },
+      url: `https://news.xystudio.my.id/n/${post.slug}`,
+      chrome_web_image: post.cover || undefined,
+      big_picture: post.cover || undefined,
+      name: 'news',
+    }),
+  });
+  if (!res.ok) throw new Error(`onesignal ${res.status}: ${await res.text()}`);
+}
+
+/// Email Resend ke seluruh pelanggan berita.
+async function sendEmails(env, post) {
+  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return;
+  const subs = await env.DB.prepare('SELECT email FROM subscribers').all();
+  for (const s of subs.results) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${env.RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: `XyDesk News <${env.EMAIL_FROM}>`,
+          to: [s.email],
+          subject: `XyDesk: ${post.title}`,
+          html: `<div style="font-family:sans-serif;max-width:560px;margin:auto">
+  <h2 style="margin:0 0 8px">${post.title}</h2>
+  <p style="color:#52525b">${post.excerpt || ''}</p>
+  <a href="https://news.xystudio.my.id/n/${post.slug}" style="display:inline-block;background:#6d28d9;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Baca di XyDesk</a>
+  <p style="color:#a1a1aa;font-size:12px;margin-top:16px">Kamu menerima email ini karena berlangganan berita XyDesk.</p>
+</div>`,
+        }),
+      });
+      if (!res.ok) throw new Error(`resend ${res.status}`);
+    } catch (e) {
+      console.error('email gagal ke', s.email, e);
+    }
+  }
 }
 
 // ── Halaman berbagi (OpenGraph untuk crawler sosial) ────────────────────
@@ -226,9 +376,9 @@ async function sharePage(env, slug, url) {
 <meta name="twitter:description" content="${esc(p.excerpt)}">
 <meta name="twitter:image" content="${esc(p.cover)}">
 <meta http-equiv="refresh" content="0; url=${esc(target)}">
-<style>body{font-family:system-ui,sans-serif;background:#131315;color:#ededef;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}</style>
+<style>body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}</style>
 </head>
-<body>Membuka <a href="${esc(target)}" style="color:#7654f6">${esc(p.title)}</a>…</body>
+<body>Membuka <a href="${esc(target)}" style="color:#a78bfa">${esc(p.title)}</a>…</body>
 </html>`;
   return new Response(html, {
     headers: { 'content-type': 'text/html; charset=utf-8', ...CORS },

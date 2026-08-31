@@ -4,6 +4,9 @@
 // Halaman berbagi (untuk crawler sosial + WhatsApp/Telegram/X):
 //   https://news.xystudio.my.id/n/:slug  → OpenGraph + redirect ke halaman ini.
 // Aplikasi web sendiri membaca: https://news.xystudio.my.id/api/news/...
+//
+// Rilis 6.0: balasan komentar (parentId), username acak per perangkat
+// (tanpa kolom nama), langganan email berita.
 
 export const NEWS_BASE = 'https://news.xystudio.my.id';
 export const NEWS_SHARE_BASE = 'https://news.xystudio.my.id/n';
@@ -25,6 +28,7 @@ export interface NewsComment {
   id: number;
   author: string;
   content: string;
+  parentId?: number | null;
   createdAt: string;
 }
 
@@ -42,6 +46,22 @@ export function newsFingerprint(): string {
     localStorage.setItem(KEY, fp);
   }
   return fp;
+}
+
+/// Nama tampilan acak per perangkat — stabil antar kunjungan.
+/// Tidak ada kolom nama manual: pengguna cukup berkomentar.
+export function newsDisplayName(): string {
+  const KEY = 'xydesk.news.name';
+  let name = localStorage.getItem(KEY);
+  if (!name) {
+    // Turunan 4 digit dari sidik jari (hex) → stabil & anonim.
+    const fp = newsFingerprint();
+    let h = 0;
+    for (let i = 0; i < fp.length; i++) h = (h * 31 + fp.charCodeAt(i)) >>> 0;
+    name = `tamu-${h.toString(16).padStart(4, '0')}`;
+    localStorage.setItem(KEY, name);
+  }
+  return name;
 }
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -77,13 +97,27 @@ export function toggleLike(slug: string): Promise<{ liked: boolean; likeCount: n
 
 export function postComment(
   slug: string,
-  author: string,
   content: string,
+  parentId?: number | null,
 ): Promise<{ comment: NewsComment }> {
   return getJson(`${NEWS_BASE}/api/news/${encodeURIComponent(slug)}/comments`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ fp: newsFingerprint(), author, content }),
+    body: JSON.stringify({
+      fp: newsFingerprint(),
+      author: newsDisplayName(),
+      content,
+      ...(parentId != null ? { parentId } : {}),
+    }),
+  });
+}
+
+/// Daftarkan email untuk langganan berita (kirim via email saat artikel baru).
+export function subscribeNews(email: string): Promise<{ ok: boolean }> {
+  return getJson(`${NEWS_BASE}/api/subscribe`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email }),
   });
 }
 

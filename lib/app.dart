@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -111,8 +112,8 @@ class _BootState extends ConsumerState<_Boot> {
         .accessibilityFeatures
         .disableAnimations;
     _reduceMotion = ref.read(settingsProvider).reduceMotion || platformReduce;
-    // 2450 ms koreografi SplashPage + 250 ms jeda tenang di lockup akhir.
-    Future<void>.delayed(Duration(milliseconds: _reduceMotion ? 0 : 2700), () {
+    // 1800 ms koreografi SplashPage + 200 ms jeda tenang di lockup akhir.
+    Future<void>.delayed(Duration(milliseconds: _reduceMotion ? 0 : 2000), () {
       if (!mounted) return;
       _splashDone = true;
       _revealWhenReady();
@@ -235,6 +236,50 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
+  final PageController _pageCtrl = PageController();
+
+  /// Waktu terakhir tombol kembali ditekan — pola "tekan dua kali untuk
+  /// keluar" biar pengguna tidak tidak sengaja menutup aplikasi saat
+  /// menggeser atau salah sentuh.
+  DateTime? _lastBackAt;
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Geser kanan-kiri berpindah tab; ketukan nav ikut memutar halaman.
+  void _goTo(int i) {
+    setState(() => _index = i);
+    if (_pageCtrl.hasClients) {
+      _pageCtrl.animateToPage(
+        i,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  /// Tekan kembali dua kali dalam 2 detik = keluar aplikasi.
+  void _onBackPressed() {
+    final now = DateTime.now();
+    if (_lastBackAt != null &&
+        now.difference(_lastBackAt!) < const Duration(seconds: 2)) {
+      SystemNavigator.pop();
+      return;
+    }
+    _lastBackAt = now;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          content: Text(context.tr('exit_double_tap_hint')),
+        ),
+      );
+  }
 
   @override
   void initState() {
@@ -266,12 +311,12 @@ class _AppShellState extends ConsumerState<AppShell> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Aktifkan notifikasi pembaruan',
+                'Aktifkan notifikasi XyDesk',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: Gap.sm),
               Text(
-                'XyDesk hanya mengirim notifikasi rilis dan keamanan penting. '
+                'Notifikasi pembaruan aplikasi dan artikel Berita baru. '
                 'Push tetap diterima saat aplikasi ditutup.',
                 style: TextStyle(
                   fontSize: 13,
@@ -332,84 +377,107 @@ class _AppShellState extends ConsumerState<AppShell> {
     // Windows/tablet (layar lebar): navigasi pindah ke rail kiri — pola
     // desktop yang benar; bottom nav hanya untuk genggaman ponsel.
     final wide = Responsive.isTablet(context);
+    // PopScope: tombol kembali tidak langsung menutup — harus dua kali
+    // (konfirmasi), konsisten dengan pola standar Android.
     if (wide) {
-      return SeamlessScaffold(
-        title: titles[_index],
-        actions: _actions(context),
-        body: Row(
-          children: [
-            NavigationRail(
-              selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
-              labelType: NavigationRailLabelType.all,
-              backgroundColor: Colors.transparent,
-              destinations: [
-                _railDest(context, LucideIcons.monitor, context.tr('nav_home')),
-                _railDest(
-                  context,
-                  LucideIcons.screenShare,
-                  context.tr('nav_connect'),
-                ),
-                _railDest(
-                  context,
-                  LucideIcons.newspaper,
-                  context.tr('nav_news'),
-                ),
-                _railDest(
-                  context,
-                  LucideIcons.circleUserRound,
-                  context.tr('nav_account'),
-                ),
-              ],
-            ),
-            Expanded(
-              child: IndexedStack(
-                index: _index,
-                children: const [
-                  HomePage(),
-                  ConnectPage(),
-                  NewsPage(),
-                  AccountPage(),
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (_, __) => _onBackPressed(),
+        child: SeamlessScaffold(
+          title: titles[_index],
+          actions: _actions(context),
+          body: Row(
+            children: [
+              NavigationRail(
+                selectedIndex: _index,
+                onDestinationSelected: _goTo,
+                labelType: NavigationRailLabelType.all,
+                backgroundColor: Colors.transparent,
+                destinations: [
+                  _railDest(
+                    context,
+                    LucideIcons.monitor,
+                    context.tr('nav_home'),
+                  ),
+                  _railDest(
+                    context,
+                    LucideIcons.screenShare,
+                    context.tr('nav_connect'),
+                  ),
+                  _railDest(
+                    context,
+                    LucideIcons.newspaper,
+                    context.tr('nav_news'),
+                  ),
+                  _railDest(
+                    context,
+                    LucideIcons.circleUserRound,
+                    context.tr('nav_account'),
+                  ),
                 ],
               ),
-            ),
-          ],
+              // Geser kanan-kiri untuk berpindah halaman — sama seperti
+              // ponsel; PageView menjaga setiap tab tetap hidup.
+              Expanded(
+                child: PageView(
+                  controller: _pageCtrl,
+                  onPageChanged: (i) => setState(() => _index = i),
+                  children: const [
+                    HomePage(),
+                    ConnectPage(),
+                    NewsPage(),
+                    AccountPage(),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return SeamlessScaffold(
-      title: titles[_index],
-      actions: _actions(context),
-      body: IndexedStack(
-        index: _index,
-        children: const [HomePage(), ConnectPage(), NewsPage(), AccountPage()],
-      ),
-      bottomNav: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(LucideIcons.monitor),
-            selectedIcon: const Icon(LucideIcons.monitor),
-            label: context.tr('nav_home'),
-          ),
-          NavigationDestination(
-            icon: const Icon(LucideIcons.screenShare),
-            selectedIcon: const Icon(LucideIcons.screenShare),
-            label: context.tr('nav_connect'),
-          ),
-          NavigationDestination(
-            icon: const Icon(LucideIcons.newspaper),
-            selectedIcon: const Icon(LucideIcons.newspaper),
-            label: context.tr('nav_news'),
-          ),
-          NavigationDestination(
-            icon: const Icon(LucideIcons.circleUserRound),
-            selectedIcon: const Icon(LucideIcons.circleUserRound),
-            label: context.tr('nav_account'),
-          ),
-        ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (_, __) => _onBackPressed(),
+      child: SeamlessScaffold(
+        title: titles[_index],
+        actions: _actions(context),
+        body: PageView(
+          controller: _pageCtrl,
+          onPageChanged: (i) => setState(() => _index = i),
+          children: const [
+            HomePage(),
+            ConnectPage(),
+            NewsPage(),
+            AccountPage(),
+          ],
+        ),
+        bottomNav: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: _goTo,
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(LucideIcons.monitor),
+              selectedIcon: const Icon(LucideIcons.monitor),
+              label: context.tr('nav_home'),
+            ),
+            NavigationDestination(
+              icon: const Icon(LucideIcons.screenShare),
+              selectedIcon: const Icon(LucideIcons.screenShare),
+              label: context.tr('nav_connect'),
+            ),
+            NavigationDestination(
+              icon: const Icon(LucideIcons.newspaper),
+              selectedIcon: const Icon(LucideIcons.newspaper),
+              label: context.tr('nav_news'),
+            ),
+            NavigationDestination(
+              icon: const Icon(LucideIcons.circleUserRound),
+              selectedIcon: const Icon(LucideIcons.circleUserRound),
+              label: context.tr('nav_account'),
+            ),
+          ],
+        ),
       ),
     );
   }

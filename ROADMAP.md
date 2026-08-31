@@ -94,29 +94,54 @@ dengan TURN, stabil 30 menit tanpa re-buffer.
   renderer OpenGraph baru di web (`web_deploy/worker/`) memberi meta per konten.
 - Perbaikan bug: berita web gagal dimuat ("Failed to fetch") karena CSP belum
   mengizinkan `news.xystudio.my.id` — sudah ditambahkan di `_headers`.
-- Lisensi proyek: **Apache-2.0** (file `LICENSE`); daftar lisensi pihak ketiga
-  tampil di Legal (Web) / Pengaturan (Android & Desktop).
+- Lisensi proyek: **proprietary** (file `LICENSE` — EULA, larangan clone);
+  daftar lengkap lisensi pihak ketiga di `docs/LEGAL.md` + Legal di
+  semua platform. (Sebelumnya sempat tercatat Apache-2.0 — dicabut.)
 - Kebijakan rilis (berlaku mulai sekarang):
   1. Setiap update aplikasi **wajib menaikkan versi** (pubspec `X.Y.Z+NN`,
      web & desktop `package.json`).
-  2. Setiap rilis **wajib punya artikel Berita** (seed `news/seed.sql`,
-     idempoten `INSERT OR IGNORE`).
+  2. Setiap rilis **wajib punya artikel Berita** — terbit lewat endpoint
+     admin (slug hash acak), lihat `news/README.md`.
 
-## Audit fitur — status implementasi (31 Agu 2026)
+## Rilis 6.0.0 — Ungu menonjol, notifikasi nyata, interaksi hidup (31 Agu 2026)
+
+- Identitas ungu menonjol di semua platform (hero web ungu pekat, tombol
+  utama ungu, aksen di Android/Desktop); logo X memakai tile seperti
+  sampul berita (tanpa glow/bayangan).
+- **Push notifikasi DIPERBAIKI**: plugin OneSignal Gradle kini terpasang
+  (sebelumnya SDK tidak masuk APK → push mati). Artikel baru memicu push
+  OneSignal + email Resend otomatis (endpoint admin `waitUntil`).
+- Berita: balas komentar (1 tingkat), username acak per perangkat (tanpa
+  kolom nama), like optimistik, langganan email, **slug hash acak** untuk
+  artikel baru.
+- Navigasi Android: geser kiri-kanan berpindah tab (PageView); keluar
+  aplikasi wajib tekan kembali 2× (PopScope + snackbar).
+- Splash ditulis ulang: 1800 ms, kurva easeOutQuart, tile logo + garis
+  aksen ungu — lebih smooth, tanpa animasi berlebihan.
+- Legal super lengkap: `docs/LEGAL.md` (EULA proprietary, privasi,
+  ketentuan, tabel lisensi pihak ketiga per platform dengan fungsi).
+- Versi: Android 6.0.0 (build 20) · Web 6.0.0 · Desktop 6.0.0 · Host 6.0.0.
+
+## Audit fitur — status implementasi (31 Agu 2026, rilis 6.0)
 
 | Fitur | Status | Catatan |
 |---|---|---|
 | Capture → encode → RTP → client | Jalan | loopback test otomatis; DXGI/NVENC menunggu lab Windows |
 | Pairing + tendang peer kedua | Jalan | `HostBusy` di gerbang pairing, teruji |
 | Control API lokal + shell desktop | Jalan | status/sesi/video/log/password/stop |
-| Berita lintas platform | Jalan | like/komentar/bagikan/OG per konten |
-| Notifikasi (OneSignal) + update checker | Jalan | opt-in di Pengaturan |
+| Berita lintas platform | Jalan | like/komentar/balasan/bagikan/OG per konten/langganan email |
+| Push notifikasi (rilis + berita) | Jalan | plugin Gradle terpasang; jalur OneSignal REST teruji |
+| Notifikasi email berita | Jalan | Resend + tabel subscribers; domain terverifikasi |
 | Akun (email OTP + Google) | Jalan | signaling worker + web connect |
 | QR scan pairing | Jalan | mobile_scanner (CameraX/MLKit) |
-| Audio forward (host → client) | **Belum** | Fase 2 — butuh capture WASAPI + Opus; UI menampilkan status jujur |
-| Mic passthrough | **Belum** | Fase 2 — consent per-sesi |
+| Keyboard virtual (modifier sticky) | Jalan | `virtual_keyboard.dart` tersambung ke sesi |
+| Geser antar halaman + keluar 2× | Jalan | PageView + PopScope di AppShell |
+| Audio forward (host → client) | **Belum** | Fase 2 — butuh capture WASAPI + encode Opus di host; UI jujur menampilkan status |
+| Mic passthrough (client → host) | **Belum** | Fase 2 — consent per-sesi |
 | Multi-monitor | **Belum** | Fase 2 |
 | Gamepad passthrough | **Belum** | Fase 2 |
+| Driver display virtual (IddSampleDriver) | **Belum** | Fase 2 — installer ada di CI release, integrasi belum |
+| Node signaling cadangan (failover) | **Belum** | Fase 3 — Durable Object multi-region / worker kedua |
 | Remap kontrol (profil) | **Belum** | Fase 2 — kerangka UI ada |
 | Installer signed + auto-update host | **Belum** | Fase 3 |
 

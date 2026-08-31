@@ -26,6 +26,14 @@ CREATE TABLE IF NOT EXISTS comments (
   author TEXT NOT NULL,
   content TEXT NOT NULL,
   fp TEXT NOT NULL DEFAULT '',
+  parent_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Pelanggan email berita (fitur rilis 6.0).
+CREATE TABLE IF NOT EXISTS subscribers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT UNIQUE NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

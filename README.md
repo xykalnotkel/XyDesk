@@ -49,8 +49,9 @@ latency end-to-end.
 | News (Web + Android + Desktop) | Live — Worker publik + D1 di `news.xystudio.my.id`; like, komentar, berbagi sosial + OpenGraph per konten |
 | OpenGraph web per konten | Live — renderer worker di `web_deploy/worker/` (crawler dapat meta berita), CSP mengizinkan `news.xystudio.my.id` |
 | Tema aplikasi Android | Terang (Paper) saja — mode gelap dihapus agar satu set kontras teruji |
-| Identitas visual 2.5 | Monokrom (hitam-putih) dengan aksen ungu; logo X resmi tanpa glow — `design/x-white.png`, `design/x-black.png` |
-| Lisensi | **Apache-2.0** (`LICENSE`) + daftar lisensi pihak ketiga di Legal (Web/Android/Desktop) |
+| Identitas visual 6.0 | Ungu menonjol sebagai warna khas; logo X tile seperti sampul berita tanpa glow — `design/x-white.png`, `design/x-black.png` |
+| Push notifikasi | Jalan — plugin OneSignal Gradle terpasang; rilis & berita baru memicu push (dan email Resend untuk pelanggan berita) |
+| Lisensi | **Proprietary** (`LICENSE` — EULA, larangan clone) + daftar lisensi pihak ketiga lengkap di `docs/LEGAL.md` dan Legal di semua platform |
 | Sesi tunggal (anti-ambil alih) | Selesai — koneksi kedua ditolak `host-sibuk` meski password benar; client menampilkan status "perangkat sedang dipakai" |
 | Test loopback host (SDP + video + data channel) | Selesai — `cargo test` hijau; jaga bug regresi SDP |
 | Benchmark encode (`xydesk-host --bench`) | Selesai — **~30 ms @640x360**: openh264 CPU TIDAK tembus <10 ms @1080p, hardware encode (NVENC/AMF/QSV) wajib untuk target itu |

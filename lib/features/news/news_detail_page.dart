@@ -34,10 +34,16 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
   bool _liked = false;
   bool _likeBusy = false;
 
-  final _author = TextEditingController();
   final _commentText = TextEditingController();
   bool _commentBusy = false;
   String? _notice;
+
+  /// Komentar yang sedang dibalas — non-null saat mode balas aktif.
+  NewsComment? _replyTo;
+
+  // Langganan email berita.
+  final _emailCtrl = TextEditingController();
+  bool _subBusy = false;
 
   @override
   void initState() {
@@ -47,8 +53,8 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
 
   @override
   void dispose() {
-    _author.dispose();
     _commentText.dispose();
+    _emailCtrl.dispose();
     super.dispose();
   }
 
@@ -105,14 +111,16 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
     if (text.length < 2 || _commentBusy || _post == null) return;
     setState(() => _commentBusy = true);
     try {
-      final name = _author.text.trim().isEmpty ? 'Anonim' : _author.text.trim();
+      // Nama tampilan acak per perangkat — tidak ada kolom nama manual.
+      final name = ref.read(newsApiProvider).displayName;
       final c = await ref
           .read(newsApiProvider)
-          .addComment(widget.slug, name, text);
+          .addComment(widget.slug, name, text, parentId: _replyTo?.id);
       if (!mounted) return;
       setState(() {
         _comments = [..._comments, c];
         _commentText.clear();
+        _replyTo = null;
         _notice = context.tr('news_comment_sent');
       });
     } catch (e) {
@@ -120,6 +128,30 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
       setState(() => _notice = e.toString());
     } finally {
       if (mounted) setState(() => _commentBusy = false);
+    }
+  }
+
+  Future<void> _subscribe() async {
+    final email = _emailCtrl.text.trim();
+    if (_subBusy || email.isEmpty || !email.contains('@')) return;
+    setState(() {
+      _subBusy = true;
+      _notice = null;
+    });
+    try {
+      final (ok, _) = await ref.read(newsApiProvider).subscribe(email);
+      if (!mounted) return;
+      setState(() {
+        _notice = ok
+            ? context.tr('news_subscribe_ok')
+            : context.tr('news_subscribe_dup');
+        if (ok) _emailCtrl.clear();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _notice = context.tr('news_subscribe_err'));
+    } finally {
+      if (mounted) setState(() => _subBusy = false);
     }
   }
 
@@ -406,18 +438,42 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextField(
-                        controller: _author,
-                        maxLength: 40,
-                        decoration: InputDecoration(
-                          hintText: context.tr('news_comment_name'),
-                          counterText: '',
-                          isDense: true,
-                          border: InputBorder.none,
-                          hintStyle: TextStyle(fontSize: 13, color: c.textLow),
+                      // Mode balas: tunjukkan komentar yang sedang dibalas.
+                      if (_replyTo != null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: c.accent.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${context.tr('news_reply_to')} '
+                                  '${_replyTo!.author}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: c.accent,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(LucideIcons.x, size: 15),
+                                color: c.textLow,
+                                tooltip: context.tr('news_reply_cancel'),
+                                onPressed: () =>
+                                    setState(() => _replyTo = null),
+                              ),
+                            ],
+                          ),
                         ),
-                        style: const TextStyle(fontSize: 13.5),
-                      ),
                       TextField(
                         controller: _commentText,
                         maxLength: 1000,
@@ -477,11 +533,14 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  comment.author,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                                Expanded(
+                                  child: Text(
+                                    comment.author,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 Text(
@@ -501,10 +560,133 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                                 height: 1.5,
                               ),
                             ),
+                            const SizedBox(height: 6),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  LucideIcons.cornerUpLeft,
+                                  size: 13,
+                                ),
+                                label: Text(
+                                  context.tr('news_reply'),
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                onPressed: () {
+                                  setState(() => _replyTo = comment);
+                                  _commentText.clear();
+                                },
+                              ),
+                            ),
+                            // Balasan (satu tingkat) tampil menjorok di bawah.
+                            for (final reply in _comments.where(
+                              (r) => r.parentId == comment.id,
+                            ))
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 8,
+                                  left: 12,
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 2,
+                                      height: 34,
+                                      margin: const EdgeInsets.only(
+                                        top: 3,
+                                        right: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: c.accent.withValues(alpha: 0.45),
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${reply.author} · ${_date(reply.createdAt)}',
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              color: c.textLow,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            reply.content,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ),
                     ),
+                // ── Langganan email berita ──
+                const SizedBox(height: Gap.xl),
+                SurfaceCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.tr('news_subscribe_title'),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        context.tr('news_subscribe_sub'),
+                        style: TextStyle(fontSize: 12.5, color: c.textMid),
+                      ),
+                      const SizedBox(height: Gap.md),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _emailCtrl,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: context.tr(
+                                  'news_subscribe_email_hint',
+                                ),
+                                hintStyle: TextStyle(
+                                  fontSize: 13,
+                                  color: c.textLow,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: Gap.sm),
+                          FilledButton(
+                            onPressed: _subBusy ? null : _subscribe,
+                            child: Text(
+                              _subBusy ? '…' : context.tr('news_subscribe_btn'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
     );

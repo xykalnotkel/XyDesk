@@ -61,6 +61,7 @@ class NewsComment {
     required this.author,
     required this.content,
     required this.createdAt,
+    this.parentId,
   });
 
   final int id;
@@ -68,11 +69,15 @@ class NewsComment {
   final String content;
   final String createdAt;
 
+  /// ID komentar induk — non-null berarti ini balasan.
+  final int? parentId;
+
   factory NewsComment.fromJson(Map<String, dynamic> j) => NewsComment(
     id: j['id'] as int? ?? 0,
     author: j['author'] as String? ?? '',
     content: j['content'] as String? ?? '',
     createdAt: j['createdAt'] as String? ?? '',
+    parentId: j['parentId'] as int?,
   );
 }
 
@@ -167,14 +172,42 @@ class NewsApi {
   Future<NewsComment> addComment(
     String slug,
     String author,
-    String content,
-  ) async {
+    String content, {
+    int? parentId,
+  }) async {
     final data = await _getJson(
       Uri.parse('$newsBase/api/news/$slug/comments'),
       method: 'POST',
-      body: {'fp': fingerprint, 'author': author, 'content': content},
+      body: {
+        'fp': fingerprint,
+        'author': author,
+        'content': content,
+        if (parentId != null) 'parentId': parentId,
+      },
     );
     return NewsComment.fromJson(data['comment'] as Map<String, dynamic>);
+  }
+
+  /// Nama tampilan acak per perangkat — tidak ada kolom nama manual.
+  /// Stabil antar sesi: turunan 4 digit dari sidik jari perangkat.
+  String get displayName {
+    final existing = _store.getStr('news_display_name');
+    if (existing != null && existing.isNotEmpty) return existing;
+    final h = fingerprint.hashCode.abs().toRadixString(16).padLeft(4, '0');
+    final name = 'tamu-$h';
+    _store.setStr('news_display_name', name);
+    return name;
+  }
+
+  /// Daftarkan email untuk langganan berita (kirim via Resend saat artikel
+  /// baru terbit).
+  Future<(bool, String)> subscribe(String email) async {
+    final data = await _getJson(
+      Uri.parse('$newsBase/api/subscribe'),
+      method: 'POST',
+      body: {'email': email},
+    );
+    return (data['ok'] as bool? ?? false, 'ok');
   }
 
   String shareUrl(String slug) => '$newsShareBase/$slug';

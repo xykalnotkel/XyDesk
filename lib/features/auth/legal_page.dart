@@ -178,11 +178,12 @@ class LegalPage extends StatelessWidget {
   List<Widget> _licenses(BuildContext c) => [
     _para(
       c,
-      'XyDesk sendiri dirilis di bawah Apache License 2.0 — bebas '
-      'dipakai, dimodifikasi, dan didistribusikan dengan menyertakan '
-      'lisensi serta pemberitahuan perubahan. Semua UI/UX dirancang '
-      'sendiri oleh tim XyDesk. Berikut perangkat lunak pihak ketiga '
-      'yang dipakai:',
+      'XyDesk adalah perangkat lunak proprietary (bukan sumber terbuka): '
+      'bebas dipakai, tetapi dilarang meng-clone, menyalin, merekayasa '
+      'balik, atau mendistribusikan ulang kode sumbernya tanpa izin '
+      'tertulis dari XySpace Tech. Semua UI/UX dirancang sendiri oleh tim '
+      'XyDesk. Berikut perangkat lunak pihak ketiga yang dipakai beserta '
+      'lisensinya masing-masing:',
     ),
     const SizedBox(height: Gap.md),
     for (final l in const [

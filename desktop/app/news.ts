@@ -22,6 +22,7 @@ export interface NewsComment {
   id: number;
   author: string;
   content: string;
+  parentId?: number | null;
   createdAt: string;
 }
 
@@ -37,6 +38,20 @@ export function newsFingerprint(): string {
     localStorage.setItem(KEY, fp);
   }
   return fp;
+}
+
+/// Nama tampilan acak per instalasi — tanpa kolom nama manual.
+export function newsDisplayName(): string {
+  const KEY = 'xydesk.desktop.news.name';
+  let name = localStorage.getItem(KEY);
+  if (!name) {
+    const fp = newsFingerprint();
+    let h = 0;
+    for (let i = 0; i < fp.length; i++) h = (h * 31 + fp.charCodeAt(i)) >>> 0;
+    name = `tamu-${h.toString(16).padStart(4, '0')}`;
+    localStorage.setItem(KEY, name);
+  }
+  return name;
 }
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -66,13 +81,27 @@ export function toggleLike(slug: string): Promise<{ liked: boolean; likeCount: n
 
 export function postComment(
   slug: string,
-  author: string,
   content: string,
+  parentId?: number | null,
 ): Promise<{ comment: NewsComment }> {
   return getJson(`${NEWS_BASE}/api/news/${encodeURIComponent(slug)}/comments`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ fp: newsFingerprint(), author, content }),
+    body: JSON.stringify({
+      fp: newsFingerprint(),
+      author: newsDisplayName(),
+      content,
+      ...(parentId != null ? { parentId } : {}),
+    }),
+  });
+}
+
+/// Daftarkan email untuk langganan berita.
+export function subscribeNews(email: string): Promise<{ ok: boolean }> {
+  return getJson(`${NEWS_BASE}/api/subscribe`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email }),
   });
 }
 

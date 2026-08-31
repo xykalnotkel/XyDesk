@@ -25,6 +25,7 @@ import {
   NewsComment,
   NewsPost,
   postComment,
+  subscribeNews,
   toggleLike,
 } from './news';
 import { InputCodec, RtcPhase, RtcSession } from './rtc';
@@ -473,10 +474,11 @@ function LegalPage() {
       <section>
         <h2>Lisensi proyek</h2>
         <p>
-          Kode sumber XyDesk dirilis di bawah lisensi{' '}
-          <strong>Apache License 2.0</strong>. Kamu bebas memakai, memodifikasi, dan
-          mendistribusikannya — dengan tetap menyertakan lisensi dan pemberitahuan
-          perubahan. Teks lengkap tersedia di repositori GitHub.
+          XyDesk adalah perangkat lunak <strong>proprietary (bukan sumber terbuka)</strong>.
+          Kamu bebas memakai aplikasinya, tetapi dilarang meng-clone, menyalin,
+          merekayasa balik, atau mendistribusikan ulang kode sumbernya tanpa izin
+          tertulis dari XySpace Tech. Teks lengkap Perjanjian Lisensi ada di
+          dokumen lisensi proyek dan di Pengaturan → Legal di aplikasi Android/Desktop.
         </p>
       </section>
       <section>
@@ -646,10 +648,12 @@ function NewsDetailPage({
   const [error, setError] = useState('');
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
-  const [author, setAuthor] = useState(() => localStorage.getItem('xydesk.news.author') ?? '');
   const [commentText, setCommentText] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [replyTo, setReplyTo] = useState<NewsComment | null>(null);
+  const [email, setEmail] = useState('');
+  const [subBusy, setSubBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -672,38 +676,60 @@ function NewsDetailPage({
 
   const post = data?.post;
 
-  const like = async () => {
-    if (!post) return;
-    setBusy(true);
-    try {
-      const r = await toggleLike(post.slug);
-      setLikeCount(r.likeCount);
-      setLiked(r.liked);
-      localStorage.setItem(`xydesk.news.liked.${post.slug}`, r.liked ? '1' : '0');
-    } catch (e) {
-      setNotice(e instanceof Error ? e.message : 'Gagal memproses like.');
-    } finally {
-      setBusy(false);
-    }
+  // Like OPTIMISTIK: UI berubah seketika, server menyusul — kalau gagal,
+  // kembalikan ke keadaan sebelumnya. Ini membuat like terasa instan.
+  const like = () => {
+    if (!post || busy) return;
+    const target = !liked;
+    setLiked(target);
+    setLikeCount((n) => n + (target ? 1 : -1));
+    toggleLike(post.slug)
+      .then((r) => {
+        setLiked(r.liked);
+        setLikeCount(r.likeCount);
+        localStorage.setItem(`xydesk.news.liked.${post.slug}`, r.liked ? '1' : '0');
+      })
+      .catch((e) => {
+        setLiked(!target);
+        setLikeCount((n) => n + (target ? -1 : 1));
+        setNotice(e instanceof Error ? e.message : 'Gagal memproses like.');
+      });
   };
 
   const submitComment = async () => {
-    if (!post || commentText.trim().length < 2) return;
-    const name = author.trim() || 'Anonim';
+    if (!post || commentText.trim().length < 2 || busy) return;
     setBusy(true);
     setNotice('');
     try {
-      localStorage.setItem('xydesk.news.author', name);
-      const r = await postComment(post.slug, name, commentText.trim());
+      // Username acak per perangkat — tanpa kolom nama manual.
+      const r = await postComment(post.slug, commentText.trim(), replyTo?.id ?? null);
       setData((d) =>
-        d ? { post: d.post, comments: [...d.comments, r.comment] } : d,
+        d
+          ? { post: { ...d.post, commentCount: d.post.commentCount + 1 }, comments: [...d.comments, r.comment] }
+          : d,
       );
       setCommentText('');
+      setReplyTo(null);
       setNotice('Komentar terkirim.');
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'Gagal mengirim komentar.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const subscribe = async () => {
+    if (!email.includes('@') || subBusy) return;
+    setSubBusy(true);
+    setNotice('');
+    try {
+      await subscribeNews(email.trim());
+      setEmail('');
+      setNotice('Berhasil! Email kamu terdaftar untuk berita XyDesk.');
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Gagal mendaftar email.');
+    } finally {
+      setSubBusy(false);
     }
   };
 
@@ -736,6 +762,9 @@ function NewsDetailPage({
         { label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
       ]
     : [];
+
+  const comments = data?.comments ?? [];
+  const topLevel = comments.filter((c) => c.parentId == null);
 
   return (
     <main className="content-page news-detail">
@@ -772,7 +801,6 @@ function NewsDetailPage({
             <button
               className={`like-btn ${liked ? 'liked' : ''}`}
               onClick={like}
-              disabled={busy}
               title={liked ? 'Batal suka' : 'Suka'}
             >
               <svg viewBox="0 0 24 24" width="16" height="16" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
@@ -797,14 +825,14 @@ function NewsDetailPage({
           </div>
 
           <section className="comments">
-            <h2>Komentar ({data?.comments.length ?? 0})</h2>
+            <h2>Komentar ({comments.length})</h2>
             <div className="comment-form">
-              <input
-                placeholder="Nama kamu"
-                maxLength={40}
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
-              />
+              {replyTo && (
+                <div className="reply-banner">
+                  <span>Membalas <strong>{replyTo.author}</strong></span>
+                  <button onClick={() => setReplyTo(null)}>×</button>
+                </div>
+              )}
               <textarea
                 placeholder="Tulis komentar…"
                 maxLength={1000}
@@ -822,18 +850,53 @@ function NewsDetailPage({
               </button>
             </div>
             <div className="comment-list">
-              {(data?.comments ?? []).length === 0 && (
+              {comments.length === 0 && (
                 <p className="muted">Belum ada komentar. Jadilah yang pertama.</p>
               )}
-              {(data?.comments ?? []).map((c) => (
-                <div className="comment" key={c.id}>
-                  <div className="comment-head">
-                    <strong>{c.author}</strong>
-                    <span>{formatNewsDate(c.createdAt)}</span>
+              {topLevel.map((c) => {
+                const replies = comments.filter((r) => r.parentId === c.id);
+                return (
+                  <div className="comment" key={c.id}>
+                    <div className="comment-head">
+                      <strong>{c.author}</strong>
+                      <span>{formatNewsDate(c.createdAt)}</span>
+                    </div>
+                    <p>{c.content}</p>
+                    <button className="reply-link" onClick={() => { setReplyTo(c); setNotice(''); }}>
+                      Balas
+                    </button>
+                    {replies.length > 0 && (
+                      <div className="replies">
+                        {replies.map((r) => (
+                          <div className="reply" key={r.id}>
+                            <div className="comment-head">
+                              <strong>{r.author}</strong>
+                              <span>{formatNewsDate(r.createdAt)}</span>
+                            </div>
+                            <p>{r.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <p>{c.content}</p>
-                </div>
-              ))}
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="subscribe-box">
+            <h2>Berita lewat email</h2>
+            <p className="muted">Artikel baru dikirim langsung ke email kamu.</p>
+            <div className="subscribe-row">
+              <input
+                type="email"
+                placeholder="alamat@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <button className="btn primary" onClick={subscribe} disabled={subBusy}>
+                {subBusy ? 'Mendaftar…' : 'Langganan'}
+              </button>
             </div>
           </section>
         </article>
@@ -841,7 +904,6 @@ function NewsDetailPage({
     </main>
   );
 }
-
 function RemoteApp() {
   const [jwt, setJwt] = useState<string | null>(() =>
     localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(GUEST_TOKEN_KEY),
