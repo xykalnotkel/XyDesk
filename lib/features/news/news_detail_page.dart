@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/l10n_bridge.dart';
 import '../../core/tokens.dart';
 import '../../widgets/seamless.dart';
 import 'news_service.dart';
@@ -334,7 +335,7 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${post.author} · ${_date(post.createdAt)}',
+                  '${post!.author} · ${_date(post!.createdAt)}',
                   style: TextStyle(fontSize: 12, color: c.textLow),
                 ),
                 const SizedBox(height: Gap.lg),
@@ -358,7 +359,7 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                   ],
                 ),
                 const SizedBox(height: Gap.xxl),
-                for (final para in post.content.split(RegExp(r'\n\n+')))
+                for (final para in post!.content.split(RegExp(r'\n\n+')))
                   Padding(
                     padding: const EdgeInsets.only(bottom: Gap.md),
                     child: Text(
@@ -474,7 +475,10 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                             const SizedBox(height: 4),
                             Text(
                               comment.content,
-                              style: TextStyle(fontSize: 13.5, height: 1.5),
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                height: 1.5,
+                              ),
                             ),
                           ],
                         ),

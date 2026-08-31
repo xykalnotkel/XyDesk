@@ -86,19 +86,19 @@ class BillingPage extends StatelessWidget {
           const SurfaceCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              children: const [
                 _FeatureRow(
                   icon: LucideIcons.monitorSmartphone,
                   title: 'Perangkat tanpa batas',
                   subtitle: 'Simpan dan hubungkan semua perangkatmu.',
                 ),
-                _CardGap(),
+                const _CardGap(),
                 _FeatureRow(
                   icon: LucideIcons.highlighter,
                   title: 'Semua mode kontrol',
                   subtitle: 'Panel gaming, keyboard virtual, pointer relatif.',
                 ),
-                _CardGap(),
+                const _CardGap(),
                 _FeatureRow(
                   icon: LucideIcons.shieldCheck,
                   title: 'Sesi peer-to-peer',

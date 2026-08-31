@@ -422,6 +422,7 @@ class _StreamPanel extends ConsumerWidget {
             TransportStatus.negotiating => 'Negosiasi koneksi…',
             TransportStatus.rejected => 'Pairing ditolak',
             TransportStatus.peerOffline => 'Host tidak online',
+            TransportStatus.hostBusy => 'Perangkat sedang dipakai',
             TransportStatus.ended => 'Sesi berakhir',
             TransportStatus.error => 'Koneksi gagal',
             TransportStatus.preview => 'Transport tidak aktif',
