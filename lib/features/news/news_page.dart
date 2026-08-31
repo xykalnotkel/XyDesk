@@ -161,19 +161,19 @@ class _NewsPageState extends ConsumerState<NewsPage> {
   List<Widget> _skeletonList() {
     return [
       for (var i = 0; i < 3; i++)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.screen, 0, Gap.screen, Gap.lg),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(Gap.screen, 0, Gap.screen, Gap.lg),
           child: SurfaceCard(
-            padding: const EdgeInsets.all(Gap.md),
+            padding: EdgeInsets.all(Gap.md),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SkeletonBox(width: 108, height: 64, radius: R.md),
-                const SizedBox(width: Gap.md),
+                SizedBox(width: Gap.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       SkeletonBox(width: 110, height: 12),
                       SizedBox(height: 10),
                       SkeletonBox(height: 11),
