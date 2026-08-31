@@ -425,10 +425,50 @@ export const LICENSE_NPM: ReadonlyArray<LicenseEntry> = ${j(npm)};
 `;
 }
 
+// ── Snapshot: membuat hasil reproduktif di CI ────────────────────────────
+//
+// Lisensi dibaca dari cache dependensi lokal (`~/.pub-cache`, `~/.cargo`,
+// `node_modules`). Runner CI yang bersih tidak punya cache itu, jadi generator
+// yang sama akan menghasilkan keluaran berbeda dan `--check` gagal walau tidak
+// ada yang berubah — persis yang terjadi pada percobaan pertama.
+//
+// Solusinya: hasil resolusi disimpan ke `tool/license-data.json` yang ikut
+// di-commit. Saat cache tersedia, ia menjadi sumber kebenaran dan snapshot
+// diperbarui. Saat tidak, snapshot dipakai. Kunci snapshot mengandung versi,
+// jadi begitu lockfile berubah, entri yang hilang langsung terdeteksi dan CI
+// menuntut regenerasi lokal — bukan diam-diam memakai data basi.
+const SNAPSHOT_PATH = join(ROOT, 'tool', 'license-data.json');
+const UNRESOLVED = new Set(['tidak dinyatakan', 'lihat berkas LICENSE paket']);
+
+function loadSnapshot() {
+  if (!existsSync(SNAPSHOT_PATH)) return {};
+  try {
+    return JSON.parse(readFileSync(SNAPSHOT_PATH, 'utf8')).licenses || {};
+  } catch {
+    return {};
+  }
+}
+
+const keyOf = (e) => `${e.ecosystem}|${e.name}@${e.version}`;
+
+function reconcile(entries, snapshot, missing) {
+  return entries.map((e) => {
+    const key = keyOf(e);
+    const known = snapshot[key];
+    if (UNRESOLVED.has(e.license)) {
+      if (known) return { ...e, license: known };
+      missing.push(key);
+    }
+    return e;
+  });
+}
+
+const snapshot = loadSnapshot();
+const missing = [];
 const data = {
-  dart: dartPackages(),
-  rust: rustCrates(),
-  npm: npmPackages(),
+  dart: reconcile(dartPackages(), snapshot, missing),
+  rust: reconcile(rustCrates(), snapshot, missing),
+  npm: reconcile(npmPackages(), snapshot, missing),
   manual: MANUAL,
 };
 
@@ -439,6 +479,18 @@ const ts = buildTs(data);
 
 if (process.argv.includes('--check')) {
   let stale = [];
+  if (missing.length) {
+    console.error(
+      `Snapshot lisensi tidak mencakup ${missing.length} komponen dari lockfile:`
+    );
+    for (const k of missing.slice(0, 12)) console.error(`  - ${k}`);
+    if (missing.length > 12) console.error(`  … dan ${missing.length - 12} lagi`);
+    console.error(
+      '\nDependensi berubah tanpa regenerasi. Jalankan di mesin yang punya' +
+        '\ncache dependensi lengkap: node tool/gen-licenses.mjs'
+    );
+    process.exit(1);
+  }
   for (const [p, want] of [[mdPath, md], [tsPath, ts]]) {
     const have = existsSync(p) ? readFileSync(p, 'utf8') : '';
     if (have !== want) stale.push(p);
@@ -452,6 +504,26 @@ if (process.argv.includes('--check')) {
 } else {
   writeFileSync(mdPath, md);
   writeFileSync(tsPath, ts);
+  // Simpan hasil resolusi supaya CI tanpa cache menghasilkan keluaran sama.
+  const licenses = {};
+  for (const e of [...data.dart, ...data.rust, ...data.npm]) {
+    licenses[keyOf(e)] = e.license;
+  }
+  writeFileSync(
+    SNAPSHOT_PATH,
+    JSON.stringify(
+      {
+        _: 'DIHASILKAN oleh tool/gen-licenses.mjs — jangan diedit tangan. ' +
+          'Snapshot ini membuat --check reproduktif di runner CI yang tidak ' +
+          'punya cache dependensi lokal.',
+        generatedFrom: ['pubspec.lock', 'host/Cargo.lock', 'package-lock.json'],
+        count: Object.keys(licenses).length,
+        licenses,
+      },
+      null,
+      2
+    ) + '\n'
+  );
   console.log(`Ditulis:
   ${mdPath}
   ${tsPath}
