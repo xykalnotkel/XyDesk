@@ -672,10 +672,6 @@ class _CategoryRow extends StatelessWidget {
   }
 }
 
- );
-  }
-}
-
 class _SwitchRow extends StatelessWidget {
   const _SwitchRow({
     required this.title,
