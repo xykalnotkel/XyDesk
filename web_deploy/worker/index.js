@@ -2,8 +2,12 @@
 //
 // Tugasnya satu: saat crawler sosial (WhatsApp/Telegram/FB/X) meminta
 // halaman, berikan HTML berisi tag OpenGraph sesuai KONTEN halaman —
-// terutama /news/<slug> (judul, ringkasan, sampul dari API berita).
+// terutama /news/<slug> (judul, ringkasan, sampul dari basis berita).
 // Browser manusia tetap mendapat aplikasi Vite statis lewat env.ASSETS.
+//
+// Data berita dibaca langsung dari D1 (binding DB) — tanpa fetch
+// edge-to-edge yang lambat dan rapuh. Kalau binding tidak tersedia
+// (lingkungan dev), fallback ke API publik berita.
 
 const NEWS_API = 'https://news.xystudio.my.id';
 const SITE = 'https://app.xystudio.my.id';
@@ -84,8 +88,30 @@ function ogPage({ title, description, image, type, url }) {
 </html>`;
 }
 
-async function newsOg(slug) {
+async function newsOg(slug, env) {
   const url = `${SITE}/news/${encodeURIComponent(slug)}`;
+  // Jalur utama: baca langsung dari D1 (tanpa lompatan jaringan).
+  if (env && env.DB) {
+    try {
+      const row = await env.DB.prepare(
+        'SELECT slug, title, excerpt, cover FROM posts WHERE slug = ? AND published = 1 LIMIT 1',
+      )
+        .bind(slug)
+        .first();
+      if (row && row.title) {
+        return ogPage({
+          title: row.title,
+          description: row.excerpt || '',
+          image: row.cover,
+          type: 'article',
+          url,
+        });
+      }
+    } catch {
+      // Lanjut ke fallback HTTP di bawah.
+    }
+  }
+  // Fallback: API publik (dipakai di lingkungan tanpa binding D1).
   try {
     const res = await fetch(`${NEWS_API}/api/news/${encodeURIComponent(slug)}`, {
       headers: { accept: 'application/json' },
@@ -115,12 +141,20 @@ export default {
     if (isBot(ua)) {
       if (url.pathname.startsWith('/news/')) {
         const slug = decodeURIComponent(url.pathname.slice('/news/'.length)).trim();
-        if (slug) return new Response(await newsOg(slug), {
-          headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300' },
-        });
+        if (slug) {
+          return new Response(await newsOg(slug, env), {
+            headers: {
+              'content-type': 'text/html; charset=utf-8',
+              'cache-control': 'public, max-age=300',
+            },
+          });
+        }
       }
       return new Response(ogPage({ ...DEFAULT_OG, url: SITE + url.pathname }), {
-        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=600' },
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'public, max-age=600',
+        },
       });
     }
 

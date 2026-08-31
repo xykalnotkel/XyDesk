@@ -14,3 +14,9 @@ routes = [
 directory = "./site"
 not_found_handling = "single-page-application"
 html_handling = "auto-trailing-slash"
+
+# Basis data berita yang sama dengan worker news (baca-saja untuk meta OG).
+[[d1_databases]]
+binding = "DB"
+database_name = "xydesk-news"
+database_id = "7ffccd9e-3432-47bf-b3e7-7492cbe56ea2"
