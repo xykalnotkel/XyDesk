@@ -45,12 +45,12 @@ class BillingPage extends StatelessWidget {
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
                             'XyDesk Beta',
                             style: TextStyle(
@@ -71,8 +71,8 @@ class BillingPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    const Icon(
+                    SizedBox(width: 4),
+                    Icon(
                       LucideIcons.badgeCheck,
                       size: 34,
                       color: Color(0xFFE8C7FF),
@@ -86,19 +86,19 @@ class BillingPage extends StatelessWidget {
           const SurfaceCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 _FeatureRow(
                   icon: LucideIcons.monitorSmartphone,
                   title: 'Perangkat tanpa batas',
                   subtitle: 'Simpan dan hubungkan semua perangkatmu.',
                 ),
-                const _CardGap(),
+                _CardGap(),
                 _FeatureRow(
                   icon: LucideIcons.highlighter,
                   title: 'Semua mode kontrol',
                   subtitle: 'Panel gaming, keyboard virtual, pointer relatif.',
                 ),
-                const _CardGap(),
+                _CardGap(),
                 _FeatureRow(
                   icon: LucideIcons.shieldCheck,
                   title: 'Sesi peer-to-peer',

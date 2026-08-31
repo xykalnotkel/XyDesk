@@ -277,6 +277,27 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                 ),
               ),
             )
+          : post == null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(Gap.xxl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      context.tr('news_load_error'),
+                      style: TextStyle(fontSize: 13, color: c.textMid),
+                    ),
+                    const SizedBox(height: Gap.md),
+                    TextButton.icon(
+                      onPressed: _load,
+                      icon: const Icon(LucideIcons.refreshCw, size: 15),
+                      label: Text(context.tr('news_retry')),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : ListView(
               padding: const EdgeInsets.fromLTRB(
                 Gap.screen,
@@ -335,7 +356,7 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${post!.author} · ${_date(post!.createdAt)}',
+                  '${post.author} · ${_date(post.createdAt)}',
                   style: TextStyle(fontSize: 12, color: c.textLow),
                 ),
                 const SizedBox(height: Gap.lg),
@@ -359,7 +380,7 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                   ],
                 ),
                 const SizedBox(height: Gap.xxl),
-                for (final para in post!.content.split(RegExp(r'\n\n+')))
+                for (final para in post.content.split(RegExp(r'\n\n+')))
                   Padding(
                     padding: const EdgeInsets.only(bottom: Gap.md),
                     child: Text(
