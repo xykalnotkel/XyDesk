@@ -1,0 +1,64 @@
+{
+  "name": "xydesk-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "XyDesk Desktop — shell Electron + Next.js untuk host Windows. Engine streaming (capture/encode/WebRTC) tetap Rust di xydesk-host.exe; proses ini TIDAK menyentuh media.",
+  "author": "XyStudio",
+  "license": "MIT",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0 -p 3470",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "electron": "electron .",
+    "package": "npm run build && electron-builder --win --x64 --publish never",
+    "package:portable": "npm run build && electron-builder --win portable --x64 --publish never"
+  },
+  "dependencies": {
+    "next": "15.1.6",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.3"
+  },
+  "build": {
+    "appId": "com.xydesk.desktop",
+    "productName": "XyDesk",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**",
+      "electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../host/target/release/xydesk-host.exe",
+        "to": "engine/xydesk-host.exe"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "XyDesk",
+      "artifactName": "XyDesk-Desktop-${version}-${arch}-Setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "XyDesk-Desktop-${version}-${arch}-Portable.${ext}"
+    }
+  }
+}

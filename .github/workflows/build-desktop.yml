@@ -1,0 +1,98 @@
+name: Build Desktop (Electron + Next.js)
+
+# Shell desktop XyDesk: Electron (supervisor engine) + renderer Next.js
+# (static export). Engine Rust dibangun di job Windows, lalu dibundel ke
+# installer NSIS + portable lewat electron-builder.
+#
+# Job Linux memverifikasi hal yang bisa diverifikasi tanpa Windows:
+# sintaks proses utama, typecheck renderer, dan static export.
+
+on:
+  push:
+    paths:
+      - 'desktop/**'
+      - 'host/**'
+      - '.github/workflows/build-desktop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shell-check:
+    name: Periksa Shell (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      # Tanpa biner Electron — cukup untuk typecheck + static export.
+      - name: Pasang dependensi
+        working-directory: desktop
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        run: npm ci
+
+      - name: Periksa sintaks proses utama + preload
+        working-directory: desktop
+        run: node --check electron/main.cjs && node --check electron/preload.cjs
+
+      - name: Typecheck renderer
+        working-directory: desktop
+        run: npm run typecheck
+
+      - name: Build renderer (static export)
+        working-directory: desktop
+        run: npm run build
+
+  package-windows:
+    name: Paket Installer Windows (x64)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            host/target
+          key: desktop-${{ runner.os }}-cargo-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: desktop-${{ runner.os }}-cargo-
+
+      # Wajib selesai SEBELUM electron-builder: extraResources mengambil
+      # xydesk-host.exe dari target/release.
+      - name: Build engine host (release)
+        working-directory: host
+        run: cargo build --release
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Pasang dependensi
+        working-directory: desktop
+        run: npm ci
+
+      - name: Paket NSIS + portable
+        working-directory: desktop
+        run: npm run package
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xydesk-desktop-windows-x64
+          path: desktop/dist/*.exe
+          if-no-files-found: error
+          retention-days: 14

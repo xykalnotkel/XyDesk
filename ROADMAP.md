@@ -85,6 +85,18 @@ dengan TURN, stabil 30 menit tanpa re-buffer.
 - Signaling multi-node (NATS/Redis pub-sub) kalau user base tumbuh — protokol
   sudah tidak berubah, ganti `Hub.clients` saja.
 
+## Keputusan stack shell desktop (Agu 2026)
+
+Shell host Windows kini **Electron + Next.js (static export)** menggantikan
+GUI native Win32 (`host/src/bin/gui.rs`, tetap ada sebagai fallback).
+Alasannya: UI web jauh lebih cepat dikembangkan dan konsisten dengan web
+client; engine streaming **tetap Rust** — capture/encode/WebRTC TIDAK boleh
+pindah ke Chromium (desktopCapturer + encode Chromium jauh di atas target
+`< 40 ms`). Shell hanya launcher + panel; kanal baliknya adalah **control API
+lokal** di engine (HTTP `127.0.0.1` + token per-lahir, `host/src/control.rs`):
+status mesin, sesi aktif, statistik video, dan aksi password/stop-session.
+Detail lengkap: `docs/DESKTOP_SHELL.md`.
+
 ---
 
 ## Stack gratis — TANPA VM/VPS (verifikasi ulang tiap fase)

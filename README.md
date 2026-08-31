@@ -44,6 +44,8 @@ latency end-to-end.
 | Gerbang signaling | Role terikat HMAC, relay client-host divalidasi, daftar host global ditutup |
 | TURN (kredensial Cloudflare ber-TTL) | Selesai |
 | Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Loop RTP terbukti di test loopback; capture DXGI nyata menunggu verifikasi lab Windows |
+| Control API lokal host (HTTP 127.0.0.1 + token) | Selesai — status, password, stop-session untuk shell desktop; 8 test otomatis |
+| Desktop shell (Electron + Next.js, engine tetap Rust) | Selesai — supervisor engine + panel status; installer Windows dibangun CI |
 | Test loopback host (SDP + video + data channel) | Selesai — `cargo test` hijau; jaga bug regresi SDP |
 | Benchmark encode (`xydesk-host --bench`) | Selesai — **~30 ms @640x360**: openh264 CPU TIDAK tembus <10 ms @1080p, hardware encode (NVENC/AMF/QSV) wajib untuk target itu |
 | Benchmark latency end-to-end di jaringan nyata | Belum — protokolnya ada di `docs/LATENCY.md` |
@@ -90,6 +92,17 @@ lib/
         ├── session_page.dart     # sesi, loading, overlay auto-hide
         ├── session_panels.dart   # bilah kiri + panel kategori kanan
         └── virtual_keyboard.dart # keyboard penuh, radius 3dp
+
+host/src/
+├── main.rs                       # engine: signaling, pairing, streaming
+├── control.rs                    # control API lokal untuk shell desktop
+├── session.rs                    # WebRTC (answerer) + track video
+├── screen.rs                     # capture DXGI + NVENC/openh264
+└── bin/gui.rs                    # GUI native Win32 (fallback, tanpa WebView)
+
+desktop/                          # shell desktop Windows — lihat docs/DESKTOP_SHELL.md
+├── electron/                     # proses utama (supervisor engine) + preload
+└── app/                          # renderer Next.js (static export)
 ```
 
 ---
@@ -144,6 +157,8 @@ Artefak build biasa tersedia melalui tab **Actions**.
 | Windows portable | `XyDesk-Windows-<arch>.zip` | Alternatif tanpa instalasi |
 | Windows host standalone x64 | `XyDesk-Host-x64.exe` | Engine opsional untuk otomasi |
 | Windows host standalone Arm64 | `XyDesk-Host-arm64.exe` | Engine opsional untuk otomasi |
+| Windows desktop shell | `XyDesk-Desktop-<ver>-x64-Setup.exe` | Installer Electron + Next.js, engine dibundel |
+| Windows desktop portable | `XyDesk-Desktop-<ver>-x64-Portable.exe` | Shell desktop tanpa instalasi |
 | Web | `XyDesk-Web.zip` | Bundle web client (Vite + React) |
 
 Bundle Web dari Build `main` yang sukses juga dideploy otomatis ke Cloudflare
