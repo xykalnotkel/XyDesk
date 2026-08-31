@@ -119,20 +119,19 @@ pub fn spawn_frame_source() -> mpsc::Receiver<Vec<u8>> {
         std::thread::spawn(move || {
             let mut current = wanted_display();
             loop {
-                if tx.is_closed() {
-                    break; // sesi selesai — receiver di-drop
-                }
                 if let Err(e) = windows::start_monitor(tx.clone(), current) {
                     eprintln!(
                         "[xydesk-host] capture layar (monitor {current}) gagal: {e}"
                     );
                 }
                 // Ada permintaan pindah monitor? Respawn dengan indeks baru.
+                // Tanpa permintaan, capture berakhir karena sesi selesai
+                // (handler berhenti) — thread ini pun keluar.
                 let next = SWITCH_TO.swap(
                     usize::MAX,
                     std::sync::atomic::Ordering::Relaxed,
                 );
-                if next == usize::MAX || tx.is_closed() {
+                if next == usize::MAX {
                     break;
                 }
                 current = next;
@@ -548,7 +547,9 @@ mod windows {
                 HDC(0),
                 None,
                 Some(collect),
-                LPARAM(&mut list as *mut Vec<super::DisplayInfo> as isize),
+                LPARAM(
+                    &mut list as *mut Vec<super::DisplayInfo> as *mut core::ffi::c_void,
+                ),
             );
         }
         list

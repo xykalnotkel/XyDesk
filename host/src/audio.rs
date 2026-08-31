@@ -98,7 +98,7 @@ pub fn spawn_audio_source() -> mpsc::Receiver<Vec<u8>> {
 }
 
 /// Sink pemutar audio mic client. Kirim paket Opus; thread render memutar.
-pub fn spawn_audio_sink() -> mpsc::Sender<Vec<u8>> {
+pub fn spawn_audio_sink() -> mpsc::SyncSender<Vec<u8>> {
     #[cfg(target_os = "windows")]
     {
         let (tx, rx) = mpsc::sync_channel::<Vec<u8>>(8);
@@ -213,14 +213,14 @@ mod windows {
 
     /// Volume master 0.0–1.0 dari perangkat output default.
     pub fn master_volume() -> Option<f32> {
-        use windows::Win32::Media::Audio::IAudioEndpointVolume;
+        use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
         let device = device().ok()?;
         let vol: IAudioEndpointVolume = unsafe { device.Activate(CLSCTX_ALL, None).ok()? };
         unsafe { vol.GetMasterVolumeLevelScalar().ok() }
     }
 
     pub fn set_master_volume(vol: f32) -> bool {
-        use windows::Win32::Media::Audio::IAudioEndpointVolume;
+        use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
         let Ok(device) = device() else { return false };
         let Ok(volume) = unsafe { device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None) } else {
             return false;
@@ -241,14 +241,14 @@ mod windows {
                     AUDCLNT_STREAMFLAGS_LOOPBACK,
                     0, // durasi buffer default
                     0,
-                    Some(&format),
+                    &format,
                     None,
                 )
                 .map_err(|e| anyhow::anyhow!("IAudioClient::Initialize: {e:?}"))?;
         }
         let capture: IAudioCaptureClient = unsafe {
             client
-                .GetService(&IAudioCaptureClient::IID)
+                .GetService::<IAudioCaptureClient>()
                 .map_err(|e| anyhow::anyhow!("GetService IAudioCaptureClient: {e:?}"))?
         };
 
@@ -281,7 +281,7 @@ mod windows {
                 let mut flags: u32 = 0;
                 unsafe {
                     capture
-                        .GetBuffer(&mut data, &mut frames, Some(&mut flags), None, None)
+                        .GetBuffer(&mut data, &mut frames, &mut flags, None, None)
                         .map_err(|e| anyhow::anyhow!("GetBuffer: {e:?}"))?;
                     if frames > 0 && !data.is_null() {
                         let bytes = std::slice::from_raw_parts(data, frames as usize * block);
@@ -329,14 +329,14 @@ mod windows {
                     windows::Win32::Media::Audio::AUDCLNT_STREAMFLAGS_NOPERSIST,
                     10_000_000,
                     0,
-                    Some(&format),
+                    &format,
                     None,
                 )
                 .map_err(|e| anyhow::anyhow!("render Initialize: {e:?}"))?;
         }
         let render: IAudioRenderClient = unsafe {
             client
-                .GetService(&IAudioRenderClient::IID)
+                .GetService::<IAudioRenderClient>()
                 .map_err(|e| anyhow::anyhow!("GetService IAudioRenderClient: {e:?}"))?
         };
         let buffer_frames = unsafe { client.GetBufferSize()? } as usize;
@@ -373,10 +373,10 @@ mod windows {
                 let want = (avail / usize::from(CHANNELS)).min(pcm_queue.len() / usize::from(CHANNELS));
                 let take = want * usize::from(CHANNELS);
                 let chunk: Vec<i16> = pcm_queue.drain(..take).collect();
-                let mut data: *mut u8 = std::ptr::null_mut();
                 unsafe {
-                    render
-                        .GetBuffer(want as u32, &mut data)
+                    // windows 0.61: GetBuffer mengembalikan pointer langsung.
+                    let data = render
+                        .GetBuffer(want as u32)
                         .map_err(|e| anyhow::anyhow!("render GetBuffer: {e:?}"))?;
                     let dst =
                         std::slice::from_raw_parts_mut(data as *mut i16, chunk.len());

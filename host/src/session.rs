@@ -39,7 +39,7 @@ pub struct Session {
     pc: Arc<RTCPeerConnection>,
     incoming_rx: tokio::sync::Mutex<mpsc::UnboundedReceiver<Arc<RTCDataChannel>>>,
     /// Track audio jarak jauh dari client (mic passthrough), bila ada.
-    remote_audio: tokio::sync::Mutex<Option<Arc<TrackRemote>>>,
+    remote_audio: Arc<tokio::sync::Mutex<Option<Arc<TrackRemote>>>>,
 }
 
 // RTCPeerConnection tidak implement Debug; cukup identitas struct saja.
@@ -101,11 +101,11 @@ impl Session {
         }));
 
         // Tangkap track audio masuk (mic client) untuk passthrough.
-        let remote_audio: tokio::sync::Mutex<Option<Arc<TrackRemote>>> =
-            tokio::sync::Mutex::new(None);
-        let audio_slot = remote_audio.clone();
+        let remote_audio: Arc<tokio::sync::Mutex<Option<Arc<TrackRemote>>>> =
+            Arc::new(tokio::sync::Mutex::new(None));
+        let audio_slot = Arc::clone(&remote_audio);
         pc.on_track(Box::new(move |track, _, _| {
-            let audio_slot = audio_slot.clone();
+            let audio_slot = Arc::clone(&audio_slot);
             Box::pin(async move {
                 if let Some(t) = track {
                     if t.kind() == RTPCodecType::Audio {
