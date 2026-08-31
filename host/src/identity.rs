@@ -136,7 +136,16 @@ pub fn set_password(pw: &str) -> std::io::Result<()> {
 }
 
 /// Direktori konfigurasi host (lintas platform, tanpa crate tambahan).
+///
+/// Bisa diarahkan ulang lewat env `XYDESK_HOME` — dipakai test otomatis dan
+/// mode portable (installer tanpa instalasi: identitas ikut folder aplikasi).
 fn config_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("XYDESK_HOME") {
+        let dir = dir.trim();
+        if !dir.is_empty() {
+            return PathBuf::from(dir);
+        }
+    }
     let base = std::env::var("USERPROFILE")
         .or_else(|_| std::env::var("HOME"))
         .unwrap_or_else(|_| ".".to_string());

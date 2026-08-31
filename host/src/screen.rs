@@ -165,6 +165,15 @@ pub fn capture_status() -> &'static str {
     }
 }
 
+/// Benar bila encoder NVENC hardware sedang dipakai (hanya bisa di Windows).
+/// Dibaca oleh control API (`control::VideoStats`) untuk ditampilkan shell
+/// desktop. Ditulis oleh modul `windows` saat encoder dipilih.
+static NVENC_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn nvenc_active() -> bool {
+    NVENC_ACTIVE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 // ── Implementasi Windows: DXGI Desktop Duplication + encode ──────────────
 #[cfg(target_os = "windows")]
 mod windows {
@@ -332,6 +341,7 @@ mod windows {
             // butuh dimensi genap; kalau tidak cocok atau gagal (tidak ada
             // GPU NVIDIA / driver < R550), tetap di openh264 — tidak crash.
             if self.frames == 0 {
+                super::NVENC_ACTIVE.store(false, std::sync::atomic::Ordering::Relaxed);
                 if width.is_multiple_of(2) && height.is_multiple_of(2) {
                     match crate::nvenc::NvEnc::new(width as u32, height as u32, super::TARGET_BPS) {
                         Ok(enc) => {
@@ -341,6 +351,7 @@ mod windows {
                                 height,
                                 super::TARGET_BPS / 1000
                             );
+                            super::NVENC_ACTIVE.store(true, std::sync::atomic::Ordering::Relaxed);
                             self.encoder = EncoderKind::Nvenc(enc);
                         }
                         Err(e) => {

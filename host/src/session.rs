@@ -38,6 +38,13 @@ pub struct Session {
     incoming_rx: tokio::sync::Mutex<mpsc::UnboundedReceiver<Arc<RTCDataChannel>>>,
 }
 
+// RTCPeerConnection tidak implement Debug; cukup identitas struct saja.
+impl std::fmt::Debug for Session {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Session").finish_non_exhaustive()
+    }
+}
+
 impl Session {
     /// Membuat peer connection (answerer) dengan server STUN/TURN opsional.
     pub async fn new(stun: Vec<String>, turn: Vec<RTCIceServer>) -> Result<Self> {

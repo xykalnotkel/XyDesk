@@ -21,6 +21,10 @@ use tokio_tungstenite::tungstenite::Message;
 use xydesk_host::pairedpeers::PairedPeers;
 use xydesk_host::pairguard::{self, PairGuard};
 use xydesk_host::session::{IceCandidate, Session};
+use xydesk_host::{
+    control::{ControlState, EngineState},
+    screen,
+};
 
 /// SDP ter-serialisasi (objek `{type, sdp}` — identik dgn sisi client).
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -108,6 +112,10 @@ struct Args {
     /// Tinggi frame benchmark (default 180; pakai 1080 untuk 1080p)
     #[arg(long, value_name = "PX", default_value_t = xydesk_host::screen::TEST_HEIGHT)]
     bench_h: usize,
+    /// Port control API lokal untuk shell desktop (127.0.0.1 saja).
+    /// 0 = port efemeral (default; shell membaca alamat + token dari stdout).
+    #[arg(long, value_name = "PORT", default_value_t = 0)]
+    control_port: u16,
 }
 
 #[tokio::main]
@@ -192,6 +200,22 @@ async fn main() -> Result<()> {
         .as_deref()
         .context("--token wajib saat menjalankan Host")?;
 
+    // ── Control API lokal (shell desktop: Electron + Next.js, desktop/) ──
+    // Keadaan mesin ini dibagikan ke loop signaling di bawah DAN ke server
+    // HTTP (lihat control.rs). Token dicetak sekali — hanya shell yang
+    // men-spawn proses ini yang membacanya.
+    let control = Arc::new(Mutex::new(ControlState::new(
+        device_id.clone(),
+        password.clone(),
+        args.url.clone(),
+    )));
+    let control_server = xydesk_host::control::start(control.clone(), args.control_port).await?;
+    println!(
+        "[control] http://127.0.0.1:{} token={}",
+        control_server.addr.port(),
+        control_server.token
+    );
+
     println!(
         "[xydesk-host] sumber video: {}",
         xydesk_host::screen::capture_status()
@@ -218,6 +242,7 @@ async fn main() -> Result<()> {
         HeaderValue::from_str(&format!("Bearer {token}"))?,
     );
 
+    control.lock().unwrap().state = EngineState::Connecting;
     let (mut ws, _) = connect_async(req).await.context("gagal hubung signaling")?;
     println!("[xydesk-host] terhubung ke {}", args.url);
 
@@ -246,6 +271,9 @@ async fn main() -> Result<()> {
     // handler status WebRTC (lihat arm "offer") harus bisa melepas slot sesi
     // saat client hilang tanpa mengirim `bye`.
     let paired = Arc::new(Mutex::new(PairedPeers::new()));
+    // Registri yang sama juga dipakai aksi control API `stop-session` — satu
+    // sumber kebenaran izin, dua pemanggil.
+    control.lock().unwrap().paired = Some(paired.clone());
 
     while let Some(m) = ws.next().await {
         let m = m.context("koneksi putus")?;
@@ -256,7 +284,10 @@ async fn main() -> Result<()> {
         };
 
         match msg.kind.as_str() {
-            "welcome" => println!("[xydesk-host] terdaftar sebagai {}", device_id),
+            "welcome" => {
+                println!("[xydesk-host] terdaftar sebagai {}", device_id);
+                control.lock().unwrap().state = EngineState::Ready;
+            }
 
             "pair" => {
                 let from = msg.from.unwrap_or_default();
@@ -397,6 +428,7 @@ async fn main() -> Result<()> {
                 {
                     let paired = paired.clone();
                     let client = client.clone();
+                    let control = control.clone();
                     session.on_state_change(move |state| {
                         use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
                         if matches!(
@@ -407,6 +439,9 @@ async fn main() -> Result<()> {
                         ) {
                             println!("[xydesk-host] koneksi {client} {state} — slot dilepas");
                             paired.lock().unwrap().revoke(&client);
+                            // Cerminkan juga ke control API agar shell desktop
+                            // langsung kembali menampilkan "siap".
+                            control.lock().unwrap().mark_stopped();
                         }
                     });
                 }
@@ -455,6 +490,7 @@ async fn main() -> Result<()> {
                 // Frame H264 ter-encode diambil dari channel, ditulis ke track
                 // yang sudah terdaftar di dalam `Session::answer` di atas.
                 {
+                    let control = control.clone();
                     tokio::spawn(async move {
                         let track = video_track;
                         println!("[xydesk-host] track video siap — streaming");
@@ -474,6 +510,13 @@ async fn main() -> Result<()> {
                             }
                         });
 
+                        // Statistik video untuk control API (shell desktop):
+                        // frame terkirim + FPS rata-rata jendela 1 detik +
+                        // status encoder NVENC.
+                        let mut fps_window: u64 = 0;
+                        let mut fps_start = std::time::Instant::now();
+                        let mut fps_now = 0.0_f64;
+
                         while let Some(data) = vrx.recv().await {
                             let sample = webrtc::media::Sample {
                                 data: bytes::Bytes::from(data),
@@ -487,10 +530,27 @@ async fn main() -> Result<()> {
                                 eprintln!("[xydesk-host] kirim frame gagal: {e}");
                                 break;
                             }
+                            fps_window += 1;
+                            let elapsed = fps_start.elapsed();
+                            if elapsed >= std::time::Duration::from_secs(1) {
+                                fps_now = fps_window as f64 / elapsed.as_secs_f64();
+                                fps_window = 0;
+                                fps_start = std::time::Instant::now();
+                            }
+                            {
+                                let mut st = control.lock().unwrap();
+                                st.video.frames_sent += 1;
+                                st.video.fps = fps_now;
+                                st.video.nvenc = screen::nvenc_active();
+                            }
                         }
                     });
                 }
 
+                control
+                    .lock()
+                    .unwrap()
+                    .set_streaming(client.clone(), session.clone());
                 active = Some(session);
             }
 
@@ -530,6 +590,7 @@ async fn main() -> Result<()> {
                 // Sesi selesai bukan alasan untuk terus mempercayai peer:
                 // menyambung ulang wajib pairing lagi.
                 paired.lock().unwrap().revoke(&from);
+                control.lock().unwrap().mark_stopped();
             }
             "error" => println!("[xydesk-host] error: {}", msg.error.unwrap_or_default()),
             other => println!("[xydesk-host] pesan: {other}"),
