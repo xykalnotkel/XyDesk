@@ -187,15 +187,15 @@ mod windows {
         let Ok(device) = device() else {
             return Vec::new();
         };
-        let Ok(enumerator) = unsafe { device.cast::<IMMDeviceEnumerator>() } else {
+        let Ok(enumerator) = (unsafe { device.cast::<IMMDeviceEnumerator>() }) else {
             return Vec::new();
         };
         let Ok(collection) =
-            unsafe { enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE) }
+            (unsafe { enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE) })
         else {
             return Vec::new();
         };
-        let Ok(count) = unsafe { collection.GetCount() } else {
+        let Ok(count) = (unsafe { collection.GetCount() }) else {
             return Vec::new();
         };
         let mut out = Vec::new();
@@ -222,7 +222,9 @@ mod windows {
     pub fn set_master_volume(vol: f32) -> bool {
         use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
         let Ok(device) = device() else { return false };
-        let Ok(volume) = unsafe { device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None) } else {
+        let Ok(volume) =
+            (unsafe { device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None) })
+        else {
             return false;
         };
         unsafe { volume.SetMasterVolumeLevelScalar(vol.clamp(0.0, 1.0), std::ptr::null()) }.is_ok()
