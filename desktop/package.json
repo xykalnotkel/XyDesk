@@ -15,6 +15,7 @@
     "package:portable": "npm run build && electron-builder --win portable --x64 --publish never"
   },
   "dependencies": {
+    "lucide-react": "^1.37.0",
     "next": "15.1.6",
     "react": "19.0.0",
     "react-dom": "19.0.0"

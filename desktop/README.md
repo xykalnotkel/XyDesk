@@ -12,7 +12,8 @@ desktop/
 │   └── preload.cjs     # contextBridge → window.xydesk
 ├── app/                # renderer Next.js (App Router, static export)
 │   ├── layout.tsx
-│   ├── page.tsx        # panel status/identitas/sesi/log
+│   ├── page.tsx        # sidebar: Home/Connect/News/Profile/Settings
+│   ├── news.ts         # klien API berita publik (news.xystudio.my.id)
 │   └── globals.css     # token Quiet Surface (sama dengan lib/core/tokens.dart)
 ├── global.d.ts         # tipe kontrak IPC
 ├── next.config.mjs     # output: 'export'

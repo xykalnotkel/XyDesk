@@ -16,10 +16,26 @@ import {
   consumeGoogleRedirect,
   GOOGLE_CLIENT_ID,
 } from './google';
+import {
+  fetchNewsList,
+  fetchNewsPost,
+  formatNewsDate,
+  NEWS_CATEGORIES,
+  NEWS_SHARE_BASE,
+  NewsComment,
+  NewsPost,
+  postComment,
+  toggleLike,
+} from './news';
 import { InputCodec, RtcPhase, RtcSession } from './rtc';
 import { TOUCH_ROWS, vkFromCode } from './vk';
 
-type Route = '/' | '/connect' | '/download' | '/legal' | '/blog';
+type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news';
+type Route = StaticRoute | NewsDetailRoute;
+interface NewsDetailRoute {
+  page: 'news-detail';
+  slug: string;
+}
 type AuthStep = 'closed' | 'login' | 'otp';
 
 const TOKEN_KEY = 'xydesk.web.jwt';
@@ -57,217 +73,302 @@ const downloads = [
   },
 ] as const;
 
-function currentRoute(): Route {
-  const path = window.location.pathname.replace(/\/$/, '') || '/';
-  return ['/connect', '/download', '/legal', '/blog'].includes(path)
-    ? (path as Route)
-    : '/';
+function routePath(r: Route): string {
+  if (typeof r === 'string') return r;
+  return `/news/${r.slug}`;
 }
 
-function useRoute() {
+function currentRoute(): Route {
+  const path = window.location.pathname.replace(/\/$/, '') || '/';
+  if (path.startsWith('/news/')) {
+    const slug = decodeURIComponent(path.slice('/news/'.length));
+    if (slug) return { page: 'news-detail', slug };
+    return '/news';
+  }
+  switch (path) {
+    case '/connect':
+      return '/connect';
+    case '/download':
+      return '/download';
+    case '/legal':
+      return '/legal';
+    case '/news':
+      return '/news';
+    default:
+      return '/';
+  }
+}
+
+function useRoute(): [Route, (r: Route) => void] {
   const [route, setRoute] = useState<Route>(currentRoute);
   useEffect(() => {
-    const onPop = () => setRoute(currentRoute());
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    const onChange = () => {
+      setRoute(currentRoute());
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('popstate', onChange);
+    return () => window.removeEventListener('popstate', onChange);
   }, []);
-  const navigate = useCallback((next: Route) => {
-    window.history.pushState({}, '', next);
-    setRoute(next);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const navigate = useCallback((r: Route) => {
+    window.history.pushState({}, '', routePath(r));
+    setRoute(r);
+    window.scrollTo(0, 0);
   }, []);
-  return { route, navigate };
+  return [route, navigate];
 }
 
 export default function App() {
-  const { route, navigate } = useRoute();
-  useEffect(() => {
-    const titles: Record<Route, string> = {
-      '/': 'XyDesk — Remote Desktop untuk Semua Perangkat',
-      '/connect': 'Connect Web — XyDesk',
-      '/download': 'Download XyDesk untuk Android dan Windows',
-      '/blog': 'XyDesk Notes',
-      '/legal': 'Legal dan Privasi — XyDesk',
-    };
-    document.title = titles[route];
-  }, [route]);
+  const [route, navigate] = useRoute();
+  const isConnect = route === '/connect';
+
+  if (isConnect) {
+    return (
+      <>
+        <SiteHeader route={route} navigate={navigate} bare />
+        <RemoteApp />
+      </>
+    );
+  }
+
+  let page: React.ReactNode;
+  if (route === '/download') page = <DownloadPage />;
+  else if (route === '/legal') page = <LegalPage />;
+  else if (route === '/news') page = <NewsPage navigate={navigate} />;
+  else if (typeof route === 'object' && route.page === 'news-detail')
+    page = <NewsDetailPage slug={route.slug} navigate={navigate} />;
+  else page = <LandingPage navigate={navigate} />;
+
   return (
-    <div className="site-shell">
+    <div className="site">
       <SiteHeader route={route} navigate={navigate} />
-      {route === '/' && <LandingPage navigate={navigate} />}
-      {route === '/connect' && <RemoteApp />}
-      {route === '/download' && <DownloadPage />}
-      {route === '/legal' && <LegalPage />}
-      {route === '/blog' && <BlogPage />}
-      {route !== '/connect' && <SiteFooter navigate={navigate} />}
+      {page}
+      <SiteFooter navigate={navigate} />
     </div>
   );
 }
 
-function SiteHeader({ route, navigate }: { route: Route; navigate: (r: Route) => void }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const go = (next: Route) => {
-    setMenuOpen(false);
-    navigate(next);
-  };
+function Logo({ size = 30 }: { size?: number }) {
   return (
-    <header className="site-header">
-      <button className="brand-button" onClick={() => go('/')}>
-        <img src="/logo.png" alt="" className="brand-logo" />
-        <span>XyDesk</span>
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#7654F6" />
+          <stop offset="1" stopColor="#9A7BFF" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="3" width="26" height="26" rx="7" fill="url(#logo-g)" opacity="0.16" />
+      <path
+        d="M9.5 10.5 L16 22.5 L22.5 10.5 M16 22.5 L16 14.5"
+        stroke="url(#logo-g)"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+function SiteHeader({
+  route,
+  navigate,
+  bare = false,
+}: {
+  route: Route;
+  navigate: (r: Route) => void;
+  bare?: boolean;
+}) {
+  const current = typeof route === 'string' ? route : '/news';
+  return (
+    <header className={bare ? 'site-header bare' : 'site-header'}>
+      <button className="brand" onClick={() => navigate('/')} aria-label="Beranda XyDesk">
+        <Logo />
+        <strong>XyDesk</strong>
       </button>
-      <button
-        className={menuOpen ? 'menu-toggle open' : 'menu-toggle'}
-        aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
-        aria-expanded={menuOpen}
-        onClick={() => setMenuOpen((value) => !value)}
-      >
-        <span />
-        <span />
-        <span />
-      </button>
-      {menuOpen && <button className="menu-backdrop" aria-label="Tutup menu" onClick={() => setMenuOpen(false)} />}
-      <nav className={menuOpen ? 'open' : ''} aria-label="Navigasi utama">
-        {([
-          ['/', 'Beranda'],
-          ['/connect', 'Connect'],
-          ['/download', 'Download'],
-          ['/blog', 'Blog'],
-          ['/legal', 'Legal'],
-        ] as const).map(([path, label]) => (
-          <button
-            key={path}
-            className={route === path ? 'nav-link active' : 'nav-link'}
-            onClick={() => go(path)}
-          >
-            {label}
+      {!bare && (
+        <nav className="top-nav">
+          <button className={current === '/' ? 'active' : ''} onClick={() => navigate('/')}>
+            Beranda
           </button>
-        ))}
-      </nav>
-      <button className="header-cta" onClick={() => go('/connect')}>
-        Buka Web
-      </button>
+          <button className={current === '/news' ? 'active' : ''} onClick={() => navigate('/news')}>
+            Berita
+          </button>
+          <button className={current === '/download' ? 'active' : ''} onClick={() => navigate('/download')}>
+            Unduh
+          </button>
+        </nav>
+      )}
+      <div className="header-actions">
+        {!bare && (
+          <button className="btn ghost" onClick={() => navigate('/connect')}>
+            Connect Web
+          </button>
+        )}
+        <a className="btn primary" href={`${RELEASE_BASE}/XyDesk-Windows-x64-Setup.exe`}>
+          Unduh Windows
+        </a>
+      </div>
     </header>
+  );
+}
+
+function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
+  const [latest, setLatest] = useState<NewsPost[]>([]);
+
+  useEffect(() => {
+    fetchNewsList('semua', 3)
+      .then((r) => setLatest(r.posts))
+      .catch(() => {});
+  }, []);
+
+  return (
+    <main className="landing">
+      {/* ── Hero ── */}
+      <section className="hero">
+        <div className="hero-copy">
+          <span className="hero-eyebrow">
+            <span className="dot" /> Remote desktop low-latency
+          </span>
+          <h1>
+            PC kamu, di
+            <span className="grad"> genggaman</span>.
+          </h1>
+          <p>
+            Akses layar PC dari HP atau browser dengan target glass-to-glass di
+            bawah 40 ms di LAN. Untuk kerja, untuk game — tanpa server perantara
+            yang menyimpan sesimu.
+          </p>
+          <div className="hero-cta">
+            <button className="btn primary big" onClick={() => navigate('/download')}>
+              Unduh sekarang
+            </button>
+            <button className="btn ghost big" onClick={() => navigate('/connect')}>
+              Coba dari browser
+            </button>
+          </div>
+          <p className="hero-note">Gratis. Media sesi peer-to-peer, tidak lewat server kami.</p>
+        </div>
+        <div className="hero-art" aria-hidden="true">
+          <div className="hero-screen">
+            <div className="screen-top">
+              <span className="screen-logo">
+                <Logo size={14} /> XyDesk
+              </span>
+              <span className="screen-live">LIVE · 9 ms</span>
+            </div>
+            <div className="screen-body">
+              <div className="screen-fps">60 FPS</div>
+              <div className="screen-vignette" />
+            </div>
+          </div>
+          <img className="float-el el-phone" src="/float-controller.webp" alt="" />
+          <img className="float-el el-kb" src="/float-keyboard.webp" alt="" />
+          <img className="float-el el-mouse" src="/float-mouse.webp" alt="" />
+        </div>
+      </section>
+
+      {/* ── Stats ── */}
+      <section className="stats-strip">
+        <div className="stat">
+          <strong>&lt; 40 ms</strong>
+          <span>target latency LAN</span>
+        </div>
+        <div className="stat">
+          <strong>P2P</strong>
+          <span>media tidak lewat server</span>
+        </div>
+        <div className="stat">
+          <strong>NVENC</strong>
+          <span>encode hardware GPU</span>
+        </div>
+        <div className="stat">
+          <strong>Rp 0</strong>
+          <span>tanpa langganan</span>
+        </div>
+      </section>
+
+      {/* ── Fitur ── */}
+      <section className="features">
+        <h2>Dibangun untuk terasa lokal</h2>
+        <div className="feature-grid">
+          <FeatureCard index="01" title="Panel gaming dua sisi">
+            Trackpad, keyboard virtual dengan modifier sticky, dan HUD glyph
+            border-only yang tidak menutupi piksel game.
+          </FeatureCard>
+          <FeatureCard index="02" title="Pasangan terenkripsi">
+            Pairing password dijaga pembatas laju (anti brute-force), sesi media
+            peer-to-peer lewat WebRTC.
+          </FeatureCard>
+          <FeatureCard index="03" title="Encoder sadar konten">
+            NVENC hardware saat GPU ada, fallback software otomatis — dengan
+            bitrate terkendali agar Wi-Fi rumah tetap lega.
+          </FeatureCard>
+          <FeatureCard index="04" title="Jujur soal angka">
+            Status transport ditampilkan apa adanya: pairing, negosiasi,
+            koneksi — bukan layar dummy yang pura-pura tersambung.
+          </FeatureCard>
+        </div>
+      </section>
+
+      {/* ── Berita ── */}
+      {latest.length > 0 && (
+        <section className="home-news">
+          <div className="section-head">
+            <h2>Berita terbaru</h2>
+            <button className="text-link" onClick={() => navigate('/news')}>
+              Lihat semua →
+            </button>
+          </div>
+          <div className="news-grid">
+            {latest.map((p) => (
+              <NewsCard
+                key={p.slug}
+                post={p}
+                onOpen={() => navigate({ page: 'news-detail', slug: p.slug })}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Unduh ── */}
+      <section className="download-cta">
+        <h2>Mulai dari perangkatmu</h2>
+        <PlatformTables compact />
+        <a className="btn primary big" href={`${RELEASE_BASE}/XyDesk-Android-arm64-v8a.apk`}>
+          Unduh untuk Android
+        </a>
+      </section>
+    </main>
+  );
+}
+
+function FeatureCard({
+  index,
+  title,
+  children,
+}: {
+  index: string;
+  title: string;
+  children: string;
+}) {
+  return (
+    <div className="feature-card">
+      <span className="feature-index">{index}</span>
+      <h3>{title}</h3>
+      <p>{children}</p>
+    </div>
   );
 }
 
 function PlatformIcon({ platform }: { platform: 'android' | 'windows' }) {
   return (
     <img
-      className="platform-image-icon"
       src={platform === 'android' ? '/platform-android.svg' : '/platform-windows.svg'}
       alt=""
-      aria-hidden="true"
+      width="20"
+      height="20"
     />
-  );
-}
-
-function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
-  const recommended = useRecommendedDownload();
-  return (
-    <main>
-      <section className="hero">
-        <div className="float-stage" aria-hidden="true">
-          <img className="float-item float-monitor" src="/float-monitor.webp" alt="" />
-          <img className="float-item float-controller" src="/float-controller.webp" alt="" />
-          <img className="float-item float-keyboard" src="/float-keyboard.webp" alt="" />
-          <img className="float-item float-mouse" src="/float-mouse.webp" alt="" />
-          <img className="float-item float-cursor" src="/float-cursor.webp" alt="" />
-          <img className="float-item float-rocket" src="/float-rocket.webp" alt="" />
-          <img className="float-item float-cloud" src="/float-cloud.webp" alt="" />
-          <img className="float-item float-wifi" src="/float-wifi.webp" alt="" />
-          <i className="orbit-dot orbit-dot-a" />
-          <i className="orbit-dot orbit-dot-b" />
-          <i className="orbit-dot orbit-dot-c" />
-        </div>
-        <div className="hero-copy">
-          <h1>XyDesk</h1>
-          <p className="hero-description">
-            Akses PC untuk kerja dan bermain dari Android, Windows, atau browser.
-            Ringan, aman, dan langsung tersambung lewat ID serta password host.
-          </p>
-          <div className="hero-actions">
-            {recommended.file ? (
-              <a className="hero-btn primary-cta platform-cta" href={`${RELEASE_BASE}/${recommended.file}`}>
-                <PlatformIcon platform={recommended.platform === 'windows' ? 'windows' : 'android'} />
-                Download {recommended.platform === 'windows' ? 'Windows' : 'Android'}
-              </a>
-            ) : (
-              <button className="hero-btn primary-cta" onClick={() => navigate('/connect')}>
-                Buka XyDesk Web
-              </button>
-            )}
-            <button className="hero-btn secondary-cta" onClick={() => navigate('/connect')}>
-              Connect dari Browser
-            </button>
-          </div>
-          <a className="channel-link" href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
-            Join saluran WhatsApp
-          </a>
-          {recommended.file && (
-            <p className="detect-chip">
-              Terdeteksi: <strong>{recommended.label}</strong>
-              {recommended.confidence === 'fallback' && ' (perkiraan)'}
-              {recommended.platform === 'android' && (
-                <button
-                  className="abi-correction"
-                  onClick={() => {
-                    localStorage.setItem(
-                      'xydesk.download.arch',
-                      recommended.architecture === 'arm64'
-                        ? 'android-armv7'
-                        : 'android-arm64',
-                    );
-                    window.location.reload();
-                  }}
-                >
-                  {recommended.architecture === 'arm64'
-                    ? 'HP 32-bit? Pakai ARMv7'
-                    : 'HP 64-bit? Pakai ARM64'}
-                </button>
-              )}
-            </p>
-          )}
-        </div>
-      </section>
-
-      <PlatformTables compact />
-
-      <section className="feature-grid" aria-label="Keunggulan XyDesk">
-        <FeatureCard index="01" title="Satu ID, langsung konek">
-          Tidak perlu menghafal alamat jaringan. Ambil ID dan password dari Host,
-          lalu masukkan dari perangkat pengendali.
-        </FeatureCard>
-        <FeatureCard index="02" title="Paket sesuai perangkat">
-          Android dan Windows dipisah per arsitektur agar unduhan lebih kecil dan
-          tidak membawa library yang tidak dipakai.
-        </FeatureCard>
-        <FeatureCard index="03" title="Verifikasi berlapis">
-          Update memeriksa checksum, ukuran, ABI, package ID, build, dan sertifikat
-          signing sebelum installer dibuka.
-        </FeatureCard>
-      </section>
-
-      <section className="release-strip">
-        <div>
-          <p className="eyebrow">RILIS STABIL</p>
-          <h2>Unduh hanya yang kamu butuhkan.</h2>
-        </div>
-        <button className="secondary-cta" onClick={() => navigate('/download')}>
-          Lihat semua paket
-        </button>
-      </section>
-    </main>
-  );
-}
-
-function FeatureCard({ index, title, children }: { index: string; title: string; children: string }) {
-  return (
-    <article className="feature-card">
-      <span>{index}</span>
-      <h2>{title}</h2>
-      <p>{children}</p>
-    </article>
   );
 }
 
@@ -282,7 +383,11 @@ function useRecommendedDownload() {
 function PlatformTables({ compact = false }: { compact?: boolean }) {
   const android = downloads.filter((item) => item.platform === 'Android');
   const windows = downloads.filter((item) => item.platform !== 'Android');
-  const table = (title: string, icon: 'android' | 'windows', items: readonly (typeof downloads)[number][]) => (
+  const table = (
+    title: string,
+    icon: 'android' | 'windows',
+    items: readonly (typeof downloads)[number][],
+  ) => (
     <section className="platform-table">
       <div className="platform-table-head">
         <PlatformIcon platform={icon} />
@@ -320,12 +425,12 @@ function DownloadPage() {
         terhubung langsung ke GitHub Release terbaru dan dilindungi SHA-256.
       </p>
       {recommended.file ? (
-        <a className="primary-cta centered-cta platform-cta" href={`${RELEASE_BASE}/${recommended.file}`}>
+        <a className="btn primary big centered" href={`${RELEASE_BASE}/${recommended.file}`}>
           <PlatformIcon platform={recommended.platform === 'windows' ? 'windows' : 'android'} />
           Download For {recommended.platform === 'windows' ? 'Windows' : 'Android'}
         </a>
       ) : (
-        <a className="primary-cta centered-cta" href="/connect">
+        <a className="btn primary big centered" href="/connect">
           Buka XyDesk Web
         </a>
       )}
@@ -385,25 +490,318 @@ function LegalPage() {
   );
 }
 
-function BlogPage() {
-  const posts = [
-    ['Rilis 1.3.0', 'Paket Android dan Windows kini dipisah per arsitektur agar lebih kecil dan presisi.'],
-    ['Cara memilih APK', 'ARM64 cocok untuk hampir semua HP modern. ARMv7 disediakan untuk perangkat lama.'],
-    ['Mengapa update diverifikasi', 'Checksum saja belum cukup; XyDesk turut memeriksa ABI, build, package, dan signing.'],
-  ];
+function NewsCard({
+  post,
+  onOpen,
+}: {
+  post: NewsPost;
+  onOpen: () => void;
+}) {
   return (
-    <main className="content-page blog-page">
-      <p className="eyebrow">XYDESK NOTES</p>
-      <h1>Catatan produk tanpa jargon kosong.</h1>
-      <div className="blog-grid">
-        {posts.map(([title, summary], index) => (
-          <article key={title}>
-            <span>0{index + 1}</span>
-            <h2>{title}</h2>
-            <p>{summary}</p>
-          </article>
+    <article className="news-card" onClick={onOpen}>
+      <div className="news-card-cover">
+        <img src={post.cover} alt="" loading="lazy" />
+        <span className="news-cat">{post.category}</span>
+      </div>
+      <div className="news-card-body">
+        <h3>{post.title}</h3>
+        <p>{post.excerpt}</p>
+        <div className="news-card-meta">
+          <span>{formatNewsDate(post.createdAt)}</span>
+          <span>
+            ♥ {post.likeCount} · 💬 {post.commentCount}
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function NewsPage({ navigate }: { navigate: (r: Route) => void }) {
+  const [category, setCategory] = useState<string>('semua');
+  const [posts, setPosts] = useState<NewsPost[] | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    setPosts(null);
+    setError('');
+    fetchNewsList(category)
+      .then((r) => {
+        if (alive) setPosts(r.posts);
+      })
+      .catch((e) => {
+        if (alive) setError(e instanceof Error ? e.message : 'Gagal memuat berita.');
+      });
+    return () => {
+      alive = false;
+    };
+  }, [category]);
+
+  return (
+    <main className="content-page news-page">
+      <p className="eyebrow">XYDESK NEWS</p>
+      <h1>Berita & catatan rilis.</h1>
+      <p className="page-lead">
+        Pembaruan produk, keputusan teknik, dan angka yang kami ukur sendiri —
+        tanpa jargon kosong.
+      </p>
+
+      <div className="news-cats">
+        {NEWS_CATEGORIES.map((c) => (
+          <button
+            key={c}
+            className={category === c ? 'active' : ''}
+            onClick={() => setCategory(c)}
+          >
+            {c === 'semua' ? 'Semua' : c}
+          </button>
         ))}
       </div>
+
+      {error && (
+        <div className="news-state error">
+          {error} — <button onClick={() => setCategory(category)}>coba lagi</button>
+        </div>
+      )}
+
+      {!posts && !error && (
+        <div className="news-grid">
+          {[0, 1, 2].map((i) => (
+            <div className="news-card skeleton" key={i}>
+              <div className="news-card-cover sk" />
+              <div className="news-card-body">
+                <div className="sk-line w80" />
+                <div className="sk-line w100" />
+                <div className="sk-line w60" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {posts && posts.length === 0 && (
+        <div className="news-state">Belum ada berita di kategori ini.</div>
+      )}
+
+      {posts && posts.length > 0 && (
+        <div className="news-grid">
+          {posts.map((p) => (
+            <NewsCard
+              key={p.slug}
+              post={p}
+              onOpen={() => navigate({ page: 'news-detail', slug: p.slug })}
+            />
+          ))}
+        </div>
+      )}
+    </main>
+  );
+}
+
+function NewsDetailPage({
+  slug,
+  navigate,
+}: {
+  slug: string;
+  navigate: (r: Route) => void;
+}) {
+  const [data, setData] = useState<{ post: NewsPost; comments: NewsComment[] } | null>(null);
+  const [error, setError] = useState('');
+  const [likeCount, setLikeCount] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [author, setAuthor] = useState(() => localStorage.getItem('xydesk.news.author') ?? '');
+  const [commentText, setCommentText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    setData(null);
+    setError('');
+    fetchNewsPost(slug)
+      .then((r) => {
+        if (!alive) return;
+        setData(r);
+        setLikeCount(r.post.likeCount);
+        setLiked(localStorage.getItem(`xydesk.news.liked.${slug}`) === '1');
+      })
+      .catch((e) => {
+        if (alive) setError(e instanceof Error ? e.message : 'Berita tidak ditemukan.');
+      });
+    return () => {
+      alive = false;
+    };
+  }, [slug]);
+
+  const post = data?.post;
+
+  const like = async () => {
+    if (!post) return;
+    setBusy(true);
+    try {
+      const r = await toggleLike(post.slug);
+      setLikeCount(r.likeCount);
+      setLiked(r.liked);
+      localStorage.setItem(`xydesk.news.liked.${post.slug}`, r.liked ? '1' : '0');
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Gagal memproses like.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitComment = async () => {
+    if (!post || commentText.trim().length < 2) return;
+    const name = author.trim() || 'Anonim';
+    setBusy(true);
+    setNotice('');
+    try {
+      localStorage.setItem('xydesk.news.author', name);
+      const r = await postComment(post.slug, name, commentText.trim());
+      setData((d) =>
+        d ? { post: d.post, comments: [...d.comments, r.comment] } : d,
+      );
+      setCommentText('');
+      setNotice('Komentar terkirim.');
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Gagal mengirim komentar.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const shareUrl = post ? `${NEWS_SHARE_BASE}/${post.slug}` : '';
+
+  const share = async () => {
+    if (!post) return;
+    const dataToShare = { title: post.title, text: post.excerpt, url: shareUrl };
+    if (navigator.share) {
+      try {
+        await navigator.share(dataToShare);
+        return;
+      } catch {
+        /* batal / tidak didukung → tombol manual tetap tersedia */
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setNotice('Tautan disalin — tempel ke media sosial.');
+    } catch {
+      setNotice(shareUrl);
+    }
+  };
+
+  const socials: { label: string; href: string }[] = post
+    ? [
+        { label: 'WhatsApp', href: `https://wa.me/?text=${encodeURIComponent(`${post.title} ${shareUrl}`)}` },
+        { label: 'Telegram', href: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}` },
+        { label: 'X', href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(shareUrl)}` },
+        { label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
+      ]
+    : [];
+
+  return (
+    <main className="content-page news-detail">
+      <button className="back-action" onClick={() => navigate('/news')}>
+        ← Semua berita
+      </button>
+
+      {error && <div className="news-state error">{error}</div>}
+
+      {!post && !error && (
+        <div className="news-detail-skeleton">
+          <div className="sk sk-block cover" />
+          <div className="sk-line w80 big" />
+          <div className="sk-line w100" />
+          <div className="sk-line w100" />
+          <div className="sk-line w40" />
+        </div>
+      )}
+
+      {post && (
+        <article className="post">
+          <div className="post-cover">
+            <img src={post.cover} alt="" />
+          </div>
+          <span className="news-cat">{post.category}</span>
+          <h1>{post.title}</h1>
+          <div className="post-meta">
+            <span>{post.author}</span>
+            <span>·</span>
+            <span>{formatNewsDate(post.createdAt)}</span>
+          </div>
+
+          <div className="post-actions">
+            <button
+              className={`like-btn ${liked ? 'liked' : ''}`}
+              onClick={like}
+              disabled={busy}
+              title={liked ? 'Batal suka' : 'Suka'}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7z" />
+              </svg>
+              {likeCount}
+            </button>
+            <button className="share-btn" onClick={share}>
+              Bagikan
+            </button>
+            {socials.map((s) => (
+              <a key={s.label} className="social-chip" href={s.href} target="_blank" rel="noreferrer">
+                {s.label}
+              </a>
+            ))}
+          </div>
+
+          <div className="post-body">
+            {post.content.split(/\n\n+/).map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+
+          <section className="comments">
+            <h2>Komentar ({data?.comments.length ?? 0})</h2>
+            <div className="comment-form">
+              <input
+                placeholder="Nama kamu"
+                maxLength={40}
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+              />
+              <textarea
+                placeholder="Tulis komentar…"
+                maxLength={1000}
+                rows={3}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+              />
+              {notice && <p className="muted">{notice}</p>}
+              <button
+                className="btn primary"
+                disabled={busy || commentText.trim().length < 2}
+                onClick={submitComment}
+              >
+                {busy ? 'Mengirim…' : 'Kirim komentar'}
+              </button>
+            </div>
+            <div className="comment-list">
+              {(data?.comments ?? []).length === 0 && (
+                <p className="muted">Belum ada komentar. Jadilah yang pertama.</p>
+              )}
+              {(data?.comments ?? []).map((c) => (
+                <div className="comment" key={c.id}>
+                  <div className="comment-head">
+                    <strong>{c.author}</strong>
+                    <span>{formatNewsDate(c.createdAt)}</span>
+                  </div>
+                  <p>{c.content}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </article>
+      )}
     </main>
   );
 }
@@ -876,6 +1274,8 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     rejected: 'ID atau password salah. Periksa keduanya lalu coba lagi.',
     'peer-offline':
       'ID tidak ditemukan. Pastikan ID benar dan XyDesk Host sedang berjalan di PC.',
+    'host-busy':
+      'Perangkat sedang dipakai sesi lain. Koneksi ini ditolak — tunggu sesi selesai lalu coba lagi.',
     ended: 'Sesi berakhir',
   };
 
@@ -1017,7 +1417,7 @@ function SiteFooter({ navigate }: { navigate: (r: Route) => void }) {
     <footer className="site-footer">
       <div className="footer-brand">
         <div className="brand">
-          <img src="/logo.png" alt="" className="brand-logo" />
+          <Logo size={22} />
           <strong>XyDesk</strong>
         </div>
         <p>Remote desktop ringan untuk kerja, bermain, dan mengakses PC dari mana saja.</p>
@@ -1026,7 +1426,7 @@ function SiteFooter({ navigate }: { navigate: (r: Route) => void }) {
         <strong>Produk</strong>
         <button onClick={() => navigate('/connect')}>Connect Web</button>
         <button onClick={() => navigate('/download')}>Download</button>
-        <button onClick={() => navigate('/blog')}>Blog</button>
+        <button onClick={() => navigate('/news')}>Berita</button>
       </div>
       <div className="footer-column">
         <strong>Platform</strong>

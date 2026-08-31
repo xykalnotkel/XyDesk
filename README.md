@@ -45,7 +45,10 @@ latency end-to-end.
 | TURN (kredensial Cloudflare ber-TTL) | Selesai |
 | Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Loop RTP terbukti di test loopback; capture DXGI nyata menunggu verifikasi lab Windows |
 | Control API lokal host (HTTP 127.0.0.1 + token) | Selesai — status, password, stop-session untuk shell desktop; 8 test otomatis |
-| Desktop shell (Electron + Next.js, engine tetap Rust) | Selesai — supervisor engine + panel status; installer Windows dibangun CI |
+| Desktop shell (Electron + Next.js, engine tetap Rust) | Selesai — sidebar Home/Connect/News/Profile/Settings; installer Windows dibangun CI |
+| News (Web + Android + Desktop) | Live — Worker publik + D1 di `news.xystudio.my.id`; like, komentar, berbagi sosial + OpenGraph per konten |
+| Tema aplikasi Android | Terang (Paper) saja — mode gelap dihapus agar satu set kontras teruji |
+| Sesi tunggal (anti-ambil alih) | Selesai — koneksi kedua ditolak `host-sibuk` meski password benar; client menampilkan status "perangkat sedang dipakai" |
 | Test loopback host (SDP + video + data channel) | Selesai — `cargo test` hijau; jaga bug regresi SDP |
 | Benchmark encode (`xydesk-host --bench`) | Selesai — **~30 ms @640x360**: openh264 CPU TIDAK tembus <10 ms @1080p, hardware encode (NVENC/AMF/QSV) wajib untuk target itu |
 | Benchmark latency end-to-end di jaringan nyata | Belum — protokolnya ada di `docs/LATENCY.md` |

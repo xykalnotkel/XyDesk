@@ -245,6 +245,27 @@ function registerIpc() {
     platform: process.platform,
     packaged: app.isPackaged,
   }));
+
+  // Mulai dengan Windows — pengaturan OS sungguhan (bukan dummy).
+  ipcMain.handle('autostart:get', () => app.getLoginItemSettings().openAtLogin);
+
+  ipcMain.handle('autostart:set', (_event, enable) => {
+    try {
+      app.setLoginItemSettings({ openAtLogin: !!enable });
+      return { ok: true, enabled: app.getLoginItemSettings().openAtLogin };
+    } catch (e) {
+      return { ok: false, error: String(e && e.message ? e.message : e) };
+    }
+  });
+
+  // Restart engine paksa: bunuh proses; watchdog akan menyalakannya lagi
+  // dengan token baru.
+  ipcMain.handle('engine:restart', () => {
+    const wasAlive = engine && engine.exitCode === null;
+    if (wasAlive) engine.kill();
+    scheduleRestart();
+    return { ok: true, restarted: wasAlive };
+  });
 }
 
 // ── Renderer: server statis (produksi) / URL dev ────────────────────────

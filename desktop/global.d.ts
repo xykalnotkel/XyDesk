@@ -54,6 +54,9 @@ declare global {
       runAction(req: { action: string; password?: string }): Promise<ActionPayload>;
       getLogs(): Promise<LogEntry[]>;
       getInfo(): Promise<InfoPayload>;
+      getAutostart(): Promise<boolean>;
+      setAutostart(enable: boolean): Promise<{ ok: boolean; enabled?: boolean; error?: string }>;
+      restartEngine(): Promise<{ ok: boolean; restarted?: boolean }>;
     };
   }
 }

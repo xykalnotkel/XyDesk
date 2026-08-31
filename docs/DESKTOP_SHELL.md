@@ -10,7 +10,7 @@ Pemisahan peran yang ketat:
 
 | Lapisan | Teknologi | Tanggung jawab |
 |---|---|---|
-| Shell | Electron + Next.js (static export) | UI, identitas, watchdog engine, panel sesi |
+| Shell | Electron + Next.js (static export) | Sidebar (Home, Connect, News, Profile, Settings), identitas, watchdog engine |
 | Engine | Rust (`xydesk-host.exe`) | Signaling, pairing, capture DXGI, encode NVENC, WebRTC, injeksi input |
 
 **Kenapa Electron boleh di sini tapi tidak untuk media:** desktopCapturer /
@@ -84,6 +84,15 @@ npm run electron   # butuh xydesk-host.exe (cargo build --release di host/)
 
 Mode demo: bila `window.xydesk` tidak ada (dibuka di browser), UI menampilkan
 data contoh dengan banner "Mode pratinjau".
+
+## Halaman sidebar
+
+- **Home** — status engine, uptime, sesi aktif (durasi/FPS/encoder) + akhiri sesi.
+- **Connect** — ID + password pairing, salin/tampilkan, password acak/kustom.
+- **News** — feed publik `news.xystudio.my.id` (like, komentar, salin tautan berbagi).
+- **Profile** — identitas perangkat, versi, tautan eksternal.
+- **Settings** (pojok kiri bawah) — mulai dengan Windows (nyata lewat
+  `app.setLoginItemSettings`), mulai ulang engine, log engine.
 
 ## Paket & rilis
 

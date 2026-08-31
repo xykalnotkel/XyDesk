@@ -10,6 +10,7 @@ export type RtcPhase =
   | 'connected'
   | 'rejected'
   | 'peer-offline'
+  | 'host-busy'
   | 'ended';
 
 interface SignalMessage {
@@ -145,6 +146,9 @@ export class RtcSession {
         return this.stop();
       case 'error':
         if (m.error === 'peer-offline') this.onPhase('peer-offline');
+        // Host sibuk: sesi lain sedang berjalan — koneksi kedua ditolak
+        // meski password benar (host melayani satu sesi pada satu waktu).
+        if (m.error === 'host-sibuk') this.onPhase('host-busy');
         return;
     }
   }

@@ -1,0 +1,14 @@
+{
+  "name": "xydesk-news-api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute xydesk-news --remote --file schema.sql",
+    "db:seed": "wrangler d1 execute xydesk-news --remote --file seed.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.86.0"
+  }
+}

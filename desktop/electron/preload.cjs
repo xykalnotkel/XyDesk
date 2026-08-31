@@ -8,4 +8,7 @@ contextBridge.exposeInMainWorld('xydesk', {
   runAction: (req) => ipcRenderer.invoke('action', req),
   getLogs: () => ipcRenderer.invoke('logs'),
   getInfo: () => ipcRenderer.invoke('info'),
+  getAutostart: () => ipcRenderer.invoke('autostart:get'),
+  setAutostart: (enable) => ipcRenderer.invoke('autostart:set', enable),
+  restartEngine: () => ipcRenderer.invoke('engine:restart'),
 });

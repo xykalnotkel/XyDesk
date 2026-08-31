@@ -1,0 +1,46 @@
+name: Deploy News (Cloudflare Workers + D1)
+
+# Deploy Worker berita publik (news.xystudio.my.id) — TERPISAH dari Worker
+# signaling agar deploy berita tidak pernah menyentuh jalur signaling
+# produksi. Migrasi skema D1 dijalankan dulu (idempoten).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'news/**'
+      - '.github/workflows/deploy-news.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy News Worker + migrasi D1
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Pasang dependensi
+        working-directory: news
+        run: npm ci
+
+      - name: Migrasi skema D1 (idempoten)
+        working-directory: news
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run db:init
+
+      - name: Deploy Worker
+        working-directory: news
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run deploy
