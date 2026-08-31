@@ -3,6 +3,4 @@
     <!-- Tema terang saja (#FAFAF9) — splash native mengikuti palet terang. -->
     <color name="splash_background">#FAFAF9</color>
     <color name="splash_background_light">#FAFAF9</color>
-    <!-- Latar ikon launcher: hitam monokrom, X putih di atasnya. -->
-    <color name="ic_launcher_background">#0A0A0A</color>
 </resources>
