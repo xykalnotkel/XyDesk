@@ -7,6 +7,8 @@ pub mod audio;
 pub mod control;
 pub mod identity;
 pub mod input;
+/// FFI libopus vendor (dikompilasi build.rs; dipakai audio.rs di Windows).
+pub mod opus_ffi;
 pub mod pairedpeers;
 pub mod pairguard;
 pub mod screen;

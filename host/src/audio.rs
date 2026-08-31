@@ -252,17 +252,8 @@ mod windows {
                 .map_err(|e| anyhow::anyhow!("GetService IAudioCaptureClient: {e:?}"))?
         };
 
-        let mut encoder = opus::Encoder::new(
-            SAMPLE_RATE,
-            opus::Channels::Stereo,
-            opus::Application::Audio,
-        )
-        .map_err(|e| anyhow::anyhow!("opus encoder: {e:?}"))?;
-        // Bitrate ~96 kbps stereo — cukup untuk audio sistem dan ringan
-        // di jaringan.
-        encoder
-            .set_bitrate(opus::Bitrate::Bits(96_000))
-            .map_err(|e| anyhow::anyhow!("opus bitrate: {e:?}"))?;
+        let mut encoder = crate::opus_ffi::Encoder::new(SAMPLE_RATE, usize::from(CHANNELS))
+            .map_err(|e| anyhow::anyhow!("opus encoder: {e}"))?;
 
         // Mulai stream.
         unsafe {
@@ -350,8 +341,8 @@ mod windows {
         };
         let buffer_frames = unsafe { client.GetBufferSize()? } as usize;
 
-        let mut decoder = opus::Decoder::new(SAMPLE_RATE, opus::Channels::Stereo)
-            .map_err(|e| anyhow::anyhow!("opus decoder: {e:?}"))?;
+        let mut decoder = crate::opus_ffi::Decoder::new(SAMPLE_RATE, usize::from(CHANNELS))
+            .map_err(|e| anyhow::anyhow!("opus decoder: {e}"))?;
         let mut pcm_queue: Vec<i16> = Vec::with_capacity(SAMPLE_RATE as usize);
 
         unsafe {
@@ -364,7 +355,7 @@ mod windows {
         loop {
             while let Ok(pkt) = rx.try_recv() {
                 let mut pcm = vec![0i16; SAMPLES_PER_PACKET * usize::from(CHANNELS) * 4];
-                match decoder.decode(&pkt, &mut pcm, false) {
+                match decoder.decode(&pkt, &mut pcm) {
                     Ok(n) => {
                         pcm_queue.extend_from_slice(&pcm[..n * usize::from(CHANNELS)]);
                     }

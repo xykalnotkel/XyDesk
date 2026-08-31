@@ -52,7 +52,11 @@ Kebijakan rilis:
 - Versi: Android **6.1.0+21**, Web **6.1.0**, Desktop **6.1.0**, Host **6.1.0**.
 
 ### Dependensi baru
-- `opus` 0.3 (host, Windows) — encode/decode Opus.
+- **libopus 1.5.2** (host, Windows) — di-vendor di `host/vendor/opus`
+  (BSD-3-Clause) dan dikompilasi statis oleh `build.rs` + `cc`. Sengaja
+  TIDAK memakai crate `opus`: `audiopus_sys`-nya membangun libopus via
+  CMake lawas yang ditolak runner Windows modern. API dibungkus di
+  `host/src/opus_ffi.rs` (encoder/decoder 48 kHz stereo).
 - Pemanfaatan API WASAPI tambahan (windows crate) — `audio.rs`.
 
 ## [6.0.0] - 2026-08-31
