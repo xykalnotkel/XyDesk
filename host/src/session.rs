@@ -107,10 +107,8 @@ impl Session {
         pc.on_track(Box::new(move |track, _, _| {
             let audio_slot = Arc::clone(&audio_slot);
             Box::pin(async move {
-                if let Some(t) = track {
-                    if t.kind() == RTPCodecType::Audio {
-                        *audio_slot.lock().await = Some(t);
-                    }
+                if track.kind() == RTPCodecType::Audio {
+                    *audio_slot.lock().await = Some(track);
                 }
             })
         }));

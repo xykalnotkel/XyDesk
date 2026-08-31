@@ -544,12 +544,10 @@ mod windows {
         let mut list: Vec<super::DisplayInfo> = Vec::new();
         unsafe {
             let _ = EnumDisplayMonitors(
-                HDC(0),
+                None, // hdc: Option<HDC> — null = semua display di desktop
                 None,
                 Some(collect),
-                LPARAM(
-                    &mut list as *mut Vec<super::DisplayInfo> as *mut core::ffi::c_void,
-                ),
+                LPARAM(&mut list as *mut Vec<super::DisplayInfo> as isize),
             );
         }
         list

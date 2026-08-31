@@ -51,6 +51,7 @@ windows = { version = "0.61", features = [
   "Win32_System_Memory",
   # Audio: WASAPI loopback + render (host/src/audio.rs)
   "Win32_Media_Audio",
+  "Win32_Media_Audio_Endpoints",
   "Win32_System_Com_StructuredStorage",
   "Win32_System_Variant",
   # NVENC: device D3D11 + texture NV12 (host/src/nvenc.rs)
