@@ -119,6 +119,20 @@ struct Args {
 }
 
 #[tokio::main]
+/// Meta JSON untuk client (layar + audio host) — dikirim lewat data channel
+/// input saat sesi dibuka dan setiap kali pilihan layar berubah.
+fn meta_json() -> serde_json::Value {
+    serde_json::json!({
+        "type": "meta",
+        "displays": xydesk_host::screen::list_displays(),
+        "wanted": xydesk_host::screen::wanted_display(),
+        "audio": {
+            "available": xydesk_host::audio::capture_available(),
+            "pipeline": xydesk_host::audio::capture_status(),
+        }
+    })
+}
+
 async fn main() -> Result<()> {
     let args = Args::parse();
 
@@ -403,9 +417,14 @@ async fn main() -> Result<()> {
 
                 let session = Arc::new(Session::new(vec![stun.clone()], vec![]).await?);
                 // Track WAJIB didaftarkan sebelum answer (dilakukan di dalam
-                // `answer`): kalau tidak, SDP jawaban tidak berisi m-line video
+                // `answer_media`): kalau tidak, SDP jawaban tidak berisi m-line
                 // dan client tidak pernah mendapat gambar. Lihat session.rs.
-                let (answer, video_track) = session.answer(&sdp.sdp).await?;
+                // Audio forward aktif bila platform mendukung (WASAPI Windows).
+                let audio_on = xydesk_host::audio::capture_available();
+                let media = session.answer_media(&sdp.sdp, audio_on).await?;
+                let video_track = media.video;
+                let audio_track = media.audio;
+                let answer = media.sdp;
 
                 send_msg(
                     &mut ws,
@@ -453,6 +472,12 @@ async fn main() -> Result<()> {
                         match session.receive_input_channel().await {
                             Ok(dc) => {
                                 println!("[xydesk-host] data channel input terbuka");
+                                // Kirim META ke client: daftar layar + status
+                                // audio host. Client memakai ini untuk
+                                // pemilihan monitor dan label audio jujur.
+                                let _ = dc
+                                    .send_text(meta_json().to_string())
+                                    .await;
                                 let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
                                 dc.on_message(Box::new(move |m| {
                                     if !m.is_string {
@@ -477,6 +502,13 @@ async fn main() -> Result<()> {
                                     // Pesan rusak dibuang diam-diam (decode → None):
                                     // input korup tidak boleh mematikan sesi.
                                     if let Some(ev) = xydesk_host::input::decode(&data) {
+                                        // Pindah monitor = bukan injeksi: setel
+                                        // pilihan + kirim meta terbaru.
+                                        if let xydesk_host::input::InputEvent::DisplaySelect(i) = ev {
+                                            xydesk_host::screen::select_display(i);
+                                            let _ = dc.send_text(meta_json().to_string()).await;
+                                            continue;
+                                        }
                                         let _ = inj_tx.send(ev);
                                     }
                                 }
@@ -543,6 +575,62 @@ async fn main() -> Result<()> {
                                 st.video.fps = fps_now;
                                 st.video.nvenc = screen::nvenc_active();
                             }
+                        }
+                    });
+                }
+
+                // Audio forward (host → client): WASAPI loopback → paket Opus
+                // → track audio. Berjalan di task sendiri; thread capture
+                // blocking dijembatani ke channel tokio (kapasitas kecil —
+                // paket lama dibuang, latency menang).
+                if let Some(audio_track) = audio_track {
+                    tokio::spawn(async move {
+                        println!("[xydesk-host] audio loopback aktif (opus 48kHz stereo)");
+                        let packets = xydesk_host::audio::spawn_audio_source();
+                        let (atx, mut arx) = tokio::sync::mpsc::channel::<Vec<u8>>(1);
+                        std::thread::spawn(move || {
+                            while let Ok(pkt) = packets.recv() {
+                                if atx.blocking_send(pkt).is_err() {
+                                    break;
+                                }
+                            }
+                        });
+                        while let Some(pkt) = arx.recv().await {
+                            let sample = webrtc::media::Sample {
+                                data: bytes::Bytes::from(pkt),
+                                timestamp: std::time::SystemTime::now(),
+                                duration: std::time::Duration::from_millis(20),
+                                packet_timestamp: 0,
+                                prev_dropped_packets: 0,
+                                prev_padding_packets: 0,
+                            };
+                            if let Err(e) = audio_track.write_sample(&sample).await {
+                                eprintln!("[xydesk-host] kirim paket audio gagal: {e}");
+                                break;
+                            }
+                        }
+                    });
+                }
+
+                // Mic passthrough (client → host): paket Opus dari track audio
+                // client dirender ke perangkat output default. Task berakhir
+                // sendiri bila client tidak mengirim track (timeout 30 dtk).
+                {
+                    let session = session.clone();
+                    tokio::spawn(async move {
+                        let sink = xydesk_host::audio::spawn_audio_sink();
+                        let (mtx, mut mrx) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
+                        tokio::spawn(async move {
+                            if let Err(e) = session.receive_mic(mtx).await {
+                                if e.to_string() != "track mic client tidak kunjung tiba" {
+                                    eprintln!("[xydesk-host] mic passthrough berakhir: {e:#}");
+                                }
+                            }
+                        });
+                        // Teruskan ke sink render. `try_send` — paket lama
+                        // dibuang bila render tertinggal (latency menang).
+                        while let Some(pkt) = mrx.recv().await {
+                            let _ = sink.try_send(pkt);
                         }
                     });
                 }

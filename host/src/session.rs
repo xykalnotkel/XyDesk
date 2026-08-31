@@ -20,7 +20,9 @@ use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
 use webrtc::rtp_transceiver::rtp_codec::RTCRtpCodecCapability;
+use webrtc::rtp_transceiver::rtp_codec::RTPCodecType;
 use webrtc::track::track_local::track_local_static_sample::TrackLocalStaticSample;
+use webrtc::track::track_remote::TrackRemote;
 
 /// Nama data channel untuk input kontrol (sama di sisi client Flutter).
 pub const INPUT_CHANNEL: &str = "input";
@@ -36,6 +38,8 @@ pub struct IceCandidate {
 pub struct Session {
     pc: Arc<RTCPeerConnection>,
     incoming_rx: tokio::sync::Mutex<mpsc::UnboundedReceiver<Arc<RTCDataChannel>>>,
+    /// Track audio jarak jauh dari client (mic passthrough), bila ada.
+    remote_audio: tokio::sync::Mutex<Option<Arc<TrackRemote>>>,
 }
 
 // RTCPeerConnection tidak implement Debug; cukup identitas struct saja.
@@ -43,6 +47,14 @@ impl std::fmt::Debug for Session {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Session").finish_non_exhaustive()
     }
+}
+
+/// Hasil negosiasi media satu sesi (video wajib; audio opsional).
+pub struct MediaTracks {
+    pub sdp: String,
+    pub video: Arc<TrackLocalStaticSample>,
+    /// Ada bila negosiasi meminta audio forward (host → client).
+    pub audio: Option<Arc<TrackLocalStaticSample>>,
 }
 
 impl Session {
@@ -88,9 +100,25 @@ impl Session {
             })
         }));
 
+        // Tangkap track audio masuk (mic client) untuk passthrough.
+        let remote_audio: tokio::sync::Mutex<Option<Arc<TrackRemote>>> =
+            tokio::sync::Mutex::new(None);
+        let audio_slot = remote_audio.clone();
+        pc.on_track(Box::new(move |track, _, _| {
+            let audio_slot = audio_slot.clone();
+            Box::pin(async move {
+                if let Some(t) = track {
+                    if t.kind() == RTPCodecType::Audio {
+                        *audio_slot.lock().await = Some(t);
+                    }
+                }
+            })
+        }));
+
         Ok(Session {
             pc,
             incoming_rx: tokio::sync::Mutex::new(rx),
+            remote_audio,
         })
     }
 
@@ -108,7 +136,24 @@ impl Session {
     /// walau koneksi "berhasil". Bug ini pernah lolos karena tidak ada test
     /// loopback; lihat `tests/loopback.rs`.
     pub async fn answer(&self, offer_sdp: &str) -> Result<(String, Arc<TrackLocalStaticSample>)> {
-        let track = self.add_video_track().await?;
+        let media = self.answer_media(offer_sdp, false).await?;
+        Ok((media.sdp, media.video))
+    }
+
+    /// Seperti [`Session::answer`], tetapi boleh menyertakan track audio
+    /// (forward host → client). Track audio harus terdaftar SEBELUM
+    /// `create_answer` — alasan yang sama dengan video di atas.
+    pub async fn answer_media(
+        &self,
+        offer_sdp: &str,
+        with_audio: bool,
+    ) -> Result<MediaTracks> {
+        let video = self.add_video_track().await?;
+        let audio = if with_audio {
+            Some(self.add_audio_track().await?)
+        } else {
+            None
+        };
 
         let offer =
             RTCSessionDescription::offer(offer_sdp.to_string()).context("SDP offer tidak valid")?;
@@ -137,7 +182,62 @@ impl Session {
             .map(|d| d.sdp)
             .unwrap_or_default();
 
-        Ok((sdp, track))
+        Ok(MediaTracks {
+            sdp,
+            video,
+            audio,
+        })
+    }
+
+    /// Menambah track audio Opus (48 kHz stereo) untuk forward host → client.
+    pub async fn add_audio_track(&self) -> Result<Arc<TrackLocalStaticSample>> {
+        let track = Arc::new(TrackLocalStaticSample::new(
+            RTCRtpCodecCapability {
+                mime_type: "audio/opus".to_owned(),
+                clock_rate: 48000,
+                channels: 2,
+                sdp_fmtp_line: "minptime=10;useinbandfec=1".to_owned(),
+                rtcp_feedback: vec![],
+            },
+            "audio".to_owned(),
+            "xydesk".to_owned(),
+        ));
+        self.pc
+            .add_track(
+                Arc::clone(&track) as Arc<dyn webrtc::track::track_local::TrackLocal + Send + Sync>
+            )
+            .await
+            .context("gagal add track audio")?;
+        Ok(track)
+    }
+
+    /// Menerima track audio mic dari client dan mengirim paket Opus yang
+    /// diterima ke `sink` (diputar oleh modul `audio`). Berakhir saat track
+    /// selesai atau sink tertutup.
+    pub async fn receive_mic(
+        &self,
+        sink: tokio::sync::mpsc::UnboundedSender<Vec<u8>>,
+    ) -> Result<()> {
+        let remote: Arc<TrackRemote> = {
+            let mut waited = 0usize;
+            loop {
+                if waited > 60 {
+                    anyhow::bail!("track mic client tidak kunjung tiba");
+                }
+                if let Some(t) = self.remote_audio.lock().await.as_ref() {
+                    break t.clone();
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                waited += 1;
+            }
+        };
+
+        while let Ok((rtp, _)) = remote.read_rtp().await {
+            if sink.send(rtp.payload.to_vec()).is_err() {
+                break; // sink render sudah berhenti
+            }
+        }
+        Ok(())
     }
 
     /// Menambah kandidat ICE dari client (via signaling).

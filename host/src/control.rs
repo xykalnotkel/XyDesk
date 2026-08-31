@@ -94,6 +94,29 @@ pub struct SessionStatus {
     pub duration_ms: u64,
 }
 
+/// Status audio (forward + mic) — dilaporkan control API.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioStatus {
+    /// Benar bila platform mendukung capture WASAPI (Windows).
+    pub capture_available: bool,
+    /// Deskripsi pipeline audio (mis. "wasapi-loopback → opus 48kHz stereo").
+    pub pipeline: String,
+    /// Jumlah perangkat output yang terdeteksi.
+    pub outputs: usize,
+    /// Volume master perangkat output default (0.0–1.0), bila terbaca.
+    pub volume: Option<f32>,
+}
+
+/// Daftar display + yang terpilih untuk sesi berikutnya.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisplayStatus {
+    pub list: Vec<crate::screen::DisplayInfo>,
+    /// Indeks monitor yang dipakai sesi berikutnya.
+    pub wanted: usize,
+}
+
 /// Snapshot status — dibangun dari [`ControlState`] saat `/status` dipanggil.
 /// Serialisasi `camelCase` agar nyaman di sisi TypeScript.
 #[derive(Clone, Debug, Serialize)]
@@ -107,6 +130,8 @@ pub struct Status {
     pub uptime_ms: u64,
     pub session: Option<SessionStatus>,
     pub video: VideoStats,
+    pub audio: AudioStatus,
+    pub displays: DisplayStatus,
     pub last_error: Option<String>,
 }
 
@@ -150,6 +175,7 @@ impl ControlState {
     /// Snapshot serializable untuk `/status`.
     pub fn snapshot(&self) -> Status {
         let now = now_ms();
+        let displays = crate::screen::list_displays();
         Status {
             state: self.state,
             device_id: self.device_id.clone(),
@@ -163,6 +189,16 @@ impl ControlState {
                 duration_ms: now.saturating_sub(s.started_at_ms),
             }),
             video: self.video,
+            audio: AudioStatus {
+                capture_available: crate::audio::capture_available(),
+                pipeline: crate::audio::capture_status().to_string(),
+                outputs: crate::audio::list_outputs().len(),
+                volume: crate::audio::master_volume(),
+            },
+            displays: DisplayStatus {
+                list: displays,
+                wanted: crate::screen::wanted_display(),
+            },
             last_error: self.last_error.clone(),
         }
     }
@@ -202,6 +238,12 @@ pub struct ActionRequest {
     pub action: String,
     #[serde(default)]
     pub password: Option<String>,
+    /// Nilai volume 0.0–1.0 untuk aksi `audio-volume`.
+    #[serde(default)]
+    pub volume: Option<f32>,
+    /// Indeks monitor untuk aksi `display-select`.
+    #[serde(default)]
+    pub index: Option<usize>,
 }
 
 /// Jawaban aksi. `password` berisi nilai baru untuk `new-password` dan
@@ -397,6 +439,44 @@ async fn action(
                 password: None,
                 stopped: Some(stopped),
             }))
+        }
+        // Setel volume master perangkat output default (0.0–1.0).
+        "audio-volume" => {
+            let Some(vol) = req.volume else {
+                return Ok(Json(ActionResponse::err("volume tidak disertakan")));
+            };
+            if crate::audio::set_master_volume(vol) {
+                Ok(Json(ActionResponse {
+                    ok: true,
+                    error: None,
+                    password: None,
+                    stopped: None,
+                }))
+            } else {
+                Ok(Json(ActionResponse::err(
+                    "gagal setel volume (WASAPI tidak tersedia di platform ini)",
+                )))
+            }
+        }
+        // Pilih monitor untuk sesi berikutnya (0 = primer). Ditolak bila
+        // indeks di luar daftar display yang terdeteksi.
+        "display-select" => {
+            let Some(index) = req.index else {
+                return Ok(Json(ActionResponse::err("index tidak disertakan")));
+            };
+            if crate::screen::select_display(index) {
+                Ok(Json(ActionResponse {
+                    ok: true,
+                    error: None,
+                    password: None,
+                    stopped: None,
+                }))
+            } else {
+                Ok(Json(ActionResponse::err(format!(
+                    "indeks display {index} tidak valid (terdeteksi {} layar)",
+                    crate::screen::list_displays().len()
+                ))))
+            }
         }
         other => Ok(Json(ActionResponse::err(format!(
             "aksi tidak dikenal: {other}"

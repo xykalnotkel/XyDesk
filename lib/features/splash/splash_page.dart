@@ -1,16 +1,14 @@
-//! Splash XyDesk — revisi total 6.0: koreografi pendek dan halus.
+//! Splash XyDesk — revisi 6.1: halus, premium, identitas ungu.
 //!
-//! Alur (total 1800 ms):
-//!   1. Tile logo (gelap + X putih + garis aksen ungu) muncul membesar
-//!      dari 0.82 → 1.0 dengan easeOutQuart — seperti "bernapas masuk".
-//!   2. Wordmark "XyDesk" naik pelan sambil memudar masuk (fade + 14 px).
-//!   3. Garis aksen ungu tumbuh dari kiri ke kanan di bawah wordmark.
-//!   4. Tagline muncul terakhir, lalu diam 200 ms sebelum diganti gate app.
+//! Koreografi 1700 ms (kurva easeOutQuart konsisten — tidak ada sentakan):
+//!   1. Latar putih dengan cahaya ungu lembut di belakang tile (fade in).
+//!   2. Tile logo (gelap + X putih + aksen ungu) muncul membesar 0.84 → 1.0.
+//!   3. Wordmark "XyDesk" gradient ungu menyusul — fade + naik 12 px,
+//!      letter-spacing mengendur dari lebar ke normal.
+//!   4. Garis aksen ungu tumbuh; tagline muncul terakhir.
 //!
-//! Tanpa glow mencolok, tanpa bayangan, tanpa animasi berlebihan —
-//! kurva easeOutQuart konsisten supaya terasa mahal, bukan sibuk.
-//! Saat pengguna mengaktifkan "kurangi gerakan", splash langsung tampil
-//! pada keadaan akhir (t = 1) tanpa animasi.
+//! Tanpa glow mencolok/bayangan pada logo; semua fase satu kurva agar
+//! terasa mahal, bukan sibuk. "Kurangi gerakan" → langsung keadaan akhir.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,10 +26,9 @@ class SplashPage extends ConsumerStatefulWidget {
 
 class _SplashPageState extends ConsumerState<SplashPage>
     with SingleTickerProviderStateMixin {
-  /// Total durasi koreografi: 1800 ms + jeda tenang diatur oleh gate.
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1800),
+    duration: const Duration(milliseconds: 1700),
   )..forward();
 
   @override
@@ -57,7 +54,6 @@ class _SplashPageState extends ConsumerState<SplashPage>
   }
 }
 
-/// Kurva halus per fase — semua easeOutQuart supaya tidak ada sentakan.
 double _quart(double t) => 1 - (1 - t) * (1 - t) * (1 - t) * (1 - t);
 
 double _frac(double t, double a, double b) {
@@ -73,104 +69,141 @@ class _SplashScene extends StatelessWidget {
   final double t;
 
   // Fase (fraksi total durasi).
-  static const _logoEnd = 0.42;
-  static const _wordStart = 0.30;
-  static const _wordEnd = 0.62;
-  static const _lineStart = 0.56;
-  static const _lineEnd = 0.80;
-  static const _tagStart = 0.72;
-  static const _tagEnd = 0.92;
+  static const _bgEnd = 0.30;
+  static const _tileEnd = 0.44;
+  static const _wordStart = 0.34;
+  static const _wordEnd = 0.66;
+  static const _lineStart = 0.60;
+  static const _lineEnd = 0.84;
+  static const _tagStart = 0.74;
+  static const _tagEnd = 0.94;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final size = MediaQuery.sizeOf(context);
     final shortSide = size.width < size.height ? size.width : size.height;
-    final logoSize = (shortSide * 0.22).clamp(78.0, 108.0).toDouble();
+    final tileSize = (shortSide * 0.30).clamp(96.0, 136.0).toDouble();
 
-    // 1. Logo tile: membesar + memudar masuk.
-    final logoT = _quart(_frac(t, 0, _logoEnd));
-    final logoScale = 0.82 + 0.18 * logoT;
-    final logoOpacity = logoT.clamp(0.0, 1.0);
+    // 1. Cahaya ungu latar memudar masuk.
+    final bgT = _quart(_frac(t, 0, _bgEnd));
 
-    // 2. Wordmark naik + fade.
+    // 2. Tile logo membesar + fade.
+    final tileT = _quart(_frac(t, 0, _tileEnd));
+    final tileScale = 0.84 + 0.16 * tileT;
+
+    // 3. Wordmark: fade + naik; letter-spacing mengendur.
     final wordT = _quart(_frac(t, _wordStart, _wordEnd));
-    final wordDy = 14.0 * (1 - wordT);
-    final wordOpacity = wordT.clamp(0.0, 1.0);
+    final wordDy = 12.0 * (1 - wordT);
+    final wordSpacing = 6.0 * (1 - wordT);
 
-    // 3. Garis aksen ungu tumbuh horizontal.
+    // 4. Garis aksen ungu tumbuh horizontal.
     final lineT = _quart(_frac(t, _lineStart, _lineEnd));
-    final lineW = 96.0 * lineT;
 
-    // 4. Tagline memudar masuk.
+    // 5. Tagline.
     final tagT = _frac(t, _tagStart, _tagEnd);
-    final tagOpacity = tagT.clamp(0.0, 1.0);
 
     return Scaffold(
       backgroundColor: c.bg,
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Opacity(
-                opacity: logoOpacity,
-                child: Transform.scale(
-                  scale: logoScale,
-                  child: Image.asset(
-                    Img.logo,
-                    width: logoSize,
-                    height: logoSize,
-                    fit: BoxFit.contain,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Cahaya ungu lembut di belakang tile — identitas tanpa mencolok.
+          Center(
+            child: Opacity(
+              opacity: bgT * 0.5,
+              child: Container(
+                width: tileSize * 2.6,
+                height: tileSize * 2.6,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      c.accent.withValues(alpha: 0.35),
+                      c.accent.withValues(alpha: 0.08),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
                   ),
                 ),
               ),
-              const SizedBox(height: 26),
-              Opacity(
-                opacity: wordOpacity,
-                child: Transform.translate(
-                  offset: Offset(0, wordDy),
-                  child: const Text(
-                    'XyDesk',
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1.4,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Garis aksen ungu — identitas warna XyDesk.
-              SizedBox(
-                width: 96,
-                height: 4,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    width: lineW,
-                    decoration: BoxDecoration(
-                      color: c.accent,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Opacity(
-                opacity: tagOpacity,
-                child: Text(
-                  'PC kamu, di tangan kamu',
-                  style: TextStyle(
-                    fontSize: 13,
-                    letterSpacing: 0.2,
-                    color: c.textMid,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Tile logo: kotak gelap rounded + X putih + aksen ungu.
+                  Opacity(
+                    opacity: tileT.clamp(0.0, 1.0),
+                    child: Transform.scale(
+                      scale: tileScale,
+                      child: Image.asset(
+                        Img.logo,
+                        width: tileSize,
+                        height: tileSize,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  Opacity(
+                    opacity: wordT.clamp(0.0, 1.0),
+                    child: Transform.translate(
+                      offset: Offset(0, wordDy),
+                      child: ShaderMask(
+                        blendMode: BlendMode.srcIn,
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [Color(0xFF6D28D9), Color(0xFFA78BFA)],
+                        ).createShader(bounds),
+                        child: Text(
+                          'XyDesk',
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: wordSpacing,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: 104,
+                    height: 4,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: lineT,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF6D28D9), Color(0xFFA78BFA)],
+                            ),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Opacity(
+                    opacity: tagT.clamp(0.0, 1.0),
+                    child: Text(
+                      'PC kamu, di tangan kamu',
+                      style: TextStyle(
+                        fontSize: 13,
+                        letterSpacing: 0.4,
+                        color: c.textMid,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

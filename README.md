@@ -51,6 +51,9 @@ latency end-to-end.
 | Tema aplikasi Android | Terang (Paper) saja — mode gelap dihapus agar satu set kontras teruji |
 | Identitas visual 6.0 | Ungu menonjol sebagai warna khas; logo X tile seperti sampul berita tanpa glow — `design/x-white.png`, `design/x-black.png` |
 | Push notifikasi | Jalan — jalur server REST OneSignal teruji; rilis & berita baru memicu push (dan email Resend untuk pelanggan berita) |
+| Audio forward & mic | Jalan (kode) — WASAPI loopback → Opus (host), mic client → speaker host; uji dengar di lab Windows |
+| Multi-monitor | Jalan (kode) — pilih layar live dari sesi (respawn capture); uji di lab Windows |
+| Changelog rilis | Wajib — `CHANGELOG.md` di-update tiap rilis & dilampirkan ke GitHub Release |
 | Lisensi | **Proprietary** (`LICENSE` — EULA, larangan clone) + daftar lisensi pihak ketiga lengkap di `docs/LEGAL.md` dan Legal di semua platform |
 | Sesi tunggal (anti-ambil alih) | Selesai — koneksi kedua ditolak `host-sibuk` meski password benar; client menampilkan status "perangkat sedang dipakai" |
 | Test loopback host (SDP + video + data channel) | Selesai — `cargo test` hijau; jaga bug regresi SDP |

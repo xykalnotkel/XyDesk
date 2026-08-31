@@ -42,6 +42,9 @@ pub enum InputEvent {
     Key { vk: u16, down: bool },
     /// Teks bebas (keyboard virtual) — diinject sebagai unicode.
     Text(String),
+    /// Pilih monitor host untuk capture (0 = primer). Bukan injeksi —
+    /// ditangani loop utama sesi (lihat `main.rs`).
+    DisplaySelect(usize),
 }
 
 /// Tipe pesan (byte pertama).
@@ -52,6 +55,7 @@ mod tag {
     pub const SCROLL: u8 = 0x04;
     pub const KEY: u8 = 0x05;
     pub const TEXT: u8 = 0x06;
+    pub const DISPLAY_SELECT: u8 = 0x07;
 }
 
 /// Dekode satu pesan biner. `None` bila tidak valid (pesan dibuang diam-diam
@@ -82,6 +86,9 @@ pub fn decode(data: &[u8]) -> Option<InputEvent> {
         (&tag::TEXT, n) if n >= 2 => std::str::from_utf8(&data[1..])
             .ok()
             .map(|s| InputEvent::Text(s.to_string())),
+        (&tag::DISPLAY_SELECT, n) if n >= 2 => {
+            Some(InputEvent::DisplaySelect(data[1] as usize))
+        }
         _ => None,
     }
 }
@@ -227,6 +234,8 @@ mod windows_inject {
                 }
                 inputs.is_empty() || send(&inputs)
             }
+            // Bukan injeksi — ditangani loop utama sesi (pindah monitor).
+            InputEvent::DisplaySelect(_) => true,
         }
     }
 }

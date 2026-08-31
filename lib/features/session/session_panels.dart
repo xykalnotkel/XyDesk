@@ -471,8 +471,7 @@ class _AudioPanel extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Daftar perangkat belum tersedia karena engine audio belum '
-              'terhubung. Diperlukan: $requirement.',
+              'Jalur audio aktif sejak rilis 6.1. $requirement',
               style: TextStyle(fontSize: 12, height: 1.5, color: c.textMid),
             ),
           ],
@@ -505,7 +504,8 @@ class _AudioPanel extends StatelessWidget {
                 icon: LucideIcons.volume2,
                 title: 'Minta audio PC',
                 subtitle: state.pcAudioRequested
-                    ? 'Preferensi tersimpan • belum aktif'
+                    ? 'Aktif — audio PC (WASAPI loopback) diputar di '
+                          'perangkat ini'
                     : 'Tidak diminta',
                 value: state.pcAudioRequested,
                 onChanged: (value) =>
@@ -589,7 +589,7 @@ class _AudioPanel extends StatelessWidget {
                 icon: LucideIcons.mic,
                 title: 'Minta passthrough mikrofon',
                 subtitle: state.microphoneRequested
-                    ? 'Preferensi tersimpan • belum mengirim audio'
+                    ? 'Aktif — mic dikirim dan diputar di speaker PC host'
                     : 'Mikrofon tidak diminta',
                 value: state.microphoneRequested,
                 onChanged: (value) =>

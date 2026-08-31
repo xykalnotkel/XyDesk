@@ -139,7 +139,9 @@ Pencantuman di sini TIDAK mengubah status proprietary XyDesk.
 | webrtc (webrtc-rs) | MIT / Apache-2.0 | Media WebRTC host |
 | serde / serde_json | MIT / Apache-2.0 | Serialisasi protokol |
 | openh264 | BSD-2-Clause (Cisco) | Encode fallback CPU |
-| windows-rs | MIT / Apache-2.0 (Microsoft) | Akses API Windows (DXGI, dll.) |
+| windows-rs | MIT / Apache-2.0 (Microsoft) | Akses API Windows (DXGI, WASAPI, GDI, SendInput) |
+| windows-capture | MIT | Capture layar (Graphics Capture API, multi-monitor) |
+| opus | BSD-3-Clause (Xiph/Mozilla) | Encode/decode audio Opus (forward + mic) |
 | tracing | MIT | Log terstruktur |
 
 ### Web (Vite + React) & Infrastruktur

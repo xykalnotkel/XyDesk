@@ -32,6 +32,14 @@ class InputCodec {
     return b;
   }
 
+  /// 0x07 DISPLAY_SELECT — minta host memindahkan capture ke monitor lain
+  /// (indeks dari daftar yang dikirim host via pesan meta).
+  static Uint8List displaySelect(int index) {
+    final b = _msg8(0x07);
+    b[1] = index.clamp(0, 255).toInt();
+    return b;
+  }
+
   /// Gerak mouse relatif (mode trackpad / FPS). dx, dy dalam piksel host.
   static Uint8List mouseMoveRel(int dx, int dy) {
     final b = _msg8(0x01);

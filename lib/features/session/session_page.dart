@@ -208,6 +208,38 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     _idleTimer?.cancel();
   }
 
+  /// Aktif/nonaktifkan pemutaran audio sistem host (transceiver direction —
+  /// tanpa negosiasi ulang, tidak memutus sesi).
+  Future<void> _toggleAudioForward() async {
+    final rtc = _transport.rtc;
+    if (rtc == null) return;
+    final next = !_settings.pcAudioRequested;
+    await rtc.setAudioForwardEnabled(next);
+    if (!mounted) return;
+    setState(() => _settings = _settings.copyWith(pcAudioRequested: next));
+  }
+
+  /// Aktif/nonaktifkan mic perangkat → host (meminta izin saat pertama kali).
+  Future<void> _toggleMic() async {
+    final rtc = _transport.rtc;
+    if (rtc == null) return;
+    if (_settings.microphoneRequested) {
+      await rtc.disableMic();
+      if (!mounted) return;
+      setState(
+        () => _settings = _settings.copyWith(microphoneRequested: false),
+      );
+      return;
+    }
+    final err = await rtc.enableMic();
+    if (!mounted) return;
+    if (err != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      return;
+    }
+    setState(() => _settings = _settings.copyWith(microphoneRequested: true));
+  }
+
   void _setExperience(SessionExperience experience) {
     setState(() => _settings = _settings.copyWith(experience: experience));
     _wake();
@@ -249,6 +281,33 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                         ),
                       ),
               ),
+              // Pemutar audio remote (suara sistem host) — 1×1 transparan.
+              // Wajib berada di pohon widget agar track Opus diputar.
+              if (_transport.state.live)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  child: IgnorePointer(
+                    child: Opacity(
+                      opacity: 0,
+                      child: SizedBox(
+                        width: 1,
+                        height: 1,
+                        child: RTCVideoView(
+                          _transport.rtc!.audioRenderer,
+                          objectFit:
+                              RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              // Pemilih layar (muncul saat host punya >1 monitor).
+              if (_transport.state.live &&
+                  !_keyboardVisible &&
+                  !_panelVisible &&
+                  _overlayVisible)
+                _HostDisplaySwitcher(transport: _transport),
               if (!_keyboardVisible &&
                   !_panelVisible &&
                   _settings.experience == SessionExperience.gaming &&
@@ -311,8 +370,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                       experience: _settings.experience,
                       audioRequested: _settings.pcAudioRequested,
                       microphoneRequested: _settings.microphoneRequested,
-                      onAudio: () => _openPanel(SessionPanelSection.audio),
-                      onMicrophone: () => _openPanel(SessionPanelSection.audio),
+                      onAudio: _toggleAudioForward,
+                      onMicrophone: _toggleMic,
                       onKeyboard: _showKeyboard,
                       onClipboard: _sendClipboard,
                       onSettings: () => _openPanel(),
@@ -996,6 +1055,73 @@ class _TopBar extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Pemilih layar host — muncul bila host melaporkan lebih dari satu monitor
+/// (pesan meta lewat data channel). Mengetuk chip meminta host memindahkan
+/// capture — berlaku langsung (capture host di-respawn).
+class _HostDisplaySwitcher extends StatelessWidget {
+  const _HostDisplaySwitcher({required this.transport});
+
+  final SessionTransport transport;
+
+  @override
+  Widget build(BuildContext context) {
+    final rtc = transport.rtc;
+    if (rtc == null) return const SizedBox.shrink();
+    return StreamBuilder(
+      initialData: rtc.hostMeta,
+      stream: rtc.hostMetaStream,
+      builder: (context, snapshot) {
+        final meta = snapshot.data;
+        final displays = meta?.displays ?? const [];
+        if (displays.length < 2) return const SizedBox.shrink();
+        final wanted = meta?.wantedDisplay ?? 0;
+        return Positioned(
+          left: 12,
+          right: 12,
+          bottom: MediaQuery.paddingOf(context).bottom + 78,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xEB18191D),
+                borderRadius: BorderRadius.circular(R.lg),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final d in displays)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: ChoiceChip(
+                        label: Text(
+                          '${d.name.isEmpty ? 'Layar' : d.name} '
+                          '${d.width}×${d.height}',
+                          style: const TextStyle(fontSize: 11.5),
+                        ),
+                        selected: d.index == wanted,
+                        onSelected: (_) => rtc.selectDisplay(d.index),
+                        visualDensity: VisualDensity.compact,
+                        backgroundColor: const Color(0xFF23242A),
+                        selectedColor: AppColors.accentDark,
+                        labelStyle: TextStyle(
+                          fontSize: 11.5,
+                          color: d.index == wanted
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

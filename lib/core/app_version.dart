@@ -31,23 +31,23 @@ class AppVersion {
     }
   }
 
-  /// Contoh: `6.0.0`. Kosong sebelum [load] selesai.
+  /// Contoh: `6.1.0`. Kosong sebelum [load] selesai.
   static String get version => _version;
 
   /// Contoh: `10`. Kosong sebelum [load] selesai.
   static String get build => _build;
 
-  /// Contoh: `v6.0.0`.
+  /// Contoh: `v6.1.0`.
   static String get short => _loaded ? 'v$_version' : 'v—';
 
-  /// Contoh: `6.0.0 · Build 10`.
+  /// Contoh: `6.1.0 · Build 10`.
   static String get full => _loaded ? '$_version · Build $_build' : '—';
 
-  /// Contoh: `XyDesk 6.0.0 · Build 10`.
+  /// Contoh: `XyDesk 6.1.0 · Build 10`.
   static String get labeled =>
       _loaded ? 'XyDesk $_version · Build $_build' : 'XyDesk';
 
-  /// Contoh: `Versi 6.0.0 · Build 10`.
+  /// Contoh: `Versi 6.1.0 · Build 10`.
   static String get versiFull =>
       _loaded ? 'Versi $_version · Build $_build' : 'Versi —';
 }

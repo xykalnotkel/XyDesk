@@ -124,23 +124,49 @@ dengan TURN, stabil 30 menit tanpa re-buffer.
   ketentuan, tabel lisensi pihak ketiga per platform dengan fungsi).
 - Versi: Android 6.0.0 (build 20) · Web 6.0.0 · Desktop 6.0.0 · Host 6.0.0.
 
-## Audit fitur — status implementasi (31 Agu 2026, rilis 6.0)
+## Rilis 6.1.0 — Audio nyata, multi-monitor, kontrol penuh (31 Agu 2026)
+
+- **Audio forward**: `host/src/audio.rs` — WASAPI loopback → Opus 48 kHz
+  stereo → track WebRTC; otomatis aktif di Windows (non-Windows jujur
+  "belum didukung"). Client (Android/Web) memutar track lewat renderer/elemen
+  audio terpisah + tombol Audio di HUD (transceiver direction, tanpa
+  negosiasi ulang).
+- **Mic passthrough**: mic client (getUserMedia) → track Opus → host decode
+  → `IAudioRenderClient` (terdengar di speaker PC). Endpoint mikrofon
+  virtual Windows menyusul (tercatat jujur di panel audio).
+- **Multi-monitor**: enumerasi GDI + pemilih layar di sesi (chip, pesan
+  meta host→client); pindah monitor LANGSUNG — thread capture di-respawn
+  (event biner 0x07 DISPLAY_SELECT).
+- **Volume master** host via control API (`audio-volume`); status audio &
+  layar di `/status`.
+- Splash revisi ulang (cahaya ungu lembut + tile + wordmark gradient).
+- `CHANGELOG.md` wajib per rilis — dilampirkan otomatis ke GitHub Release;
+  isi rilis juga dimuat di Release Notes.
+- Email berita kini bertanda tangan premium: badge XySpace + **Haekal
+  Saputra (Founder, XySpace)**.
+- Versi: Android 6.1.0+21 · Web 6.1.0 · Desktop 6.1.0 · Host 6.1.0.
+- **Uji berikutnya (lab Windows)**: bunyi loopback terdengar di Android/Web,
+  mic terdengar di speaker PC, pindah monitor saat sesi berjalan, volume
+  master berubah. Semua jalur punya fallback & log jujur.
+
+## Audit fitur — status implementasi (31 Agu 2026, rilis 6.1)
 
 | Fitur | Status | Catatan |
 |---|---|---|
 | Capture → encode → RTP → client | Jalan | loopback test otomatis; DXGI/NVENC menunggu lab Windows |
 | Pairing + tendang peer kedua | Jalan | `HostBusy` di gerbang pairing, teruji |
-| Control API lokal + shell desktop | Jalan | status/sesi/video/log/password/stop |
+| Control API lokal + shell desktop | Jalan | status/sesi/video/log/password/stop + audio-volume + display-select |
 | Berita lintas platform | Jalan | like/komentar/balasan/bagikan/OG per konten/langganan email |
 | Push notifikasi (rilis + berita) | Jalan | jalur server REST OneSignal teruji; SDK klien via onesignal_flutter (opt-in) |
-| Notifikasi email berita | Jalan | Resend + tabel subscribers; domain terverifikasi |
+| Notifikasi email berita | Jalan | Resend + tabel subscribers; domain terverifikasi; badge pengirim premium |
 | Akun (email OTP + Google) | Jalan | signaling worker + web connect |
 | QR scan pairing | Jalan | mobile_scanner (CameraX/MLKit) |
 | Keyboard virtual (modifier sticky) | Jalan | `virtual_keyboard.dart` tersambung ke sesi |
 | Geser antar halaman + keluar 2× | Jalan | PageView + PopScope di AppShell |
-| Audio forward (host → client) | **Belum** | Fase 2 — butuh capture WASAPI + encode Opus di host; UI jujur menampilkan status |
-| Mic passthrough (client → host) | **Belum** | Fase 2 — consent per-sesi |
-| Multi-monitor | **Belum** | Fase 2 |
+| Audio forward (host → client) | Jalan (kode) | WASAPI loopback + Opus + track; uji dengar di lab Windows |
+| Mic passthrough (client → host) | Jalan (kode) | diputar di speaker host; endpoint mik virtual menyusul |
+| Multi-monitor + pilih layar live | Jalan (kode) | GDI enumerate + respawn capture; uji di lab Windows |
+| Changelog wajib per rilis | Jalan | `CHANGELOG.md` + dilampirkan ke Release |
 | Gamepad passthrough | **Belum** | Fase 2 |
 | Driver display virtual (IddSampleDriver) | **Belum** | Fase 2 — installer ada di CI release, integrasi belum |
 | Node signaling cadangan (failover) | **Belum** | Fase 3 — Durable Object multi-region / worker kedua |

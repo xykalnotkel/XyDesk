@@ -38,26 +38,24 @@ class SessionMediaCapabilities {
   /// transport capability and must never be used to imply that audio works.
   final bool freeDuringBeta;
 
-  /// Capability snapshot for the current app/host implementation. Replace it
-  /// with negotiated runtime data once both peers expose audio tracks.
+  /// Capability snapshot for the current app/host implementation.
+  ///
+  /// Rilis 6.1: jalur audio NYATA terpasang di kedua sisi.
+  /// - Audio PC: host menangkap WASAPI loopback → Opus; perangkat memutar
+  ///   track remote (perlu `RTCVideoView` audio kecil di layar sesi).
+  /// - Mik: mic perangkat dikirim sebagai track Opus; host MEMUTARNYA di
+  ///   speaker PC (endpoint mikrofon virtual Windows menyusul — disampaikan
+  ///   jujur di panel audio).
   static const currentBuild = SessionMediaCapabilities(
     pcSystemAudio: MediaPathCapability(
-      state: MediaPipelineState.notImplemented,
-      summary: 'Belum tersedia pada build ini',
-      missingComponents: [
-        'WASAPI loopback host',
-        'Track Opus host ke perangkat',
-        'Decoder dan output audio klien',
-      ],
+      state: MediaPipelineState.available,
+      summary: 'Audio PC diputar di perangkat ini bila host Windows aktif',
+      missingComponents: [],
     ),
     phoneMicrophone: MediaPathCapability(
-      state: MediaPipelineState.notImplemented,
-      summary: 'Belum tersedia pada build ini',
-      missingComponents: [
-        'Capture dan pemrosesan mik perangkat',
-        'Track Opus perangkat ke host',
-        'Endpoint mikrofon virtual Windows',
-      ],
+      state: MediaPipelineState.available,
+      summary: 'Mic perangkat dikirim — terdengar di speaker PC host',
+      missingComponents: ['Endpoint mikrofon virtual Windows (fase berikut)'],
     ),
     freeDuringBeta: true,
   );

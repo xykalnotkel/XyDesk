@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/devlog.dart';
+import 'input_codec.dart';
 import 'signaling_client.dart';
 
 /// Fase koneksi sesi remote — dikonsumsi UI untuk menampilkan status jujur.
@@ -39,12 +40,66 @@ enum RtcPhase {
   error,
 }
 
+/// Info display host — dikirim host lewat data channel (pesan meta).
+@immutable
+class HostDisplay {
+  const HostDisplay({
+    required this.index,
+    required this.name,
+    required this.width,
+    required this.height,
+  });
+
+  final int index;
+  final String name;
+  final int width;
+  final int height;
+
+  factory HostDisplay.fromJson(Map<String, dynamic> j) => HostDisplay(
+    index: j['index'] as int? ?? 0,
+    name: j['name'] as String? ?? '',
+    width: j['width'] as int? ?? 0,
+    height: j['height'] as int? ?? 0,
+  );
+}
+
+/// Meta yang dikirim host saat sesi dimulai (dan setiap kali berubah):
+/// daftar layar, layar terpilih, dan status pipeline audio host.
+@immutable
+class HostMeta {
+  const HostMeta({
+    required this.displays,
+    required this.wantedDisplay,
+    required this.audioAvailable,
+    required this.audioPipeline,
+  });
+
+  final List<HostDisplay> displays;
+  final int wantedDisplay;
+  final bool audioAvailable;
+  final String audioPipeline;
+
+  factory HostMeta.fromJson(Map<String, dynamic> j) => HostMeta(
+    displays: [
+      for (final d in j['displays'] as List? ?? [])
+        HostDisplay.fromJson(d as Map<String, dynamic>),
+    ],
+    wantedDisplay: j['wanted'] as int? ?? 0,
+    audioAvailable: (j['audio']?['available'] as bool?) ?? false,
+    audioPipeline: (j['audio']?['pipeline'] as String?) ?? '',
+  );
+}
+
 /// Layanan WebRTC client XyDesk.
 ///
 /// Client = penelepon: buat `RTCPeerConnection`, `createOffer`, kirim ke host
 /// lewat signaling, terima `answer` + `ice`, lalu render video. Input
 /// (mouse/keyboard) dikirim lewat data channel yang **reliable** — kehilangan
 /// satu event input tidak boleh terjadi.
+///
+/// Audio (rilis 6.1): transceiver audio `recvonly` memutar suara sistem host
+/// (Opus) — host mengirim bila WASAPI Windows aktif. Mic perangkat dikirim
+/// lewat track `sendonly` (getUserMedia) — host memutarnya di speaker PC.
 class RtcService {
   RTCPeerConnection? _pc;
   RTCDataChannel? _inputChannel;
@@ -58,6 +113,28 @@ class RtcService {
   /// Video renderer untuk ditampilkan di `RTCVideoView`.
   RTCVideoRenderer get renderer => _renderer;
   final RTCVideoRenderer _renderer = RTCVideoRenderer();
+
+  /// Renderer audio remote (suara sistem host). Pasang `RTCVideoView`-nya
+  /// (boleh berukuran 1×1 / offstage) agar audio ikut diputar.
+  RTCVideoRenderer get audioRenderer => _audioRenderer;
+  final RTCVideoRenderer _audioRenderer = RTCVideoRenderer();
+
+  RTCRtpTransceiver? _audioTransceiver;
+  MediaStream? _micStream;
+
+  /// Benar bila mic perangkat sedang dikirim ke host.
+  bool _micEnabled = false;
+  bool get micEnabled => _micEnabled;
+
+  /// Benar bila pemutaran audio host aktif di sisi perangkat ini.
+  bool _audioForwardEnabled = true;
+  bool get audioForwardEnabled => _audioForwardEnabled;
+
+  /// Meta terakhir dari host (layar + audio pipeline), beserta alirannya.
+  HostMeta? get hostMeta => _hostMeta;
+  HostMeta? _hostMeta;
+  Stream<HostMeta> get hostMetaStream => _metaCtrl.stream;
+  final _metaCtrl = StreamController<HostMeta>.broadcast();
 
   /// Aliran fase koneksi — satu sumber kebenaran untuk status UI.
   Stream<RtcPhase> get phases => _phaseCtrl.stream;
@@ -167,6 +244,7 @@ class RtcService {
     };
 
     await _renderer.initialize();
+    await _audioRenderer.initialize();
     _emit(RtcPhase.pairing);
     await sig.connect(signalingUrl, token);
     sig.sendPair(hostId, pin);
@@ -205,8 +283,21 @@ class RtcService {
       init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly),
     );
 
+    // Audio forward (host → perangkat): transceiver recvonly agar offer
+    // memuat m-line audio — host mengisi track Opus ke sini bila WASAPI
+    // aktif. Nonaktif = direction `inactive` (tanpa negosiasi ulang).
+    _audioTransceiver = await pc.addTransceiver(
+      kind: RTCRtpMediaType.RTCRtpMediaTypeAudio,
+      init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly),
+    );
+
     // Data channel input: reliable + ordered (kontrol, bukan media).
     _inputChannel = await pc.createDataChannel('input', RTCDataChannelInit());
+    _inputChannel!.onMessage = (message) {
+      // Host mengirim PESAN TEKS meta (layar + audio) di channel ini —
+      // input biner tetap satu arah (perangkat → host).
+      if (!message.isBinary) _handleMeta(message.text);
+    };
 
     pc.onIceCandidate = (candidate) {
       _sig?.sendIce(hostId, {
@@ -219,6 +310,10 @@ class RtcService {
     pc.onTrack = (event) {
       if (event.track.kind == 'video') {
         _renderer.srcObject = event.streams.isNotEmpty
+            ? event.streams[0]
+            : null;
+      } else if (event.track.kind == 'audio') {
+        _audioRenderer.srcObject = event.streams.isNotEmpty
             ? event.streams[0]
             : null;
       }
@@ -282,6 +377,78 @@ class RtcService {
     }
   }
 
+  /// Meta teks dari host (data channel) — layar & status audio.
+  void _handleMeta(String text) {
+    try {
+      final data = jsonDecode(text);
+      if (data is Map<String, dynamic> && data['type'] == 'meta') {
+        final meta = HostMeta.fromJson(data);
+        _hostMeta = meta;
+        if (!_metaCtrl.isClosed) _metaCtrl.add(meta);
+      }
+    } catch (e) {
+      DevLog.w('rtc', 'meta host tidak valid', '$e');
+    }
+  }
+
+  /// Minta host mengganti monitor (berlaku segera — capture di-respawn).
+  /// Event 0x07 DISPLAY_SELECT pada protokol input biner.
+  void selectDisplay(int index) {
+    final ch = _inputChannel;
+    if (ch?.state != RTCDataChannelState.RTCDataChannelOpen) return;
+    ch!.send(RTCDataChannelMessage.fromBinary(InputCodec.displaySelect(index)));
+  }
+
+  /// Aktif/nonaktifkan pemutaran audio host (transceiver direction —
+  /// tanpa negosiasi ulang, tidak memutus sesi).
+  Future<void> setAudioForwardEnabled(bool on) async {
+    _audioForwardEnabled = on;
+    final t = _audioTransceiver;
+    if (t == null) return;
+    try {
+      await t.setDirection(
+        on ? TransceiverDirection.RecvOnly : TransceiverDirection.Inactive,
+      );
+    } catch (e) {
+      DevLog.w('rtc', 'set direction audio gagal', '$e');
+    }
+  }
+
+  /// Aktifkan mic perangkat (minta izin saat pertama kali) dan kirim track
+  /// audio ke host. Gagal → kembalikan pesan untuk ditampilkan UI.
+  Future<String?> enableMic() async {
+    if (_micEnabled) return null;
+    try {
+      final stream = await navigator.mediaDevices.getUserMedia({
+        'audio': {'echoCancellation': true, 'noiseSuppression': true},
+        'video': false,
+      });
+      final track = stream.getAudioTracks().first;
+      await _pc?.addTrack(track, stream);
+      _micStream = stream;
+      _micEnabled = true;
+      return null;
+    } catch (e) {
+      DevLog.w('rtc', 'mic gagal', '$e');
+      return 'Izin mikrofon ditolak atau mic tidak tersedia.';
+    }
+  }
+
+  /// Matikan mic — stop semua track lokal (stream berakhir untuk host).
+  Future<void> disableMic() async {
+    if (!_micEnabled) return;
+    final stream = _micStream;
+    _micStream = null;
+    _micEnabled = false;
+    if (stream != null) {
+      for (final t in stream.getTracks()) {
+        try {
+          await t.stop();
+        } catch (_) {}
+      }
+    }
+  }
+
   /// Kirim event input BINER ke host (encode via [InputCodec]).
   ///
   /// Protokol 8-byte little-endian — lihat `input_codec.dart` &
@@ -299,11 +466,14 @@ class RtcService {
     _stopped = true;
     _watchdog?.cancel();
     _watchdog = null;
+    await disableMic();
     await _inputChannel?.close();
     await _pc?.close();
     await _renderer.dispose();
+    await _audioRenderer.dispose();
     await _sig?.close();
     _emit(RtcPhase.ended);
     await _phaseCtrl.close();
+    await _metaCtrl.close();
   }
 }

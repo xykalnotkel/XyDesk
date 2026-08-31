@@ -355,6 +355,8 @@ jobs:
           mkdir -p dist
           cp artifacts/release-client-assets/XyDesk-Android-arm64-v8a.apk dist/
           cp artifacts/release-client-assets/XyDesk-Android-armeabi-v7a.apk dist/
+          # Changelog rilis ikut dilampirkan — wajib ada di setiap rilis.
+          cp CHANGELOG.md dist/CHANGELOG.md
           # Satu installer per arsitektur. Client Flutter + engine Rust Host
           # sudah menyatu di dalamnya, jadi host exe & portable zip tidak
           # diterbitkan terpisah.
@@ -425,6 +427,14 @@ jobs:
           sha256sum update.json >> SHA256SUMS.txt
           cat SHA256SUMS.txt
 
+      - name: Siapkan isi changelog untuk Release
+        run: |
+          {
+            echo 'CHANGELOG_BODY<<EOF'
+            sed -n '/^## \[/,$p' CHANGELOG.md | head -n 120
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+
       - name: Publikasikan GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -437,6 +447,8 @@ jobs:
             ## XyDesk ${{ needs.prepare.outputs.tag }}
 
             Rilis resmi XyDesk untuk Android, Windows, dan Web.
+
+            ${{ env.CHANGELOG_BODY }}
 
             | Platform | Berkas | Keterangan |
             |---|---|---|

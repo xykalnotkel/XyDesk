@@ -80,6 +80,20 @@ export const InputCodec = {
   },
 };
 
+/// Meta host (layar + audio) — dikirim host lewat data channel input.
+export interface HostDisplay {
+  index: number;
+  name: string;
+  width: number;
+  height: number;
+}
+
+export interface HostMeta {
+  displays: HostDisplay[];
+  wanted: number;
+  audio: { available: boolean; pipeline: string };
+}
+
 export class RtcSession {
   private ws?: WebSocket;
   private pc?: RTCPeerConnection;
@@ -90,9 +104,16 @@ export class RtcSession {
   private stopped = false;
   private recoveryAttempt = 0;
   private recovering = false;
+  private audioTransceiver?: RTCRtpTransceiver;
+  private micStream?: MediaStream;
 
   onPhase: (phase: RtcPhase) => void = () => {};
   onTrack: (stream: MediaStream) => void = () => {};
+  onAudioTrack: (stream: MediaStream) => void = () => {};
+  onMeta: (meta: HostMeta) => void = () => {};
+
+  meta: HostMeta | null = null;
+  micEnabled = false;
 
   async start(jwt: string, hostId: string, pin: string) {
     this.hostId = hostId.replace(/[\s-]/g, '');
@@ -168,7 +189,24 @@ export class RtcSession {
     this.pc = pc;
 
     pc.addTransceiver('video', { direction: 'recvonly' });
+    // Audio forward (host → browser): m-line audio di offer; host mengisi
+    // track Opus bila WASAPI aktif.
+    this.audioTransceiver = pc.addTransceiver('audio', { direction: 'recvonly' });
     this.input = pc.createDataChannel('input');
+    this.input.onmessage = (ev) => {
+      // Host mengirim meta teks (layar + audio) di channel ini.
+      if (typeof ev.data === 'string') {
+        try {
+          const data = JSON.parse(ev.data);
+          if (data.type === 'meta') {
+            this.meta = data as HostMeta;
+            this.onMeta(this.meta);
+          }
+        } catch {
+          /* meta tidak valid — abaikan */
+        }
+      }
+    };
 
     pc.onicecandidate = (ev) => {
       if (!ev.candidate) return;
@@ -183,8 +221,9 @@ export class RtcSession {
       });
     };
     pc.ontrack = (ev) => {
-      if (ev.track.kind === 'video' && ev.streams[0]) {
-        this.onTrack(ev.streams[0]);
+      if (ev.streams[0]) {
+        if (ev.track.kind === 'video') this.onTrack(ev.streams[0]);
+        else if (ev.track.kind === 'audio') this.onAudioTrack(ev.streams[0]);
       }
     };
     pc.onconnectionstatechange = () => {
@@ -246,9 +285,54 @@ export class RtcSession {
     if (this.input?.readyState === 'open') this.input.send(event.buffer as ArrayBuffer);
   }
 
+  /// 0x07 DISPLAY_SELECT — pindah monitor host.
+  selectDisplay(index: number) {
+    const b = new Uint8Array(8);
+    b[0] = 0x07;
+    b[1] = Math.max(0, Math.min(255, index | 0));
+    this.sendInput(b);
+  }
+
+  /// Aktif/nonaktifkan pemutaran audio host (transceiver direction).
+  async setAudioEnabled(on: boolean) {
+    if (!this.audioTransceiver) return;
+    try {
+      this.audioTransceiver.direction = on ? 'recvonly' : 'inactive';
+    } catch {
+      /* abaikan — audio tidak tersedia */
+    }
+  }
+
+  /// Aktifkan mic browser → host. Gagal → kembalikan pesan error.
+  async enableMic(): Promise<string | null> {
+    if (this.micEnabled) return null;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+        video: false,
+      });
+      const track = stream.getAudioTracks()[0];
+      if (!track) throw new Error('track mic tidak ada');
+      this.pc?.addTrack(track, stream);
+      this.micStream = stream;
+      this.micEnabled = true;
+      return null;
+    } catch {
+      return 'Izin mikrofon ditolak atau mic tidak tersedia.';
+    }
+  }
+
+  async disableMic() {
+    if (!this.micEnabled) return;
+    this.micEnabled = false;
+    for (const t of this.micStream?.getTracks() ?? []) t.stop();
+    this.micStream = undefined;
+  }
+
   stop() {
     if (this.stopped) return;
     this.stopped = true;
+    void this.disableMic();
     this.input?.close();
     this.pc?.close();
     this.ws?.close();

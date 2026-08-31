@@ -1,6 +1,6 @@
 [package]
 name = "xydesk-host"
-version = "6.0.0"
+version = "6.1.0"
 edition = "2021"
 description = "XyDesk host — capture & stream layar Windows via WebRTC"
 
@@ -38,6 +38,8 @@ axum = { version = "0.8", default-features = false, features = ["http1", "json",
 # ── Capture layar (Windows-only) — DXGI Desktop Duplication ──
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-capture = "2.0"
+# Audio: WASAPI loopback → Opus (audio.rs)
+opus = "0.3"
 # Injeksi input via SendInput (user-mode, tanpa driver) — lihat src/input.rs
 windows = { version = "0.61", features = [
   "Win32_UI_Input_KeyboardAndMouse",

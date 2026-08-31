@@ -1085,3 +1085,36 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   .stats-strip .stat:last-child { border-radius: 0 0 var(--radius) 0; }
   .site-header .top-nav { display: none; }
 }
+
+/* ── Sesi: pemilih layar & tombol audio/mic ────────────────────── */
+.display-switcher {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  z-index: 5;
+}
+.display-switcher button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(13, 7, 22, 0.65);
+  color: #e9e2fa;
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+.display-switcher button.active {
+  background: var(--accent);
+  border-color: var(--accent-2);
+  color: #fff;
+}
+.session-actions button.on {
+  background: var(--accent);
+  border-color: var(--accent-deep);
+  color: #fff;
+}

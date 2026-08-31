@@ -28,7 +28,7 @@ import {
   subscribeNews,
   toggleLike,
 } from './news';
-import { InputCodec, RtcPhase, RtcSession } from './rtc';
+import { HostMeta, InputCodec, RtcPhase, RtcSession } from './rtc';
 import { TOUCH_ROWS, vkFromCode } from './vk';
 
 type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news';
@@ -1240,6 +1240,10 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const sessionRef = useRef<RtcSession | null>(null);
   const retryRef = useRef({ tries: 0, timer: 0 as ReturnType<typeof setTimeout> | 0, wasConnected: false });
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioOn, setAudioOn] = useState(true);
+  const [micOn, setMicOn] = useState(false);
+  const [hostMeta, setHostMeta] = useState<HostMeta | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const pinRef = useRef<HTMLInputElement | null>(null);
 
@@ -1307,6 +1311,12 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       session.onTrack = (stream) => {
         if (videoRef.current) videoRef.current.srcObject = stream;
       };
+      // Audio sistem host — diputar lewat elemen audio terpisah.
+      session.onAudioTrack = (stream) => {
+        if (audioRef.current) audioRef.current.srcObject = stream;
+      };
+      // Meta host (daftar layar + status audio) untuk pemilih monitor.
+      session.onMeta = (meta) => setHostMeta(meta);
       await session.start(jwt, hostId, pin);
     } catch {
       setPhase('ended');
@@ -1451,7 +1461,52 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
         onContextMenu={(e) => e.preventDefault()}
       >
         <video ref={videoRef} autoPlay playsInline muted />
+        {/* Audio sistem host (track Opus) — elemen terpisah, tidak di-mute. */}
+        <audio ref={audioRef} autoPlay />
+        {hostMeta && hostMeta.displays.length > 1 && (
+          <div className="display-switcher">
+            {hostMeta.displays.map((d) => (
+              <button
+                key={d.index}
+                className={d.index === hostMeta.wanted ? 'active' : ''}
+                onClick={() => sessionRef.current?.selectDisplay(d.index)}
+              >
+                {d.name || `Layar ${d.index + 1}`} {d.width}×{d.height}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="session-actions">
+          <button
+            className={audioOn ? 'on' : ''}
+            title="Audio PC (WASAPI loopback host)"
+            onClick={() => {
+              const next = !audioOn;
+              setAudioOn(next);
+              void sessionRef.current?.setAudioEnabled(next);
+            }}
+          >
+            {audioOn ? 'Audio: hidup' : 'Audio: mati'}
+          </button>
+          <button
+            className={micOn ? 'on' : ''}
+            title="Kirim mic ke host (diputar di speaker PC)"
+            onClick={async () => {
+              if (micOn) {
+                await sessionRef.current?.disableMic();
+                setMicOn(false);
+                return;
+              }
+              const err = await sessionRef.current?.enableMic();
+              if (err) {
+                window.alert(err);
+                return;
+              }
+              setMicOn(true);
+            }}
+          >
+            {micOn ? 'Mic: hidup' : 'Mic: mati'}
+          </button>
           <button
             title="Kirim clipboard"
             onClick={async () => {

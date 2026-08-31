@@ -252,7 +252,7 @@ async function adminPublish(env, request, body) {
   const content = clean(body.content).slice(0, 20000);
   const cover = clean(body.cover).slice(0, 300);
   const category = (clean(body.category) || 'umum').slice(0, 24);
-  const author = (clean(body.author) || 'Tim XyDesk').slice(0, 60);
+  const author = (clean(body.author) || 'Haekal Saputra (XySpace)').slice(0, 60);
   if (title.length < 4 || content.length < 10) {
     return json({ error: 'judul dan isi wajib diisi' }, 400);
   }
@@ -329,10 +329,20 @@ async function sendEmails(env, post) {
           to: [s.email],
           subject: `XyDesk: ${post.title}`,
           html: `<div style="font-family:sans-serif;max-width:560px;margin:auto">
-  <h2 style="margin:0 0 8px">${post.title}</h2>
-  <p style="color:#52525b">${post.excerpt || ''}</p>
-  <a href="https://news.xystudio.my.id/n/${post.slug}" style="display:inline-block;background:#6d28d9;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Baca di XyDesk</a>
-  <p style="color:#a1a1aa;font-size:12px;margin-top:16px">Kamu menerima email ini karena berlangganan berita XyDesk.</p>
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:#0d0716;border-radius:14px 14px 0 0">
+    <img src="https://app.xystudio.my.id/badge-xyspace.png" alt="XySpace" width="168" height="38" style="display:block;border:0" />
+    <span style="color:#a78bfa;font-size:13px;font-weight:600">XyDesk News</span>
+  </div>
+  <div style="padding:22px;border:1px solid #e9e5f2;border-top:0;border-radius:0 0 14px 14px">
+    <h2 style="margin:0 0 10px;color:#160f2b">${post.title}</h2>
+    <p style="color:#5b5570">${post.excerpt || ''}</p>
+    <a href="https://news.xystudio.my.id/n/${post.slug}" style="display:inline-block;background:#7c3aed;color:#fff;padding:11px 20px;border-radius:10px;text-decoration:none;font-weight:600">Baca di XyDesk</a>
+    <p style="color:#9a94ad;font-size:12px;margin:20px 0 0">Kamu menerima email ini karena berlangganan berita XyDesk.</p>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:20px;padding-top:18px;border-top:1px solid #e9e5f2">
+      <img src="https://app.xystudio.my.id/logo.png" alt="X" width="34" height="34" style="border-radius:8px;display:block" />
+      <div style="font-size:13px;color:#160f2b"><strong>Haekal Saputra</strong><br /><span style="color:#9a94ad">Founder, XySpace — via XyDesk News</span></div>
+    </div>
+  </div>
 </div>`,
         }),
       });

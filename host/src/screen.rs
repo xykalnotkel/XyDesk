@@ -117,8 +117,26 @@ pub fn spawn_frame_source() -> mpsc::Receiver<Vec<u8>> {
     {
         let (tx, rx) = mpsc::sync_channel::<Vec<u8>>(2);
         std::thread::spawn(move || {
-            if let Err(e) = windows::start_primary_monitor(tx) {
-                eprintln!("[xydesk-host] capture layar gagal: {e}");
+            let mut current = wanted_display();
+            loop {
+                if tx.is_closed() {
+                    break; // sesi selesai — receiver di-drop
+                }
+                if let Err(e) = windows::start_monitor(tx.clone(), current) {
+                    eprintln!(
+                        "[xydesk-host] capture layar (monitor {current}) gagal: {e}"
+                    );
+                }
+                // Ada permintaan pindah monitor? Respawn dengan indeks baru.
+                let next = SWITCH_TO.swap(
+                    usize::MAX,
+                    std::sync::atomic::Ordering::Relaxed,
+                );
+                if next == usize::MAX || tx.is_closed() {
+                    break;
+                }
+                current = next;
+                println!("[xydesk-host] pindah capture ke monitor {current}");
             }
         });
         rx
@@ -163,6 +181,57 @@ pub fn capture_status() -> &'static str {
     {
         "test-pattern (openh264) — jalur video RTP dapat diuji"
     }
+}
+
+/// Info satu monitor/display untuk pemilihan layar di client.
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisplayInfo {
+    /// Indeks sistem (0 = primer) — dipakai `select_display`.
+    pub index: usize,
+    /// Nama perangkat GDI (mis. `\\.\DISPLAY1`) — untuk label UI.
+    pub name: String,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// Daftar semua monitor aktif (urutan sistem Windows).
+pub fn list_displays() -> Vec<DisplayInfo> {
+    #[cfg(target_os = "windows")]
+    {
+        windows::list_displays()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Vec::new()
+    }
+}
+
+/// Monitor yang sedang dipilih untuk capture (default 0 = primer).
+static WANTED_MONITOR: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
+
+/// Permintaan pindah monitor DI TENGAH SESI. Dibaca thread capture
+/// (`on_frame_arrived` menghentikan handler → thread respawn dengan monitor
+/// baru). `usize::MAX` = tidak ada permintaan.
+static SWITCH_TO: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(usize::MAX);
+
+/// Pilih monitor. Berlaku langsung bila ada sesi berjalan (capture di-respawn);
+/// selain itu menjadi pilihan sesi berikutnya.
+pub fn select_display(index: usize) -> bool {
+    let count = list_displays().len();
+    if count == 0 || index >= count {
+        return false;
+    }
+    WANTED_MONITOR.store(index, std::sync::atomic::Ordering::Relaxed);
+    SWITCH_TO.store(index, std::sync::atomic::Ordering::Relaxed);
+    true
+}
+
+/// Indeks monitor yang akan dipakai sesi berikutnya.
+pub fn wanted_display() -> usize {
+    WANTED_MONITOR.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 /// Benar bila encoder NVENC hardware sedang dipakai (hanya bisa di Windows).
@@ -311,8 +380,14 @@ mod windows {
         fn on_frame_arrived(
             &mut self,
             frame: &mut Frame,
-            _capture_control: InternalCaptureControl,
+            capture_control: InternalCaptureControl,
         ) -> Result<(), Self::Error> {
+            // Permintaan pindah monitor: hentikan handler ini — thread
+            // capture di atasnya akan respawn dengan monitor baru.
+            if super::SWITCH_TO.load(std::sync::atomic::Ordering::Relaxed) != usize::MAX {
+                capture_control.stop();
+                return Ok(());
+            }
             // Baca dimensi SEBELUM buffer() (buffer meminjam frame secara mut).
             let width = frame.width() as usize;
             let height = frame.height() as usize;
@@ -405,10 +480,13 @@ mod windows {
 
     /// Mulai capture layar primer. Fungsi memblok thread yang memanggilnya
     /// (dijalankan di thread terpisah oleh `spawn_frame_source`).
-    pub fn start_primary_monitor(
+    pub fn start_monitor(
         sender: mpsc::SyncSender<Vec<u8>>,
+        index: usize,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let monitor = Monitor::primary()?;
+        // `from_index` gagal bila indeks di luar jangkauan — fallback ke
+        // monitor primer agar sesi tidak mati hanya karena pemilihan layar.
+        let monitor = Monitor::from_index(index).or_else(|_| Monitor::primary())?;
         let settings = Settings::new(
             monitor,
             CursorCaptureSettings::WithCursor,
@@ -421,6 +499,59 @@ mod windows {
         );
         ScreenCapturer::start(settings)?;
         Ok(())
+    }
+
+    /// Daftar monitor aktif via GDI (`EnumDisplayMonitors` + `GetMonitorInfoW`)
+    /// — urutan dan nama konsisten dengan yang dilihat sistem Windows.
+    pub fn list_displays() -> Vec<super::DisplayInfo> {
+        use windows::core::BOOL;
+        use windows::Win32::Foundation::LPARAM;
+        use windows::Win32::Graphics::Gdi::{
+            EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO,
+            MONITORINFOEXW,
+        };
+
+        unsafe extern "system" fn collect(
+            hmonitor: HMONITOR,
+            _hdc: HDC,
+            _rect: *mut windows::Win32::Foundation::RECT,
+            lparam: LPARAM,
+        ) -> BOOL {
+            let list = &mut *(lparam.0 as *mut Vec<super::DisplayInfo>);
+            let mut info: MONITORINFOEXW = std::mem::zeroed();
+            info.monitorInfo.cbSize = std::mem::size_of::<MONITORINFOEXW>() as u32;
+            if unsafe {
+                GetMonitorInfoW(
+                    hmonitor,
+                    &mut info as *mut MONITORINFOEXW as *mut MONITORINFO,
+                )
+            }
+            .as_bool()
+            {
+                let rc = info.monitorInfo.rcMonitor;
+                let name = String::from_utf16_lossy(&info.szDevice)
+                    .trim_end_matches('\0')
+                    .to_string();
+                list.push(super::DisplayInfo {
+                    index: list.len(),
+                    name,
+                    width: (rc.right - rc.left).max(0) as u32,
+                    height: (rc.bottom - rc.top).max(0) as u32,
+                });
+            }
+            BOOL(1)
+        }
+
+        let mut list: Vec<super::DisplayInfo> = Vec::new();
+        unsafe {
+            let _ = EnumDisplayMonitors(
+                HDC(0),
+                None,
+                Some(collect),
+                LPARAM(&mut list as *mut Vec<super::DisplayInfo> as isize),
+            );
+        }
+        list
     }
 }
 
