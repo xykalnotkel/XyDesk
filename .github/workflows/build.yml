@@ -78,7 +78,7 @@ jobs:
 
       # Badge "Resmi" hanya berarti bila mustahil diminta klien.
       - name: Uji gerbang badge resmi (news worker)
-        run: node --test news/test/
+        run: node --test news/test/*.test.js
 
       # Nomor versi hidup di satu tempat. Kalau turunannya melenceng, footer
       # web pernah memajang v2.5.0 selama empat rilis.
