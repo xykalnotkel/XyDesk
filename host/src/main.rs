@@ -118,7 +118,6 @@ struct Args {
     control_port: u16,
 }
 
-#[tokio::main]
 /// Meta JSON untuk client (layar + audio host) — dikirim lewat data channel
 /// input saat sesi dibuka dan setiap kali pilihan layar berubah.
 fn meta_json() -> serde_json::Value {
@@ -133,6 +132,7 @@ fn meta_json() -> serde_json::Value {
     })
 }
 
+#[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
 
