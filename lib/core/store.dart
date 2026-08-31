@@ -64,7 +64,6 @@ final storeProvider = Provider<Store>((_) => throw UnimplementedError());
 @immutable
 class AppSettings {
   const AppSettings({
-    this.themeMode = ThemeMode.dark,
     this.langCode = 'id',
     this.haptics = true,
     this.highRefresh = true,
@@ -79,7 +78,6 @@ class AppSettings {
     this.clipboardSync = true,
   });
 
-  final ThemeMode themeMode;
   final String langCode;
   final bool haptics;
   final bool highRefresh;
@@ -94,7 +92,6 @@ class AppSettings {
   final bool clipboardSync;
 
   AppSettings copyWith({
-    ThemeMode? themeMode,
     String? langCode,
     bool? haptics,
     bool? highRefresh,
@@ -108,7 +105,6 @@ class AppSettings {
     bool? micPassthrough,
     bool? clipboardSync,
   }) => AppSettings(
-    themeMode: themeMode ?? this.themeMode,
     langCode: langCode ?? this.langCode,
     haptics: haptics ?? this.haptics,
     highRefresh: highRefresh ?? this.highRefresh,
@@ -133,7 +129,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   void _load() {
     state = AppSettings(
-      themeMode: ThemeMode.values[_s.getI('theme', def: ThemeMode.dark.index)],
       langCode: _s.getStr('lang') ?? 'id',
       haptics: _s.getBool('haptics', def: true),
       highRefresh: _s.getBool('high_refresh', def: true),
@@ -150,14 +145,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     DevLog.i(
       'settings',
       'Dimuat',
-      'tema=${state.themeMode.name} bahasa=${state.langCode} codec=${state.codec}',
+      'bahasa=${state.langCode} codec=${state.codec}',
     );
-  }
-
-  Future<void> setTheme(ThemeMode m) async {
-    state = state.copyWith(themeMode: m);
-    await _s.setI('theme', m.index);
-    DevLog.i('settings', 'Tema diubah', m.name);
   }
 
   Future<void> setLang(String code) async {

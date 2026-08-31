@@ -111,22 +111,13 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
 
   Future<void> _connect() async {
     if (!_valid) return;
-    // Demo: kata sandi "salah" memicu state error agar bisa dilihat di UI.
-    if (_pw.text == 'salah') {
-      setState(() => _error = null);
-      await _showConnectError(
-        'Koneksi gagal',
-        'Kata sandi salah. Sisa 3 percobaan sebelum dikunci 5 menit.',
-      );
-      return;
-    }
     setState(() => _error = null);
 
     final id = _id.text.replaceAll(' ', '');
     await _saveRecent(id, _pw.text);
     final device = await ref
         .read(deviceRepoProvider.notifier)
-        .connect(id: id, name: _demoName(id), remembered: _remember);
+        .connect(id: id, name: _pendingName(id), remembered: _remember);
     if (!mounted) return;
 
     Navigator.of(context).push(
@@ -136,42 +127,12 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     );
   }
 
-  Future<void> _showConnectError(String title, String message) async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tutup'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _demoName(String id) {
-    switch (id) {
-      case '123456789':
-        return 'XYCLOUD-RTX4090-01';
-      case '234567890':
-        return 'XYCLOUD-RTX4080-02';
-      case '345678901':
-        return 'XYCLOUD-PRO-WORK-01';
-      case '456789012':
-        return 'XYCLOUD-ESPORT-360HZ';
-      default:
-        return 'PC-${id.substring(id.length - 4)}';
-    }
-  }
+  String _pendingName(String id) => 'PC-${id.substring(id.length - 4)}';
 
   Future<void> _scanQr() async {
     final id = await Navigator.of(
       context,
-    ).push<String>(MaterialPageRoute(builder: (_) => const QrScanDemoPage()));
+    ).push<String>(MaterialPageRoute(builder: (_) => const QrScanPage()));
     if (!mounted || id == null) return;
     _id.text = id;
     ScaffoldMessenger.of(
@@ -492,14 +453,14 @@ class _RecentsList extends StatelessWidget {
 
 /// Pemindai QR nyata (kamera + MLKit). Menerima QR host yang berisi ID
 /// 9 digit — polos ("123456789") atau URI xydesk://connect?id=123456789.
-class QrScanDemoPage extends StatefulWidget {
-  const QrScanDemoPage({super.key});
+class QrScanPage extends StatefulWidget {
+  const QrScanPage({super.key});
 
   @override
-  State<QrScanDemoPage> createState() => _QrScanDemoPageState();
+  State<QrScanPage> createState() => _QrScanPageState();
 }
 
-class _QrScanDemoPageState extends State<QrScanDemoPage> {
+class _QrScanPageState extends State<QrScanPage> {
   final MobileScannerController _controller = MobileScannerController(
     formats: const [BarcodeFormat.qrCode],
   );

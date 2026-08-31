@@ -25,6 +25,11 @@ enum RtcPhase {
   /// Host tidak online di signaling.
   peerOffline,
 
+  /// Host sedang melayani sesi lain. Meski password benar, koneksi kedua
+  /// DITOLAK — host hanya melayani satu sesi pada satu waktu dan tidak
+  /// membiarkan sesi aktif diambil alih diam-diam.
+  hostBusy,
+
   /// Sesi berakhir (bye, gagal, atau ditutup lokal).
   ended,
 
@@ -151,6 +156,11 @@ class RtcService {
         case 'error':
           if (m.error == 'peer-offline') {
             _emit(RtcPhase.peerOffline);
+          } else if (m.error == 'host-sibuk') {
+            // Host sibuk: sesi lain sedang berjalan. UI menampilkan pesan
+            // tendangan yang jelas — bukan error generik.
+            _lastError = 'Perangkat sedang dipakai sesi lain. Coba lagi nanti.';
+            _emit(RtcPhase.hostBusy);
           }
           break;
       }

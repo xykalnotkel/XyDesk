@@ -784,7 +784,7 @@ class _ControlsPanel extends StatelessWidget {
           title: 'Input transport belum tersambung',
           body:
               'Kontrol di layar dapat dipreview, tetapi belum mengirim input '
-              'ke host pada mode demo.',
+              'ke host sampai transport tersambung.',
         ),
       ],
     );
@@ -815,7 +815,7 @@ class _SessionPanel extends StatelessWidget {
               const _InfoRow(
                 icon: LucideIcons.wifi,
                 title: 'Transport',
-                value: 'Demo • offline',
+                value: 'Tidak terhubung',
               ),
               const _CardGap(),
               const _InfoRow(

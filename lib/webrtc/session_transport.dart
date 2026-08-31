@@ -19,6 +19,7 @@ enum TransportStatus {
   connected,
   rejected,
   peerOffline,
+  hostBusy,
   ended,
   error,
 }
@@ -112,6 +113,11 @@ class SessionTransport extends ChangeNotifier {
           _set(TransportStatus.rejected, 'Host menolak pairing.');
         case RtcPhase.peerOffline:
           _set(TransportStatus.peerOffline, 'Host tidak online.');
+        case RtcPhase.hostBusy:
+          _set(
+            TransportStatus.hostBusy,
+            'Perangkat sedang dipakai sesi lain. Koneksi ini ditolak — tunggu sesi selesai, lalu coba lagi.',
+          );
         case RtcPhase.ended:
           _set(TransportStatus.ended);
         case RtcPhase.error:

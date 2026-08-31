@@ -138,7 +138,7 @@ class _SplashScene extends StatelessWidget {
         : 0.5 * (1 - _frac(t, _clickEnd, _rightEnd));
 
     return ColoredBox(
-      color: const Color(0xFF090A10),
+      color: const Color(0xFFFAFAF9),
       child: ClipRect(
         child: Stack(
           fit: StackFit.expand,
@@ -149,9 +149,9 @@ class _SplashScene extends StatelessWidget {
                   center: Alignment(0, -0.10),
                   radius: 1.06,
                   colors: [
-                    Color(0xFF19152A),
-                    Color(0xFF0E0F18),
-                    Color(0xFF090A10),
+                    Color(0xFFFFFFFF),
+                    Color(0xFFF3F0FD),
+                    Color(0xFFFAFAF9),
                   ],
                   stops: [0, 0.48, 1],
                 ),
@@ -162,7 +162,7 @@ class _SplashScene extends StatelessWidget {
               top: size.height * 0.18,
               child: _BlurOrb(
                 size: 210,
-                color: const Color(0xFF6842E8).withValues(alpha: 0.16),
+                color: const Color(0xFF6142D6).withValues(alpha: 0.14),
               ),
             ),
             Positioned(
@@ -170,7 +170,7 @@ class _SplashScene extends StatelessWidget {
               bottom: size.height * 0.12,
               child: _BlurOrb(
                 size: 250,
-                color: const Color(0xFF3B7CFF).withValues(alpha: 0.12),
+                color: const Color(0xFF3B7CFF).withValues(alpha: 0.10),
               ),
             ),
             Center(
@@ -279,9 +279,9 @@ class _SplashScene extends StatelessWidget {
                                     ],
                                     colors: [
                                       Colors.transparent,
-                                      Colors.white.withValues(
+                                      const Color(0xFF18181B).withValues(
                                         alpha: shineT > 0 && shineT < 1
-                                            ? 0.35
+                                            ? 0.14
                                             : 0,
                                       ),
                                       Colors.transparent,
@@ -295,7 +295,7 @@ class _SplashScene extends StatelessWidget {
                                       height: 1.08,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: -1.9,
-                                      color: Color(0xFFF4F2FA),
+                                      color: Color(0xFF18181B),
                                       decoration: TextDecoration.none,
                                     ),
                                   ),

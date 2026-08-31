@@ -200,7 +200,7 @@ class DeviceRepo extends StateNotifier<List<Device>> {
       if (current == null) connected,
     ];
     await _persist();
-    DevLog.ok('devices', 'Pairing demo berhasil', connected.name);
+    DevLog.ok('devices', 'Perangkat disimpan ke riwayat', connected.name);
     return connected;
   }
 

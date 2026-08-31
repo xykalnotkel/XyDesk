@@ -18,6 +18,7 @@ import 'features/auth/auth_service.dart';
 import 'features/connect/connect_page.dart';
 import 'features/devices/history_page.dart';
 import 'features/home/home_page.dart';
+import 'features/news/news_page.dart';
 import 'features/notifications/app_update_details.dart';
 import 'features/notifications/notification_preferences_page.dart';
 import 'features/notifications/notification_service.dart';
@@ -38,9 +39,10 @@ class XyDeskApp extends ConsumerWidget {
       title: 'XyDesk',
       debugShowCheckedModeBanner: false,
       navigatorKey: appNavigatorKey,
+      // XyDesk memakai Tema Terang saja (Paper). Mode gelap dihapus —
+      // satu tema berarti satu set kontras yang diuji, tanpa cabang UI.
       theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: settings.themeMode,
+      themeMode: ThemeMode.light,
 
       // Lokalisasi
       locale: Locale(lang.code),
@@ -304,11 +306,26 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (mounted) setState(() {});
   }
 
+  /// Destinasi rail untuk layar lebar — ikon vektor Lucide yang warnanya
+  /// mengikuti tema (tidak lagi gambar webp dua varian).
+  NavigationRailDestination _railDest(
+    BuildContext context,
+    IconData icon,
+    String label,
+  ) {
+    return NavigationRailDestination(
+      icon: Icon(icon),
+      selectedIcon: Icon(icon),
+      label: Text(label),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final titles = [
       context.tr('home_devices'),
       context.tr('nav_connect'),
+      context.tr('nav_news'),
       context.tr('nav_account'),
     ];
 
@@ -327,51 +344,33 @@ class _AppShellState extends ConsumerState<AppShell> {
               labelType: NavigationRailLabelType.all,
               backgroundColor: Colors.transparent,
               destinations: [
-                NavigationRailDestination(
-                  icon: Image.asset(
-                    'assets/libraryicons/nav_home_inactive.webp',
-                    width: 24,
-                    height: 24,
-                  ),
-                  selectedIcon: Image.asset(
-                    'assets/libraryicons/nav_home_active.webp',
-                    width: 24,
-                    height: 24,
-                  ),
-                  label: Text(context.tr('nav_home')),
+                _railDest(context, LucideIcons.monitor, context.tr('nav_home')),
+                _railDest(
+                  context,
+                  LucideIcons.screenShare,
+                  context.tr('nav_connect'),
                 ),
-                NavigationRailDestination(
-                  icon: Image.asset(
-                    'assets/libraryicons/nav_connect_inactive.webp',
-                    width: 24,
-                    height: 24,
-                  ),
-                  selectedIcon: Image.asset(
-                    'assets/libraryicons/nav_connect_active.webp',
-                    width: 24,
-                    height: 24,
-                  ),
-                  label: Text(context.tr('nav_connect')),
+                _railDest(
+                  context,
+                  LucideIcons.newspaper,
+                  context.tr('nav_news'),
                 ),
-                NavigationRailDestination(
-                  icon: Image.asset(
-                    'assets/libraryicons/nav_account_inactive.webp',
-                    width: 24,
-                    height: 24,
-                  ),
-                  selectedIcon: Image.asset(
-                    'assets/libraryicons/nav_account_active.webp',
-                    width: 24,
-                    height: 24,
-                  ),
-                  label: Text(context.tr('nav_account')),
+                _railDest(
+                  context,
+                  LucideIcons.circleUserRound,
+                  context.tr('nav_account'),
                 ),
               ],
             ),
             Expanded(
               child: IndexedStack(
                 index: _index,
-                children: const [HomePage(), ConnectPage(), AccountPage()],
+                children: const [
+                  HomePage(),
+                  ConnectPage(),
+                  NewsPage(),
+                  AccountPage(),
+                ],
               ),
             ),
           ],
@@ -384,49 +383,30 @@ class _AppShellState extends ConsumerState<AppShell> {
       actions: _actions(context),
       body: IndexedStack(
         index: _index,
-        children: const [HomePage(), ConnectPage(), AccountPage()],
+        children: const [HomePage(), ConnectPage(), NewsPage(), AccountPage()],
       ),
       bottomNav: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: [
           NavigationDestination(
-            icon: Image.asset(
-              'assets/libraryicons/nav_home_inactive.webp',
-              width: 26,
-              height: 26,
-            ),
-            selectedIcon: Image.asset(
-              'assets/libraryicons/nav_home_active.webp',
-              width: 26,
-              height: 26,
-            ),
+            icon: const Icon(LucideIcons.monitor),
+            selectedIcon: const Icon(LucideIcons.monitor),
             label: context.tr('nav_home'),
           ),
           NavigationDestination(
-            icon: Image.asset(
-              'assets/libraryicons/nav_connect_inactive.webp',
-              width: 26,
-              height: 26,
-            ),
-            selectedIcon: Image.asset(
-              'assets/libraryicons/nav_connect_active.webp',
-              width: 26,
-              height: 26,
-            ),
+            icon: const Icon(LucideIcons.screenShare),
+            selectedIcon: const Icon(LucideIcons.screenShare),
             label: context.tr('nav_connect'),
           ),
           NavigationDestination(
-            icon: Image.asset(
-              'assets/libraryicons/nav_account_inactive.webp',
-              width: 26,
-              height: 26,
-            ),
-            selectedIcon: Image.asset(
-              'assets/libraryicons/nav_account_active.webp',
-              width: 26,
-              height: 26,
-            ),
+            icon: const Icon(LucideIcons.newspaper),
+            selectedIcon: const Icon(LucideIcons.newspaper),
+            label: context.tr('nav_news'),
+          ),
+          NavigationDestination(
+            icon: const Icon(LucideIcons.circleUserRound),
+            selectedIcon: const Icon(LucideIcons.circleUserRound),
             label: context.tr('nav_account'),
           ),
         ],

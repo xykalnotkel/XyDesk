@@ -131,15 +131,12 @@ class AppearanceSettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsProvider);
     final lang = ref.watch(langProvider);
     return _SettingsScaffold(
       title: 'Tampilan & bahasa',
       description: 'Atur tampilan XyDesk agar nyaman di perangkat ini.',
       children: [
-        const SectionLabel('Tema', top: 0),
-        _ThemeSelector(current: settings.themeMode),
-        const SectionLabel('Bahasa'),
+        const SectionLabel('Bahasa', top: 0),
         ListRow(
           title: context.tr('settings_language'),
           subtitle: 'Bahasa antarmuka aplikasi',
@@ -675,80 +672,7 @@ class _CategoryRow extends StatelessWidget {
   }
 }
 
-class _ThemeSelector extends ConsumerWidget {
-  const _ThemeSelector({required this.current});
-
-  final ThemeMode current;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.c;
-    final items = <(ThemeMode, String, IconData)>[
-      (ThemeMode.dark, context.tr('settings_theme_dark'), LucideIcons.moon),
-      (ThemeMode.light, context.tr('settings_theme_light'), LucideIcons.sun),
-      (
-        ThemeMode.system,
-        context.tr('settings_theme_system'),
-        LucideIcons.smartphone,
-      ),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: c.input,
-        borderRadius: BorderRadius.circular(R.lg),
-      ),
-      child: Row(
-        children: [
-          for (final (mode, label, icon) in items)
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => ref.read(settingsProvider.notifier).setTheme(mode),
-                child: AnimatedContainer(
-                  duration: D.tab,
-                  curve: D.curve,
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  decoration: BoxDecoration(
-                    color: current == mode ? c.raised : Colors.transparent,
-                    borderRadius: BorderRadius.circular(R.md),
-                    boxShadow: current == mode
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        icon,
-                        size: 17,
-                        color: current == mode ? c.textHi : c.textLow,
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: current == mode
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: current == mode ? c.textHi : c.textLow,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+ );
   }
 }
 

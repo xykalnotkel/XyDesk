@@ -122,6 +122,51 @@ class SurfaceCard extends StatelessWidget {
   }
 }
 
+/// Kotak kerangka pemuatan (skeleton) — denyut halus, kontras rendah.
+/// Dipakai semua layar yang memuat data jaringan agar pengguna melihat
+/// bahwa konten sedang diambil, bukan layar kosong.
+class SkeletonBox extends StatefulWidget {
+  const SkeletonBox({super.key, this.width, this.height = 14, this.radius = 8});
+
+  final double? width;
+  final double height;
+  final double radius;
+
+  @override
+  State<SkeletonBox> createState() => _SkeletonBoxState();
+}
+
+class _SkeletonBoxState extends State<SkeletonBox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+    lowerBound: 0.35,
+    upperBound: 1.0,
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) => Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: context.c.textLow.withValues(alpha: 0.16 * _pulse.value),
+          borderRadius: BorderRadius.circular(widget.radius),
+        ),
+      ),
+    );
+  }
+}
+
 /// Titik status koneksi. Warna desaturasi, bukan lampu neon.
 class StatusDot extends StatelessWidget {
   const StatusDot({super.key, required this.pingMs});

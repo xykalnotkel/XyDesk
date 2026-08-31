@@ -616,6 +616,7 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
     TransportStatus.connected => 'TERSAMBUNG',
     TransportStatus.rejected => 'PAIRING DITOLAK',
     TransportStatus.peerOffline => 'HOST TIDAK ONLINE',
+    TransportStatus.hostBusy => 'PERANGKAT SEDANG DIPAKAI',
     TransportStatus.ended => 'SESI BERAKHIR',
     TransportStatus.error => 'KONEKSI GAGAL',
   };
@@ -685,6 +686,71 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
     ];
   }
 
+  /// Konten saat host sibuk: koneksi DITOLAK karena sesi lain sedang
+  /// berjalan. Bukan error teknis — pengguna diarahkan menunggu.
+  List<Widget> _busyContent() {
+    return [
+      Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: AppColors.warning.withValues(alpha: 0.16),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: AppColors.warning.withValues(alpha: 0.45),
+            width: 1.5,
+          ),
+        ),
+        child: const Icon(
+          LucideIcons.userX,
+          size: 32,
+          color: AppColors.warning,
+        ),
+      ),
+      const SizedBox(height: 14),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.warning.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(R.sm),
+          border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+        ),
+        child: const Text(
+          'DITOLAK • SEDANG DIPAKAI',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: AppColors.warning,
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Text(
+        transport.message ?? 'Perangkat sedang dipakai sesi lain.',
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Color(0xD9FFFFFF),
+        ),
+      ),
+      const SizedBox(height: 16),
+      FilledButton(
+        onPressed: onRetry,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.warning.withValues(alpha: 0.9),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+        ),
+        child: const Text(
+          'Coba lagi',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+        ),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -707,6 +773,8 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: transport.status == TransportStatus.error
                     ? _errorContent()
+                    : transport.status == TransportStatus.hostBusy
+                    ? _busyContent()
                     : [
                         Opacity(
                           opacity: 0.52,
