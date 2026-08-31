@@ -32,6 +32,8 @@ rand = "0.8"
 sha2 = "0.10"
 # Encoder H264 software (lintas platform — pola visual di Linux, capture di Windows)
 openh264 = "0.9.8"
+# Control API lokal untuk shell desktop (HTTP 127.0.0.1, lihat src/control.rs)
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
 
 # ── Capture layar (Windows-only) — DXGI Desktop Duplication ──
 [target.'cfg(target_os = "windows")'.dependencies]
