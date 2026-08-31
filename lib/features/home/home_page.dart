@@ -13,11 +13,10 @@ import '../devices/device_model.dart';
 import '../host/host_mode_page.dart';
 import '../session/session_page.dart';
 
-/// Simulasi pemuatan awal supaya skeleton terlihat.
-final _loadingProvider = FutureProvider<void>((ref) async {
-  await Future<void>.delayed(const Duration(milliseconds: 650));
-});
-
+/// Beranda menampilkan daftar perangkat langsung dari penyimpanan lokal —
+/// tanpa jeda tiruan. Penyimpanan dibaca sinkron saat repo dibuat, jadi
+/// tidak ada kondisi memuat yang perlu dipalsukan; state kosong jujur
+/// ditampilkan bila memang belum ada perangkat.
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -25,61 +24,41 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (Platform.isWindows) return const HostModePage();
 
-    final loading = ref.watch(_loadingProvider);
     final devices = ref.watch(deviceRepoProvider);
     final topPad = MediaQuery.paddingOf(context).top + 60;
 
-    return loading.when(
-      loading: () => ListView(
-        padding: EdgeInsets.only(top: topPad, bottom: 110),
-        children: const [
-          DeviceCardSkeleton(),
-          DeviceCardSkeleton(),
-          DeviceCardSkeleton(),
-          DeviceCardSkeleton(),
-        ],
-      ),
-      error: (e, _) => IllustrationState(
-        asset: Img.error,
-        title: context.tr('home_load_error'),
-        message: '$e',
-      ),
-      data: (_) {
-        if (devices.isEmpty) {
-          return IllustrationState(
-            asset: Img.empty,
-            title: context.tr('home_empty_title'),
-            message: context.tr('home_empty_msg'),
-          );
-        }
+    if (devices.isEmpty) {
+      return IllustrationState(
+        asset: Img.empty,
+        title: context.tr('home_empty_title'),
+        message: context.tr('home_empty_msg'),
+      );
+    }
 
-        // Tablet mendapat dua kolom agar ruang tidak terbuang.
-        final cols = Responsive.isTablet(context) ? 2 : 1;
+    // Tablet mendapat dua kolom agar ruang tidak terbuang.
+    final cols = Responsive.isTablet(context) ? 2 : 1;
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(_loadingProvider);
-            await ref.read(_loadingProvider.future);
-          },
-          child: cols == 1
-              ? ListView.builder(
-                  padding: EdgeInsets.only(top: topPad, bottom: 110),
-                  itemCount: devices.length,
-                  itemBuilder: (_, i) => _DeviceCard(device: devices[i]),
-                )
-              : GridView.builder(
-                  padding: EdgeInsets.only(top: topPad, bottom: 110),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    mainAxisExtent: 116,
-                  ),
-                  itemCount: devices.length,
-                  itemBuilder: (_, i) => _DeviceCard(device: devices[i]),
-                ),
-        );
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.read(deviceRepoProvider.notifier).reloadFromStore();
       },
+      child: cols == 1
+          ? ListView.builder(
+              padding: EdgeInsets.only(top: topPad, bottom: 110),
+              itemCount: devices.length,
+              itemBuilder: (_, i) => _DeviceCard(device: devices[i]),
+            )
+          : GridView.builder(
+              padding: EdgeInsets.only(top: topPad, bottom: 110),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                mainAxisExtent: 116,
+              ),
+              itemCount: devices.length,
+              itemBuilder: (_, i) => _DeviceCard(device: devices[i]),
+            ),
     );
   }
 }

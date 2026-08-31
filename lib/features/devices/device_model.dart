@@ -135,6 +135,9 @@ class DeviceRepo extends StateNotifier<List<Device>> {
   final Store _s;
   static const _key = 'devices';
 
+  /// Muat ulang daftar dari penyimpanan — dipakai pull-to-refresh Beranda.
+  void reloadFromStore() => _load();
+
   void _load() {
     final raw = _s.getList(_key);
     if (raw.isEmpty) {
