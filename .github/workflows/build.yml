@@ -3,8 +3,15 @@ name: Build
 on:
   push:
     branches: [main]
+  # SENGAJA tanpa filter `branches`.
+  #
+  # Sebelumnya di sini ada `branches: [main]`, yang berarti workflow hanya
+  # berjalan untuk pull request yang menargetkan main. Pull request bertumpuk
+  # — PR kedua yang basisnya branch PR pertama, pola normal saat memecah
+  # perubahan besar — tidak diuji sama sekali dan tampil TANPA status check.
+  # Bukan merah, bukan hijau: kosong. Itu bentuk kegagalan paling berbahaya,
+  # karena terlihat seperti tidak ada masalah.
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 # Push baru membatalkan run lama di branch yang sama — hemat waktu runner
