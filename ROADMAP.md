@@ -85,6 +85,11 @@ dengan TURN, stabil 30 menit tanpa re-buffer.
 - Signaling multi-node (NATS/Redis pub-sub) kalau user base tumbuh — protokol
   sudah tidak berubah, ganti `Hub.clients` saja.
 
+> **Catatan 1 Sep 2026:** identitas logo dikembalikan ke logo asli
+> (`design/logo-asli.png`), dan `tool/gen_logo.py` sekarang menurunkan semua
+> ukuran dari berkas itu. Baris di bawah ini adalah catatan sejarah, bukan
+> keadaan sekarang.
+
 ## Rilis 2.5.0 — Monokrom, berita, lisensi (31 Agu 2026)
 
 - Tampilan semua platform: dominan hitam-putih, ungu hanya aksen. Logo X resmi

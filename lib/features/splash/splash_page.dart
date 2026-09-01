@@ -1,4 +1,15 @@
-//! Splash XyDesk — revisi 6.2.
+//! Splash XyDesk — revisi 6.2, disesuaikan untuk logo asli.
+//!
+//! ## Penyesuaian logo asli
+//!
+//! Logo asli (`design/logo-asli.png`) membawa margin transparan sendiri:
+//! isinya hanya menempati ~81% kanvas. Kalau ukuran boksnya disamakan dengan
+//! tile lama, mark-nya tampak lebih kecil meski angkanya identik — jadi boks
+//! diperbesar ~20% agar ukuran optisnya setara.
+//!
+//! Koreografi juga diperlambat pada wordmark: tadinya selesai di 62% durasi
+//! (terasa menyentak), sekarang melarut sampai 86% sehingga tulisan benar-
+//! benar "muncul perlahan".
 //!
 //! ## Yang berubah dari revisi 6.1 dan kenapa
 //!
@@ -80,12 +91,14 @@ class _SplashScene extends StatelessWidget {
   // Fase (fraksi total durasi).
   static const _bgEnd = 0.28;
   static const _tileEnd = 0.42;
-  static const _wordStart = 0.32;
-  static const _wordEnd = 0.62;
+  // Wordmark dibiarkan melarut hampir sampai akhir: fokus splash adalah logo,
+  // lalu tulisan menyusul tanpa menyentak.
+  static const _wordStart = 0.34;
+  static const _wordEnd = 0.86;
   static const _lineStart = 0.20;
   static const _lineEnd = 1.00;
-  static const _tagStart = 0.66;
-  static const _tagEnd = 0.88;
+  static const _tagStart = 0.68;
+  static const _tagEnd = 0.96;
   static const _footStart = 0.72;
   static const _footEnd = 0.96;
 
@@ -94,7 +107,9 @@ class _SplashScene extends StatelessWidget {
     final c = context.c;
     final size = MediaQuery.sizeOf(context);
     final shortSide = size.width < size.height ? size.width : size.height;
-    final tileSize = (shortSide * 0.30).clamp(96.0, 136.0).toDouble();
+    // Logo asli punya margin transparan ~9% di tiap sisi, jadi boksnya
+    // dibesarkan supaya mark yang terlihat berukuran sama seperti tile lama.
+    final tileSize = (shortSide * 0.36).clamp(112.0, 164.0).toDouble();
 
     // 1. Cahaya ungu latar memudar masuk.
     final bgT = _quart(_frac(t, 0, _bgEnd));
@@ -106,7 +121,7 @@ class _SplashScene extends StatelessWidget {
     // 3. Wordmark: fade + naik; letter-spacing mengendur.
     final wordT = _quart(_frac(t, _wordStart, _wordEnd));
     final wordDy = 12.0 * (1 - wordT);
-    final wordSpacing = 6.0 * (1 - wordT);
+    final wordSpacing = 3.0 * (1 - wordT);
 
     // 4. Garis aksen ungu tumbuh horizontal.
     final lineT = _quart(_frac(t, _lineStart, _lineEnd));
@@ -125,7 +140,7 @@ class _SplashScene extends StatelessWidget {
           // Cahaya ungu lembut di belakang tile — identitas tanpa mencolok.
           Center(
             child: Opacity(
-              opacity: bgT * 0.38,
+              opacity: bgT * 0.30,
               child: Container(
                 width: tileSize * 2.6,
                 height: tileSize * 2.6,

@@ -17,7 +17,24 @@ replace this file with a custom `CustomPainter` approximation.
 
 ## XyDesk launch mark
 
-The five Android `splash_logo.png` resources are density-specific 72 dp
-transparent canvases generated from `assets/img/logo.png`. The visible mark is
-34 dp: it fits Android 12's masked icon safe zone and matches Flutter's centered
-first frame before the wordmark reveal.
+## XyDesk logo — satu sumber untuk semua platform
+
+`design/logo-asli.png` is the single source of truth: a square, transparent
+canvas whose artwork does not touch the edges. Every other logo file is
+generated from it by `python3 tool/gen_logo.py`:
+
+| Target | File | Note |
+|---|---|---|
+| Flutter app | `assets/img/logo.png` | 1024 px |
+| Web | `web/public/logo.png`, `logo-white.png`, `icon-192`, `icon-512`, `apple-touch-icon`, `favicon-16/32`, `favicon.ico` | |
+| Monochrome | `design/x-white.png`, `x-black.png` | silhouette for contrasting backgrounds |
+| Android launcher | `mipmap-*/ic_launcher.png` (legacy, logo on dark tile) + `ic_launcher_foreground.png` (adaptive, 108 dp) | five densities |
+| Android splash | `splash_logo_tight.png` (104 dp) + `splash_logo_android12.png` (inside the 2/3 masked circle) | |
+| Windows | `packaging/windows/xydesk.ico` | 16–256 px |
+
+The Android splash mark fits Android 12's masked icon safe zone and matches
+Flutter's centered first frame before the wordmark reveal.
+
+To change the identity: replace `design/logo-asli.png`, then re-run the
+generator. Never hand-edit a generated file — the next generator run will
+overwrite it, and the app will end up showing two different logos at once.

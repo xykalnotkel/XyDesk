@@ -137,6 +137,65 @@ def build_wordmark_tile(size: int, light: bool) -> Image.Image:
 # berukuran sama dengan ikon legacy (48–192 px). Lapisan foreground adaptive
 # icon berukuran 108dp, jadi di xxxhdpi ia seharusnya 432 px — yang lama
 # di-upscale peluncur dan tampak buram di layar kepadatan tinggi.
+# ── Sumber logo: berkas, bukan geometri ───────────────────────────────────
+#
+# Identitas XyDesk dikembalikan ke logo asli (mark biru-ungu transparan).
+# Geometri kode di atas tetap disimpan sebagai cadangan dan dokumentasi
+# bentuk, tetapi yang dipakai semua platform sekarang adalah berkas ini -
+# karena kalau ada dua sumber, pasti ada berkas yang ketinggalan dan
+# aplikasi akhirnya memajang dua logo berbeda sekaligus.
+#
+# Ganti identitas? Timpa `design/logo-asli.png` (persegi, latar transparan,
+# isi tidak menyentuh tepi), lalu jalankan ulang skrip ini.
+SOURCE = ROOT / "design" / "logo-asli.png"
+
+
+def _source_image() -> Image.Image:
+    """Buka sumber logo, dipangkas ke isinya supaya margin simetris."""
+    im = Image.open(SOURCE).convert("RGBA")
+    bbox = im.getchannel("A").getbbox()
+    return im.crop(bbox) if bbox else im
+
+
+def build_source(
+    size: int,
+    *,
+    fill: float = 0.92,
+    mono: tuple[int, int, int] | None = None,
+    tile: bool = False,
+) -> Image.Image:
+    """Render logo asli pada kanvas `size x size`.
+
+    fill  proporsi kanvas yang diisi logo (0..1).
+    mono  bila diisi, logo dijadikan siluet warna itu (dipakai di latar yang
+          bertolak belakang: putih untuk latar gelap, gelap untuk latar muda).
+    tile  kompositkan di atas tile squircle gelap. Wajib untuk ikon launcher
+          dan .ico Windows: peluncur lama tidak memberi latar, jadi logo
+          transparan bisa tenggelam di wallpaper terang.
+    """
+    s = size * SS
+    canvas = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+
+    if tile:
+        plate = Image.new("RGBA", (s, s), TILE_DARK)
+        canvas.paste(plate, (0, 0), _squircle(s, 0.22, 0.02))
+        inner = 0.72  # logo duduk di dalam tile, tidak menyentuh tepi tile
+    else:
+        inner = fill
+
+    im = _source_image()
+    if mono is not None:
+        alpha = im.getchannel("A")
+        flat = Image.new("RGBA", im.size, mono + (255,))
+        flat.putalpha(alpha)
+        im = flat
+
+    target = int(round(s * inner))
+    im = im.resize((target, target), Image.LANCZOS)
+    canvas.paste(im, ((s - target) // 2, (s - target) // 2), im)
+    return canvas.resize((size, size), Image.LANCZOS)
+
+
 ANDROID_DENSITIES = {
     "mdpi": (48, 108),
     "hdpi": (72, 162),
@@ -163,46 +222,78 @@ def build_foreground(size: int) -> Image.Image:
 
 OUTPUTS = [
     # (path, ukuran, jenis)
-    ("assets/img/logo.png", BASE, "tile"),
+    ("assets/img/logo.png", BASE, "mark"),
     ("design/x-white.png", 512, "white"),
     ("design/x-black.png", 512, "black"),
-    ("web/public/logo.png", 512, "tile"),
+    ("web/public/logo.png", 512, "mark"),
     ("web/public/logo-white.png", 512, "white"),
-    ("web/public/icon-192.png", 192, "tile"),
-    ("web/public/icon-512.png", 512, "tile"),
-    ("web/public/apple-touch-icon.png", 180, "tile"),
-    ("web/public/favicon-32.png", 32, "tile"),
-    ("web/public/favicon-16.png", 16, "tile"),
+    ("web/public/icon-192.png", 192, "mark"),
+    ("web/public/icon-512.png", 512, "mark"),
+    ("web/public/apple-touch-icon.png", 180, "mark"),
+    ("web/public/favicon-32.png", 32, "mark"),
+    ("web/public/favicon-16.png", 16, "mark"),
+    # Splash Android. Yang "tight" digambar utuh di 104dp; yang android12
+    # ditutup sistem dengan lingkaran berdiameter 2/3 kanvas, jadi isinya
+    # dikecilkan agar tidak terpotong.
+    ("android/app/src/main/res/drawable-nodpi/splash_logo_tight.png", 640, "splash"),
+    ("android/app/src/main/res/drawable-nodpi/splash_logo_android12.png", 640, "splash12"),
+    ("packaging/windows/xydesk.ico", 256, "ico"),
 ]
 
+# Ukuran yang ikut dibundel dalam satu berkas .ico.
+ICO_SIZES = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+
+
+def _render(size: int, kind: str) -> Image.Image:
+    """Bangun logo sesuai jenis keluaran."""
+    if kind == "mark":
+        return build_source(size)
+    if kind == "white":
+        return build_source(size, mono=WHITE, fill=0.86)
+    if kind == "black":
+        return build_source(size, mono=TILE_DARK[:3], fill=0.86)
+    if kind == "splash":
+        return build_source(size, fill=0.86)
+    if kind == "splash12":
+        return build_source(size, fill=0.66)
+    if kind == "ico":
+        return build_source(size, tile=True)
+    raise ValueError(f"jenis keluaran tidak dikenal: {kind}")
 
 def main() -> None:
+    if not SOURCE.exists():
+        raise SystemExit(
+            f"Sumber logo tidak ada: {SOURCE}\n"
+            "Taruh logo asli di sana, atau jalankan dengan geometri cadangan "
+            "memakai build_mark() secara manual."
+        )
+
     for rel, size, kind in OUTPUTS:
         path = ROOT / rel
         path.parent.mkdir(parents=True, exist_ok=True)
-        if kind == "tile":
-            img = build_mark(size, tile=True)
-        elif kind == "white":
-            img = build_wordmark_tile(size, light=True)
+        img = _render(size, kind)
+        if rel.endswith(".ico"):
+            img.save(path, sizes=[s for s in ICO_SIZES if s[0] <= size])
         else:
-            img = build_wordmark_tile(size, light=False)
-        img.save(path)
-        print(f"OK {rel:38} {size}x{size}")
+            img.save(path)
+        print(f"OK {rel:64} {size}x{size}")
 
     # Android: ikon legacy + lapisan foreground adaptive icon.
     for density, (legacy, foreground) in ANDROID_DENSITIES.items():
         base = ROOT / "android/app/src/main/res" / f"mipmap-{density}"
         base.mkdir(parents=True, exist_ok=True)
-        build_mark(legacy, tile=True).save(base / "ic_launcher.png")
-        build_foreground(foreground).save(base / "ic_launcher_foreground.png")
+        build_source(legacy, tile=True).save(base / "ic_launcher.png")
+        # XML memberi inset 16%, jadi isi efektifnya 0.92 x (1 - 0.32) = 0.63
+        # kanvas — aman di dalam zona aman 72dp adaptive icon.
+        build_source(foreground).save(base / "ic_launcher_foreground.png")
         print(f"OK mipmap-{density:<8} legacy={legacy} foreground={foreground}")
 
     # Favicon multi-ukuran untuk peramban lama.
     ico = ROOT / "web/public/favicon.ico"
-    build_mark(64, tile=True).save(
+    build_source(64, fill=0.90).save(
         ico, sizes=[(16, 16), (32, 32), (48, 48), (64, 64)]
     )
-    print(f"OK {'web/public/favicon.ico':38} multi")
+    print(f"OK {'web/public/favicon.ico':64} multi")
 
 
 if __name__ == "__main__":

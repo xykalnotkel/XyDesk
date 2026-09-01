@@ -16,7 +16,14 @@ Worker signaling.
 
 ## Menerbitkan artikel baru (ADMIN)
 
-Setiap rilis WAJIB punya artikel berita. Terbitkan lewat endpoint admin —
+Setiap rilis WAJIB punya artikel berita.
+
+**Baca dulu [`docs/NEWS_STYLE.md`](../docs/NEWS_STYLE.md) sebelum menulis.**
+Berita bukan changelog: tulis dampaknya untuk pengguna, bukan daftar
+pekerjaan. Tidak ada nama berkas, nama modul, atau nomor versi di judul.
+Penulis artikel selalu `Tim XySpace`.
+
+Terbitkan lewat endpoint admin —
 **slug dibuat otomatis sebagai HASH acak** (mis. `p-d5b4512f7d17`), tidak
 menebak urutan dan tidak membocorkan judul di URL:
 

@@ -9,7 +9,40 @@ Kebijakan rilis:
   `web`/`desktop` package.json, `host` Cargo.toml).
 - Setiap rilis **wajib punya artikel Berita** dengan changelog yang jelas dan
   panjang (lihat `news/README.md` untuk alur penerbitan).
+- **Berita dan changelog adalah dua hal berbeda.** File ini untuk tim dan
+  untuk catatan GitHub Release. Berita di `news.xystudio.my.id` ditulis untuk
+  pengguna: tanpa nama berkas, tanpa nomor versi di judul, tanpa daftar
+  commit. Panduan lengkap nadanya ada di [`docs/NEWS_STYLE.md`](docs/NEWS_STYLE.md).
 - File ini otomatis dilampirkan ke GitHub Release oleh `release.yml`.
+
+## [Belum terbit]
+
+### Ditambahkan
+
+- Panduan wajib untuk menulis berita: [`docs/NEWS_STYLE.md`](docs/NEWS_STYLE.md).
+  Berita bukan changelog — tanpa nama berkas, tanpa nomor versi di judul,
+  ditulis untuk pengguna dengan penulis `Tim XySpace`.
+- Kontrol mutu CI untuk Worker signaling: 19 test auth/OTP/rate-limit kini
+  jalan di setiap PR (sebelumnya hanya saat deploy ke `main`).
+- Pengawasan `gofmt` untuk signaling Go.
+
+### Diubah
+
+- **Logo asli dipakai di semua platform.** `design/logo-asli.png` menjadi satu
+  sumber; `tool/gen_logo.py` menurunkan darinya: ikon aplikasi Android
+  (5 kepadatan, legacy + adaptive), splash Android, logo web, favicon, ikon
+  PWA, `.ico` Windows, dan aset Flutter. Mengedit berkas hasil generate tidak
+  lagi ada gunanya — generator akan menimpanya.
+
+### Diperbaiki
+
+- CORS Worker gagal-tertutup: tanpa `CORS_ORIGINS` tidak ada origin yang
+  diizinkan (sebelumnya `*`). `*` tetap tersedia bila ditulis eksplisit.
+  Dikunci 10 test baru.
+- Inventaris lisensi tidak lagi menghitung dependensi pengembang
+  (`flutter_lints`, `lints`, dan paket test) sebagai komponen yang ikut ke
+  perangkat pengguna: 490 menjadi 488.
+- `npm test` di `news/` tidak lagi gagal (skrip `test` ditambahkan).
 
 ## [6.2.2] - 2026-09-01
 
