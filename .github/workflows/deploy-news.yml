@@ -56,7 +56,8 @@ jobs:
         run: node migrate.mjs
 
       # Artikel bawaan repo, termasuk changelog rilis yang ditautkan footer
-      # web lewat slug `changelog-v<versi>`. INSERT OR IGNORE — aman diulang.
+      # web lewat slug `changelog-v<versi>`. UPSERT per slug — aman diulang,
+      # dan perbaikan isi artikel ikut terkirim.
       - name: Terbitkan artikel bawaan repo
         working-directory: news
         env:

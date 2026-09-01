@@ -1,6 +1,13 @@
 -- Seed berita XyDesk (konten asli, bukan dummy — ini yang tampil di Web/Android/Desktop).
+--
+-- Memakai UPSERT (ON CONFLICT(slug) DO UPDATE), bukan INSERT OR IGNORE.
+-- Alasannya: dengan OR IGNORE, artikel yang sudah pernah masuk D1 tidak
+-- pernah berubah lagi — perbaikan judul atau isi di berkas ini diam-diam
+-- tidak sampai ke produksi. Sekarang berkas ini yang jadi acuan isi artikel,
+-- dan aman dijalankan berulang kali. Like dan komentar tidak tersentuh
+-- karena keduanya merujuk posts.id yang tetap sama.
 
-INSERT OR IGNORE INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
 (
   'xydesk-24-control-api-desktop-shell',
   'XyDesk 2.4 — Control API lokal dan shell desktop baru',
@@ -54,11 +61,19 @@ Status hari ini: loop capture-encode-RTP-terima sudah terbukti di test loopback 
   'rilis',
   'Tim XyDesk',
   1
-);
+)
+ON CONFLICT(slug) DO UPDATE SET
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  cover = excluded.cover,
+  category = excluded.category,
+  author = excluded.author,
+  published = excluded.published;
 
 -- Changelog rilis 6.2.0. Slug SENGAJA deterministik: footer web dan layar
 -- Tentang menautkan nomor versi ke `changelog-v<major>-<minor>-<patch>`.
-INSERT OR IGNORE INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
 (
   'changelog-v6-2-0',
   'XyDesk 6.2.0 — rilis kejujuran: unduhan dimatikan, 482 lisensi dibuka',
@@ -112,43 +127,53 @@ Empat hal itu adalah pekerjaan berikutnya, dan tidak satu pun bisa diselesaikan 
   'rilis',
   'Haekal Saputra',
   1
-);
+)
+ON CONFLICT(slug) DO UPDATE SET
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  cover = excluded.cover,
+  category = excluded.category,
+  author = excluded.author,
+  published = excluded.published;
 
 -- Changelog rilis 6.2.1.
-INSERT OR IGNORE INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
 (
   'changelog-v6-2-1',
-  'XyDesk 6.2.1 — logo asli di tombol bagikan, dan bahasa yang lebih manusiawi',
-  'Tombol berbagi sekarang pakai logo resmi WhatsApp, Telegram, X, dan Facebook. Selain itu tulisan di seluruh aplikasi kami rombak supaya tidak terdengar seperti manual teknis.',
-  'Rilis kecil. Tidak ada perubahan di jalur video atau suara — yang kami kerjakan kali ini soal tampilan dan cara aplikasi berbicara.
+  'XyDesk 6.2.1',
+  'Tombol bagikan di halaman Berita kini lengkap dengan logo resmi tiap platform, keterangan di Pengaturan ditulis ulang supaya lebih gampang dibaca, dan daftar lisensi bertambah jadi 490 komponen.',
+  'Versi 6.2.1 sudah tersedia. Isinya perapian tampilan dan penyegaran tulisan di dalam aplikasi.
 
-LOGO ASLI DI TOMBOL BAGIKAN
+TOMBOL BAGIKAN
 
-Sebelumnya tombol berbagi memakai ikon seadanya: gelembung chat untuk WhatsApp, pesawat kertas untuk Telegram, dan rantai tautan untuk X. Orang mengenali logo, bukan tebakan bentuk. Ikon seadanya itu juga membuat barisnya terlihat seperti belum selesai dikerjakan.
+Artikel di halaman Berita bisa dibagikan lewat WhatsApp, Telegram, X, Facebook, dan LinkedIn, masing-masing dengan logo resminya. Pilihan yang muncul di aplikasi HP sekarang sama dengan yang ada di web. Tautan artikel juga tetap bisa langsung disalin.
 
-Sekarang keempatnya memakai logo resmi lengkap dengan warna mereknya. Facebook yang sebelumnya tidak ada di aplikasi HP juga sudah ditambahkan, jadi pilihannya sama antara web dan aplikasi.
+TULISAN DI DALAM APLIKASI
 
-BAHASA YANG DITULIS ULANG
+Keterangan di halaman Akun, Pengaturan, dan Lisensi ditulis ulang dengan kalimat yang lebih mudah dibaca. Tiap pengaturan sekarang menjelaskan pengaruhnya ke sesi kamu, bukan nama teknisnya.
 
-Ini bagian yang paling banyak berubah. Teks di halaman Pengaturan selama ini ditulis dengan istilah yang hanya jelas buat orang yang membuatnya. Contohnya "Pengodean akselerasi perangkat keras", "Alokasi bandwidth jaringan", atau yang paling parah: "Belum didukung Host, kanal papan klip belum ada di protokol".
+HALAMAN LISENSI
 
-Kalimat terakhir itu benar secara teknis, tapi tidak menjawab pertanyaan yang sebenarnya ada di kepala orang: bisa dipakai atau tidak? Sekarang tertulis "Belum bisa dipakai. Aplikasi XyDesk di PC belum mendukung fitur ini."
+Daftar komponen pihak ketiga yang dipakai XyDesk kini berisi 490 entri, lengkap dengan nama lisensi dan tautan sumbernya. Jumlahnya mengikuti isi daftar secara otomatis, jadi tidak akan tertinggal saat ada komponen baru.
 
-Beberapa contoh lain. "Kualitas video dari perangkat Host" jadi "Makin tinggi makin jernih, tapi makin berat". "Kunci kursor di tengah untuk kontrol game FPS" jadi "Buat main game FPS, kursor dikunci di tengah layar". "Tinjau fungsi yang membutuhkan izin sistem" jadi "Lihat izin yang dipakai XyDesk dan alasannya".
+UNDUHAN
 
-Halaman unduh juga ikut dirombak. Daftar syarat sebelum masa uji coba dibuka tadinya berbunyi seperti tiket kerja internal, penuh singkatan seperti WASAPI dan DXGI. Sekarang ditulis dari sisi kamu sebagai pemakai: suara PC benar-benar terdengar di HP, monitor bisa diganti saat sesi berjalan, tombol kontrol dari HP terbukti menggerakkan PC.
+Tombol unduh masih ditutup. XyDesk belum masuk masa uji coba terbuka. Halaman Unduh menampilkan syarat apa saja yang harus beres sebelum dibuka, dan kabar pembukaannya akan diumumkan di halaman Berita.
 
-ANGKA LISENSI TIDAK BISA BASI LAGI
+CATATAN VERSI
 
-Halaman Lisensi menyebutkan jumlah komponen yang XyDesk pakai. Angka itu diketik tangan, dan langsung salah begitu satu paket ditambahkan. Kebetulan rilis ini menambah satu paket, jadi masalahnya langsung terbukti.
-
-Sekarang angkanya dibangkitkan otomatis dari daftar dependensi, dan sistem pemeriksa kami menolak kalau angkanya tidak cocok. Jumlahnya sekarang 490 komponen.
-
-YANG MASIH SAMA
-
-Tombol unduh masih ditahan. Suara, multi-monitor, kontrol dari HP, dan pemberitahuan masih belum diuji di komputer sungguhan. Daftar lengkapnya ada di halaman Unduh, dan tidak ada satu pun yang bisa kami centang dari balik meja.',
+Aplikasi Android, host Windows, aplikasi desktop, dan web sama-sama di versi 6.2.1. Tidak ada perubahan pada jalur video maupun suara, jadi kualitas dan kecepatan sesi sama seperti 6.2.0.',
   'https://app.xystudio.my.id/news/covers/changelog-621.jpg',
   'rilis',
   'Haekal Saputra',
   1
-);
+)
+ON CONFLICT(slug) DO UPDATE SET
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  cover = excluded.cover,
+  category = excluded.category,
+  author = excluded.author,
+  published = excluded.published;
