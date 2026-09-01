@@ -506,6 +506,59 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 .news-state.error { border-color: var(--danger); color: var(--danger); }
 .news-state button { color: var(--accent-deep); font-weight: 700; }
 
+/* ── Keadaan kosong / gagal / offline ─────────────────────────────
+   Dipakai semua halaman (lihat web/src/states.tsx) supaya pembaca
+   selalu mendapat pola yang sama: apa yang terjadi, kenapa, dan
+   satu tindakan yang bisa dilakukan. */
+.state-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  margin: 20px 0;
+}
+.state-notice.compact { padding: 14px 16px; margin: 12px 0; }
+.state-notice.offline {
+  border-style: solid;
+  background: var(--overlay);
+}
+.state-glyph { flex: 0 0 auto; margin-top: 2px; color: var(--text-low); }
+.state-notice.offline .state-glyph { color: var(--text-mid); }
+.state-notice.error .state-glyph { color: var(--danger); }
+.state-body { flex: 1 1 auto; min-width: 0; }
+.state-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-hi);
+}
+.state-notice.error .state-title { color: var(--danger); }
+.state-message {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-mid);
+}
+.state-action {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--accent-deep);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.state-action:hover { border-color: var(--accent-deep); }
+@media (max-width: 560px) {
+  .state-notice { flex-wrap: wrap; }
+  .state-action { width: 100%; }
+}
+
 /* ── Detail berita ──────────────────────────────────────────── */
 .back-action {
   display: inline-flex;
