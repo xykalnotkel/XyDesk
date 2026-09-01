@@ -18,6 +18,7 @@ import '../../widgets/hud_glyphs.dart';
 import 'media_capabilities.dart';
 import 'session_panels.dart';
 import 'virtual_keyboard.dart';
+import '../../core/display_control.dart';
 
 /// Adaptive remote-session surface.
 ///
@@ -77,6 +78,11 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    // Selama sesi, pengguna sering hanya menonton — tanpa sentuhan, Android
+    // memadamkan layar dan sesi terlihat seolah putus.
+    if (preferences.keepScreenOn) {
+      unawaited(DisplayControl.setKeepScreenOn(true));
+    }
     DevLog.i(
       'sesi',
       'Membuka preview sesi ke ${widget.deviceName}',
@@ -121,6 +127,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     _connectTimer?.cancel();
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    // Flag layar-tetap-menyala milik window, bukan halaman. Kalau tidak
+    // dicabut di sini, ia akan tetap aktif di seluruh aplikasi setelah sesi
+    // ditutup dan diam-diam menghabiskan baterai.
+    unawaited(DisplayControl.setKeepScreenOn(false));
     DevLog.i('sesi', 'Menutup sesi');
     super.dispose();
   }

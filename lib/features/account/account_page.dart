@@ -5,7 +5,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/app_version.dart';
 import '../../core/devlog.dart';
 import '../../core/l10n_bridge.dart';
-import '../../core/responsive.dart';
 import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
@@ -18,6 +17,8 @@ import '../notifications/update_page.dart';
 import '../session/media_capabilities.dart';
 import 'billing_page.dart';
 import 'permissions_page.dart';
+import '../../core/display_control.dart';
+import '../../core/haptics.dart';
 
 /// Ringkasan akun. Pengaturan tidak lagi ditumpuk di halaman profil; setiap
 /// kategori membuka layar fokusnya sendiri agar lebih mudah dipindai.
@@ -53,7 +54,7 @@ class AccountPage extends ConsumerWidget {
         const SectionLabel('Preferensi'),
         _CategoryRow(
           title: 'Tampilan & bahasa',
-          subtitle: 'Tema, bahasa, dan kenyamanan visual',
+          subtitle: 'Bahasa antarmuka dan format tanggal',
           icon: LucideIcons.palette,
           onTap: () => _open(context, const AppearanceSettingsPage()),
         ),
@@ -133,7 +134,10 @@ class AppearanceSettingsPage extends ConsumerWidget {
     final lang = ref.watch(langProvider);
     return _SettingsScaffold(
       title: 'Tampilan & bahasa',
-      description: 'Atur tampilan XyDesk agar nyaman di perangkat ini.',
+      description:
+          'XyDesk memakai satu tema terang (Paper) supaya hanya ada satu set '
+          'kontras yang benar-benar diuji. Mode gelap sengaja tidak '
+          'disediakan, bukan belum dibuat.',
       children: [
         const SectionLabel('Bahasa', top: 0),
         ListRow(
@@ -147,6 +151,14 @@ class AppearanceSettingsPage extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// Menjelaskan refresh rate memakai angka nyata dari panel, bukan janji.
+String _refreshRateSubtitle() {
+  final now = '${DisplayControl.current.round()} Hz';
+  if (!DisplayControl.canSwitch) return 'Panel berjalan di $now';
+  final list = DisplayControl.supported.map((e) => '${e.round()}').join('/');
+  return 'Sekarang $now · panel mendukung $list Hz';
 }
 
 class BehaviorSettingsPage extends ConsumerWidget {
@@ -169,12 +181,26 @@ class BehaviorSettingsPage extends ConsumerWidget {
         ),
         _SwitchRow(
           title: context.tr('behavior_high_refresh'),
-          subtitle: context
-              .tr('behavior_high_refresh_sub')
-              .replaceAll('{hz}', '${DisplayMode.current.round()}'),
+          subtitle: _refreshRateSubtitle(),
           icon: LucideIcons.zap,
           value: s.highRefresh,
           onChanged: notifier.setHighRefresh,
+          // Perangkat 60 Hz tidak punya apa pun untuk dipilih. Menampilkan
+          // sakelar aktif di situ adalah kebohongan kecil yang gratis
+          // dihindari.
+          unavailable: DisplayControl.canSwitch
+              ? null
+              : 'Panel perangkat ini hanya mendukung '
+                    '${DisplayControl.current.round()} Hz',
+        ),
+        _SwitchRow(
+          title: 'Layar tetap menyala saat sesi',
+          subtitle:
+              'Mencegah layar padam selama sesi remote berjalan. '
+              'Nonaktifkan untuk menghemat baterai.',
+          icon: LucideIcons.sun,
+          value: s.keepScreenOn,
+          onChanged: notifier.setKeepScreenOn,
         ),
         _SwitchRow(
           title: context.tr('behavior_reduce_motion'),
@@ -264,17 +290,23 @@ class StreamingSettingsPage extends ConsumerWidget {
           icon: LucideIcons.clipboard,
           value: s.clipboardSync,
           onChanged: notifier.setClipboardSync,
+          // Protokol host belum punya kanal papan klip sama sekali — bukan
+          // "belum diuji", memang belum ada kodenya. Sakelar ini sebelumnya
+          // menyala secara bawaan dan tidak pernah mengirim apa pun.
+          unavailable:
+              'Belum didukung Host — kanal papan klip belum ada '
+              'di protokol',
         ),
       ],
     );
   }
 }
 
-class SystemSettingsPage extends StatelessWidget {
+class SystemSettingsPage extends ConsumerWidget {
   const SystemSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return _SettingsScaffold(
       title: 'Sistem & privasi',
       description: 'Kelola akses sistem dan periksa kondisi aplikasi.',
@@ -305,9 +337,52 @@ class SystemSettingsPage extends StatelessWidget {
           trailing: _chevron(context),
           onTap: () => DevLog.openPage(context),
         ),
+        const SectionLabel('Pemulihan'),
+        ListRow(
+          title: 'Reset pengaturan ke bawaan',
+          subtitle:
+              'Mengembalikan codec, bitrate, dan perilaku ke nilai awal. '
+              'Bahasa, akun, dan perangkat tersimpan tidak ikut terhapus.',
+          icon: LucideIcons.rotateCcw,
+          trailing: _chevron(context),
+          onTap: () => _confirmReset(context, ref),
+        ),
       ],
     );
   }
+}
+
+/// Reset selalu lewat konfirmasi: pengaturan streaming yang sudah dicocokkan
+/// dengan jaringan pengguna tidak sepele untuk disusun ulang.
+Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Reset pengaturan?', style: TextStyle(fontSize: 16)),
+      content: const Text(
+        'Codec, resolusi, bitrate, mode kontrol, dan preferensi perilaku '
+        'kembali ke nilai bawaan.\n\n'
+        'Bahasa antarmuka, akun, dan daftar perangkat tidak berubah.',
+        style: TextStyle(fontSize: 13, height: 1.5),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Batal'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Reset'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  await ref.read(settingsProvider.notifier).resetToDefaults();
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Pengaturan dikembalikan ke bawaan')),
+  );
 }
 
 class LegalSettingsPage extends StatelessWidget {
@@ -666,6 +741,7 @@ class _SwitchRow extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.subtitle,
+    this.unavailable,
   });
 
   final String title;
@@ -674,54 +750,72 @@ class _SwitchRow extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
 
+  /// Bila diisi, sakelar dinonaktifkan dan alasannya ditampilkan.
+  ///
+  /// Sakelar yang bisa digeser, mengingat pilihanmu, dan tidak melakukan
+  /// apa-apa lebih buruk daripada sakelar yang jujur mengaku belum siap.
+  final String? unavailable;
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: c.raised,
-              borderRadius: BorderRadius.circular(10),
+    final off = unavailable != null;
+    return Opacity(
+      opacity: off ? 0.55 : 1,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: c.raised,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 16, color: c.textMid),
             ),
-            child: Icon(icon, size: 16, color: c.textMid),
-          ),
-          const SizedBox(width: Gap.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: c.textHi,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 3),
+            const SizedBox(width: Gap.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    subtitle!,
+                    title,
                     style: TextStyle(
-                      fontSize: 11,
-                      height: 1.4,
-                      color: c.textLow,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: c.textHi,
                     ),
                   ),
+                  if (subtitle != null || off) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      unavailable ?? subtitle!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.4,
+                        color: off ? c.warningText : c.textLow,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          Transform.scale(
-            scale: 0.82,
-            child: Switch(value: value, onChanged: onChanged),
-          ),
-        ],
+            Transform.scale(
+              scale: 0.82,
+              child: Switch(
+                value: off ? false : value,
+                onChanged: off
+                    ? null
+                    : (v) {
+                        AppHaptics.impact();
+                        onChanged(v);
+                      },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

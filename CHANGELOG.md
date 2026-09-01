@@ -38,6 +38,12 @@ Kebijakan rilis:
   ukuran sekaligus.
 - **`news/test/comments.test.js`** — 6 uji yang memastikan badge resmi tidak
   bisa diminta klien.
+- **Pengaturan "Layar tetap menyala saat sesi"** (bawaan aktif). Selama sesi
+  pengguna sering hanya menonton; tanpa ini Android memadamkan layar dan sesi
+  terlihat seolah putus.
+- **"Reset pengaturan ke bawaan"** di Sistem & privasi. Bahasa antarmuka
+  sengaja tidak ikut direset — mengembalikan pengguna ke bahasa yang tidak ia
+  mengerti membuat layar ini sendiri sulit dipakai untuk membatalkannya.
 
 ### Diubah
 
@@ -55,6 +61,21 @@ Kebijakan rilis:
 
 ### Diperbaiki
 
+- **Sakelar "Refresh rate tinggi" sekarang benar-benar bekerja.** Sisi Dart
+  memanggil `setHighRefreshRate` pada channel `flutter/platform_views` —
+  metode yang tidak pernah ada di Flutter — dan kegagalannya ditelan
+  `catchError`. Preferensi tersimpan rapi ke disk dan tidak berefek apa pun.
+  Implementasi nyatanya kini ada di `MainActivity.kt`, dan pada perangkat yang
+  panelnya hanya mendukung satu refresh rate, sakelarnya dinonaktifkan dengan
+  alasan yang ditulis apa adanya.
+- **Sakelar "Getaran" berlaku di seluruh aplikasi.** Sebelumnya hanya dibaca
+  layar sesi; tombol lain memanggil `HapticFeedback` langsung. Kini semua
+  lewat `AppHaptics`.
+- **"Sinkronisasi papan klip" berhenti berpura-pura.** Protokol host belum
+  punya kanal papan klip sama sekali, tetapi sakelarnya menyala secara bawaan.
+  Kini dinonaktifkan dengan alasannya.
+- **Subtitel "Tema, bahasa, dan kenyamanan visual" tidak lagi berbohong** —
+  mode gelap memang sengaja tidak ada, dan halamannya sekarang mengatakan itu.
 - **Paragraf artikel tidak lagi hilang.** `adminPublish` memakai `clean()`
   yang meratakan semua whitespace, sehingga artikel yang diterbitkan lewat API
   menjadi satu blok tanpa jeda — hanya artikel dari `seed.sql` yang punya

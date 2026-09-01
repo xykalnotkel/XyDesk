@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 
 /// Kelas ukuran layar. Dipakai agar tata letak menyesuaikan HP kecil,
 /// HP besar, sampai tablet — bukan sekadar diperbesar.
@@ -80,30 +78,6 @@ class TextScaleGuard extends StatelessWidget {
   }
 }
 
-/// Mengaktifkan refresh rate tertinggi yang didukung perangkat.
-///
-/// Banyak HP Android mengunci aplikasi di 60 Hz kecuali diminta eksplisit.
-/// Untuk aplikasi remote desktop, 90/120 Hz terasa jelas lebih mulus saat
-/// menggeser pointer dan membuka panel.
-class DisplayMode {
-  const DisplayMode._();
-
-  static Future<void> useHighestRefreshRate() async {
-    try {
-      // Channel resmi Flutter untuk mengganti mode tampilan Android.
-      const ch = MethodChannel('flutter/platform_views');
-      // Pada Android 11+ Flutter sudah otomatis memakai mode tertinggi bila
-      // aktivitas meminta. Panggilan ini aman diabaikan bila tidak tersedia.
-      await ch.invokeMethod<void>('setHighRefreshRate').catchError((_) {});
-    } catch (_) {
-      // Bukan Android atau tidak didukung — abaikan, tetap jalan di 60 Hz.
-    }
-  }
-
-  /// Refresh rate saat ini, untuk ditampilkan di DevLog.
-  static double get current {
-    final v = SchedulerBinding.instance.platformDispatcher.views.firstOrNull;
-    if (v == null) return 60;
-    return v.display.refreshRate;
-  }
-}
+// Kontrol refresh rate dipindahkan ke `display_control.dart`. Versi yang
+// dulu ada di sini memanggil metode yang tidak pernah ada di Flutter dan
+// menelan kegagalannya, sehingga sakelar di Pengaturan tidak berefek.
