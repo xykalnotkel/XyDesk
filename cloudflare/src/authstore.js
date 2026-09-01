@@ -17,6 +17,28 @@ const OTP_IP_MAX_REQUESTS = 8;
 const GUEST_IP_WINDOW = 60 * 60;
 const GUEST_IP_MAX_REQUESTS = 20;
 
+// ── Rem klaim device (lihat host/src/pairguard.rs untuk model ancaman) ────
+//
+// pairguard.rs melindungi percobaan pairing yang sampai ke binary host. Jalur
+// /host-token TIDAK melewatinya sama sekali: penyerang menukar {device_id,
+// claim} langsung di edge dan tidak pernah menyentuh PC korban. Device ID cuma
+// 9 digit dan disiarkan ke semua client lewat pesan `devices`, sedangkan claim
+// boleh sependek 6 karakter dan sering dipilih manusia. Tanpa rem di sini,
+// laju tebakan hanya dibatasi kecepatan jaringan — dan hadiahnya token
+// role=host yang sah untuk perangkat orang lain.
+//
+// Dua lapis, sengaja meniru pembagian di pairguard:
+//   1. Per device — menutup penyerang yang berganti-ganti IP (botnet/proxy).
+//      Ini lapis yang benar-benar penting, karena target serangannya satu
+//      device tertentu.
+//   2. Per IP — menutup penyerang yang menyapu banyak device dari satu tempat.
+// Klaim yang benar menghapus catatan kegagalan device (lihat pairguard: user
+// sah yang salah ketik tidak dihukum berkepanjangan).
+const CLAIM_DEVICE_MAX_FAILURES = 5;
+const CLAIM_DEVICE_LOCKOUT = 15 * 60;
+const CLAIM_IP_WINDOW = 10 * 60;
+const CLAIM_IP_MAX_REQUESTS = 30;
+
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
 
@@ -368,22 +390,77 @@ export class AuthStore {
       return json({ error: 'invalid-claim' }, 400);
     }
 
+    const now = Math.floor(Date.now() / 1000);
+
+    // Rem per IP dulu (murah, satu get) sebelum kerja kripto apa pun.
+    const ipLimit = await this.consumeRateLimit(
+      request,
+      now,
+      'claim',
+      CLAIM_IP_WINDOW,
+      CLAIM_IP_MAX_REQUESTS,
+    );
+    if (!ipLimit.ok) {
+      return json({ error: 'rate-limited', retry_in: ipLimit.retryIn }, 429);
+    }
+
+    // Rem per device: penyerang boleh berganti IP sesukanya, tapi jatah
+    // tebakan menempel pada device yang diserang.
+    const lock = await this.claimLockState(device_id, now);
+    if (lock.locked) {
+      return json({ error: 'device-locked', retry_in: lock.retryIn }, 429);
+    }
+
     const key = `device:${device_id}`;
     const claimHash = await hashOtp(this.secret(), `device:${device_id}`, claim);
     const existing = await this.ctx.storage.get(key);
     if (existing) {
       if (!timingSafeEqual(existing.claim_hash, claimHash)) {
+        const state = await this.recordClaimFailure(device_id, now);
+        if (state.locked) {
+          return json({ error: 'device-locked', retry_in: state.retryIn }, 429);
+        }
         return json({ error: 'claim-mismatch' }, 403);
       }
+      await this.ctx.storage.delete(`claimfail:${device_id}`);
       return json({ ok: true, claimed: false }, 200);
     }
 
     await this.ctx.storage.put(key, {
       owner: 'tofu',
       claim_hash: claimHash,
-      claimed_at: Math.floor(Date.now() / 1000),
+      claimed_at: now,
     });
+    await this.ctx.storage.delete(`claimfail:${device_id}`);
     return json({ ok: true, claimed: true }, 200);
+  }
+
+  /// Status kunci klaim untuk satu device. Kunci kedaluwarsa sendiri; tidak
+  /// ada pembersih terjadwal supaya DO tetap sederhana.
+  async claimLockState(deviceId, now) {
+    const state = await this.ctx.storage.get(`claimfail:${deviceId}`);
+    if (!state || !state.locked_until) return { locked: false, retryIn: 0 };
+    if (state.locked_until <= now) {
+      await this.ctx.storage.delete(`claimfail:${deviceId}`);
+      return { locked: false, retryIn: 0 };
+    }
+    return { locked: true, retryIn: state.locked_until - now };
+  }
+
+  /// Catat satu tebakan salah. Setelah CLAIM_DEVICE_MAX_FAILURES kegagalan,
+  /// device dikunci CLAIM_DEVICE_LOCKOUT detik.
+  async recordClaimFailure(deviceId, now) {
+    const key = `claimfail:${deviceId}`;
+    const state = (await this.ctx.storage.get(key)) || { count: 0, locked_until: 0 };
+    state.count += 1;
+    if (state.count >= CLAIM_DEVICE_MAX_FAILURES) {
+      state.count = 0;
+      state.locked_until = now + CLAIM_DEVICE_LOCKOUT;
+      await this.ctx.storage.put(key, state);
+      return { locked: true, retryIn: CLAIM_DEVICE_LOCKOUT };
+    }
+    await this.ctx.storage.put(key, state);
+    return { locked: false, retryIn: 0 };
   }
 
   async guest(request) {

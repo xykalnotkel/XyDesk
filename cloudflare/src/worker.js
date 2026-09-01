@@ -164,7 +164,11 @@ function timingSafeEqual(a, b) {
 
 // ── Endpoint penerbitan token (dijaga ADMIN_SECRET) ─────────────────────
 async function handleIssue(request, url, env) {
-  if (request.headers.get('X-Admin') !== env.ADMIN_SECRET) {
+  // Perbandingan konstan-waktu: `!==` pada string membocorkan panjang prefix
+  // yang cocok lewat waktu eksekusi. Sulit dieksploitasi lewat internet, tapi
+  // fungsinya sudah ada di file ini — tidak ada alasan memakai `!==`.
+  const admin = request.headers.get('X-Admin') || '';
+  if (!env.ADMIN_SECRET || !timingSafeEqual(admin, String(env.ADMIN_SECRET))) {
     return new Response('forbidden', { status: 403 });
   }
   const purpose = url.searchParams.get('purpose') || 'client';
@@ -211,12 +215,19 @@ async function handleHostToken(request, env) {
       headers: {
         'content-type': 'application/json',
         'X-XyDesk-Internal': env.XYDESK_SECRET,
+        // Request ke DO dirakit dari nol, jadi CF-Connecting-IP tidak ikut
+        // sendirinya. Tanpa diteruskan, rem per-IP di claimDevice mati diam
+        // diam (consumeRateLimit melepas request yang tidak punya IP).
+        'CF-Connecting-IP': request.headers.get('CF-Connecting-IP') || '',
       },
       body: JSON.stringify({ device_id: id, claim }),
     }),
   );
   if (!res.ok) {
-    return new Response('claim rejected', { status: res.status });
+    // Rem klaim menjawab 429; teruskan apa adanya supaya host bisa
+    // menampilkan "coba lagi nanti", bukan "password salah".
+    const detail = await res.text();
+    return new Response(detail || 'claim rejected', { status: res.status });
   }
   return new Response(await signSignalToken(id, 'host', env.XYDESK_SECRET), {
     status: 200,
@@ -300,7 +311,8 @@ async function handleSignalToken(request, url, env) {
 // (bukan crash), sehingga sisa sistem tetap berjalan pakai STUN saja.
 async function handleTurnIce(request, url, env) {
   const authorized = await (async () => {
-    if (request.headers.get('X-Admin') === env.ADMIN_SECRET) return true;
+    const admin = request.headers.get('X-Admin') || '';
+    if (env.ADMIN_SECRET && timingSafeEqual(admin, String(env.ADMIN_SECRET))) return true;
     const id = url.searchParams.get('id') || 'client';
     const token = url.searchParams.get('token') || '';
     return token && (await verifyToken(token, id, 'client', env.XYDESK_SECRET));
