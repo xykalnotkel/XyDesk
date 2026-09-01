@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/l10n_bridge.dart';
 import '../../core/tokens.dart';
+import '../../widgets/official_badge.dart';
 import '../../widgets/seamless.dart';
 import 'news_service.dart';
 
@@ -387,9 +388,13 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  '${post.author} · ${_date(post.createdAt)}',
-                  style: TextStyle(fontSize: 12, color: c.textLow),
+                // Artikel hanya bisa terbit lewat endpoint admin, jadi
+                // penulisnya resmi menurut konstruksi.
+                AuthorName(
+                  name: post.author,
+                  official: true,
+                  trailing: _date(post.createdAt),
+                  fontSize: 12.5,
                 ),
                 const SizedBox(height: Gap.lg),
                 // ── Aksi ──
@@ -534,13 +539,9 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Expanded(
-                                  child: Text(
-                                    comment.author,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                                  child: AuthorName(
+                                    name: comment.author,
+                                    official: comment.official,
                                   ),
                                 ),
                                 Text(
@@ -613,12 +614,11 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            '${reply.author} · ${_date(reply.createdAt)}',
-                                            style: TextStyle(
-                                              fontSize: 11.5,
-                                              color: c.textLow,
-                                            ),
+                                          AuthorName(
+                                            name: reply.author,
+                                            official: reply.official,
+                                            trailing: _date(reply.createdAt),
+                                            fontSize: 11.5,
                                           ),
                                           const SizedBox(height: 2),
                                           Text(

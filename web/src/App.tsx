@@ -28,7 +28,23 @@ import {
   subscribeNews,
   toggleLike,
 } from './news';
+import {
+  LICENSE_DART,
+  LICENSE_HIGHLIGHTS,
+  LICENSE_NPM,
+  LICENSE_RUST,
+  LICENSE_SUMMARY,
+  LICENSE_TOTAL,
+} from './licenses.generated';
 import { HostMeta, InputCodec, RtcPhase, RtcSession } from './rtc';
+import {
+  APP_VERSION,
+  CHANGELOG_SLUG,
+  DOWNLOAD_DISABLED_REASON,
+  DOWNLOAD_ENABLED,
+  RELEASE_STAGE,
+  STAGE_LABEL,
+} from './version';
 import { TOUCH_ROWS, vkFromCode } from './vk';
 
 type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news';
@@ -189,9 +205,19 @@ function SiteHeader({
             Connect Web
           </button>
         )}
-        <a className="btn primary" href={`${RELEASE_BASE}/XyDesk-Windows-x64-Setup.exe`}>
-          Unduh Windows
-        </a>
+        {DOWNLOAD_ENABLED ? (
+          <a className="btn primary" href={`${RELEASE_BASE}/XyDesk-Windows-x64-Setup.exe`}>
+            Unduh Windows
+          </a>
+        ) : (
+          <button
+            className="btn primary"
+            disabled
+            title={DOWNLOAD_DISABLED_REASON}
+          >
+            {STAGE_LABEL[RELEASE_STAGE]}
+          </button>
+        )}
       </div>
     </header>
   );
@@ -225,13 +251,17 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           </p>
           <div className="hero-cta">
             <button className="btn primary big" onClick={() => navigate('/download')}>
-              Unduh sekarang
+              {DOWNLOAD_ENABLED ? 'Unduh sekarang' : 'Status rilis'}
             </button>
             <button className="btn ghost big" onClick={() => navigate('/connect')}>
               Coba dari browser
             </button>
           </div>
-          <p className="hero-note">Gratis. Media sesi peer-to-peer, tidak lewat server kami.</p>
+          <p className="hero-note">
+            {DOWNLOAD_ENABLED
+              ? 'Gratis. Media sesi peer-to-peer, tidak lewat server kami.'
+              : `v${APP_VERSION} · ${STAGE_LABEL[RELEASE_STAGE]} — paket publik belum dibuka.`}
+          </p>
         </div>
         <div className="hero-art" aria-hidden="true">
           <div className="hero-screen">
@@ -318,11 +348,17 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
 
       {/* ── Unduh ── */}
       <section className="download-cta">
-        <h2>Mulai dari perangkatmu</h2>
+        <h2>{DOWNLOAD_ENABLED ? 'Mulai dari perangkatmu' : 'Segera di perangkatmu'}</h2>
         <PlatformTables compact />
-        <a className="btn primary big" href={`${RELEASE_BASE}/XyDesk-Android-arm64-v8a.apk`}>
-          Unduh untuk Android
-        </a>
+        {DOWNLOAD_ENABLED ? (
+          <a className="btn primary big" href={`${RELEASE_BASE}/XyDesk-Android-arm64-v8a.apk`}>
+            Unduh untuk Android
+          </a>
+        ) : (
+          <button className="btn primary big" disabled title={DOWNLOAD_DISABLED_REASON}>
+            Belum tersedia
+          </button>
+        )}
       </section>
     </main>
   );
@@ -385,7 +421,13 @@ function PlatformTables({ compact = false }: { compact?: boolean }) {
               <strong>{item.architecture}</strong>
               {!compact && <span>{item.note}</span>}
             </div>
-            <a href={`${RELEASE_BASE}/${item.file}`}>Download</a>
+            {DOWNLOAD_ENABLED ? (
+              <a href={`${RELEASE_BASE}/${item.file}`}>Download</a>
+            ) : (
+              <span className="soon-chip" title={DOWNLOAD_DISABLED_REASON}>
+                Segera
+              </span>
+            )}
           </div>
         ))}
       </div>
@@ -401,6 +443,54 @@ function PlatformTables({ compact = false }: { compact?: boolean }) {
 
 function DownloadPage() {
   const recommended = useRecommendedDownload();
+
+  // Pra-beta: halaman ini berhenti menjual dan mulai menjelaskan. Tidak ada
+  // tombol yang menjanjikan file yang belum layak dipasang siapa pun.
+  if (!DOWNLOAD_ENABLED) {
+    return (
+      <main className="content-page download-page">
+        <p className="eyebrow">STATUS RILIS</p>
+        <h1>Belum dibuka untuk umum.</h1>
+        <p className="page-lead">{DOWNLOAD_DISABLED_REASON}</p>
+        <div className="stage-card">
+          <div className="stage-row">
+            <span>Versi kerja</span>
+            <strong>v{APP_VERSION}</strong>
+          </div>
+          <div className="stage-row">
+            <span>Tahap</span>
+            <strong>{STAGE_LABEL[RELEASE_STAGE]}</strong>
+          </div>
+          <div className="stage-row">
+            <span>Paket publik</span>
+            <strong>Ditahan</strong>
+          </div>
+        </div>
+        <h2 className="stage-heading">Yang harus lulus sebelum beta dibuka</h2>
+        <ul className="stage-list">
+          <li>Uji dengar audio WASAPI dan mic passthrough di PC Windows nyata.</li>
+          <li>Verifikasi capture DXGI dan pemilih multi-monitor pada perangkat keras.</li>
+          <li>Pemetaan HUD, mouse, dan keyboard virtual terbukti mengendalikan host.</li>
+          <li>Angka latency ujung-ke-ujung terukur di jaringan nyata, bukan lab loopback.</li>
+          <li>Push notifikasi terkirim dan terbuka di perangkat uji.</li>
+        </ul>
+        <p className="page-lead">
+          Progres setiap poin ditulis di changelog. Kamu bisa mengikutinya tanpa
+          memasang apa pun.
+        </p>
+        <button
+          className="btn primary big centered"
+          onClick={() => (window.location.href = '/news')}
+        >
+          Baca changelog
+        </button>
+        <a className="channel-link" href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
+          Dapat kabar saat beta dibuka — saluran WhatsApp
+        </a>
+      </main>
+    );
+  }
+
   return (
     <main className="content-page download-page">
       <p className="eyebrow">DOWNLOAD CENTER</p>
@@ -484,47 +574,106 @@ function LegalPage() {
       <section>
         <h2>Lisensi pihak ketiga</h2>
         <p>
-          Semua UI/UX XyDesk dirancang sendiri oleh tim. Berikut komponen pihak ketiga
-          yang dipakai beserta lisensinya:
+          Seluruh UI/UX XyDesk dirancang sendiri oleh tim. Di bawah ini adalah
+          inventaris <strong>lengkap</strong> komponen pihak ketiga yang ikut
+          terkirim bersama aplikasi — {LICENSE_TOTAL} komponen, dihasilkan
+          otomatis dari lockfile dan teks lisensi paket yang benar-benar
+          terpasang, bukan daftar yang diketik tangan.
         </p>
-        <div className="license-card">
-          <strong>Inter</strong><span>OFL 1.1</span>
-          <p>Font antarmuka — Rasmus Andersson, SIL Open Font License 1.1.</p>
-        </div>
-        <div className="license-card">
-          <strong>Lucide Icons</strong><span>ISC</span>
-          <p>Set ikon garis konsisten — proyek Lucide.</p>
-        </div>
-        <div className="license-card">
-          <strong>Flutter &amp; Dart</strong><span>BSD-3</span>
-          <p>Kerangka UI lintas platform — Google, BSD 3-Clause.</p>
-        </div>
-        <div className="license-card">
-          <strong>React &amp; Vite</strong><span>MIT</span>
-          <p>Perpustakaan UI dan bundler aplikasi web.</p>
-        </div>
-        <div className="license-card">
-          <strong>Electron &amp; Next.js</strong><span>MIT</span>
-          <p>Cangkang aplikasi desktop Windows.</p>
-        </div>
-        <div className="license-card">
-          <strong>libwebrtc</strong><span>BSD-3</span>
-          <p>Implementasi WebRTC untuk media peer-to-peer.</p>
-        </div>
-        <div className="license-card">
-          <strong>Cloudflare Workers &amp; D1</strong><span>Layanan</span>
-          <p>Runtime signaling dan basis data berita (layanan Cloudflare).</p>
-        </div>
-        <div className="license-card">
-          <strong>NVIDIA NVENC SDK</strong><span>NVIDIA</span>
-          <p>Encode hardware saat GPU NVIDIA tersedia (lisensi SDK NVIDIA).</p>
-        </div>
-        <div className="license-card">
-          <strong>OneSignal SDK</strong><span>OneSignal</span>
-          <p>Notifikasi pembaruan di Android (ketentuan OneSignal).</p>
-        </div>
+        <LicenseInventory />
       </section>
     </main>
+  );
+}
+
+/// Inventaris lisensi.
+///
+/// Datanya berasal dari `web/src/licenses.generated.ts` yang ditulis oleh
+/// `tool/gen-licenses.mjs`. Daftar panjang dilipat per ekosistem supaya
+/// halaman tetap bisa dibaca, tetapi tidak ada satu pun entri yang dibuang —
+/// daftar lisensi yang tidak lengkap adalah masalah hukum, bukan sekadar
+/// dokumentasi yang kurang rapi.
+function LicenseInventory() {
+  const groups = [
+    { key: 'dart', label: 'Paket Dart / Flutter', items: LICENSE_DART },
+    { key: 'rust', label: 'Crate Rust (aplikasi Host)', items: LICENSE_RUST },
+    { key: 'npm', label: 'Paket npm (web & layanan)', items: LICENSE_NPM },
+  ] as const;
+  const [open, setOpen] = useState<string | null>(null);
+
+  return (
+    <div className="license-inventory">
+      <div className="license-summary">
+        {LICENSE_SUMMARY.slice(0, 8).map(([name, count]) => (
+          <span key={name} className="license-chip">
+            {name} <b>{count}</b>
+          </span>
+        ))}
+      </div>
+
+      <h3>Komponen inti, aset, dan layanan</h3>
+      {LICENSE_HIGHLIGHTS.map((l) => (
+        <div className="license-card" key={l.name}>
+          <strong>{l.name}</strong>
+          <span>{l.license}</span>
+          <p>{l.note}</p>
+        </div>
+      ))}
+
+      <h3>Inventaris penuh</h3>
+      {groups.map((g) => (
+        <div className="license-group" key={g.key}>
+          <button
+            className="license-toggle"
+            onClick={() => setOpen(open === g.key ? null : g.key)}
+          >
+            <span>{g.label}</span>
+            <span className="license-count">{g.items.length} komponen</span>
+            <span className="license-caret">{open === g.key ? '−' : '+'}</span>
+          </button>
+          {open === g.key && (
+            <div className="license-table">
+              {g.items.map((l) => (
+                <div className="license-row" key={`${l.name}@${l.version}`}>
+                  <code>{l.name}</code>
+                  <span className="license-version">{l.version}</span>
+                  <span className="license-spdx">{l.license}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/// Nama penulis dengan badge resmi XyDesk.
+///
+/// Badge ini melekat pada identitas, jadi ia harus punya arti tunggal:
+/// "tulisan ini datang dari tim". Karena itu ia HANYA dirender saat server
+/// menandai `official` — nilai yang berasal dari ADMIN_TOKEN, bukan dari
+/// nama yang diketik. Nama tim juga dikunci di sisi worker, sehingga tidak
+/// ada komentar publik yang bisa tampil sebagai "Haekal Saputra" tanpa badge
+/// dan menipu pembaca yang sekilas.
+function AuthorName({
+  name,
+  official,
+  size = 'sm',
+}: {
+  name: string;
+  official?: boolean;
+  size?: 'sm' | 'md';
+}) {
+  if (!official) return <span className="author-name">{name}</span>;
+  return (
+    <span className={`author-name official ${size}`}>
+      <img className="author-badge" src="/logo.png" alt="" aria-hidden="true" />
+      <strong>{name}</strong>
+      <span className="official-tag" title="Diverifikasi — tim XyDesk">
+        Resmi
+      </span>
+    </span>
   );
 }
 
@@ -792,7 +941,9 @@ function NewsDetailPage({
           <span className="news-cat">{post.category}</span>
           <h1>{post.title}</h1>
           <div className="post-meta">
-            <span>{post.author}</span>
+            {/* Artikel hanya bisa diterbitkan lewat endpoint admin, jadi
+                penulisnya resmi menurut konstruksi. */}
+            <AuthorName name={post.author} official size="md" />
             <span>·</span>
             <span>{formatNewsDate(post.createdAt)}</span>
           </div>
@@ -829,7 +980,9 @@ function NewsDetailPage({
             <div className="comment-form">
               {replyTo && (
                 <div className="reply-banner">
-                  <span>Membalas <strong>{replyTo.author}</strong></span>
+                  <span>
+                    Membalas <AuthorName name={replyTo.author} official={replyTo.official} />
+                  </span>
                   <button onClick={() => setReplyTo(null)}>×</button>
                 </div>
               )}
@@ -858,7 +1011,7 @@ function NewsDetailPage({
                 return (
                   <div className="comment" key={c.id}>
                     <div className="comment-head">
-                      <strong>{c.author}</strong>
+                      <AuthorName name={c.author} official={c.official} />
                       <span>{formatNewsDate(c.createdAt)}</span>
                     </div>
                     <p>{c.content}</p>
@@ -870,7 +1023,7 @@ function NewsDetailPage({
                         {replies.map((r) => (
                           <div className="reply" key={r.id}>
                             <div className="comment-head">
-                              <strong>{r.author}</strong>
+                              <AuthorName name={r.author} official={r.official} />
                               <span>{formatNewsDate(r.createdAt)}</span>
                             </div>
                             <p>{r.content}</p>
@@ -1583,19 +1736,39 @@ function SiteFooter({ navigate }: { navigate: (r: Route) => void }) {
           </div>
           <div className="footer-column">
             <strong>Platform</strong>
-            <a href={`${RELEASE_BASE}/XyDesk-Android-arm64-v8a.apk`}>Android</a>
-            <a href={`${RELEASE_BASE}/XyDesk-Windows-x64-Setup.exe`}>Windows</a>
+            {DOWNLOAD_ENABLED ? (
+              <>
+                <a href={`${RELEASE_BASE}/XyDesk-Android-arm64-v8a.apk`}>Android</a>
+                <a href={`${RELEASE_BASE}/XyDesk-Windows-x64-Setup.exe`}>Windows</a>
+              </>
+            ) : (
+              <>
+                <button onClick={() => navigate('/download')}>Android — segera</button>
+                <button onClick={() => navigate('/download')}>Windows — segera</button>
+              </>
+            )}
             <button onClick={() => navigate('/connect')}>iPhone & iPad</button>
           </div>
           <div className="footer-column">
             <strong>Dukungan</strong>
             <button onClick={() => navigate('/legal')}>Legal & Privasi</button>
+            <button onClick={() => navigate('/legal')}>Lisensi pihak ketiga</button>
             <a href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">Saluran WhatsApp</a>
-            <a href="https://github.com/xykalnotkel/XyDesk/releases" target="_blank" rel="noreferrer">GitHub Releases</a>
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 XySpace Tch. XyDesk v2.5.0.</span>
+          {/* Versi dibaca dari pubspec saat build; tautannya ke changelog,
+              bukan ke GitHub Releases — pengguna butuh penjelasan, bukan
+              artefak build. */}
+          <span>
+            © 2026 XySpace Tech ·{' '}
+            <button
+              className="footer-version"
+              onClick={() => navigate({ page: 'news-detail', slug: CHANGELOG_SLUG })}
+            >
+              XyDesk v{APP_VERSION} · {STAGE_LABEL[RELEASE_STAGE]}
+            </button>
+          </span>
           <span>Media sesi tidak disimpan oleh server.</span>
         </div>
       </div>

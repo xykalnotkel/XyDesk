@@ -55,3 +55,61 @@ Status hari ini: loop capture-encode-RTP-terima sudah terbukti di test loopback 
   'Tim XyDesk',
   1
 );
+
+-- Changelog rilis 6.2.0. Slug SENGAJA deterministik: footer web dan layar
+-- Tentang menautkan nomor versi ke `changelog-v<major>-<minor>-<patch>`.
+INSERT OR IGNORE INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+(
+  'changelog-v6-2-0',
+  'XyDesk 6.2.0 — rilis kejujuran: unduhan dimatikan, 482 lisensi dibuka',
+  'Tidak ada fitur media baru di rilis ini. Yang berubah adalah apa yang XyDesk katakan tentang dirinya sendiri: status rilis yang sebenarnya, nomor versi yang punya aturan, daftar lisensi yang lengkap, dan badge resmi supaya tidak ada yang bisa mengaku tim.',
+  'Rilis ini tidak menambah satu pun fitur media. Kalau kamu menunggu audio atau multi-monitor, tunggu rilis berikutnya. Yang kami kerjakan kali ini adalah sesuatu yang lebih mendasar: membuat XyDesk berhenti mengatakan hal yang belum benar tentang dirinya sendiri.
+
+TOMBOL UNDUH KAMI MATIKAN
+
+Sampai hari ini situs XyDesk menyediakan tombol Download untuk Windows dan Android. Masalahnya sederhana: produk ini belum pernah masuk beta test. Layar sesi, HUD kontrol, mouse dan keyboard virtual belum pernah diverifikasi mengendalikan PC sungguhan. Audio WASAPI belum pernah didengar orang. Push notifikasi belum pernah dibuktikan sampai ke perangkat.
+
+Menyediakan tombol unduh untuk sesuatu seperti itu bukan kepercayaan diri, itu janji yang belum bisa ditepati. Jadi tombolnya mati, dan halaman Unduh sekarang menampilkan hal yang jujur: versi berapa, tahap apa, dan enam syarat yang harus lulus sebelum tombolnya menyala lagi.
+
+Syarat itu bukan perasaan. Semuanya bisa dicentang atau tidak: uji dengar audio di PC nyata, capture multi-monitor terverifikasi di perangkat keras, HUD terbukti mengendalikan host, latency ujung-ke-ujung terukur di jaringan nyata, push notifikasi terkirim dan terbuka, dan sesi 30 menit tanpa putus.
+
+482 KOMPONEN BERLISENSI, SEMUANYA DIBUKA
+
+Halaman Lisensi lama menyebut sembilan komponen di web dan delapan belas di aplikasi. Angka sebenarnya, setelah seluruh lockfile dipindai: 482. Sembilan puluh paket Dart, 324 crate Rust, 58 paket npm, dan 10 aset serta layanan pihak ketiga.
+
+Selisih itu bukan kelalaian kecil. Lisensi open source adalah kewajiban hukum, dan kewajiban yang tidak kamu daftar tetap berlaku. Sekarang daftarnya dibangkitkan mesin dari pubspec.lock, Cargo.lock, dan package-lock.json — jadi ia ikut berubah otomatis setiap kali dependensi berubah, bukan diketik ulang tangan dan basi tiga rilis kemudian.
+
+Di aplikasi Android, menu Tentang mendapat satu tambahan: tombol yang membuka registry lisensi bawaan Flutter. Registry itu membaca berkas LICENSE dari biner yang sedang berjalan. Ia mustahil basi, karena sumbernya adalah aplikasi itu sendiri.
+
+BADGE RESMI, DAN KENAPA IA HARUS MUSTAHIL DIPALSUKAN
+
+Mulai rilis ini, nama penulis berita dan komentar dari tim tampil dengan logo XyDesk dan label Resmi.
+
+Badge yang bisa diminta sendiri tidak ada gunanya — justru berbahaya, karena ia mengajari pembaca untuk percaya pada lencana. Jadi aturannya: badge hanya diberikan server, dan hanya kalau request membawa token admin. Mengirim official: true di body komentar tidak berpengaruh apa pun. Ada enam pengujian otomatis yang memastikan itu tetap benar setiap kali kode berubah.
+
+Lapis kedua: nama tim dikunci. Komentar publik yang memakai nama anggota tim ditolak, bukan sekadar tampil tanpa badge. Alasannya, pembaca yang sedang menggulir membaca nama, bukan ketiadaan lencana.
+
+SATU NOMOR VERSI, SATU SUMBER
+
+Dalam lima jam pada 31 Agustus, XyDesk melompat dari 2.5.0 ke 6.1.0. Tidak ada satu pun perubahan yang merusak kompatibilitas. Sementara itu footer situs masih menulis v2.5.0, karena angka itu diketik tangan di kode dan tidak pernah ikut berubah.
+
+Sekarang ada aturannya, tertulis di docs/VERSIONING.md, dan aturan itu mengikat: nomor versi hidup di satu tempat yaitu pubspec.yaml. Situs membacanya saat build. Aplikasi membacanya dari paket. MAJOR hanya naik untuk lima alasan yang didaftar tertutup — protokol patah, data tidak bisa dimigrasi, fitur dicabut, syarat platform naik, model lisensi berubah. Redesign visual bukan MAJOR. Rebranding bukan MAJOR.
+
+Angka 6.x diteruskan, bukan direset, karena tag 6.1.0 sudah beredar dan menurunkannya akan membuat installer menolak update. Tapi ia berhenti bergerak liar.
+
+YANG JUGA DIPERBAIKI
+
+Artikel yang diterbitkan lewat API admin selama ini kehilangan seluruh paragrafnya — fungsi pembersih meratakan semua whitespace jadi satu spasi, sehingga tulisan panjang menjadi satu blok. Hanya artikel bawaan yang punya paragraf. Sekarang jeda paragraf dipertahankan.
+
+Menekan Connect tidak lagi mampir ke halaman perantara; ia langsung masuk layar sesi dengan status Menyambung. Splash screen dirombak dengan rel progres nyata dan chip tahap rilis. Panel Riwayat diberi ruang. Logo direvisi dan sekarang dibangkitkan dari kode untuk 20-an ukuran sekaligus, termasuk perbaikan lapisan ikon adaptif Android yang selama ini kekecilan dan di-upscale peluncur.
+
+YANG MASIH BELUM
+
+Layar sesi, HUD, mouse dan keyboard virtual belum terbukti mengendalikan host sungguhan. Audio dan multi-monitor belum diuji di perangkat keras. Push notifikasi belum dibuktikan. Latency di jaringan nyata belum terukur.
+
+Empat hal itu adalah pekerjaan berikutnya, dan tidak satu pun bisa diselesaikan dari editor kode. Semuanya butuh PC Windows sungguhan dan HP di tangan. Sampai itu terjadi, tombol unduh tetap mati.',
+  'https://app.xystudio.my.id/news/covers/changelog-620.jpg',
+  'rilis',
+  'Haekal Saputra',
+  1
+);

@@ -27,6 +27,10 @@ CREATE TABLE IF NOT EXISTS comments (
   content TEXT NOT NULL,
   fp TEXT NOT NULL DEFAULT '',
   parent_id INTEGER,
+  -- Badge resmi. HANYA diisi 1 oleh worker saat request membawa
+  -- ADMIN_TOKEN. Tidak pernah dibaca dari body request — kalau boleh
+  -- dikirim klien, badge-nya tidak berarti apa-apa.
+  official INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
