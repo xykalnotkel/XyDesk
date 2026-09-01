@@ -31,12 +31,38 @@ jobs:
         working-directory: news
         run: npm ci
 
-      - name: Migrasi skema D1 (idempoten)
+      # URUTAN DI BAWAH INI PENTING DAN TIDAK BOLEH DIBALIK.
+      #
+      # Worker baru boleh menyala hanya setelah database punya semua kolom
+      # yang dipakainya. Saat kolom `official` ditambahkan ke Worker tanpa
+      # langkah migrasi di bawah, SELECT-nya gagal dan seluruh endpoint
+      # detail berita membalas 500 — bukan hanya fitur badge-nya.
+
+      - name: Migrasi skema D1 (tabel baru)
         working-directory: news
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run db:init
+
+      # `schema.sql` memakai CREATE TABLE IF NOT EXISTS, jadi database yang
+      # sudah ada TIDAK pernah menerima kolom baru darinya. Kolom baru hanya
+      # masuk lewat berkas ini.
+      - name: Migrasi kolom D1 (idempoten)
+        working-directory: news
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node migrate.mjs
+
+      # Artikel bawaan repo, termasuk changelog rilis yang ditautkan footer
+      # web lewat slug `changelog-v<versi>`. INSERT OR IGNORE — aman diulang.
+      - name: Terbitkan artikel bawaan repo
+        working-directory: news
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run db:seed
 
       - name: Deploy Worker
         working-directory: news
