@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -23,6 +24,7 @@ import java.util.zip.ZipFile
 class MainActivity : FlutterActivity() {
     companion object {
         private const val CHANNEL = "com.xystudio.xydesk/update"
+        private const val DISPLAY_CHANNEL = "com.xystudio.xydesk/display"
         private const val PREFS = "xydesk_update"
         private const val KEY_DOWNLOAD_ID = "download_id"
         private const val KEY_SHA256 = "sha256"
@@ -41,6 +43,94 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler(::handleUpdateCall)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DISPLAY_CHANNEL)
+            .setMethodCallHandler(::handleDisplayCall)
+    }
+
+    // ── Tampilan: refresh rate & layar tetap menyala ─────────────────────
+    //
+    // Sebelumnya sisi Dart memanggil metode `setHighRefreshRate` pada channel
+    // `flutter/platform_views`. Metode itu tidak pernah ada di Flutter; hasilnya
+    // panggilan gagal diam-diam dan sakelar "Refresh rate tinggi" di Pengaturan
+    // tidak melakukan apa pun. Implementasi nyatanya ada di sini.
+    private fun handleDisplayCall(call: MethodCall, result: MethodChannel.Result) {
+        when (call.method) {
+            "getDisplayInfo" -> result.success(displayInfo())
+            "setHighRefreshRate" -> {
+                val enabled = call.argument<Boolean>("enabled") ?: true
+                applyRefreshRate(enabled)
+                result.success(displayInfo())
+            }
+            "setKeepScreenOn" -> {
+                val enabled = call.argument<Boolean>("enabled") ?: false
+                runOnUiThread {
+                    if (enabled) {
+                        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    } else {
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    }
+                }
+                result.success(enabled)
+            }
+            else -> result.notImplemented()
+        }
+    }
+
+    /// Mode tampilan dengan resolusi sama seperti mode aktif, diurutkan
+    /// berdasarkan refresh rate. Resolusi sengaja tidak diubah — mengganti
+    /// resolusi panel demi Hz akan membuat UI berubah ukuran mendadak.
+    private fun candidateModes(): List<android.view.Display.Mode> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return emptyList()
+        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay
+        } ?: return emptyList()
+        val active = display.mode ?: return emptyList()
+        return display.supportedModes
+            .filter {
+                it.physicalWidth == active.physicalWidth &&
+                    it.physicalHeight == active.physicalHeight
+            }
+            .sortedBy { it.refreshRate }
+    }
+
+    private fun applyRefreshRate(highest: Boolean) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val modes = candidateModes()
+        if (modes.isEmpty()) return
+        val target = if (highest) modes.last() else modes.first()
+        runOnUiThread {
+            val attributes = window.attributes
+            attributes.preferredDisplayModeId = target.modeId
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                attributes.preferredRefreshRate = target.refreshRate
+            }
+            window.attributes = attributes
+        }
+    }
+
+    private fun displayInfo(): Map<String, Any> {
+        val modes = candidateModes()
+        val current = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val d = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display
+            } else {
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay
+            }
+            d?.mode?.refreshRate?.toDouble() ?: 60.0
+        } else {
+            60.0
+        }
+        return mapOf(
+            "current" to current,
+            // Bila perangkat hanya punya satu mode, daftar ini berisi satu
+            // angka — dan UI wajib mengatakan "tidak didukung", bukan
+            // menampilkan sakelar yang tidak mengubah apa pun.
+            "supported" to modes.map { it.refreshRate.toDouble() }.distinct(),
+        )
     }
 
     override fun onDestroy() {

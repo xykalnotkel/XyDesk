@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../features/auth/session_vault.dart';
 import 'devlog.dart';
 import 'l10n_bridge.dart';
+import 'display_control.dart';
+import 'haptics.dart';
 
 /// Penyimpanan lokal sederhana di atas SharedPreferences.
 ///
@@ -76,6 +79,7 @@ class AppSettings {
     this.audioEnabled = true,
     this.micPassthrough = false,
     this.clipboardSync = true,
+    this.keepScreenOn = true,
   });
 
   final String langCode;
@@ -91,6 +95,10 @@ class AppSettings {
   final bool micPassthrough;
   final bool clipboardSync;
 
+  /// Cegah layar mati selama sesi remote berjalan. Tanpa ini layar padam saat
+  /// pengguna hanya menonton, dan sesi terlihat seolah putus.
+  final bool keepScreenOn;
+
   AppSettings copyWith({
     String? langCode,
     bool? haptics,
@@ -104,6 +112,7 @@ class AppSettings {
     bool? audioEnabled,
     bool? micPassthrough,
     bool? clipboardSync,
+    bool? keepScreenOn,
   }) => AppSettings(
     langCode: langCode ?? this.langCode,
     haptics: haptics ?? this.haptics,
@@ -117,6 +126,7 @@ class AppSettings {
     audioEnabled: audioEnabled ?? this.audioEnabled,
     micPassthrough: micPassthrough ?? this.micPassthrough,
     clipboardSync: clipboardSync ?? this.clipboardSync,
+    keepScreenOn: keepScreenOn ?? this.keepScreenOn,
   );
 }
 
@@ -141,7 +151,13 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       audioEnabled: _s.getBool('stream_audio', def: true),
       micPassthrough: _s.getBool('stream_mic', def: false),
       clipboardSync: _s.getBool('stream_clipboard', def: true),
+      keepScreenOn: _s.getBool('keep_screen_on', def: true),
     );
+    // Preferensi yang punya efek di luar Flutter harus benar-benar diterapkan
+    // saat dimuat, bukan hanya saat pengguna menggeser sakelarnya. Kalau tidak,
+    // pilihan pengguna hilang setiap aplikasi dimulai ulang.
+    unawaited(DisplayControl.setHighRefreshRate(state.highRefresh));
+    AppHaptics.enabled = state.haptics;
     DevLog.i(
       'settings',
       'Dimuat',
@@ -157,12 +173,49 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   Future<void> setHaptics(bool v) async {
     state = state.copyWith(haptics: v);
+    AppHaptics.enabled = v;
     await _s.setBool('haptics', v);
   }
 
   Future<void> setHighRefresh(bool v) async {
     state = state.copyWith(highRefresh: v);
     await _s.setBool('high_refresh', v);
+    // Diterapkan ke panel, bukan sekadar disimpan.
+    await DisplayControl.setHighRefreshRate(v);
+  }
+
+  Future<void> setKeepScreenOn(bool v) async {
+    state = state.copyWith(keepScreenOn: v);
+    await _s.setBool('keep_screen_on', v);
+  }
+
+  /// Kembalikan seluruh pengaturan ke bawaan.
+  ///
+  /// Bahasa sengaja TIDAK ikut direset: mengembalikan pengguna ke bahasa yang
+  /// tidak ia mengerti akan membuat layar ini sendiri sulit dipakai untuk
+  /// membatalkannya.
+  Future<void> resetToDefaults() async {
+    const d = AppSettings();
+    state = d.copyWith(langCode: state.langCode);
+    for (final k in [
+      'haptics',
+      'high_refresh',
+      'show_devlog',
+      'reduce_motion',
+      'stream_codec',
+      'stream_res',
+      'stream_bitrate',
+      'stream_relative_mouse',
+      'stream_audio',
+      'stream_mic',
+      'stream_clipboard',
+      'keep_screen_on',
+    ]) {
+      await _s.remove(k);
+    }
+    AppHaptics.enabled = state.haptics;
+    await DisplayControl.setHighRefreshRate(state.highRefresh);
+    DevLog.i('settings', 'Direset ke bawaan', 'bahasa dipertahankan');
   }
 
   Future<void> setShowDevLog(bool v) async {

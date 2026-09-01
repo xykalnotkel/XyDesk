@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/tokens.dart';
+import '../core/haptics.dart';
 
 /// Gradient fade yang menggantikan garis pemisah.
 ///
@@ -243,7 +244,14 @@ class ListRow extends StatelessWidget {
     final fg = danger ? c.danger : c.textHi;
 
     return InkWell(
-      onTap: onTap,
+      // Getar lewat AppHaptics, bukan HapticFeedback langsung — supaya sakelar
+      // "Getaran" di Pengaturan benar-benar berlaku di seluruh aplikasi.
+      onTap: onTap == null
+          ? null
+          : () {
+              danger ? AppHaptics.heavy() : AppHaptics.tap();
+              onTap!();
+            },
       borderRadius: BorderRadius.circular(R.sm),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),

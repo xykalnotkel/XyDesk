@@ -7,10 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'core/app_version.dart';
 import 'core/devlog.dart';
-import 'core/responsive.dart';
 import 'core/store.dart';
 import 'features/auth/session_vault.dart';
 import 'features/notifications/notification_service.dart';
+import 'core/display_control.dart';
 
 void main() {
   // runZonedGuarded menangkap error async yang lolos dari framework,
@@ -41,8 +41,11 @@ void main() {
         ),
       );
 
-      await DisplayMode.useHighestRefreshRate();
-      DevLog.i('display', 'Refresh rate', '${DisplayMode.current.round()} Hz');
+      // Hanya membaca kemampuan panel di sini. Penerapannya dilakukan
+      // SettingsNotifier memakai preferensi tersimpan pengguna — kalau
+      // diterapkan di sini juga, pilihan "hemat baterai" akan ditimpa setiap
+      // aplikasi dimulai.
+      await DisplayControl.probe();
 
       // Menyiapkan push tanpa menampilkan dialog izin pada peluncuran awal.
       await NotificationService.instance.initialize();
