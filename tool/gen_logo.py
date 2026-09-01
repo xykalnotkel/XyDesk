@@ -150,6 +150,30 @@ def build_wordmark_tile(size: int, light: bool) -> Image.Image:
 SOURCE = ROOT / "design" / "logo-asli.png"
 
 
+def source_is_dark() -> bool:
+    """Apakah logo asli bernilai gelap?
+
+    Logo XyDesk pernah berganti-ganti: ada yang biru-ungu, ada yang monokrom
+    hitam. Beberapa target duduk di atas latar gelap (ikon launcher, .ico
+    Windows) dan sisanya di latar terang (splash Android #FAFAF9). Kalau
+    pembuatnya memilih warna sendiri, cepat atau lambat ada logo yang
+    tenggelam di latarnya — jadi terang/gelapnya diukur, bukan ditebak.
+    """
+    im = _source_image()
+    small = im.resize((64, 64), Image.LANCZOS)
+    total = 0.0
+    weight = 0
+    for r, g, b, a in small.convert("RGBA").getdata():
+        if a < 128:
+            continue
+        lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+        total += lum * a
+        weight += a
+    if not weight:
+        return False
+    return (total / weight) < 0.5
+
+
 def _source_image() -> Image.Image:
     """Buka sumber logo, dipangkas ke isinya supaya margin simetris."""
     im = Image.open(SOURCE).convert("RGBA")
@@ -180,6 +204,11 @@ def build_source(
         plate = Image.new("RGBA", (s, s), TILE_DARK)
         canvas.paste(plate, (0, 0), _squircle(s, 0.22, 0.02))
         inner = 0.72  # logo duduk di dalam tile, tidak menyentuh tepi tile
+        # Tile-nya gelap (#0D0716), jadi logo gelap harus jadi siluet putih
+        # supaya tidak lenyap. Ini yang menjaga ikon tetap terbaca di
+        # wallpaper apa pun, berapa kali pun identitasnya berganti.
+        if source_is_dark():
+            mono = mono or WHITE
     else:
         inner = fill
 
@@ -285,7 +314,11 @@ def main() -> None:
         build_source(legacy, tile=True).save(base / "ic_launcher.png")
         # XML memberi inset 16%, jadi isi efektifnya 0.92 x (1 - 0.32) = 0.63
         # kanvas — aman di dalam zona aman 72dp adaptive icon.
-        build_source(foreground).save(base / "ic_launcher_foreground.png")
+        # Latar adaptive icon ikut @color/ic_launcher_background (#0D0716),
+        # jadi logo gelap dipaksa jadi siluet putih (lihat build_source).
+        build_source(foreground, tile=source_is_dark()).save(
+            base / "ic_launcher_foreground.png"
+        )
         print(f"OK mipmap-{density:<8} legacy={legacy} foreground={foreground}")
 
     # Favicon multi-ukuran untuk peramban lama.
