@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "test": "node --test",
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute xydesk-news --remote --file schema.sql",
     "db:seed": "wrangler d1 execute xydesk-news --remote --file seed.sql"

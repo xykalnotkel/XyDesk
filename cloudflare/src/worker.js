@@ -91,11 +91,18 @@ export default {
 };
 
 // ── CORS untuk aplikasi Web ─────────────────────────────────────────────
-// CORS_ORIGINS dapat berisi daftar origin dipisah koma. Default `*` aman untuk
-// API bearer-token ini karena Worker tidak memakai cookie/credentials browser.
-function corsResponse(response, request, env) {
+// CORS_ORIGINS berisi daftar origin dipisah koma, misalnya
+// "https://app.xystudio.my.id". Tulis `*` secara EKSPLISIT bila memang mau
+// membuka API untuk semua origin.
+//
+// Nilai bawaan saat variabel tidak terisi adalah KOSONG (= tolak semua
+// origin), bukan `*`. Alasannya: variabel bisa hilang karena salah deploy,
+// environment pratinjau yang belum disetel, atau typo nama — dan kegagalan
+// akibat konfigurasi lupa harus berbunyi "tidak ada yang boleh masuk",
+// bukan "semua orang boleh masuk".
+export function corsResponse(response, request, env) {
   const origin = request.headers.get('Origin') || '';
-  const configured = String(env.CORS_ORIGINS || '*')
+  const configured = String(env.CORS_ORIGINS || '')
     .split(',')
     .map((v) => v.trim())
     .filter(Boolean);

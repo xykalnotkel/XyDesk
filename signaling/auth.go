@@ -58,9 +58,9 @@ func (a *Auth) Verify(token string, purpose string) bool {
 	return hmac.Equal([]byte(expect), []byte(parts[2]))
 }
 
-	// middleware memaksa autentikasi: header `Authorization: Bearer <token>`
-	// ATAU query `?token=<token>`. Query dipakai client Flutter
-	// (web_socket_channel tak kirim header kustom); header dipakai host Rust.
+// middleware memaksa autentikasi: header `Authorization: Bearer <token>`
+// ATAU query `?token=<token>`. Query dipakai client Flutter
+// (web_socket_channel tak kirim header kustom); header dipakai host Rust.
 func (a *Auth) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := ""
@@ -85,5 +85,3 @@ func (a *Auth) middleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
-

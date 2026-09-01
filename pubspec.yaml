@@ -32,6 +32,11 @@ dependencies:
 
 dev_dependencies:
   flutter_lints: ^4.0.0
+  # Test widget & unit. Sengaja ditambahkan bersamaan dengan folder test/
+  # pertama: logika protokol input (input_codec.dart) selama ini tidak pernah
+  # diuji, padahal satu byte meleset = kursor melompat di mesin pengguna.
+  flutter_test:
+    sdk: flutter
 
 flutter:
   uses-material-design: true
