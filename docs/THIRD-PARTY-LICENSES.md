@@ -10,15 +10,15 @@ bersama aplikasi, beserta lisensinya — diambil langsung dari lockfile dan
 teks lisensi paket yang benar-benar terpasang, bukan dari daftar ketik
 tangan yang bisa ketinggalan zaman.
 
-**Total komponen: 490**
-(Dart/Flutter 97 · Rust 324 · npm 58 · aset & layanan 11)
+**Total komponen: 488**
+(Dart/Flutter 95 · Rust 324 · npm 58 · aset & layanan 11)
 
 ## Ringkasan lisensi
 
 | Lisensi | Jumlah komponen |
 |---|---|
 | MIT OR Apache-2.0 | 196 |
-| BSD-3-Clause | 84 |
+| BSD-3-Clause | 82 |
 | MIT | 73 |
 | Apache-2.0 OR MIT | 30 |
 | Unicode-3.0 | 18 |
@@ -154,7 +154,7 @@ Login opsional dengan akun Google.
 
 ---
 
-## 2. Paket Dart / Flutter (97)
+## 2. Paket Dart / Flutter (95)
 
 Termasuk dependensi transitif yang ikut ter-bundle di APK.
 
@@ -171,7 +171,6 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `ffi` | 2.2.0 | BSD-3-Clause |
 | `ffi_leak_tracker` | 0.1.2 | BSD-3-Clause |
 | `file` | 7.0.1 | BSD-3-Clause |
-| `flutter_lints` | 4.0.0 | BSD-3-Clause |
 | `flutter_riverpod` | 2.6.1 | MIT |
 | `flutter_secure_storage` | 11.0.0 | BSD-3-Clause |
 | `flutter_secure_storage_darwin` | 0.4.0 | BSD-3-Clause |
@@ -196,7 +195,6 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `jni_flutter` | 1.0.2 | BSD-3-Clause |
 | `jni_util` | 1.0.0 | BSD-3-Clause |
 | `js` | 0.7.2 | BSD-3-Clause |
-| `lints` | 4.0.0 | BSD-3-Clause |
 | `logger` | 2.7.0 | MIT |
 | `logging` | 1.3.0 | BSD-3-Clause |
 | `lucide_icons_flutter` | 3.1.15 | MIT |

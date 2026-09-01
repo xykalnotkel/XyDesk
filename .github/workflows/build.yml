@@ -87,6 +87,32 @@ jobs:
       - name: Uji gerbang badge resmi (news worker)
         run: node --test news/test/*.test.js
 
+      # Worker signaling memegang JWT, OTP, dan rate limit. Dulu 19 test ini
+      # HANYA jalan di deploy-signaling.yml — yaitu setelah push ke main,
+      # lewat filter path cloudflare/**. PR bisa mematikan verifikasi token
+      # dan tetap hijau; kabar buruknya baru muncul saat deploy produksi.
+      # Sekarang pengawalnya jalan di setiap PR, sama seperti news worker.
+      - name: Uji Worker signaling (JWT, OTP, rate limit)
+        run: |
+          cd cloudflare
+          npm ci
+          npm test
+
+      # Signaling Go adalah jalur cadangan self-host. Formatnya pernah
+      # dibiarkan menyimpang berbulan-bulan karena tidak ada yang mengecek.
+      - name: Cek format Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: signaling/go.mod
+      - name: Verifikasi gofmt
+        run: |
+          if [ -n "$(gofmt -l signaling/)" ]; then
+            echo "::error::Berkas Go belum diformat. Jalankan: gofmt -w signaling/"
+            gofmt -l signaling/
+            exit 1
+          fi
+          echo "OK - semua berkas Go rapi."
+
       # Nomor versi hidup di satu tempat. Kalau turunannya melenceng, footer
       # web pernah memajang v2.5.0 selama empat rilis.
       - name: Verifikasi versi konsisten di semua manifest

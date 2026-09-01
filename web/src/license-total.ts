@@ -1,2 +1,2 @@
 // DIBANGKITKAN OLEH tool/gen-licenses.mjs - JANGAN DIEDIT TANGAN.
-export const LICENSE_TOTAL = 490;
+export const LICENSE_TOTAL = 488;

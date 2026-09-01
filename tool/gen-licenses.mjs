@@ -28,6 +28,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from '
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PUB_CACHE = process.env.PUB_CACHE || join(homedir(), '.pub-cache');
@@ -95,9 +96,64 @@ const LICENSE_NAMES = [
   'COPYING', 'COPYING.txt', 'LICENSE-MIT', 'LICENSE-APACHE',
 ];
 
+// ── Penyaring runtime vs dev (khusus Dart/Flutter) ───────────────────────
+//
+// pubspec.lock menandai dependensi langsung ("direct main" / "direct dev"),
+// tetapi untuk paket yang ikut sebagai rantai, semuanya tertulis
+// "transitive" — tidak ada penanda apakah ia rantai dari dependensi utama
+// atau dari dependensi pengembang.
+//
+// Akibatnya, begitu `flutter_test` (atau dev dependency lain yang membawa
+// rantainya sendiri: matcher, leak_tracker, test_api, …) ditambahkan,
+// paket yang TIDAK PERNAH ikut ke perangkat pengguna ikut tercantum di
+// dokumen legal. Jalur npm sudah membuang berkas `dev`; jalur Dart belum.
+//
+// Jadi: hitung closure runtime sendiri dengan bertanya ke pub.
+function runtimeDartNames() {
+  let graph;
+  try {
+    const raw = execFileSync('flutter', ['pub', 'deps', '--json'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    graph = JSON.parse(raw);
+  } catch {
+    // Flutter tidak tersedia (mis. generator dijalankan di mesin tanpa SDK).
+    // Jangan menebak — pakai perilaku lama: sertakan semua entri lockfile.
+    return null;
+  }
+
+  const byName = new Map(graph.packages.map((p) => [p.name, p]));
+
+  // Titik mula = dependensi utama di pubspec.yaml. Dibaca dari manifes, bukan
+  // dari graf, karena `directDependencies` milik akar mencampur dev dan utama.
+  const pubspec = readFileSync(join(ROOT, 'pubspec.yaml'), 'utf8');
+  const mainBlock = (pubspec.split(/^dev_dependencies:/m)[0] || '').split(/^dependencies:/m)[1];
+  if (mainBlock == null) return null;
+
+  const runtime = new Set();
+  const queue = [];
+  for (const line of mainBlock.split('\n')) {
+    // Nama boleh diikuti nilai di baris yang sama (^2.5.1) atau blok
+    // bersarang (sdk: flutter). Keduanya dependensi utama.
+    const m = line.match(/^ {2}([a-z0-9_]+):/);
+    if (m) queue.push(m[1]);
+  }
+
+  while (queue.length) {
+    const name = queue.pop();
+    if (runtime.has(name)) continue;
+    runtime.add(name);
+    for (const dep of byName.get(name)?.dependencies ?? []) queue.push(dep);
+  }
+  return runtime;
+}
+
 // ── Dart / Flutter ───────────────────────────────────────────────────────
 function dartPackages() {
   const lock = readFileSync(join(ROOT, 'pubspec.lock'), 'utf8');
+  const runtime = runtimeDartNames();
   const out = [];
   // Blok paket: "  nama:\n    dependency: ...\n    ...\n    version: \"x.y.z\""
   const re = /^ {2}([a-z0-9_]+):\n((?: {4}.*\n)+)/gm;
@@ -108,6 +164,8 @@ function dartPackages() {
     const version = (body.match(/^ {4}version: "?([^"\n]+)"?/m) || [])[1];
     const source = (body.match(/^ {4}source: (.+)$/m) || [])[1];
     if (!version || source === 'sdk') continue;
+    // Hanya yang benar-benar ikut ke perangkat pengguna.
+    if (runtime && !runtime.has(name)) continue;
     const dir = join(PUB_CACHE, 'hosted', 'pub.dev', `${name}-${version}`);
     const text = readFirst(dir, LICENSE_NAMES);
     out.push({
