@@ -113,3 +113,42 @@ Empat hal itu adalah pekerjaan berikutnya, dan tidak satu pun bisa diselesaikan 
   'Haekal Saputra',
   1
 );
+
+-- Changelog rilis 6.2.1.
+INSERT OR IGNORE INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+(
+  'changelog-v6-2-1',
+  'XyDesk 6.2.1 — logo asli di tombol bagikan, dan bahasa yang lebih manusiawi',
+  'Tombol berbagi sekarang pakai logo resmi WhatsApp, Telegram, X, dan Facebook. Selain itu tulisan di seluruh aplikasi kami rombak supaya tidak terdengar seperti manual teknis.',
+  'Rilis kecil. Tidak ada perubahan di jalur video atau suara — yang kami kerjakan kali ini soal tampilan dan cara aplikasi berbicara.
+
+LOGO ASLI DI TOMBOL BAGIKAN
+
+Sebelumnya tombol berbagi memakai ikon seadanya: gelembung chat untuk WhatsApp, pesawat kertas untuk Telegram, dan rantai tautan untuk X. Orang mengenali logo, bukan tebakan bentuk. Ikon seadanya itu juga membuat barisnya terlihat seperti belum selesai dikerjakan.
+
+Sekarang keempatnya memakai logo resmi lengkap dengan warna mereknya. Facebook yang sebelumnya tidak ada di aplikasi HP juga sudah ditambahkan, jadi pilihannya sama antara web dan aplikasi.
+
+BAHASA YANG DITULIS ULANG
+
+Ini bagian yang paling banyak berubah. Teks di halaman Pengaturan selama ini ditulis dengan istilah yang hanya jelas buat orang yang membuatnya. Contohnya "Pengodean akselerasi perangkat keras", "Alokasi bandwidth jaringan", atau yang paling parah: "Belum didukung Host, kanal papan klip belum ada di protokol".
+
+Kalimat terakhir itu benar secara teknis, tapi tidak menjawab pertanyaan yang sebenarnya ada di kepala orang: bisa dipakai atau tidak? Sekarang tertulis "Belum bisa dipakai. Aplikasi XyDesk di PC belum mendukung fitur ini."
+
+Beberapa contoh lain. "Kualitas video dari perangkat Host" jadi "Makin tinggi makin jernih, tapi makin berat". "Kunci kursor di tengah untuk kontrol game FPS" jadi "Buat main game FPS, kursor dikunci di tengah layar". "Tinjau fungsi yang membutuhkan izin sistem" jadi "Lihat izin yang dipakai XyDesk dan alasannya".
+
+Halaman unduh juga ikut dirombak. Daftar syarat sebelum masa uji coba dibuka tadinya berbunyi seperti tiket kerja internal, penuh singkatan seperti WASAPI dan DXGI. Sekarang ditulis dari sisi kamu sebagai pemakai: suara PC benar-benar terdengar di HP, monitor bisa diganti saat sesi berjalan, tombol kontrol dari HP terbukti menggerakkan PC.
+
+ANGKA LISENSI TIDAK BISA BASI LAGI
+
+Halaman Lisensi menyebutkan jumlah komponen yang XyDesk pakai. Angka itu diketik tangan, dan langsung salah begitu satu paket ditambahkan. Kebetulan rilis ini menambah satu paket, jadi masalahnya langsung terbukti.
+
+Sekarang angkanya dibangkitkan otomatis dari daftar dependensi, dan sistem pemeriksa kami menolak kalau angkanya tidak cocok. Jumlahnya sekarang 490 komponen.
+
+YANG MASIH SAMA
+
+Tombol unduh masih ditahan. Suara, multi-monitor, kontrol dari HP, dan pemberitahuan masih belum diuji di komputer sungguhan. Daftar lengkapnya ada di halaman Unduh, dan tidak ada satu pun yang bisa kami centang dari balik meja.',
+  'https://app.xystudio.my.id/news/covers/changelog-621.jpg',
+  'rilis',
+  'Haekal Saputra',
+  1
+);

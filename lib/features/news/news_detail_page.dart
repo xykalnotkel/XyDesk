@@ -15,6 +15,7 @@ import '../../core/tokens.dart';
 import '../../widgets/official_badge.dart';
 import '../../widgets/seamless.dart';
 import 'news_service.dart';
+import '../../widgets/brand_icons.dart';
 
 class NewsDetailPage extends ConsumerStatefulWidget {
   const NewsDetailPage({super.key, required this.slug});
@@ -176,15 +177,19 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
               ),
               const SizedBox(height: Gap.md),
               Text(
-                'Kartu pratinjau (judul + gambar) dibuat otomatis oleh tautan ini.',
+                'Judul dan gambar akan muncul otomatis di aplikasi tujuan.',
                 style: TextStyle(fontSize: 12.5, color: ctx.c.textMid),
               ),
               const SizedBox(height: Gap.lg),
               Row(
                 children: [
                   _ShareButton(
-                    icon: LucideIcons.copy,
-                    label: 'Salin',
+                    label: 'Salin tautan',
+                    child: Icon(
+                      LucideIcons.copy,
+                      size: 20,
+                      color: ctx.c.textHi,
+                    ),
                     onTap: () async {
                       await Clipboard.setData(ClipboardData(text: url));
                       if (ctx.mounted) Navigator.pop(ctx);
@@ -195,42 +200,18 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                       }
                     },
                   ),
-                  _ShareButton(
-                    icon: LucideIcons.messageCircle,
-                    label: 'WhatsApp',
-                    onTap: () async {
-                      await launchUrl(
-                        Uri.parse(
-                          'https://wa.me/?text=${Uri.encodeComponent('${post.title} $url')}',
-                        ),
-                      );
-                      if (ctx.mounted) Navigator.pop(ctx);
-                    },
-                  ),
-                  _ShareButton(
-                    icon: LucideIcons.send,
-                    label: 'Telegram',
-                    onTap: () async {
-                      await launchUrl(
-                        Uri.parse(
-                          'https://t.me/share/url?url=${Uri.encodeComponent(url)}&text=${Uri.encodeComponent(post.title)}',
-                        ),
-                      );
-                      if (ctx.mounted) Navigator.pop(ctx);
-                    },
-                  ),
-                  _ShareButton(
-                    icon: LucideIcons.link,
-                    label: 'X',
-                    onTap: () async {
-                      await launchUrl(
-                        Uri.parse(
-                          'https://twitter.com/intent/tweet?text=${Uri.encodeComponent(post.title)}&url=${Uri.encodeComponent(url)}',
-                        ),
-                      );
-                      if (ctx.mounted) Navigator.pop(ctx);
-                    },
-                  ),
+                  for (final entry in _shareTargets(post.title, url).entries)
+                    _ShareButton(
+                      label: brandMarks[entry.key]!.label,
+                      child: brandMarks[entry.key]!.icon(),
+                      onTap: () async {
+                        await launchUrl(
+                          Uri.parse(entry.value),
+                          mode: LaunchMode.externalApplication,
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                    ),
                 ],
               ),
             ],
@@ -238,6 +219,20 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
         ),
       ),
     );
+  }
+
+  /// Tautan berbagi per platform. Dipisah dari widget supaya daftarnya
+  /// mudah dibaca dan mudah ditambah.
+  Map<SharePlatform, String> _shareTargets(String title, String url) {
+    final t = Uri.encodeComponent(title);
+    final u = Uri.encodeComponent(url);
+    return {
+      SharePlatform.whatsapp:
+          'https://wa.me/?text=${Uri.encodeComponent('$title $url')}',
+      SharePlatform.telegram: 'https://t.me/share/url?url=$u&text=$t',
+      SharePlatform.x: 'https://twitter.com/intent/tweet?text=$t&url=$u',
+      SharePlatform.facebook: 'https://www.facebook.com/sharer/sharer.php?u=$u',
+    };
   }
 
   String _date(String raw) {
@@ -742,12 +737,13 @@ class _PillAction extends StatelessWidget {
 
 class _ShareButton extends StatelessWidget {
   const _ShareButton({
-    required this.icon,
+    required this.child,
     required this.label,
     required this.onTap,
   });
 
-  final IconData icon;
+  /// Logo platform, atau ikon biasa untuk aksi seperti "Salin tautan".
+  final Widget child;
   final String label;
   final VoidCallback onTap;
 
@@ -765,14 +761,16 @@ class _ShareButton extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: onTap,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Icon(icon, size: 20, color: c.textHi),
-                ),
+                child: Padding(padding: const EdgeInsets.all(16), child: child),
               ),
             ),
             const SizedBox(height: 6),
-            Text(label, style: TextStyle(fontSize: 11, color: c.textMid)),
+            Text(
+              label,
+              style: TextStyle(fontSize: 10.5, color: c.textMid),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),

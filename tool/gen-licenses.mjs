@@ -215,6 +215,18 @@ const MANUAL = [
     note: 'Font antarmuka — Rasmus Andersson. Di-bundle, bukan diunduh runtime.',
   },
   {
+    name: 'Simple Icons',
+    version: '13.21.0',
+    license: 'CC0-1.0',
+    ecosystem: 'Set ikon',
+    note:
+      'Logo resmi WhatsApp, Telegram, X, dan Facebook pada tombol berbagi. ' +
+      'Data path disalin ke web/src/brand-icons.tsx dan ' +
+      'lib/widgets/brand_icons.dart, bukan dipasang sebagai dependensi. ' +
+      'CC0 tidak menuntut atribusi; dicantumkan karena memang dipakai. ' +
+      'Merek dagang tetap milik masing-masing pemiliknya.',
+  },
+  {
     name: 'Lucide Icons',
     version: 'via lucide_icons_flutter',
     license: 'ISC',
@@ -465,6 +477,29 @@ function reconcile(entries, snapshot, missing) {
 
 const snapshot = loadSnapshot();
 const missing = [];
+/// Angka jumlah komponen untuk layar "Tentang" di aplikasi.
+///
+/// Sebelumnya angka 482 diketik tangan di `legal_page.dart`. Angka seperti itu
+/// pasti basi begitu satu dependensi ditambahkan — dan pada halaman legal,
+/// angka yang salah bukan sekadar jelek, ia keliru menggambarkan kewajiban.
+function buildDart({ dart, rust, npm, manual }) {
+  const total = dart.length + rust.length + npm.length + manual.length;
+  return `// DIHASILKAN OTOMATIS oleh tool/gen-licenses.mjs — jangan diedit tangan.
+// Jalankan \`node tool/gen-licenses.mjs\` setelah mengubah dependensi.
+
+/// Jumlah komponen pihak ketiga yang dipakai XyDesk, dihitung dari lockfile.
+class LicenseStats {
+  const LicenseStats._();
+
+  static const int total = ${total};
+  static const int dart = ${dart.length};
+  static const int rust = ${rust.length};
+  static const int npm = ${npm.length};
+  static const int assets = ${manual.length};
+}
+`;
+}
+
 const data = {
   dart: reconcile(dartPackages(), snapshot, missing),
   rust: reconcile(rustCrates(), snapshot, missing),
@@ -474,8 +509,10 @@ const data = {
 
 const mdPath = join(ROOT, 'docs', 'THIRD-PARTY-LICENSES.md');
 const tsPath = join(ROOT, 'web', 'src', 'licenses.generated.ts');
+const dartPath = join(ROOT, 'lib', 'core', 'license_stats.dart');
 const md = buildMarkdown(data);
 const ts = buildTs(data);
+const dartFile = buildDart(data);
 
 if (process.argv.includes('--check')) {
   let stale = [];
@@ -491,7 +528,11 @@ if (process.argv.includes('--check')) {
     );
     process.exit(1);
   }
-  for (const [p, want] of [[mdPath, md], [tsPath, ts]]) {
+  for (const [p, want] of [
+    [mdPath, md],
+    [tsPath, ts],
+    [dartPath, dartFile],
+  ]) {
     const have = existsSync(p) ? readFileSync(p, 'utf8') : '';
     if (have !== want) stale.push(p);
   }
@@ -504,6 +545,7 @@ if (process.argv.includes('--check')) {
 } else {
   writeFileSync(mdPath, md);
   writeFileSync(tsPath, ts);
+  writeFileSync(dartPath, dartFile);
   // Simpan hasil resolusi supaya CI tanpa cache menghasilkan keluaran sama.
   const licenses = {};
   for (const e of [...data.dart, ...data.rust, ...data.npm]) {

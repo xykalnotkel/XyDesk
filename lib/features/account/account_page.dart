@@ -54,31 +54,31 @@ class AccountPage extends ConsumerWidget {
         const SectionLabel('Preferensi'),
         _CategoryRow(
           title: 'Tampilan & bahasa',
-          subtitle: 'Bahasa antarmuka dan format tanggal',
+          subtitle: 'Bahasa tampilan aplikasi',
           icon: LucideIcons.palette,
           onTap: () => _open(context, const AppearanceSettingsPage()),
         ),
         _CategoryRow(
           title: 'Perilaku & aksesibilitas',
-          subtitle: 'Getaran, refresh rate, dan reduksi gerakan',
+          subtitle: 'Getaran, kehalusan layar, dan animasi',
           icon: LucideIcons.slidersHorizontal,
           onTap: () => _open(context, const BehaviorSettingsPage()),
         ),
         _CategoryRow(
           title: 'Streaming & kontrol',
-          subtitle: 'Codec, resolusi, bitrate, audio, dan input',
+          subtitle: 'Kualitas gambar, suara, dan cara mengontrol',
           icon: LucideIcons.monitorCog,
           onTap: () => _open(context, const StreamingSettingsPage()),
         ),
         _CategoryRow(
           title: 'Notifikasi',
-          subtitle: 'Izin dan langganan pembaruan aplikasi',
+          subtitle: 'Atur pemberitahuan dari XyDesk',
           icon: LucideIcons.bell,
           onTap: () => _open(context, const NotificationPreferencesPage()),
         ),
         _CategoryRow(
           title: 'Sistem & privasi',
-          subtitle: 'Izin perangkat, update, dan diagnostik',
+          subtitle: 'Izin aplikasi, pembaruan, dan catatan teknis',
           icon: LucideIcons.shieldCheck,
           onTap: () => _open(context, const SystemSettingsPage()),
         ),
@@ -92,7 +92,7 @@ class AccountPage extends ConsumerWidget {
         ),
         _CategoryRow(
           title: 'Legal & tentang XyDesk',
-          subtitle: 'Ketentuan, privasi, lisensi, dan versi aplikasi',
+          subtitle: 'Ketentuan, privasi, dan lisensi',
           icon: LucideIcons.info,
           onTap: () => _open(context, const LegalSettingsPage()),
         ),
@@ -109,7 +109,7 @@ class AccountPage extends ConsumerWidget {
         if (!user.isGuest && user.token != null)
           ListRow(
             title: 'Hapus akun',
-            subtitle: 'Permanen — data akun di server ikut terhapus',
+            subtitle: 'Akun dan semua datanya hilang, tidak bisa dibalikkan',
             icon: LucideIcons.trash2,
             danger: true,
             onTap: () => _deleteAccount(context, ref),
@@ -135,14 +135,13 @@ class AppearanceSettingsPage extends ConsumerWidget {
     return _SettingsScaffold(
       title: 'Tampilan & bahasa',
       description:
-          'XyDesk memakai satu tema terang (Paper) supaya hanya ada satu set '
-          'kontras yang benar-benar diuji. Mode gelap sengaja tidak '
-          'disediakan, bukan belum dibuat.',
+          'XyDesk cuma punya satu tampilan terang. Mode gelap memang tidak '
+          'disediakan — bukan belum jadi.',
       children: [
         const SectionLabel('Bahasa', top: 0),
         ListRow(
           title: context.tr('settings_language'),
-          subtitle: 'Bahasa antarmuka aplikasi',
+          subtitle: 'Ganti bahasa tampilan',
           icon: LucideIcons.languages,
           value: lang.nativeName,
           trailing: _chevron(context),
@@ -156,9 +155,11 @@ class AppearanceSettingsPage extends ConsumerWidget {
 /// Menjelaskan refresh rate memakai angka nyata dari panel, bukan janji.
 String _refreshRateSubtitle() {
   final now = '${DisplayControl.current.round()} Hz';
-  if (!DisplayControl.canSwitch) return 'Panel berjalan di $now';
-  final list = DisplayControl.supported.map((e) => '${e.round()}').join('/');
-  return 'Sekarang $now · panel mendukung $list Hz';
+  if (!DisplayControl.canSwitch) return 'Layar berjalan di $now';
+  final list = DisplayControl.supported
+      .map((e) => '${e.round()}')
+      .join(' dan ');
+  return 'Sekarang $now · layar HP ini bisa $list Hz';
 }
 
 class BehaviorSettingsPage extends ConsumerWidget {
@@ -170,11 +171,11 @@ class BehaviorSettingsPage extends ConsumerWidget {
     final notifier = ref.read(settingsProvider.notifier);
     return _SettingsScaffold(
       title: 'Perilaku & aksesibilitas',
-      description: 'Respons sentuhan, animasi, dan informasi pengembang.',
+      description: 'Atur getaran, animasi, dan catatan teknis.',
       children: [
         _SwitchRow(
           title: context.tr('behavior_vibration'),
-          subtitle: 'Umpan balik sentuhan untuk tindakan penting',
+          subtitle: 'HP bergetar tiap kali kamu menekan tombol',
           icon: LucideIcons.vibrate,
           value: s.haptics,
           onChanged: notifier.setHaptics,
@@ -190,14 +191,14 @@ class BehaviorSettingsPage extends ConsumerWidget {
           // dihindari.
           unavailable: DisplayControl.canSwitch
               ? null
-              : 'Panel perangkat ini hanya mendukung '
-                    '${DisplayControl.current.round()} Hz',
+              : 'Layar HP ini cuma ${DisplayControl.current.round()} Hz, '
+                    'jadi tidak ada yang bisa diubah',
         ),
         _SwitchRow(
           title: 'Layar tetap menyala saat sesi',
           subtitle:
-              'Mencegah layar padam selama sesi remote berjalan. '
-              'Nonaktifkan untuk menghemat baterai.',
+              'Layar tidak akan mati selama kamu tersambung ke PC. '
+              'Matikan kalau mau hemat baterai.',
           icon: LucideIcons.sun,
           value: s.keepScreenOn,
           onChanged: notifier.setKeepScreenOn,
@@ -236,7 +237,7 @@ class StreamingSettingsPage extends ConsumerWidget {
         const SectionLabel('Video', top: 0),
         ListRow(
           title: 'Codec video',
-          subtitle: 'Pengodean akselerasi perangkat keras',
+          subtitle: 'Cara PC memproses gambar sebelum dikirim',
           icon: LucideIcons.cpu,
           value: _shortCodec(s.codec),
           trailing: _chevron(context),
@@ -244,7 +245,7 @@ class StreamingSettingsPage extends ConsumerWidget {
         ),
         ListRow(
           title: 'Resolusi & target FPS',
-          subtitle: 'Kualitas video dari perangkat Host',
+          subtitle: 'Makin tinggi makin jernih, tapi makin berat',
           icon: LucideIcons.monitor,
           value: s.resolution,
           trailing: _chevron(context),
@@ -252,7 +253,7 @@ class StreamingSettingsPage extends ConsumerWidget {
         ),
         ListRow(
           title: 'Bitrate maksimal',
-          subtitle: 'Alokasi bandwidth jaringan',
+          subtitle: 'Batas pemakaian internet selama sesi',
           icon: LucideIcons.gauge,
           value: '${s.bitrateMbps} Mbps',
           trailing: _chevron(context),
@@ -261,7 +262,7 @@ class StreamingSettingsPage extends ConsumerWidget {
         const SectionLabel('Input & media'),
         _SwitchRow(
           title: 'Mode FPS / trackpad relatif',
-          subtitle: 'Kunci kursor di tengah untuk kontrol game FPS',
+          subtitle: 'Buat main game FPS — kursor dikunci di tengah layar',
           icon: LucideIcons.crosshair,
           value: s.relativeMouseMode,
           onChanged: notifier.setRelativeMouseMode,
@@ -286,7 +287,7 @@ class StreamingSettingsPage extends ConsumerWidget {
         ),
         _SwitchRow(
           title: 'Sinkronisasi papan klip',
-          subtitle: 'Copy-paste teks dan gambar lintas perangkat',
+          subtitle: 'Salin teks di HP, tempel di PC — dan sebaliknya',
           icon: LucideIcons.clipboard,
           value: s.clipboardSync,
           onChanged: notifier.setClipboardSync,
@@ -294,8 +295,8 @@ class StreamingSettingsPage extends ConsumerWidget {
           // "belum diuji", memang belum ada kodenya. Sakelar ini sebelumnya
           // menyala secara bawaan dan tidak pernah mengirim apa pun.
           unavailable:
-              'Belum didukung Host — kanal papan klip belum ada '
-              'di protokol',
+              'Belum bisa dipakai. Aplikasi XyDesk di PC belum '
+              'mendukung fitur ini.',
         ),
       ],
     );
@@ -309,12 +310,12 @@ class SystemSettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return _SettingsScaffold(
       title: 'Sistem & privasi',
-      description: 'Kelola akses sistem dan periksa kondisi aplikasi.',
+      description: 'Izin aplikasi, pembaruan, dan catatan teknis.',
       children: [
         const SectionLabel('Akses perangkat', top: 0),
         ListRow(
           title: context.tr('settings_permissions'),
-          subtitle: 'Tinjau fungsi yang membutuhkan izin sistem',
+          subtitle: 'Lihat izin yang dipakai XyDesk dan alasannya',
           icon: LucideIcons.shield,
           trailing: _chevron(context),
           onTap: () => _open(context, const PermissionsPage()),
@@ -322,7 +323,7 @@ class SystemSettingsPage extends ConsumerWidget {
         const SectionLabel('Aplikasi'),
         ListRow(
           title: 'Pusat pembaruan',
-          subtitle: 'Bandingkan build dengan Release resmi',
+          subtitle: 'Cek dan pasang versi terbaru',
           icon: LucideIcons.refreshCw,
           trailing: _chevron(context),
           onTap: () => _open(
@@ -332,7 +333,7 @@ class SystemSettingsPage extends ConsumerWidget {
         ),
         ListRow(
           title: context.tr('settings_devlog'),
-          subtitle: 'Informasi teknis tanpa data kredensial',
+          subtitle: 'Catatan teknis untuk melaporkan masalah',
           icon: LucideIcons.fileText,
           trailing: _chevron(context),
           onTap: () => DevLog.openPage(context),
@@ -341,8 +342,8 @@ class SystemSettingsPage extends ConsumerWidget {
         ListRow(
           title: 'Reset pengaturan ke bawaan',
           subtitle:
-              'Mengembalikan codec, bitrate, dan perilaku ke nilai awal. '
-              'Bahasa, akun, dan perangkat tersimpan tidak ikut terhapus.',
+              'Semua pengaturan kembali seperti baru dipasang. Akun, bahasa, '
+              'dan daftar PC tidak ikut hilang.',
           icon: LucideIcons.rotateCcw,
           trailing: _chevron(context),
           onTap: () => _confirmReset(context, ref),
@@ -360,9 +361,9 @@ Future<void> _confirmReset(BuildContext context, WidgetRef ref) async {
     builder: (dialogContext) => AlertDialog(
       title: const Text('Reset pengaturan?', style: TextStyle(fontSize: 16)),
       content: const Text(
-        'Codec, resolusi, bitrate, mode kontrol, dan preferensi perilaku '
-        'kembali ke nilai bawaan.\n\n'
-        'Bahasa antarmuka, akun, dan daftar perangkat tidak berubah.',
+        'Kualitas gambar, suara, dan cara mengontrol kembali ke setelan '
+        'awal.\n\n'
+        'Akun, bahasa, dan daftar PC kamu tidak berubah.',
         style: TextStyle(fontSize: 13, height: 1.5),
       ),
       actions: [
@@ -392,7 +393,7 @@ class LegalSettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SettingsScaffold(
       title: 'Legal & tentang',
-      description: 'Dokumen penggunaan dan informasi resmi XyDesk.',
+      description: 'Ketentuan pakai, privasi, dan lisensi.',
       children: [
         const SectionLabel('Legal', top: 0),
         ListRow(
@@ -416,7 +417,7 @@ class LegalSettingsPage extends StatelessWidget {
         const SectionLabel('Aplikasi'),
         ListRow(
           title: context.tr('settings_about'),
-          subtitle: 'Versi, catatan rilis, dan diagnostik',
+          subtitle: 'Versi aplikasi dan apa saja yang berubah',
           icon: LucideIcons.info,
           value: AppVersion.short,
           trailing: _chevron(context),

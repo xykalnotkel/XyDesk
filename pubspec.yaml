@@ -1,7 +1,7 @@
 name: xydesk
 description: "XyDesk — remote desktop low-latency untuk gaming dan kerja."
 publish_to: 'none'
-version: 6.2.0+22
+version: 6.2.1+23
 
 environment:
   sdk: ^3.8.0
@@ -28,6 +28,7 @@ dependencies:
   url_launcher: ^6.3.0
   # Pemindai QR nyata (CameraX/MLKit) — menggantikan halaman demo.
   mobile_scanner: ^7.4.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_lints: ^4.0.0

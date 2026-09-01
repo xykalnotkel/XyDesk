@@ -567,7 +567,9 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 .social-chip {
   display: inline-flex;
   align-items: center;
-  padding: 8px 14px;
+  /* Jarak untuk logo merek di sebelah kiri label. */
+  gap: 7px;
+  padding: 8px 13px;
   border-radius: 999px;
   border: 1px solid var(--line);
   font-size: 13px;
@@ -575,7 +577,17 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   color: var(--text-mid);
   transition: all 0.15s ease;
 }
-.social-chip:hover { border-color: var(--accent); color: var(--accent-deep); text-decoration: none; }
+.social-chip svg { flex: none; display: block; }
+.social-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent-deep);
+  text-decoration: none;
+}
+/* Layar sempit: logo saja, label disembunyikan agar barisnya tidak patah. */
+@media (max-width: 560px) {
+  .social-chip { padding: 9px; gap: 0; }
+  .social-chip span { display: none; }
+}
 
 .post-body { font-size: 16px; line-height: 1.75; color: #2b2440; }
 .post-body p { margin-bottom: 18px; }

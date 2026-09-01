@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/app_version.dart';
 import '../../core/l10n_bridge.dart';
 import '../../core/tokens.dart';
+import '../../core/license_stats.dart';
 
 enum LegalDoc { terms, privacy, licenses }
 
@@ -179,10 +180,10 @@ class LegalPage extends StatelessWidget {
   /// Lisensi pihak ketiga.
   ///
   /// Sebelumnya bagian ini memuat 18 komponen yang diketik tangan. Jumlah
-  /// sebenarnya yang ikut terkirim ke perangkat pengguna ada 482 (90 paket
-  /// Dart, 324 crate Rust, 58 paket npm, 10 aset & layanan) — daftar tangan
-  /// tidak pernah bisa mengejarnya, dan daftar lisensi yang tidak lengkap
-  /// adalah masalah hukum, bukan sekadar dokumentasi yang kurang rapi.
+  /// sebenarnya ada ratusan — lihat [LicenseStats], yang dibangkitkan dari
+  /// lockfile oleh `tool/gen-licenses.mjs`. Daftar tangan tidak pernah bisa
+  /// mengejarnya, dan daftar lisensi yang tidak lengkap adalah masalah
+  /// hukum, bukan sekadar dokumentasi yang kurang rapi.
   ///
   /// Karena itu halaman ini menampilkan komponen inti saja, lalu menyerahkan
   /// daftar penuhnya ke [showLicensePage] — registry lisensi bawaan Flutter
@@ -200,18 +201,19 @@ class LegalPage extends StatelessWidget {
     ),
     _para(
       c,
-      'XyDesk memakai 482 komponen pihak ketiga: 90 paket Dart/Flutter, '
-      '324 crate Rust di aplikasi Host, 58 paket npm di web dan layanan, '
-      'serta 10 aset, SDK, dan layanan awan. Semuanya didaftar lengkap '
-      'beserta lisensinya — tidak ada yang disembunyikan.',
+      'XyDesk dibangun di atas ${LicenseStats.total} komponen buatan orang '
+      'lain: ${LicenseStats.dart} paket Dart/Flutter, ${LicenseStats.rust} '
+      'paket Rust di aplikasi PC, ${LicenseStats.npm} paket npm untuk web, '
+      'dan ${LicenseStats.assets} aset serta layanan. Semuanya kami daftar, '
+      'tidak ada yang kami sembunyikan.',
     ),
     const SizedBox(height: Gap.md),
     _sec(c, 'Komponen inti'),
     for (final l in const [
       ('Flutter & Dart SDK', 'BSD-3-Clause', 'Google'),
-      ('libwebrtc', 'BSD-3-Clause', 'Google — media peer-to-peer'),
-      ('libopus 1.5.2', 'BSD-3-Clause', 'Xiph.Org — codec audio'),
-      ('OpenH264', 'BSD-2-Clause', 'Cisco — encode video'),
+      ('libwebrtc', 'BSD-3-Clause', 'Google — jalur video dan suara'),
+      ('libopus 1.5.2', 'BSD-3-Clause', 'Xiph.Org — pemroses suara'),
+      ('OpenH264', 'BSD-2-Clause', 'Cisco — pemroses video'),
       (
         'windows-rs / windows-capture',
         'MIT atau Apache-2.0',
@@ -222,13 +224,13 @@ class LegalPage extends StatelessWidget {
       (
         'NVIDIA Video Codec SDK',
         'Lisensi SDK NVIDIA',
-        'Opsional saat GPU NVIDIA ada',
+        'Dipakai kalau PC punya GPU NVIDIA',
       ),
-      ('OneSignal SDK', 'Ketentuan OneSignal', 'Push notifikasi'),
+      ('OneSignal SDK', 'Ketentuan OneSignal', 'Pemberitahuan'),
       (
         'Cloudflare Workers, D1, TURN',
         'Ketentuan Cloudflare',
-        'Signaling & berita',
+        'Penghubung sesi & berita',
       ),
     ])
       Padding(
@@ -257,10 +259,10 @@ class LegalPage extends StatelessWidget {
     const SizedBox(height: Gap.md),
     _para(
       c,
-      'Tombol di atas membuka teks lisensi lengkap setiap paket, dibaca '
-      'langsung dari aplikasi yang sedang kamu jalankan. Inventaris penuh '
-      'lintas platform (termasuk crate Rust dan paket npm) ada di dokumen '
-      'THIRD-PARTY-LICENSES pada repositori proyek.',
+      'Tombol di atas membuka teks lisensi lengkap tiap paket, dibaca '
+      'langsung dari aplikasi yang sedang kamu pakai — jadi isinya selalu '
+      'sesuai versi yang terpasang. Daftar lengkap untuk semua platform ada '
+      'di situs XyDesk, halaman Legal.',
     ),
   ];
 }

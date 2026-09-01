@@ -11,6 +11,46 @@ Kebijakan rilis:
   panjang (lihat `news/README.md` untuk alur penerbitan).
 - File ini otomatis dilampirkan ke GitHub Release oleh `release.yml`.
 
+## [6.2.1] - 2026-09-01
+
+> Rilis kecil soal cara XyDesk berbicara dan tampil. Tidak ada perubahan pada
+> jalur media.
+
+### Diubah
+
+- **Tombol berbagi berita memakai logo asli.** WhatsApp, Telegram, X, dan
+  Facebook sebelumnya diwakili ikon generik — gelembung chat, pesawat kertas,
+  rantai tautan. Sekarang logo resminya, lengkap dengan warna mereknya.
+  Facebook yang sebelumnya tidak ada di aplikasi juga ditambahkan.
+- **Bahasa di seluruh aplikasi ditulis ulang.** Teks pengaturan, halaman
+  unduh, dan halaman lisensi sebelumnya memakai istilah teknis yang hanya
+  jelas bagi yang membuatnya: "codec", "bitrate", "kanal papan klip belum ada
+  di protokol", "alokasi bandwidth jaringan". Sekarang ditulis seperti orang
+  menjelaskan ke temannya.
+
+  Beberapa contoh:
+
+  | Sebelum | Sesudah |
+  |---|---|
+  | Pengodean akselerasi perangkat keras | Cara PC memproses gambar sebelum dikirim |
+  | Alokasi bandwidth jaringan | Batas pemakaian internet selama sesi |
+  | Belum didukung Host — kanal papan klip belum ada di protokol | Belum bisa dipakai. Aplikasi XyDesk di PC belum mendukung fitur ini. |
+  | Tinjau fungsi yang membutuhkan izin sistem | Lihat izin yang dipakai XyDesk dan alasannya |
+  | Bandingkan build dengan Release resmi | Cek dan pasang versi terbaru |
+
+### Diperbaiki
+
+- **Jumlah komponen di halaman Lisensi tidak bisa basi lagi.** Angkanya
+  diketik tangan, dan langsung salah begitu satu paket ditambahkan. Sekarang
+  `tool/gen-licenses.mjs` ikut membangkitkan `lib/core/license_stats.dart`,
+  dan CI menolak kalau angkanya tidak cocok dengan lockfile.
+
+### Ditambahkan
+
+- Paket `flutter_svg` untuk menggambar logo merek di aplikasi.
+- Simple Icons (CC0-1.0) dicatat di inventaris lisensi. Merek dagang tetap
+  milik masing-masing pemiliknya.
+
 ## [6.2.0] - 2026-09-01
 
 > Rilis kejujuran. Tidak ada fitur media baru di sini; yang berubah adalah

@@ -10,16 +10,16 @@ bersama aplikasi, beserta lisensinya — diambil langsung dari lockfile dan
 teks lisensi paket yang benar-benar terpasang, bukan dari daftar ketik
 tangan yang bisa ketinggalan zaman.
 
-**Total komponen: 482**
-(Dart/Flutter 90 · Rust 324 · npm 58 · aset & layanan 10)
+**Total komponen: 490**
+(Dart/Flutter 97 · Rust 324 · npm 58 · aset & layanan 11)
 
 ## Ringkasan lisensi
 
 | Lisensi | Jumlah komponen |
 |---|---|
 | MIT OR Apache-2.0 | 196 |
-| BSD-3-Clause | 81 |
-| MIT | 69 |
+| BSD-3-Clause | 84 |
+| MIT | 73 |
 | Apache-2.0 OR MIT | 30 |
 | Unicode-3.0 | 18 |
 | Apache-2.0 | 17 |
@@ -47,6 +47,7 @@ tangan yang bisa ketinggalan zaman.
 | CC-BY-4.0 | 1 |
 | 0BSD | 1 |
 | OFL-1.1 | 1 |
+| CC0-1.0 | 1 |
 | NVIDIA Software License Agreement | 1 |
 | Modified MIT (ketentuan layanan OneSignal) | 1 |
 | Ketentuan Layanan Cloudflare | 1 |
@@ -96,6 +97,12 @@ Codec audio Opus — Xiph.Org Foundation. Dikompilasi statis oleh host/build.rs.
 Font antarmuka — Rasmus Andersson. Di-bundle, bukan diunduh runtime.
 
 *Ekosistem: Font (assets/fonts) · Versi: 3.19*
+
+### Simple Icons — CC0-1.0
+
+Logo resmi WhatsApp, Telegram, X, dan Facebook pada tombol berbagi. Data path disalin ke web/src/brand-icons.tsx dan lib/widgets/brand_icons.dart, bukan dipasang sebagai dependensi. CC0 tidak menuntut atribusi; dicantumkan karena memang dipakai. Merek dagang tetap milik masing-masing pemiliknya.
+
+*Ekosistem: Set ikon · Versi: 13.21.0*
 
 ### Lucide Icons — ISC
 
@@ -147,7 +154,7 @@ Login opsional dengan akun Google.
 
 ---
 
-## 2. Paket Dart / Flutter (90)
+## 2. Paket Dart / Flutter (97)
 
 Termasuk dependensi transitif yang ikut ter-bundle di APK.
 
@@ -172,6 +179,7 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `flutter_secure_storage_platform_interface` | 2.0.3 | BSD-3-Clause |
 | `flutter_secure_storage_web` | 2.1.1 | BSD-3-Clause |
 | `flutter_secure_storage_windows` | 4.2.2 | BSD-3-Clause |
+| `flutter_svg` | 2.3.0 | MIT |
 | `flutter_webrtc` | 1.6.0 | MIT |
 | `go_router` | 14.8.1 | BSD-3-Clause |
 | `google_identity_services_web` | 0.3.3+1 | BSD-3-Clause |
@@ -201,12 +209,14 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `package_info_plus` | 10.2.1 | BSD-3-Clause |
 | `package_info_plus_platform_interface` | 4.1.0 | BSD-3-Clause |
 | `path` | 1.9.1 | BSD-3-Clause |
+| `path_parsing` | 1.1.0 | MIT |
 | `path_provider` | 2.1.6 | BSD-3-Clause |
 | `path_provider_android` | 2.3.1 | BSD-3-Clause |
 | `path_provider_foundation` | 2.6.0 | BSD-3-Clause |
 | `path_provider_linux` | 2.2.1 | BSD-3-Clause |
 | `path_provider_platform_interface` | 2.1.2 | BSD-3-Clause |
 | `path_provider_windows` | 2.3.0 | BSD-3-Clause |
+| `petitparser` | 7.0.2 | MIT |
 | `platform` | 3.1.6 | BSD-3-Clause |
 | `plugin_platform_interface` | 2.1.8 | BSD-3-Clause |
 | `pub_semver` | 2.2.0 | BSD-3-Clause |
@@ -235,6 +245,9 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `url_launcher_platform_interface` | 2.3.2 | BSD-3-Clause |
 | `url_launcher_web` | 2.4.1 | Apache-2.0 |
 | `url_launcher_windows` | 3.1.4 | BSD-3-Clause |
+| `vector_graphics` | 1.2.3 | BSD-3-Clause |
+| `vector_graphics_codec` | 1.1.13 | BSD-3-Clause |
+| `vector_graphics_compiler` | 1.3.0 | BSD-3-Clause |
 | `vector_math` | 2.2.0 | BSD-3-Clause |
 | `web` | 1.1.1 | BSD-3-Clause |
 | `web_socket` | 1.0.1 | BSD-3-Clause |
@@ -242,6 +255,7 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `webrtc_interface` | 1.5.1 | MIT |
 | `win32` | 6.4.0 | BSD-3-Clause |
 | `xdg_directories` | 1.1.0 | BSD-3-Clause |
+| `xml` | 7.0.1 | MIT |
 | `yaml` | 3.1.3 | MIT |
 
 ---

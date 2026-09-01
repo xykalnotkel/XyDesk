@@ -49,12 +49,12 @@ class SessionMediaCapabilities {
   static const currentBuild = SessionMediaCapabilities(
     pcSystemAudio: MediaPathCapability(
       state: MediaPipelineState.available,
-      summary: 'Audio PC diputar di perangkat ini bila host Windows aktif',
+      summary: 'Suara dari PC ikut terdengar di HP kamu',
       missingComponents: [],
     ),
     phoneMicrophone: MediaPathCapability(
       state: MediaPipelineState.available,
-      summary: 'Mic perangkat dikirim — terdengar di speaker PC host',
+      summary: 'Suara kamu keluar dari speaker PC',
       missingComponents: ['Endpoint mikrofon virtual Windows (fase berikut)'],
     ),
     freeDuringBeta: true,

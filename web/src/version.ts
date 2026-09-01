@@ -39,9 +39,10 @@ export const STAGE_LABEL: Record<Stage, string> = {
 export const DOWNLOAD_ENABLED: boolean = RELEASE_STAGE !== 'pra-beta';
 
 export const DOWNLOAD_DISABLED_REASON =
-  'XyDesk masih pra-beta. Jalur audio, multi-monitor, dan kontrol HUD belum ' +
-  'diverifikasi di perangkat nyata, jadi paket publik sengaja ditahan sampai ' +
-  'uji lab selesai.';
+  'XyDesk belum masuk masa uji coba. Suara, multi-monitor, dan kontrol dari ' +
+  'HP belum pernah kami coba di komputer sungguhan, jadi file-nya sengaja ' +
+  'kami tahan dulu. Lebih baik menunggu daripada kamu memasang sesuatu yang ' +
+  'belum tentu jalan.';
 
 /// Slug artikel changelog rilis saat ini di XyDesk News.
 ///

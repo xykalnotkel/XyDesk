@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ReactElement } from 'react';
 import {
   ApiError,
   createGuestSession,
@@ -46,6 +47,7 @@ import {
   STAGE_LABEL,
 } from './version';
 import { TOUCH_ROWS, vkFromCode } from './vk';
+import { WhatsAppIcon, TelegramIcon, XIcon, FacebookIcon } from './brand-icons';
 
 type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news';
 type Route = StaticRoute | NewsDetailRoute;
@@ -260,7 +262,7 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           <p className="hero-note">
             {DOWNLOAD_ENABLED
               ? 'Gratis. Media sesi peer-to-peer, tidak lewat server kami.'
-              : `v${APP_VERSION} · ${STAGE_LABEL[RELEASE_STAGE]} — paket publik belum dibuka.`}
+              : `v${APP_VERSION} · ${STAGE_LABEL[RELEASE_STAGE]} — belum bisa diunduh.`}
           </p>
         </div>
         <div className="hero-art" aria-hidden="true">
@@ -450,11 +452,11 @@ function DownloadPage() {
     return (
       <main className="content-page download-page">
         <p className="eyebrow">STATUS RILIS</p>
-        <h1>Belum dibuka untuk umum.</h1>
+        <h1>Belum bisa diunduh dulu.</h1>
         <p className="page-lead">{DOWNLOAD_DISABLED_REASON}</p>
         <div className="stage-card">
           <div className="stage-row">
-            <span>Versi kerja</span>
+            <span>Versi saat ini</span>
             <strong>v{APP_VERSION}</strong>
           </div>
           <div className="stage-row">
@@ -462,30 +464,30 @@ function DownloadPage() {
             <strong>{STAGE_LABEL[RELEASE_STAGE]}</strong>
           </div>
           <div className="stage-row">
-            <span>Paket publik</span>
-            <strong>Ditahan</strong>
+            <span>File unduhan</span>
+            <strong>Belum dibuka</strong>
           </div>
         </div>
-        <h2 className="stage-heading">Yang harus lulus sebelum beta dibuka</h2>
+        <h2 className="stage-heading">Yang harus beres dulu</h2>
         <ul className="stage-list">
-          <li>Uji dengar audio WASAPI dan mic passthrough di PC Windows nyata.</li>
-          <li>Verifikasi capture DXGI dan pemilih multi-monitor pada perangkat keras.</li>
-          <li>Pemetaan HUD, mouse, dan keyboard virtual terbukti mengendalikan host.</li>
-          <li>Angka latency ujung-ke-ujung terukur di jaringan nyata, bukan lab loopback.</li>
-          <li>Push notifikasi terkirim dan terbuka di perangkat uji.</li>
+          <li>Suara PC benar-benar terdengar di HP, dan mikrofon HP terdengar di PC.</li>
+          <li>Ganti monitor saat sesi berjalan, diuji di komputer sungguhan.</li>
+          <li>Tombol kontrol, mouse, dan keyboard dari HP terbukti menggerakkan PC.</li>
+          <li>Jeda gambar diukur di internet biasa, bukan cuma di jaringan lokal.</li>
+          <li>Pemberitahuan benar-benar sampai dan bisa dibuka di HP.</li>
         </ul>
         <p className="page-lead">
-          Progres setiap poin ditulis di changelog. Kamu bisa mengikutinya tanpa
-          memasang apa pun.
+          Setiap poin di atas kami tulis kemajuannya di halaman berita. Kamu bisa
+          ikuti tanpa perlu memasang apa pun.
         </p>
         <button
           className="btn primary big centered"
           onClick={() => (window.location.href = '/news')}
         >
-          Baca changelog
+          Lihat kabar terbaru
         </button>
         <a className="channel-link" href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
-          Dapat kabar saat beta dibuka — saluran WhatsApp
+          Mau dikabari saat sudah bisa diunduh? Ikuti saluran WhatsApp kami
         </a>
       </main>
     );
@@ -903,14 +905,31 @@ function NewsDetailPage({
     }
   };
 
-  const socials: { label: string; href: string }[] = post
-    ? [
-        { label: 'WhatsApp', href: `https://wa.me/?text=${encodeURIComponent(`${post.title} ${shareUrl}`)}` },
-        { label: 'Telegram', href: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}` },
-        { label: 'X', href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(shareUrl)}` },
-        { label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
-      ]
-    : [];
+  const socials: { label: string; href: string; Icon: (p: { size?: number }) => ReactElement }[] =
+    post
+      ? [
+          {
+            label: 'WhatsApp',
+            Icon: WhatsAppIcon,
+            href: `https://wa.me/?text=${encodeURIComponent(`${post.title} ${shareUrl}`)}`,
+          },
+          {
+            label: 'Telegram',
+            Icon: TelegramIcon,
+            href: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`,
+          },
+          {
+            label: 'X',
+            Icon: XIcon,
+            href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(shareUrl)}`,
+          },
+          {
+            label: 'Facebook',
+            Icon: FacebookIcon,
+            href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+          },
+        ]
+      : [];
 
   const comments = data?.comments ?? [];
   const topLevel = comments.filter((c) => c.parentId == null);
@@ -962,9 +981,17 @@ function NewsDetailPage({
             <button className="share-btn" onClick={share}>
               Bagikan
             </button>
-            {socials.map((s) => (
-              <a key={s.label} className="social-chip" href={s.href} target="_blank" rel="noreferrer">
-                {s.label}
+            {socials.map(({ label, href, Icon }) => (
+              <a
+                key={label}
+                className="social-chip"
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                title={`Bagikan ke ${label}`}
+              >
+                <Icon size={15} />
+                <span>{label}</span>
               </a>
             ))}
           </div>
