@@ -66,7 +66,7 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
       _error = null;
     });
     try {
-      final (post, comments) = await ref
+      final (post, comments, liked) = await ref
           .read(newsApiProvider)
           .detail(widget.slug);
       if (!mounted) return;
@@ -74,6 +74,7 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
         _post = post;
         _comments = comments;
         _likeCount = post.likeCount;
+        _liked = liked;
         _loading = false;
       });
     } catch (e) {
@@ -87,7 +88,16 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
 
   Future<void> _toggleLike() async {
     if (_likeBusy || _post == null) return;
-    setState(() => _likeBusy = true);
+    // Terisi duluan, baru kirim. Menunggu jaringan sebelum hati berubah
+    // membuat tombolnya terasa tidak menanggapi.
+    final before = _liked;
+    final beforeCount = _likeCount;
+    setState(() {
+      _likeBusy = true;
+      _liked = !before;
+      _likeCount = beforeCount + (before ? -1 : 1);
+    });
+    HapticFeedback.selectionClick();
     try {
       final (liked, count) = await ref
           .read(newsApiProvider)
@@ -97,9 +107,12 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
         _liked = liked;
         _likeCount = count;
       });
-      HapticFeedback.selectionClick();
     } catch (e) {
       if (!mounted) return;
+      setState(() {
+        _liked = before;
+        _likeCount = beforeCount;
+      });
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
@@ -717,7 +730,19 @@ class _PillAction extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 15, color: active ? c.accent : c.textMid),
+              AnimatedScale(
+                scale: active ? 1.12 : 1,
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOutBack,
+                child: Icon(
+                  // Hati kosong berubah jadi hati penuh saat disukai. Dulu
+                  // parameter iconFilled ada tapi tidak pernah dipakai, jadi
+                  // tombolnya tidak pernah kelihatan aktif.
+                  iconFilled && active ? Icons.favorite : icon,
+                  size: 15,
+                  color: active ? c.accent : c.textMid,
+                ),
+              ),
               const SizedBox(width: 6),
               Text(
                 label,

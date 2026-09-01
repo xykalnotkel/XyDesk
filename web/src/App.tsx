@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import {
   ApiError,
@@ -29,14 +29,12 @@ import {
   subscribeNews,
   toggleLike,
 } from './news';
-import {
-  LICENSE_DART,
-  LICENSE_HIGHLIGHTS,
-  LICENSE_NPM,
-  LICENSE_RUST,
-  LICENSE_SUMMARY,
-  LICENSE_TOTAL,
-} from './licenses.generated';
+import { LICENSE_TOTAL } from './license-total';
+
+// Inventaris lisensi berisi 490 entri dan besarnya puluhan kilobyte. Halaman
+// depan tidak butuh itu, jadi berkasnya baru diunduh saat halaman Legal
+// dibuka.
+const LicenseInventory = lazy(() => import('./LicenseInventory'));
 import { HostMeta, InputCodec, RtcPhase, RtcSession } from './rtc';
 import {
   APP_VERSION,
@@ -537,42 +535,119 @@ function DownloadPage() {
 function LegalPage() {
   return (
     <main className="content-page prose-page">
-      <p className="eyebrow">LEGAL & PRIVACY</p>
+      <p className="eyebrow">LEGAL & PRIVASI</p>
       <h1>Kendali tetap milik kamu.</h1>
+      <p className="lede">
+        Berlaku sejak 1 September 2026. XyDesk dibuat oleh XySpace Tech, Indonesia.
+        Versi lengkap Syarat &amp; Ketentuan dan Kebijakan Privasi juga ada di dalam
+        aplikasi, lewat Akun → Tentang → Legal.
+      </p>
+
+      <section>
+        <h2>Status layanan</h2>
+        <p>
+          XyDesk masih pra-beta. Unduhan publik ditutup, sebagian fitur belum jalan,
+          dan sesi bisa berubah perilakunya tanpa pemberitahuan. Jangan jadikan XyDesk
+          satu-satunya jalan masuk ke komputer yang kamu butuhkan untuk kerja penting.
+        </p>
+      </section>
+
       <section>
         <h2>Privasi sesi</h2>
         <p>
-          Signaling hanya mempertemukan perangkat. Media WebRTC memakai DTLS-SRTP
-          dan tidak disimpan oleh layanan XyDesk. Password pairing diverifikasi di
-          sisi Host.
+          Signaling hanya mempertemukan perangkat. Media WebRTC memakai DTLS-SRTP dan
+          tidak disimpan oleh layanan XyDesk. Password pairing diverifikasi di sisi Host
+          dan tidak pernah dikirim ke server kami.
         </p>
       </section>
+
+      <section>
+        <h2>Data yang kami simpan</h2>
+        <ul>
+          <li>Email, dan nama serta foto profil kalau kamu masuk lewat Google.</li>
+          <li>ID perangkat, nama perangkat, dan sistem operasinya.</li>
+          <li>Metadata sesi: waktu, durasi, jalur langsung atau relay, bitrate, ping.</li>
+          <li>Token notifikasi, kalau kamu mengizinkan notifikasi.</li>
+          <li>Sidik jari acak browser untuk suka dan komentar berita.</li>
+          <li>Log server standar: alamat IP, waktu akses, jenis permintaan.</li>
+        </ul>
+        <p>
+          Yang tidak pernah kami simpan: isi layar, ketikan, gerakan mouse, audio,
+          berkas yang kamu transfer, dan isi papan klip.
+        </p>
+      </section>
+
       <section>
         <h2>Data akun</h2>
         <p>
-          Login email memakai OTP satu kali. OTP disimpan sebagai hash dan memiliki
-          batas waktu serta batas percobaan. Sesi tamu berumur pendek dan tidak
-          menyimpan identitas pengguna.
+          Login email memakai kode sekali pakai. Kodenya disimpan sebagai hash dan punya
+          batas waktu serta batas percobaan. Sesi tamu berumur pendek dan tidak menyimpan
+          identitas pengguna.
         </p>
       </section>
+
+      <section>
+        <h2>Layanan pihak ketiga</h2>
+        <p>
+          Supabase untuk akun dan basis data, Cloudflare untuk jaringan dan situs,
+          OneSignal untuk notifikasi, Google Sign-In untuk pilihan masuk, dan GitHub
+          sebagai tempat berkas pemasangan diunduh. Karena penyedia ini beroperasi lintas
+          negara, datamu bisa diproses di luar Indonesia. Kami tidak menjual data dan
+          tidak memasang pelacak iklan.
+        </p>
+      </section>
+
+      <section>
+        <h2>Berapa lama disimpan</h2>
+        <ul>
+          <li>Metadata sesi: 90 hari.</li>
+          <li>Log server: 30 hari.</li>
+          <li>Catatan audit keamanan: 1 tahun.</li>
+          <li>Data akun: selama akunmu aktif, lalu hilang 30 hari setelah dihapus.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Hak kamu</h2>
+        <p>
+          Sesuai UU Nomor 27 Tahun 2022 tentang Pelindungan Data Pribadi, kamu berhak
+          melihat, memperbaiki, mengunduh, membatasi, dan menghapus datamu, serta menarik
+          persetujuan. Kirim ke <strong>privacy@xydesk.app</strong>, dijawab paling lama
+          14 hari kerja.
+        </p>
+      </section>
+
       <section>
         <h2>Tanggung jawab penggunaan</h2>
         <p>
-          Gunakan XyDesk hanya pada perangkat yang kamu miliki atau yang secara jelas
-          memberi izin. Jangan memakai layanan untuk mengambil alih, mengganggu, atau
-          mengakses data pihak lain tanpa hak.
+          Gunakan XyDesk hanya pada perangkat yang kamu miliki atau yang jelas memberi
+          izin. Jangan memakai layanan untuk mengambil alih, mengganggu, atau mengakses
+          data pihak lain tanpa hak. Layanan resmi tidak pernah meminta kamu memasang
+          aplikasi remote desktop lalu menyebutkan ID dan password — kalau ada yang
+          meminta begitu, itu penipuan.
         </p>
       </section>
+
+      <section>
+        <h2>Hukum dan sengketa</h2>
+        <p>
+          Ketentuan ini tunduk pada hukum Republik Indonesia. Perselisihan diselesaikan
+          lebih dulu secara musyawarah lewat <strong>legal@xydesk.app</strong>. Bila tidak
+          selesai dalam 30 hari, perkara dibawa ke pengadilan yang berwenang di Indonesia.
+        </p>
+      </section>
+
       <section>
         <h2>Lisensi proyek</h2>
         <p>
           XyDesk adalah perangkat lunak <strong>proprietary (bukan sumber terbuka)</strong>.
           Kamu bebas memakai aplikasinya, tetapi dilarang meng-clone, menyalin,
           merekayasa balik, atau mendistribusikan ulang kode sumbernya tanpa izin
-          tertulis dari XySpace Tech. Teks lengkap Perjanjian Lisensi ada di
-          dokumen lisensi proyek dan di Pengaturan → Legal di aplikasi Android/Desktop.
+          tertulis dari XySpace Tech. Teks lengkap Perjanjian Lisensi ada di dokumen
+          lisensi proyek dan di Pengaturan → Legal di aplikasi Android/Desktop.
         </p>
       </section>
+
       <section>
         <h2>Lisensi pihak ketiga</h2>
         <p>
@@ -582,71 +657,11 @@ function LegalPage() {
           otomatis dari lockfile dan teks lisensi paket yang benar-benar
           terpasang, bukan daftar yang diketik tangan.
         </p>
-        <LicenseInventory />
+        <Suspense fallback={<p className="muted">Memuat daftar lisensi…</p>}>
+          <LicenseInventory />
+        </Suspense>
       </section>
     </main>
-  );
-}
-
-/// Inventaris lisensi.
-///
-/// Datanya berasal dari `web/src/licenses.generated.ts` yang ditulis oleh
-/// `tool/gen-licenses.mjs`. Daftar panjang dilipat per ekosistem supaya
-/// halaman tetap bisa dibaca, tetapi tidak ada satu pun entri yang dibuang —
-/// daftar lisensi yang tidak lengkap adalah masalah hukum, bukan sekadar
-/// dokumentasi yang kurang rapi.
-function LicenseInventory() {
-  const groups = [
-    { key: 'dart', label: 'Paket Dart / Flutter', items: LICENSE_DART },
-    { key: 'rust', label: 'Crate Rust (aplikasi Host)', items: LICENSE_RUST },
-    { key: 'npm', label: 'Paket npm (web & layanan)', items: LICENSE_NPM },
-  ] as const;
-  const [open, setOpen] = useState<string | null>(null);
-
-  return (
-    <div className="license-inventory">
-      <div className="license-summary">
-        {LICENSE_SUMMARY.slice(0, 8).map(([name, count]) => (
-          <span key={name} className="license-chip">
-            {name} <b>{count}</b>
-          </span>
-        ))}
-      </div>
-
-      <h3>Komponen inti, aset, dan layanan</h3>
-      {LICENSE_HIGHLIGHTS.map((l) => (
-        <div className="license-card" key={l.name}>
-          <strong>{l.name}</strong>
-          <span>{l.license}</span>
-          <p>{l.note}</p>
-        </div>
-      ))}
-
-      <h3>Inventaris penuh</h3>
-      {groups.map((g) => (
-        <div className="license-group" key={g.key}>
-          <button
-            className="license-toggle"
-            onClick={() => setOpen(open === g.key ? null : g.key)}
-          >
-            <span>{g.label}</span>
-            <span className="license-count">{g.items.length} komponen</span>
-            <span className="license-caret">{open === g.key ? '−' : '+'}</span>
-          </button>
-          {open === g.key && (
-            <div className="license-table">
-              {g.items.map((l) => (
-                <div className="license-row" key={`${l.name}@${l.version}`}>
-                  <code>{l.name}</code>
-                  <span className="license-version">{l.version}</span>
-                  <span className="license-spdx">{l.license}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
   );
 }
 
@@ -815,7 +830,7 @@ function NewsDetailPage({
         if (!alive) return;
         setData(r);
         setLikeCount(r.post.likeCount);
-        setLiked(localStorage.getItem(`xydesk.news.liked.${slug}`) === '1');
+        setLiked(r.liked || localStorage.getItem(`xydesk.news.liked.${slug}`) === '1');
       })
       .catch((e) => {
         if (alive) setError(e instanceof Error ? e.message : 'Berita tidak ditemukan.');

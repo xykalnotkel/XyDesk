@@ -11,6 +11,58 @@ Kebijakan rilis:
   panjang (lihat `news/README.md` untuk alur penerbitan).
 - File ini otomatis dilampirkan ke GitHub Release oleh `release.yml`.
 
+## [6.2.2] - 2026-09-01
+
+> Logo baru, layar sesi tanpa panel melayang, angka kualitas yang benar-benar
+> dibaca dari koneksi, dan perbaikan notifikasi rilis.
+
+### Ditambahkan
+
+- Statistik sesi nyata dibaca dari `getStats()` WebRTC tiap detik: ukuran
+  gambar, fps, pemakaian data, ping, paket hilang, dan codec. Angka ini
+  dipakai panel Gambar dan panel Sesi.
+- Pemilih layar host pindah ke dalam panel, lengkap dengan resolusi tiap
+  monitor.
+
+### Diubah
+
+- Logo aplikasi kembali ke bentuk tiga dimensi yang lama. Ikon Android, ikon
+  web, favicon, dan gambar splash ikut dibuat ulang dari berkas master yang
+  sama.
+- Layar sesi: bar melayang di tengah atas dan dock di tengah bawah dihapus,
+  diganti satu rail tipis di tepi kanan yang bisa dilipat.
+- Sidebar sesi: kepala panel menampilkan nama PC dan status sambungan, tab
+  berubah jadi empat kolom sama lebar dengan ikon, tidak perlu digeser lagi.
+- Syarat & Ketentuan diperluas dari 7 menjadi 16 bagian; Kebijakan Privasi
+  dari 7 menjadi 15 bagian, termasuk hak pengguna menurut UU 27/2022, daftar
+  penyedia pihak ketiga, dan lama penyimpanan tiap jenis data. Halaman Legal
+  di web mengikuti isi yang sama.
+
+### Diperbaiki
+
+- Tombol suka di halaman berita tidak pernah terlihat aktif. Parameter untuk
+  hati terisi ada di kode tapi tidak pernah dipakai, dan status suka tidak
+  pernah dibaca ulang dari server saat artikel dibuka. Sekarang hatinya
+  terisi, jumlahnya berubah seketika, dan status suka bertahan.
+- Notifikasi rilis tidak terkirim sejak v1.3.0. Perangkat sudah memberi izin
+  di Android tetapi belum opt-in di SDK, jadi tidak masuk segmen tujuan dan
+  OneSignal menolak dengan "All included players are not subscribed".
+  Aplikasi kini menyalakan langganan otomatis bila izin sudah ada dan
+  pengguna tidak sengaja menjedanya, dan alur rilis mencoba ulang ke seluruh
+  langganan bila segmen utama kosong.
+- Panel Sesi tidak lagi menulis "Belum diimplementasikan", "Tidak terhubung",
+  dan "Tidak aktif" secara permanen. Isinya sekarang mengikuti keadaan sesi.
+
+### Dihapus
+
+- Delapan gambar di folder publik web yang sudah tidak dirujuk siapa pun.
+
+### Performa
+
+- Inventaris lisensi dipisah jadi berkas sendiri dan baru diunduh saat
+  halaman Legal dibuka. Bundel awal web turun dari 294 kB ke 245 kB
+  (gzip 84,2 kB ke 77,6 kB).
+
 ## [6.2.1] - 2026-09-01
 
 > Rilis kecil soal cara XyDesk berbicara dan tampil. Tidak ada perubahan pada

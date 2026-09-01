@@ -510,9 +510,18 @@ const data = {
 const mdPath = join(ROOT, 'docs', 'THIRD-PARTY-LICENSES.md');
 const tsPath = join(ROOT, 'web', 'src', 'licenses.generated.ts');
 const dartPath = join(ROOT, 'lib', 'core', 'license_stats.dart');
+// Berkas kecil berisi angka totalnya saja. Halaman web memakai ini supaya
+// jumlah komponen bisa ditampilkan tanpa ikut menarik seluruh inventaris
+// (puluhan kilobyte) ke dalam bundel yang dimuat pertama kali.
+const totalPath = join(ROOT, 'web', 'src', 'license-total.ts');
 const md = buildMarkdown(data);
 const ts = buildTs(data);
 const dartFile = buildDart(data);
+const totalFile =
+  '// DIBANGKITKAN OLEH tool/gen-licenses.mjs - JANGAN DIEDIT TANGAN.\n' +
+  `export const LICENSE_TOTAL = ${
+    data.dart.length + data.rust.length + data.npm.length + data.manual.length
+  };\n`;
 
 if (process.argv.includes('--check')) {
   let stale = [];
@@ -532,6 +541,7 @@ if (process.argv.includes('--check')) {
     [mdPath, md],
     [tsPath, ts],
     [dartPath, dartFile],
+    [totalPath, totalFile],
   ]) {
     const have = existsSync(p) ? readFileSync(p, 'utf8') : '';
     if (have !== want) stale.push(p);
@@ -546,6 +556,7 @@ if (process.argv.includes('--check')) {
   writeFileSync(mdPath, md);
   writeFileSync(tsPath, ts);
   writeFileSync(dartPath, dartFile);
+  writeFileSync(totalPath, totalFile);
   // Simpan hasil resolusi supaya CI tanpa cache menghasilkan keluaran sama.
   const licenses = {};
   for (const e of [...data.dart, ...data.rust, ...data.npm]) {

@@ -177,3 +177,59 @@ ON CONFLICT(slug) DO UPDATE SET
   category = excluded.category,
   author = excluded.author,
   published = excluded.published;
+
+INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+(
+  'changelog-v6-2-2',
+  'XyDesk 6.2.2',
+  'Logo kembali ke bentuk tiga dimensi, panel melayang di layar sesi dihapus, angka kualitas sesi kini dibaca langsung dari koneksi, dan tombol suka di berita sudah benar.',
+  'Versi 6.2.2 sudah tersedia. Isinya logo baru, layar sesi yang lebih lega, dan beberapa perbaikan yang sudah lama mengganggu.
+
+LOGO
+
+Logo XyDesk kembali ke bentuk tiga dimensi. Ikon aplikasi di Android, ikon di web, favicon, dan gambar pembuka semuanya dibuat ulang dari berkas yang sama, jadi bentuknya konsisten di semua tempat.
+
+LAYAR SESI
+
+Panel yang melayang di tengah atas dan di tengah bawah sudah dihapus. Keduanya menutupi bagian layar PC yang paling sering dilihat. Sekarang semua tombol ada di satu rail tipis di tepi kanan, dan rail itu bisa dilipat jadi tab kecil kalau kamu mau layar penuh tanpa gangguan.
+
+Panel pengaturan sesi juga dirapikan. Bagian atasnya menampilkan nama PC dan status sambungan, dan tabnya jadi empat kolom sama lebar, tidak perlu digeser-geser lagi.
+
+ANGKA YANG BENAR
+
+Panel Gambar dan panel Sesi sekarang menampilkan ukuran gambar, kehalusan, pemakaian data, ping, paket hilang, dan codec yang dipakai. Semua angka itu dibaca langsung dari koneksi dan disegarkan tiap detik. Kalau sesi belum jalan, yang tampil tanda strip.
+
+Kalau PC kamu punya lebih dari satu monitor, pilihan layarnya sekarang ada di dalam panel, lengkap dengan resolusi masing-masing.
+
+TOMBOL SUKA
+
+Tombol suka di halaman berita sebelumnya tidak pernah kelihatan aktif walaupun sudah ditekan, dan tandanya hilang lagi setiap artikel dibuka ulang. Sekarang hatinya terisi, angkanya langsung berubah, dan statusnya tetap tersimpan.
+
+NOTIFIKASI
+
+Notifikasi pembaruan tidak terkirim sejak lama. Penyebabnya perangkat sudah memberi izin di Android tetapi belum terdaftar sebagai penerima, jadi kiriman ditolak sebelum sampai. Mulai versi ini pendaftarannya jalan otomatis begitu izin diberikan. Kalau kamu sengaja mematikan notifikasi lewat Pengaturan, pilihanmu tetap dihormati.
+
+LEGAL
+
+Syarat dan Ketentuan sekarang punya 16 bagian, Kebijakan Privasi 15 bagian. Isinya menjelaskan data apa saja yang disimpan, berapa lama, siapa saja pihak ketiga yang terlibat, dan hak kamu menurut UU Nomor 27 Tahun 2022. Bisa dibaca di aplikasi lewat Akun, Tentang, Legal, atau di halaman Legal di situs.
+
+LEBIH RINGAN
+
+Daftar lisensi yang panjang tidak lagi ikut terunduh saat kamu membuka halaman depan, hanya saat halaman Legal dibuka. Muat pertama situs jadi sekitar 50 kB lebih ringan.
+
+UNDUHAN
+
+Tombol unduh masih ditutup. XyDesk belum masuk masa uji coba terbuka.',
+  'https://app.xystudio.my.id/news/covers/changelog-622.jpg',
+  'rilis',
+  'Haekal Saputra',
+  1
+)
+ON CONFLICT(slug) DO UPDATE SET
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  cover = excluded.cover,
+  category = excluded.category,
+  author = excluded.author,
+  published = excluded.published;

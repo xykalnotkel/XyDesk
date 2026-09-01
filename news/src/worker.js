@@ -40,7 +40,7 @@ export default {
         return adminPublish(env, request, await readJson(request));
       }
       let m = path.match(/^\/api\/news\/([a-z0-9-]+)$/);
-      if (m && request.method === 'GET') return postDetail(env, m[1]);
+      if (m && request.method === 'GET') return postDetail(env, m[1], url);
       m = path.match(/^\/api\/news\/([a-z0-9-]+)\/like$/);
       if (m && request.method === 'POST') {
         return likePost(env, m[1], await readJson(request));
@@ -191,14 +191,26 @@ async function getPost(env, slug) {
   return r || null;
 }
 
-async function postDetail(env, slug) {
+async function postDetail(env, slug, url) {
   const p = await getPost(env, slug);
   if (!p) return json({ error: 'post-not-found' }, 404);
   const comments = await env.DB.prepare(
     `SELECT id, author, content, parent_id, official, created_at FROM comments WHERE post_id = ? ORDER BY created_at ASC, id ASC LIMIT 200`
   ).bind(p.id).all();
+  // `liked` ikut dikembalikan supaya tombol suka tampil terisi saat artikel
+  // dibuka lagi. Tanpa ini, klien tidak punya cara tahu perangkat ini sudah
+  // menyukai artikel dan hatinya selalu terlihat kosong.
+  const fp = clean((url && url.searchParams.get('fp')) || '').slice(0, 64);
+  let liked = false;
+  if (fp) {
+    const row = await env.DB.prepare(
+      'SELECT 1 AS ok FROM likes WHERE post_id = ? AND fp = ?'
+    ).bind(p.id, fp).first();
+    liked = Boolean(row);
+  }
   return json({
     post: rowToPost(p),
+    liked,
     comments: comments.results.map(rowToComment),
   });
 }

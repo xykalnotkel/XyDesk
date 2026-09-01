@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 import '../../core/devlog.dart';
+import '../../core/store.dart';
 import 'app_update_details.dart';
 import 'notification_config.dart';
 import 'update_page.dart';
@@ -28,6 +29,11 @@ class NotificationService extends ChangeNotifier {
   bool _canRequestPermission = false;
   bool _optedIn = false;
   String? _lastError;
+
+  /// Kunci penanda "pengguna sengaja menjeda notifikasi". Selama tidak ada,
+  /// izin sistem yang sudah diberikan dianggap sebagai persetujuan dan
+  /// langganan diaktifkan otomatis.
+  static const _pausedKey = 'push_paused_by_user';
 
   AppUpdateDetails? _pendingUpdate;
   bool _navigationScheduled = false;
@@ -81,6 +87,7 @@ class NotificationService extends ChangeNotifier {
       _lastError = null;
       _syncState();
       await _syncCanRequest();
+      await _autoOptInIfAllowed();
       DevLog.ok('push', 'OneSignal siap', 'izin diminta hanya lewat opt-in');
     } catch (error, stack) {
       _lastError = 'Layanan notifikasi belum dapat dihubungkan.';
@@ -88,6 +95,33 @@ class NotificationService extends ChangeNotifier {
     }
     notifyListeners();
     flushPendingNavigation();
+  }
+
+  /// Menyalakan langganan bila izin Android sudah diberikan tetapi SDK masih
+  /// berstatus opt-out.
+  ///
+  /// Ini bukan detail kecil. Perangkat yang izinnya sudah diberikan tapi tidak
+  /// pernah opt-in tidak masuk segmen "Subscribed Users", dan push rilis
+  /// ditolak OneSignal dengan pesan "All included players are not subscribed".
+  /// Itulah sebabnya beberapa rilis terakhir terbit tanpa notifikasi sama
+  /// sekali. Pengguna yang sengaja menjeda tetap dihormati lewat penanda
+  /// tersimpan.
+  Future<void> _autoOptInIfAllowed() async {
+    if (!_initialized || !_permissionGranted || _optedIn) return;
+    Store? store;
+    try {
+      store = await Store.open();
+    } catch (error) {
+      DevLog.w('push', 'Penyimpanan preferensi tidak siap', '$error');
+    }
+    if (store != null && store.getBool(_pausedKey)) return;
+    try {
+      await OneSignal.User.pushSubscription.optIn();
+      _syncState();
+      DevLog.ok('push', 'Langganan dinyalakan', 'izin sistem sudah ada');
+    } catch (error, stack) {
+      DevLog.e('push', 'Gagal menyalakan langganan otomatis', error, stack);
+    }
   }
 
   void _attachListeners() {
@@ -157,6 +191,7 @@ class NotificationService extends ChangeNotifier {
       if (granted) {
         // requestPermission saja tidak membatalkan opt-out SDK sebelumnya.
         await OneSignal.User.pushSubscription.optIn();
+        await _setPaused(false);
       }
       _syncState();
       await _syncCanRequest();
@@ -180,6 +215,7 @@ class NotificationService extends ChangeNotifier {
       await initialize();
       if (_initialized) {
         await OneSignal.User.pushSubscription.optOut();
+        await _setPaused(true);
         _syncState();
       }
     } catch (error, stack) {
@@ -188,6 +224,15 @@ class NotificationService extends ChangeNotifier {
     } finally {
       _busy = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _setPaused(bool value) async {
+    try {
+      final store = await Store.open();
+      await store.setBool(_pausedKey, value);
+    } catch (error) {
+      DevLog.w('push', 'Penanda jeda gagal disimpan', '$error');
     }
   }
 

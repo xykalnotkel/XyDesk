@@ -537,15 +537,37 @@ jobs:
           PY
             exit 1
           fi
+          # OneSignal menjawab 200 dengan id kosong bila segmen tujuan kosong.
+          # Ini pernah membuat tiga rilis berturut-turut terbit tanpa satu pun
+          # notifikasi: perangkat sudah memberi izin di Android, tapi belum
+          # opt-in di SDK sehingga tidak masuk segmen "Subscribed Users".
+          # Aplikasi 6.2.2 sudah opt-in otomatis; percobaan kedua di bawah
+          # menyelamatkan pemasangan lama yang belum diperbarui.
+          if python3 -c "import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if not d.get('id') else 1)" "$response_file"; then
+            echo "::warning::Segmen Subscribed Users kosong. Mencoba ulang ke seluruh langganan."
+            python3 - <<'PY'
+          import json
+          payload = json.load(open('/tmp/onesignal-payload.json', encoding='utf-8'))
+          payload['included_segments'] = ['Total Subscriptions']
+          payload.pop('idempotency_key', None)
+          json.dump(payload, open('/tmp/onesignal-retry.json', 'w', encoding='utf-8'), ensure_ascii=False)
+          PY
+            retry_file="$(mktemp)"
+            curl --silent --show-error \
+              --output "$retry_file" \
+              --request POST \
+              --url 'https://api.onesignal.com/notifications' \
+              --header 'Content-Type: application/json' \
+              --header "Authorization: Key $ONESIGNAL_REST_API_KEY" \
+              --data-binary @/tmp/onesignal-retry.json
+            response_file="$retry_file"
+          fi
           python3 - <<'PY' "$response_file"
-          import json, os, sys
+          import json, sys
           data = json.load(open(sys.argv[1], encoding='utf-8'))
-          # OneSignal menjawab 200 dengan id kosong bila belum ada perangkat
-          # yang memberi izin dan opt-in. Itu bukan sukses pengiriman dan wajib
-          # terlihat jelas di log.
           if not data.get('id'):
-              print('::warning::Push tidak dibuat: belum ada perangkat '
-                    'yang subscribed ke notifikasi XyDesk. '
+              print('::warning::Push tidak terkirim: tidak ada perangkat yang '
+                    'bisa dihubungi. '
                     f"Respons: {json.dumps(data, ensure_ascii=False)}")
           else:
               print(f"Push OneSignal dibuat: id={data.get('id')} "

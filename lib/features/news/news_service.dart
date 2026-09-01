@@ -156,14 +156,19 @@ class NewsApi {
     ];
   }
 
-  Future<(NewsPost, List<NewsComment>)> detail(String slug) async {
-    final data = await _getJson(Uri.parse('$newsBase/api/news/$slug'));
+  /// Detail artikel. Sidik jari ikut dikirim supaya server bisa memberi tahu
+  /// apakah perangkat ini sudah menyukai artikelnya.
+  Future<(NewsPost, List<NewsComment>, bool)> detail(String slug) async {
+    final uri = Uri.parse(
+      '$newsBase/api/news/$slug',
+    ).replace(queryParameters: {'fp': fingerprint});
+    final data = await _getJson(uri);
     final post = NewsPost.fromJson(data['post'] as Map<String, dynamic>);
     final comments = [
       for (final c in data['comments'] as List? ?? [])
         NewsComment.fromJson(c as Map<String, dynamic>),
     ];
-    return (post, comments);
+    return (post, comments, data['liked'] as bool? ?? false);
   }
 
   /// Toggle like; kembalikan (liked, likeCount) terbaru.

@@ -86,8 +86,13 @@ export function fetchNewsList(
 export function fetchNewsPost(slug: string): Promise<{
   post: NewsPost;
   comments: NewsComment[];
+  liked: boolean;
 }> {
-  return getJson(`${NEWS_BASE}/api/news/${encodeURIComponent(slug)}`);
+  // Sidik jari ikut dikirim supaya server yang memutuskan tombol suka
+  // tampil terisi atau tidak. localStorage saja tidak cukup: begitu cache
+  // browser dibersihkan, suka yang tercatat di server jadi tidak kelihatan.
+  const fp = encodeURIComponent(newsFingerprint());
+  return getJson(`${NEWS_BASE}/api/news/${encodeURIComponent(slug)}?fp=${fp}`);
 }
 
 export function toggleLike(slug: string): Promise<{ liked: boolean; likeCount: number }> {

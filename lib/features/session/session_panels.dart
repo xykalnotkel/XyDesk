@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/store.dart';
 import '../../core/tokens.dart';
+import '../../webrtc/rtc_service.dart';
 import '../../webrtc/session_transport.dart';
 import 'media_capabilities.dart';
 
@@ -110,6 +111,7 @@ class SessionControlPanel extends ConsumerStatefulWidget {
     required this.onDisconnect,
     this.initialSection = SessionPanelSection.stream,
     this.transport = const TransportState(),
+    this.rtc,
   });
 
   final String deviceName;
@@ -122,6 +124,11 @@ class SessionControlPanel extends ConsumerStatefulWidget {
   /// Status transport nyata — dipakai panel Stream supaya tidak menampilkan
   /// teks dummy statis saat koneksi gagal/offline.
   final TransportState transport;
+
+  /// Sesi WebRTC yang sedang jalan. Dari sini panel membaca statistik nyata
+  /// (resolusi, fps, bitrate, ping) dan daftar layar host. Null berarti belum
+  /// ada sesi, dan panel menampilkan tanda strip, bukan angka contoh.
+  final RtcService? rtc;
 
   @override
   ConsumerState<SessionControlPanel> createState() =>
@@ -185,6 +192,7 @@ class _SessionControlPanelState extends ConsumerState<SessionControlPanel> {
             children: [
               _PanelHeader(
                 deviceName: widget.deviceName,
+                transport: widget.transport,
                 onClose: widget.onClose,
               ),
               Padding(
@@ -206,6 +214,7 @@ class _SessionControlPanelState extends ConsumerState<SessionControlPanel> {
                   child: switch (_section) {
                     SessionPanelSection.stream => _StreamPanel(
                       transport: widget.transport,
+                      rtc: widget.rtc,
                     ),
                     SessionPanelSection.audio => _AudioPanel(
                       state: widget.state,
@@ -217,6 +226,8 @@ class _SessionControlPanelState extends ConsumerState<SessionControlPanel> {
                     ),
                     SessionPanelSection.session => _SessionPanel(
                       deviceName: widget.deviceName,
+                      transport: widget.transport,
+                      rtc: widget.rtc,
                       onDisconnect: widget.onDisconnect,
                     ),
                   },
@@ -231,52 +242,90 @@ class _SessionControlPanelState extends ConsumerState<SessionControlPanel> {
 }
 
 class _PanelHeader extends StatelessWidget {
-  const _PanelHeader({required this.deviceName, required this.onClose});
+  const _PanelHeader({
+    required this.deviceName,
+    required this.transport,
+    required this.onClose,
+  });
 
   final String deviceName;
+  final TransportState transport;
   final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final live = transport.live;
+    final (dot, status) = switch (transport.status) {
+      TransportStatus.connected => (c.successText, 'Tersambung'),
+      TransportStatus.pairing => (c.warningText, 'Menghubungi PC'),
+      TransportStatus.negotiating => (c.warningText, 'Menyiapkan koneksi'),
+      TransportStatus.hostBusy => (c.warningText, 'PC sedang dipakai'),
+      TransportStatus.peerOffline => (c.dangerText, 'PC tidak online'),
+      TransportStatus.rejected => (c.dangerText, 'Pairing ditolak'),
+      TransportStatus.error => (c.dangerText, 'Koneksi gagal'),
+      TransportStatus.ended => (c.textLow, 'Sesi selesai'),
+      TransportStatus.preview => (c.textLow, 'Belum tersambung'),
+    };
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: c.accentSoft,
+              color: live ? c.accentSoft : c.raised,
               borderRadius: BorderRadius.circular(R.sm),
             ),
-            child: Icon(LucideIcons.settings, size: 18, color: c.accent),
+            child: Icon(
+              LucideIcons.monitor,
+              size: 19,
+              color: live ? c.accent : c.textMid,
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Kontrol sesi',
+                  deviceName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: c.textHi,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  deviceName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, color: c.textLow),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: dot,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        status,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11.5, color: c.textLow),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           IconButton(
-            tooltip: 'Tutup panel',
+            tooltip: 'Tutup',
             onPressed: onClose,
             icon: Icon(LucideIcons.x, size: 20, color: c.textMid),
           ),
@@ -330,77 +379,165 @@ class _SectionTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     const tabs = [
-      (SessionPanelSection.stream, 'Stream'),
-      (SessionPanelSection.audio, 'Audio & mik'),
-      (SessionPanelSection.controls, 'Kontrol'),
-      (SessionPanelSection.session, 'Sesi'),
+      (SessionPanelSection.stream, 'Gambar', LucideIcons.monitor),
+      (SessionPanelSection.audio, 'Suara', LucideIcons.volume2),
+      (SessionPanelSection.controls, 'Kontrol', LucideIcons.gamepad2),
+      (SessionPanelSection.session, 'Sesi', LucideIcons.info),
     ];
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        scrollDirection: Axis.horizontal,
-        itemCount: tabs.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 4),
-        itemBuilder: (context, index) {
-          final tab = tabs[index];
-          final active = value == tab.$1;
-          return InkWell(
-            onTap: () => onChanged(tab.$1),
-            borderRadius: BorderRadius.circular(R.sm),
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: active ? c.accentSoft : Colors.transparent,
-                borderRadius: BorderRadius.circular(R.sm),
-              ),
-              child: Text(
-                tab.$2,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                  color: active ? c.accent : c.textMid,
+    // Empat tab dengan lebar sama: tidak perlu digeser-geser, dan posisinya
+    // tidak berpindah saat label berubah panjang.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: c.raised,
+          borderRadius: BorderRadius.circular(R.md),
+        ),
+        child: Row(
+          children: [
+            for (final tab in tabs)
+              Expanded(
+                child: InkWell(
+                  onTap: () => onChanged(tab.$1),
+                  borderRadius: BorderRadius.circular(R.sm),
+                  child: AnimatedContainer(
+                    duration: D.fast,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: value == tab.$1
+                          ? c.accentSoft
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(R.sm),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          tab.$3,
+                          size: 16,
+                          color: value == tab.$1 ? c.accent : c.textMid,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          tab.$2,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: value == tab.$1
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            color: value == tab.$1 ? c.accent : c.textMid,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
 }
 
 class _StreamPanel extends ConsumerWidget {
-  const _StreamPanel({this.transport = const TransportState()});
+  const _StreamPanel({this.transport = const TransportState(), this.rtc});
 
   final TransportState transport;
+  final RtcService? rtc;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    final codec = settings.codec.split(' ')[0];
-    final resolution = settings.resolution.split(' ')[0];
+    final service = rtc;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionTitle(
-          title: 'Kualitas gambar',
-          subtitle: 'Preferensi dipakai saat transport video tersedia.',
+          title: 'Yang sedang berjalan',
+          subtitle: 'Angka di bawah dibaca langsung dari koneksi.',
+        ),
+        if (service == null)
+          const _PanelCard(
+            child: Text(
+              'Belum ada sesi. Angka kualitas muncul begitu PC tersambung.',
+              style: TextStyle(fontSize: 12.5, height: 1.5),
+            ),
+          )
+        else
+          StreamBuilder<SessionStats>(
+            initialData: service.stats,
+            stream: service.statsStream,
+            builder: (context, snapshot) {
+              final st = snapshot.data ?? const SessionStats();
+              return _PanelCard(
+                child: Column(
+                  children: [
+                    _InfoRow(
+                      icon: LucideIcons.monitor,
+                      title: 'Ukuran gambar',
+                      value: st.resolutionLabel,
+                    ),
+                    const _CardGap(),
+                    _InfoRow(
+                      icon: LucideIcons.activity,
+                      title: 'Kehalusan',
+                      value: st.fpsLabel,
+                    ),
+                    const _CardGap(),
+                    _InfoRow(
+                      icon: LucideIcons.gauge,
+                      title: 'Pemakaian data',
+                      value: st.bitrateLabel,
+                    ),
+                    const _CardGap(),
+                    _InfoRow(
+                      icon: LucideIcons.wifi,
+                      title: 'Ping',
+                      value: st.rttLabel,
+                    ),
+                    const _CardGap(),
+                    _InfoRow(
+                      icon: LucideIcons.triangleAlert,
+                      title: 'Paket hilang',
+                      value: st.lossLabel,
+                    ),
+                    const _CardGap(),
+                    _InfoRow(
+                      icon: LucideIcons.cpu,
+                      title: 'Codec',
+                      value: st.codec ?? '-',
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        const SizedBox(height: 16),
+        if (service != null) _DisplayPicker(rtc: service),
+        const _SectionTitle(
+          title: 'Batas yang kamu pilih',
+          subtitle: 'Dipakai saat sesi berikutnya dimulai.',
         ),
         _PanelCard(
           child: Column(
             children: [
               _InfoRow(
-                icon: LucideIcons.monitor,
-                title: 'Resolusi',
-                value: resolution,
+                icon: LucideIcons.maximize,
+                title: 'Resolusi diminta',
+                value: settings.resolution.split(' ')[0],
               ),
               const _CardGap(),
-              _InfoRow(icon: LucideIcons.cpu, title: 'Codec', value: codec),
+              _InfoRow(
+                icon: LucideIcons.fileVideo,
+                title: 'Codec diminta',
+                value: settings.codec.split(' ')[0],
+              ),
               const _CardGap(),
               _SliderRow(
-                label: 'Bitrate maksimal',
+                label: 'Batas pemakaian data',
                 valueLabel: '${settings.bitrateMbps} Mbps',
                 value: (settings.bitrateMbps - 5) / 45,
                 onChanged: (value) => ref
@@ -410,30 +547,96 @@ class _StreamPanel extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        const _SectionTitle(title: 'Status transport'),
-        _StatusCard(
-          icon: transport.status == TransportStatus.error
-              ? LucideIcons.wifiOff
-              : LucideIcons.video,
-          title: switch (transport.status) {
-            TransportStatus.connected => 'Video terhubung ke host',
-            TransportStatus.pairing => 'Menghubungi host…',
-            TransportStatus.negotiating => 'Negosiasi koneksi…',
-            TransportStatus.rejected => 'Pairing ditolak',
-            TransportStatus.peerOffline => 'Host tidak online',
-            TransportStatus.hostBusy => 'Perangkat sedang dipakai',
-            TransportStatus.ended => 'Sesi berakhir',
-            TransportStatus.error => 'Koneksi gagal',
-            TransportStatus.preview => 'Transport tidak aktif',
-          },
-          body: transport.status == TransportStatus.connected
-              ? 'Video diterima dari host. Statistik jaringan & kualitas akan '
-                    'tampil di sini saat telemetry hadir.'
-              : (transport.message ??
-                    'Tidak ada sesi aktif. Mulai sesi dari daftar perangkat.'),
-        ),
+        if (!transport.live) ...[
+          const SizedBox(height: 16),
+          _StatusCard(
+            icon: transport.status == TransportStatus.error
+                ? LucideIcons.wifiOff
+                : LucideIcons.info,
+            title: switch (transport.status) {
+              TransportStatus.pairing => 'Sedang menghubungi PC',
+              TransportStatus.negotiating => 'Sedang menyiapkan koneksi',
+              TransportStatus.rejected => 'PC menolak sambungan',
+              TransportStatus.peerOffline => 'PC tidak online',
+              TransportStatus.hostBusy => 'PC sedang dipakai sesi lain',
+              TransportStatus.ended => 'Sesi sudah ditutup',
+              TransportStatus.error => 'Koneksi gagal',
+              TransportStatus.connected => 'Tersambung',
+              TransportStatus.preview => 'Belum tersambung',
+            },
+            body:
+                transport.message ??
+                'Belum ada sesi berjalan. Mulai dari daftar perangkat.',
+          ),
+        ],
       ],
+    );
+  }
+}
+
+/// Pemilih layar host. Dulu chip ini melayang di bawah layar sesi dan menutupi
+/// gambar; sekarang tinggal di panel bersama pengaturan gambar lainnya.
+class _DisplayPicker extends StatelessWidget {
+  const _DisplayPicker({required this.rtc});
+
+  final RtcService rtc;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return StreamBuilder<HostMeta>(
+      initialData: rtc.hostMeta,
+      stream: rtc.hostMetaStream,
+      builder: (context, snapshot) {
+        final displays = snapshot.data?.displays ?? const <HostDisplay>[];
+        if (displays.length < 2) return const SizedBox.shrink();
+        final wanted = snapshot.data?.wantedDisplay ?? 0;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionTitle(
+              title: 'Layar PC',
+              subtitle: 'PC ini punya lebih dari satu monitor.',
+            ),
+            _PanelCard(
+              child: Column(
+                children: [
+                  for (final d in displays) ...[
+                    if (d != displays.first) const _CardGap(),
+                    InkWell(
+                      onTap: () => rtc.selectDisplay(d.index),
+                      borderRadius: BorderRadius.circular(R.sm),
+                      child: Row(
+                        children: [
+                          Icon(
+                            d.index == wanted
+                                ? LucideIcons.circleCheck
+                                : LucideIcons.circle,
+                            size: 17,
+                            color: d.index == wanted ? c.accent : c.textLow,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              d.name.isEmpty ? 'Layar ${d.index + 1}' : d.name,
+                              style: TextStyle(fontSize: 13, color: c.textHi),
+                            ),
+                          ),
+                          Text(
+                            '${d.width} x ${d.height}',
+                            style: TextStyle(fontSize: 11.5, color: c.textLow),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
     );
   }
 }
@@ -793,45 +996,78 @@ class _ControlsPanel extends StatelessWidget {
 }
 
 class _SessionPanel extends StatelessWidget {
-  const _SessionPanel({required this.deviceName, required this.onDisconnect});
+  const _SessionPanel({
+    required this.deviceName,
+    required this.transport,
+    required this.onDisconnect,
+    this.rtc,
+  });
 
   final String deviceName;
+  final TransportState transport;
+  final RtcService? rtc;
   final VoidCallback onDisconnect;
 
   @override
   Widget build(BuildContext context) {
+    final service = rtc;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionTitle(title: 'Tentang sesi'),
-        _PanelCard(
-          child: Column(
-            children: [
-              _InfoRow(
-                icon: LucideIcons.monitor,
-                title: 'Perangkat',
-                value: deviceName,
+        const _SectionTitle(title: 'Sesi ini'),
+        StreamBuilder<SessionStats>(
+          initialData: service?.stats,
+          stream: service?.statsStream,
+          builder: (context, snapshot) {
+            final st = snapshot.data;
+            return _PanelCard(
+              child: Column(
+                children: [
+                  _InfoRow(
+                    icon: LucideIcons.monitor,
+                    title: 'Perangkat',
+                    value: deviceName,
+                  ),
+                  const _CardGap(),
+                  _InfoRow(
+                    icon: LucideIcons.wifi,
+                    title: 'Sambungan',
+                    value: switch (transport.status) {
+                      TransportStatus.connected => 'Langsung ke PC',
+                      TransportStatus.pairing => 'Menghubungi PC',
+                      TransportStatus.negotiating => 'Menyiapkan koneksi',
+                      TransportStatus.hostBusy => 'PC dipakai sesi lain',
+                      TransportStatus.peerOffline => 'PC tidak online',
+                      TransportStatus.rejected => 'Ditolak PC',
+                      TransportStatus.error => 'Gagal',
+                      TransportStatus.ended => 'Sudah ditutup',
+                      TransportStatus.preview => 'Belum tersambung',
+                    },
+                  ),
+                  const _CardGap(),
+                  _InfoRow(
+                    icon: LucideIcons.video,
+                    title: 'Gambar',
+                    value: st?.hasVideo == true
+                        ? '${st!.resolutionLabel} - ${st.fpsLabel}'
+                        : 'Belum ada gambar',
+                  ),
+                  const _CardGap(),
+                  _InfoRow(
+                    icon: LucideIcons.volume2,
+                    title: 'Suara dari PC',
+                    value: st?.audioLabel ?? 'Tidak ada suara masuk',
+                  ),
+                  const _CardGap(),
+                  _InfoRow(
+                    icon: LucideIcons.mic,
+                    title: 'Mik ke PC',
+                    value: service?.micEnabled == true ? 'Aktif' : 'Mati',
+                  ),
+                ],
               ),
-              const _CardGap(),
-              const _InfoRow(
-                icon: LucideIcons.wifi,
-                title: 'Transport',
-                value: 'Tidak terhubung',
-              ),
-              const _CardGap(),
-              const _InfoRow(
-                icon: LucideIcons.video,
-                title: 'Video',
-                value: 'Tidak aktif',
-              ),
-              const _CardGap(),
-              const _InfoRow(
-                icon: LucideIcons.volume2,
-                title: 'Audio',
-                value: 'Belum diimplementasikan',
-              ),
-            ],
-          ),
+            );
+          },
         ),
         const SizedBox(height: 16),
         SizedBox(

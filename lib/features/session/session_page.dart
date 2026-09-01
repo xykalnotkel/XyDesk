@@ -250,11 +250,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     setState(() => _settings = _settings.copyWith(microphoneRequested: true));
   }
 
-  void _setExperience(SessionExperience experience) {
-    setState(() => _settings = _settings.copyWith(experience: experience));
-    _wake();
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_connecting) return _ConnectingView(name: widget.deviceName);
@@ -274,8 +269,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     ? _RemoteVideoSurface(
                         transport: _transport,
                         relativeMouse: _settings.pointerLock,
-                        // Saat live, tap adalah klik kiri murni — overlay
-                        // dibuka lewat _EdgeHandle, bukan tap layar.
+                        // Saat live, tap adalah klik kiri murni — kontrol
+                        // dibuka lewat rail di tepi kanan, bukan tap layar.
                         onWake: () {},
                       )
                     : GestureDetector(
@@ -312,12 +307,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     ),
                   ),
                 ),
-              // Pemilih layar (muncul saat host punya >1 monitor).
-              if (_transport.state.live &&
-                  !_keyboardVisible &&
-                  !_panelVisible &&
-                  _overlayVisible)
-                _HostDisplaySwitcher(transport: _transport),
               if (!_keyboardVisible &&
                   !_panelVisible &&
                   _settings.experience == SessionExperience.gaming &&
@@ -330,56 +319,30 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     }
                   },
                 ),
-              if (!_keyboardVisible &&
-                  !_panelVisible &&
-                  _settings.experience == SessionExperience.desktop)
-                _DesktopControls(compact: compact),
-              if (!_keyboardVisible && !_panelVisible) ...[
-                Positioned(
-                  left: 0,
-                  top: constraints.maxHeight / 2 - 44,
-                  child: _EdgePanelHandle(
-                    icon: LucideIcons.chevronRight,
-                    tooltip: 'Buka kontrol',
-                    visible: _overlayVisible,
-                    onTap: () => _openPanel(SessionPanelSection.controls),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  top: constraints.maxHeight / 2 - 44,
-                  child: _EdgePanelHandle(
-                    icon: LucideIcons.chevronLeft,
-                    tooltip: 'Buka pengaturan',
-                    visible: _overlayVisible,
-                    onTap: () => _openPanel(SessionPanelSection.stream),
-                  ),
-                ),
-              ],
-              _fadePositioned(
-                top: MediaQuery.paddingOf(context).top + 8,
-                left: 12,
-                right: 12,
-                child: _TopBar(
-                  deviceName: widget.deviceName,
-                  experience: _settings.experience,
-                  compact: compact,
-                  live: _transport.state.live,
-                  onExperienceChanged: _setExperience,
-                  onBack: _leaveSession,
-                ),
-              ),
+              // Satu-satunya HUD yang tersisa: rail tipis menempel di tepi
+              // kanan. Tidak ada lagi bar melayang di tengah atas maupun
+              // tengah bawah yang menutupi gambar PC.
               if (!_keyboardVisible)
-                _fadePositioned(
-                  left: 12,
-                  right: 12,
-                  bottom: MediaQuery.paddingOf(context).bottom + 10,
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: _QuickDock(
-                      experience: _settings.experience,
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  right: 0,
+                  child: Center(
+                    child: _SessionRail(
+                      expanded: _overlayVisible,
+                      compact: compact,
+                      showClipboard:
+                          _settings.experience == SessionExperience.desktop,
                       audioRequested: _settings.pcAudioRequested,
                       microphoneRequested: _settings.microphoneRequested,
+                      onToggleExpanded: () {
+                        if (_overlayVisible) {
+                          setState(() => _overlayVisible = false);
+                          _idleTimer?.cancel();
+                        } else {
+                          _wake();
+                        }
+                      },
                       onAudio: _toggleAudioForward,
                       onMicrophone: _toggleMic,
                       onKeyboard: _showKeyboard,
@@ -389,50 +352,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     ),
                   ),
                 ),
-              // Handle kecil di tepi kanan-tengah: satu-satunya kontrol yang
-              // selalu terlihat (redup) saat HUD tersembunyi. Mobile-friendly:
-              // tidak menutupi area game/kerja di tengah, atas, atau bawah.
-              Positioned(
-                right: 0,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      if (_overlayVisible) {
-                        setState(() => _overlayVisible = false);
-                        _idleTimer?.cancel();
-                      } else {
-                        _wake();
-                      }
-                    },
-                    child: AnimatedOpacity(
-                      duration: D.fade,
-                      opacity: _overlayVisible ? 0.9 : 0.28,
-                      child: Container(
-                        width: 22,
-                        height: 64,
-                        margin: const EdgeInsets.only(right: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xC818191D),
-                          borderRadius: BorderRadius.circular(R.pill),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.14),
-                          ),
-                        ),
-                        child: Icon(
-                          _overlayVisible
-                              ? LucideIcons.chevronRight
-                              : LucideIcons.chevronLeft,
-                          size: 15,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
               AnimatedPositioned(
                 duration: D.panel,
                 curve: D.curve,
@@ -446,6 +365,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                   deviceName: widget.deviceName,
                   state: _settings,
                   transport: _transport.state,
+                  rtc: _transport.rtc,
                   onChanged: (value) => setState(() => _settings = value),
                   onClose: _closePanel,
                   onDisconnect: _confirmDisconnect,
@@ -474,26 +394,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _fadePositioned({
-    double? left,
-    double? top,
-    double? right,
-    double? bottom,
-    required Widget child,
-  }) {
-    return Positioned(
-      left: left,
-      top: top,
-      right: right,
-      bottom: bottom,
-      child: AnimatedOpacity(
-        opacity: _overlayVisible ? 1 : 0,
-        duration: D.fade,
-        child: IgnorePointer(ignoring: !_overlayVisible, child: child),
       ),
     );
   }
@@ -929,218 +829,20 @@ class _AmbientGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _EdgePanelHandle extends StatelessWidget {
-  const _EdgePanelHandle({
-    required this.icon,
-    required this.tooltip,
-    required this.visible,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final bool visible;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedOpacity(
-      opacity: visible ? 0.72 : 0,
-      duration: D.fast,
-      child: IgnorePointer(
-        ignoring: !visible,
-        child: Tooltip(
-          message: tooltip,
-          child: Material(
-            color: Colors.black.withValues(alpha: 0.34),
-            borderRadius: BorderRadius.circular(R.sm),
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(R.sm),
-              child: SizedBox(
-                width: 34,
-                height: 88,
-                child: Icon(icon, size: 21, color: Colors.white70),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.deviceName,
-    required this.experience,
+/// Rail kontrol sesi.
+///
+/// Menempel di tepi kanan dan hanya selebar ikon. Versi sebelumnya memakai
+/// bar melayang di tengah atas dan dock di tengah bawah; dua-duanya menutupi
+/// bagian layar PC yang paling sering dilihat. Rail ini bisa dilipat jadi tab
+/// kecil, dan saat dilipat tidak ada apa pun yang menghalangi gambar.
+class _SessionRail extends StatelessWidget {
+  const _SessionRail({
+    required this.expanded,
     required this.compact,
-    required this.live,
-    required this.onExperienceChanged,
-    required this.onBack,
-  });
-
-  final String deviceName;
-  final SessionExperience experience;
-  final bool compact;
-  final bool live;
-  final ValueChanged<SessionExperience> onExperienceChanged;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 720),
-        height: compact ? 48 : 54,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xE818191D),
-          borderRadius: BorderRadius.circular(R.md),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.28),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Kembali',
-              onPressed: onBack,
-              icon: const Icon(
-                LucideIcons.arrowLeft,
-                size: 19,
-                color: Colors.white70,
-              ),
-            ),
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: live ? AppColors.success : AppColors.warning,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    deviceName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    live
-                        ? 'Live • end-to-end WebRTC'
-                        : 'Preview • tanpa telemetry',
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      color: Colors.white38,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              width: compact ? 200 : 230,
-              child: ExperienceSelector(
-                value: experience,
-                compact: true,
-                onChanged: onExperienceChanged,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Pemilih layar host — muncul bila host melaporkan lebih dari satu monitor
-/// (pesan meta lewat data channel). Mengetuk chip meminta host memindahkan
-/// capture — berlaku langsung (capture host di-respawn).
-class _HostDisplaySwitcher extends StatelessWidget {
-  const _HostDisplaySwitcher({required this.transport});
-
-  final SessionTransport transport;
-
-  @override
-  Widget build(BuildContext context) {
-    final rtc = transport.rtc;
-    if (rtc == null) return const SizedBox.shrink();
-    return StreamBuilder(
-      initialData: rtc.hostMeta,
-      stream: rtc.hostMetaStream,
-      builder: (context, snapshot) {
-        final meta = snapshot.data;
-        final displays = meta?.displays ?? const [];
-        if (displays.length < 2) return const SizedBox.shrink();
-        final wanted = meta?.wantedDisplay ?? 0;
-        return Positioned(
-          left: 12,
-          right: 12,
-          bottom: MediaQuery.paddingOf(context).bottom + 78,
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xEB18191D),
-                borderRadius: BorderRadius.circular(R.lg),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final d in displays)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3),
-                      child: ChoiceChip(
-                        label: Text(
-                          '${d.name.isEmpty ? 'Layar' : d.name} '
-                          '${d.width}×${d.height}',
-                          style: const TextStyle(fontSize: 11.5),
-                        ),
-                        selected: d.index == wanted,
-                        onSelected: (_) => rtc.selectDisplay(d.index),
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor: const Color(0xFF23242A),
-                        selectedColor: AppColors.accentDark,
-                        labelStyle: TextStyle(
-                          fontSize: 11.5,
-                          color: d.index == wanted
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _QuickDock extends StatelessWidget {
-  const _QuickDock({
-    required this.experience,
+    required this.showClipboard,
     required this.audioRequested,
     required this.microphoneRequested,
+    required this.onToggleExpanded,
     required this.onAudio,
     required this.onMicrophone,
     required this.onKeyboard,
@@ -1149,9 +851,12 @@ class _QuickDock extends StatelessWidget {
     required this.onDisconnect,
   });
 
-  final SessionExperience experience;
+  final bool expanded;
+  final bool compact;
+  final bool showClipboard;
   final bool audioRequested;
   final bool microphoneRequested;
+  final VoidCallback onToggleExpanded;
   final VoidCallback onAudio;
   final VoidCallback onMicrophone;
   final VoidCallback onKeyboard;
@@ -1161,68 +866,98 @@ class _QuickDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const caps = SessionMediaCapabilities.currentBuild;
+    if (!expanded) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onToggleExpanded,
+        child: Opacity(
+          opacity: 0.34,
+          child: Container(
+            width: 20,
+            height: 58,
+            margin: const EdgeInsets.only(right: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xC818191D),
+              borderRadius: BorderRadius.circular(R.pill),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            ),
+            child: const Icon(
+              LucideIcons.chevronLeft,
+              size: 14,
+              color: Colors.white70,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final size = compact ? 40.0 : 44.0;
     return Container(
-      height: 58,
-      constraints: const BoxConstraints(maxWidth: 520),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 3),
       decoration: BoxDecoration(
         color: const Color(0xEB18191D),
         borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.34),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.32),
+            blurRadius: 18,
+            offset: const Offset(-4, 4),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _DockButton(
+          _RailButton(
+            icon: LucideIcons.chevronRight,
+            tooltip: 'Sembunyikan kontrol',
+            size: size,
+            onTap: onToggleExpanded,
+          ),
+          const _RailDivider(),
+          _RailButton(
             icon: LucideIcons.volume2,
-            label: 'Audio',
-            requested: audioRequested,
-            pending:
-                audioRequested &&
-                !SessionMediaCapabilities.currentBuild.pcSystemAudio.isActive,
+            tooltip: 'Suara PC',
+            size: size,
+            active: audioRequested,
+            pending: audioRequested && !caps.pcSystemAudio.isActive,
             onTap: onAudio,
           ),
-          _DockButton(
+          _RailButton(
             icon: LucideIcons.mic,
-            label: 'Mik',
-            requested: microphoneRequested,
-            pending:
-                microphoneRequested &&
-                !SessionMediaCapabilities.currentBuild.phoneMicrophone.isActive,
+            tooltip: 'Mik ke PC',
+            size: size,
+            active: microphoneRequested,
+            pending: microphoneRequested && !caps.phoneMicrophone.isActive,
             onTap: onMicrophone,
           ),
-          _DockButton(
+          _RailButton(
             icon: LucideIcons.keyboard,
-            label: 'Keyboard',
+            tooltip: 'Keyboard',
+            size: size,
             onTap: onKeyboard,
           ),
-          if (experience == SessionExperience.desktop)
-            _DockButton(
+          if (showClipboard)
+            _RailButton(
               icon: LucideIcons.clipboard,
-              label: 'Clipboard',
+              tooltip: 'Kirim teks yang disalin',
+              size: size,
               onTap: onClipboard,
             ),
-          _DockButton(
+          _RailButton(
             icon: LucideIcons.settings,
-            label: 'Atur',
+            tooltip: 'Pengaturan sesi',
+            size: size,
             onTap: onSettings,
           ),
-          Container(
-            width: 1,
-            height: 28,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
-            color: Colors.white.withValues(alpha: 0.12),
-          ),
-          _DockButton(
+          const _RailDivider(),
+          _RailButton(
             icon: LucideIcons.power,
-            label: 'Putus',
+            tooltip: 'Putuskan',
+            size: size,
             danger: true,
             onTap: onDisconnect,
           ),
@@ -1232,20 +967,36 @@ class _QuickDock extends StatelessWidget {
   }
 }
 
-class _DockButton extends StatelessWidget {
-  const _DockButton({
+class _RailDivider extends StatelessWidget {
+  const _RailDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 1,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      color: Colors.white.withValues(alpha: 0.12),
+    );
+  }
+}
+
+class _RailButton extends StatelessWidget {
+  const _RailButton({
     required this.icon,
-    required this.label,
+    required this.tooltip,
+    required this.size,
     required this.onTap,
-    this.requested = false,
+    this.active = false,
     this.pending = false,
     this.danger = false,
   });
 
   final IconData icon;
-  final String label;
+  final String tooltip;
+  final double size;
   final VoidCallback onTap;
-  final bool requested;
+  final bool active;
   final bool pending;
   final bool danger;
 
@@ -1255,41 +1006,38 @@ class _DockButton extends StatelessWidget {
         ? AppColors.danger
         : pending
         ? AppColors.warning
-        : requested
+        : active
         ? AppColors.accentDark
         : Colors.white70;
     return Tooltip(
-      message: pending ? '$label belum aktif • ketuk untuk detail' : label,
+      message: pending ? '$tooltip - belum aktif' : tooltip,
+      preferBelow: false,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(R.sm),
         child: SizedBox(
-          width: 62,
-          height: 52,
+          width: size,
+          height: size,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, size: 19, color: color),
-                  const SizedBox(height: 4),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
+              Icon(icon, size: 19, color: color),
+              if (active && !danger)
+                Positioned(
+                  bottom: 6,
+                  child: Container(
+                    width: 14,
+                    height: 2,
+                    decoration: BoxDecoration(
                       color: color,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                ],
-              ),
+                ),
               if (pending)
                 const Positioned(
                   top: 8,
-                  right: 10,
+                  right: 8,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: AppColors.warning,
@@ -1548,48 +1296,6 @@ class _ActionButtonState extends State<_ActionButton> {
             fontSize: 13,
             fontWeight: FontWeight.w700,
             color: Colors.white70,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DesktopControls extends StatelessWidget {
-  const _DesktopControls({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: 20,
-      right: 20,
-      bottom: compact ? 78 : 90,
-      child: IgnorePointer(
-        child: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 460),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.24),
-              borderRadius: BorderRadius.circular(R.md),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                HudIcon(HudGlyph.trackpad, size: 25, color: Colors.white54),
-                SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    'Seret untuk pointer • ketuk untuk klik • dua jari untuk gulir',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: Colors.white54),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),

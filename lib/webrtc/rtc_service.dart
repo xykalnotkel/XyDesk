@@ -100,6 +100,62 @@ class HostMeta {
 /// Audio (rilis 6.1): transceiver audio `recvonly` memutar suara sistem host
 /// (Opus) — host mengirim bila WASAPI Windows aktif. Mic perangkat dikirim
 /// lewat track `sendonly` (getUserMedia) — host memutarnya di speaker PC.
+/// Ringkasan kualitas sesi yang dibaca langsung dari `getStats()` WebRTC.
+///
+/// Semua angka di sini berasal dari mesin WebRTC, bukan perkiraan UI. Bila
+/// sesi belum jalan, nilainya null dan panel menampilkan tanda strip — lebih
+/// jujur daripada menampilkan angka yang kelihatan meyakinkan tapi karangan.
+@immutable
+class SessionStats {
+  const SessionStats({
+    this.width,
+    this.height,
+    this.fps,
+    this.kbps,
+    this.rttMs,
+    this.jitterMs,
+    this.packetLossPercent,
+    this.codec,
+    this.audioKbps,
+  });
+
+  final int? width;
+  final int? height;
+  final double? fps;
+  final double? kbps;
+  final double? rttMs;
+  final double? jitterMs;
+  final double? packetLossPercent;
+  final String? codec;
+  final double? audioKbps;
+
+  bool get hasVideo => width != null && height != null;
+
+  String get resolutionLabel =>
+      hasVideo ? '$width x $height' : 'Belum ada gambar';
+
+  String get fpsLabel => fps == null ? '-' : '${fps!.round()} fps';
+
+  String get bitrateLabel {
+    final v = kbps;
+    if (v == null) return '-';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)} Mbps';
+    return '${v.round()} kbps';
+  }
+
+  String get rttLabel => rttMs == null ? '-' : '${rttMs!.round()} ms';
+
+  String get lossLabel => packetLossPercent == null
+      ? '-'
+      : '${packetLossPercent!.toStringAsFixed(1)}%';
+
+  String get audioLabel {
+    final v = audioKbps;
+    if (v == null) return 'Tidak ada suara masuk';
+    return '${v.round()} kbps';
+  }
+}
+
 class RtcService {
   RTCPeerConnection? _pc;
   RTCDataChannel? _inputChannel;
@@ -135,6 +191,18 @@ class RtcService {
   HostMeta? _hostMeta;
   Stream<HostMeta> get hostMetaStream => _metaCtrl.stream;
   final _metaCtrl = StreamController<HostMeta>.broadcast();
+
+  /// Statistik sesi, disegarkan tiap detik selama koneksi hidup.
+  SessionStats get stats => _stats;
+  SessionStats _stats = const SessionStats();
+  Stream<SessionStats> get statsStream => _statsCtrl.stream;
+  final _statsCtrl = StreamController<SessionStats>.broadcast();
+  Timer? _statsTimer;
+  int? _lastVideoBytes;
+  int? _lastAudioBytes;
+  int? _lastPacketsLost;
+  int? _lastPacketsReceived;
+  DateTime? _lastStatsAt;
 
   /// Aliran fase koneksi — satu sumber kebenaran untuk status UI.
   Stream<RtcPhase> get phases => _phaseCtrl.stream;
@@ -322,6 +390,7 @@ class RtcService {
     pc.onConnectionState = (state) {
       switch (state) {
         case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
+          _startStatsPolling();
           _lastError = null;
           _emit(RtcPhase.connected);
         case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
@@ -461,11 +530,119 @@ class RtcService {
     }
   }
 
+  /// Mulai membaca `getStats()` tiap detik. Angka bitrate dihitung dari
+  /// selisih byte antar pembacaan, bukan dari nilai kumulatif mentah.
+  void _startStatsPolling() {
+    _statsTimer?.cancel();
+    _statsTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      final pc = _pc;
+      if (pc == null || _stopped) return;
+      try {
+        await _collectStats(pc);
+      } catch (error) {
+        DevLog.w('rtc', 'getStats gagal', '$error');
+      }
+    });
+  }
+
+  Future<void> _collectStats(RTCPeerConnection pc) async {
+    final reports = await pc.getStats();
+    final now = DateTime.now();
+    int? width, height, videoBytes, audioBytes, packetsLost, packetsReceived;
+    double? fps, rtt, jitter;
+    String? codecId, codecName;
+
+    for (final r in reports) {
+      final v = r.values;
+      switch (r.type) {
+        case 'inbound-rtp':
+          final kind = v['kind'] ?? v['mediaType'];
+          if (kind == 'video') {
+            width = (v['frameWidth'] as num?)?.toInt();
+            height = (v['frameHeight'] as num?)?.toInt();
+            fps = (v['framesPerSecond'] as num?)?.toDouble();
+            videoBytes = (v['bytesReceived'] as num?)?.toInt();
+            packetsLost = (v['packetsLost'] as num?)?.toInt();
+            packetsReceived = (v['packetsReceived'] as num?)?.toInt();
+            codecId = v['codecId'] as String?;
+          } else if (kind == 'audio') {
+            audioBytes = (v['bytesReceived'] as num?)?.toInt();
+            jitter = (v['jitter'] as num?)?.toDouble();
+          }
+        case 'candidate-pair':
+          final nominated = v['nominated'] == true || v['state'] == 'succeeded';
+          if (nominated && v['currentRoundTripTime'] != null) {
+            rtt = ((v['currentRoundTripTime'] as num).toDouble()) * 1000;
+          }
+        case 'codec':
+          if (codecId != null && r.id == codecId) {
+            codecName = (v['mimeType'] as String?)?.split('/').last;
+          }
+      }
+    }
+    // Pencarian codec kedua: laporan codec bisa datang sebelum inbound-rtp.
+    if (codecName == null && codecId != null) {
+      for (final r in reports) {
+        if (r.id == codecId) {
+          codecName = (r.values['mimeType'] as String?)?.split('/').last;
+        }
+      }
+    }
+
+    final last = _lastStatsAt;
+    final elapsed = last == null
+        ? null
+        : now.difference(last).inMilliseconds / 1000.0;
+    double? kbps, audioKbps, loss;
+    if (elapsed != null && elapsed > 0.2) {
+      final pv = _lastVideoBytes;
+      if (videoBytes != null && pv != null && videoBytes >= pv) {
+        kbps = (videoBytes - pv) * 8 / 1000 / elapsed;
+      }
+      final pa = _lastAudioBytes;
+      if (audioBytes != null && pa != null && audioBytes >= pa) {
+        audioKbps = (audioBytes - pa) * 8 / 1000 / elapsed;
+      }
+      final pl = _lastPacketsLost;
+      final pr = _lastPacketsReceived;
+      if (packetsLost != null &&
+          packetsReceived != null &&
+          pl != null &&
+          pr != null) {
+        final dLost = packetsLost - pl;
+        final dRecv = packetsReceived - pr;
+        final total = dLost + dRecv;
+        if (total > 0) loss = (dLost / total) * 100;
+      }
+    }
+
+    _lastVideoBytes = videoBytes;
+    _lastAudioBytes = audioBytes;
+    _lastPacketsLost = packetsLost;
+    _lastPacketsReceived = packetsReceived;
+    _lastStatsAt = now;
+
+    _stats = SessionStats(
+      width: width,
+      height: height,
+      fps: fps,
+      kbps: kbps,
+      rttMs: rtt,
+      jitterMs: jitter == null ? null : jitter * 1000,
+      packetLossPercent: loss,
+      codec: codecName?.toUpperCase(),
+      audioKbps: audioKbps,
+    );
+    if (!_statsCtrl.isClosed) _statsCtrl.add(_stats);
+  }
+
   Future<void> stop() async {
     if (_stopped) return;
     _stopped = true;
     _watchdog?.cancel();
     _watchdog = null;
+    _statsTimer?.cancel();
+    _statsTimer = null;
     await disableMic();
     await _inputChannel?.close();
     await _pc?.close();
@@ -475,5 +652,6 @@ class RtcService {
     _emit(RtcPhase.ended);
     await _phaseCtrl.close();
     await _metaCtrl.close();
+    await _statsCtrl.close();
   }
 }
