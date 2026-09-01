@@ -31,6 +31,32 @@ def pubspec_version() -> tuple[str, int]:
     return m.group(1), int(m.group(2))
 
 
+UNRELEASED = "Belum terbit"
+
+
+def changelog_top_version(changelog: str) -> tuple[str | None, list[str]]:
+    """Entri berversi pertama di CHANGELOG, dilewati bagian "Belum terbit".
+
+    Mengembalikan (versi teratas, daftar masalah tata letak).
+    """
+    headings = re.findall(r"^## \[([^\]]+)\]", changelog, re.M)
+    problems: list[str] = []
+
+    unreleased = [i for i, h in enumerate(headings) if h == UNRELEASED]
+    if len(unreleased) > 1:
+        problems.append(
+            f"CHANGELOG.md punya {len(unreleased)} bagian '{UNRELEASED}', "
+            "seharusnya paling banyak satu"
+        )
+    if unreleased and unreleased[0] != 0:
+        problems.append(
+            f"bagian '{UNRELEASED}' harus berada di paling atas CHANGELOG.md"
+        )
+
+    top = next((h for h in headings if h != UNRELEASED), None)
+    return top, problems
+
+
 def main() -> None:
     version, build = pubspec_version()
     problems: list[str] = []
@@ -51,10 +77,18 @@ def main() -> None:
             problems.append(f"{pkg} = {got}, seharusnya {version}")
 
     # CHANGELOG wajib punya entri untuk versi ini, di paling atas.
-    m = re.search(r"^## \[([^\]]+)\]", read("CHANGELOG.md"), re.M)
-    if not m or m.group(1) != version:
+    #
+    # Pengecualian: bagian "[Belum terbit]" boleh duduk di atasnya — itu
+    # konvensi Keep a Changelog untuk pekerjaan yang sudah masuk tapi belum
+    # dirilis. Bagian itu tidak punya nomor, jadi tidak bisa dibandingkan
+    # dengan versi; yang dibandingkan adalah entri berversi pertama di
+    # bawahnya. Salah letak atau dobel tetap ditolak: CHANGELOG yang
+    # membingungkan lebih buruk daripada tidak ada catatan.
+    top_version, changelog_problems = changelog_top_version(read("CHANGELOG.md"))
+    problems.extend(changelog_problems)
+    if not top_version or top_version != version:
         problems.append(
-            f"CHANGELOG.md entri teratas = {m.group(1) if m else 'tidak ada'}, "
+            f"CHANGELOG.md entri versi teratas = {top_version or 'tidak ada'}, "
             f"seharusnya {version}"
         )
 
