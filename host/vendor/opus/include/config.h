@@ -4,7 +4,11 @@
  * - FIXED_POINT TIDAK didefinisikan (build float — akurat & cepat di
  *   x86_64/aarch64 modern).
  * - Tanpa jalur asm (SSE/NEON) — kode C generik, portabel antar runner CI.
- * - USE_ALLOCA untuk MSVC (_alloca dari <malloc.h>); Unix memakai HAVE_ALLOCA_H.
+ * - USE_ALLOCA untuk MSVC (_alloca dari <malloc.h>); compiler lain (GCC/Clang,
+ *   termasuk mingw-w64 yang dipakai cross-check dari Linux) memakai VAR_ALLOCA
+ *   lewat VAR_ARRAYS — stack_alloc.h MEWAJIBKAN salah satu dari VAR_ARRAYS,
+ *   USE_ALLOCA, atau NONTHREADSAFE_PSEUDOSTACK didefinisikan eksplisit;
+ *   HAVE_ALLOCA_H saja tidak cukup dan berakhir #error.
  */
 #ifndef OPUS_CONFIG_H
 #define OPUS_CONFIG_H
@@ -17,6 +21,7 @@
 # define USE_ALLOCA
 #else
 # define HAVE_ALLOCA_H 1
+# define VAR_ARRAYS
 #endif
 
 #define HAVE_LRINT 1

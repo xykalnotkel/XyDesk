@@ -119,7 +119,6 @@ pub fn spawn_audio_sink() -> mpsc::SyncSender<Vec<u8>> {
 // ── Implementasi Windows: WASAPI ─────────────────────────────────────────
 #[cfg(target_os = "windows")]
 mod windows {
-    use std::sync::mpsc;
     use std::sync::mpsc::{Receiver, SyncSender};
 
     use windows::core::Interface;
@@ -183,11 +182,11 @@ mod windows {
 
     /// Daftar ID endpoint output aktif.
     pub fn list_outputs() -> Vec<String> {
-        use windows::Win32::Media::Audio::{IMMDeviceCollection, DEVICE_STATE_ACTIVE};
+        use windows::Win32::Media::Audio::DEVICE_STATE_ACTIVE;
         let Ok(device) = device() else {
             return Vec::new();
         };
-        let Ok(enumerator) = (unsafe { device.cast::<IMMDeviceEnumerator>() }) else {
+        let Ok(enumerator) = device.cast::<IMMDeviceEnumerator>() else {
             return Vec::new();
         };
         let Ok(collection) =
