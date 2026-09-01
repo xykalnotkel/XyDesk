@@ -13,6 +13,13 @@ import {
 } from './api';
 import { detectDevicePackage, initialDevicePackage } from './device';
 import {
+  explainError,
+  NewsGridSkeleton,
+  StateNotice,
+  useOnline,
+  useReload,
+} from './states';
+import {
   beginGoogleLogin,
   consumeGoogleRedirect,
   GOOGLE_CLIENT_ID,
@@ -724,23 +731,27 @@ function NewsCard({
 function NewsPage({ navigate }: { navigate: (r: Route) => void }) {
   const [category, setCategory] = useState<string>('semua');
   const [posts, setPosts] = useState<NewsPost[] | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<unknown>(null);
+  // `nonce` sengaja: tombol ulang yang memanggil setCategory(nilaiYangSama)
+  // tidak pernah menjalankan ulang efeknya, jadi tombolnya percuma.
+  const [nonce, reload] = useReload();
+  const online = useOnline();
 
   useEffect(() => {
     let alive = true;
     setPosts(null);
-    setError('');
+    setError(null);
     fetchNewsList(category)
       .then((r) => {
         if (alive) setPosts(r.posts);
       })
       .catch((e) => {
-        if (alive) setError(e instanceof Error ? e.message : 'Gagal memuat berita.');
+        if (alive) setError(e);
       });
     return () => {
       alive = false;
     };
-  }, [category]);
+  }, [category, nonce]);
 
   return (
     <main className="content-page news-page">
@@ -763,29 +774,33 @@ function NewsPage({ navigate }: { navigate: (r: Route) => void }) {
         ))}
       </div>
 
-      {error && (
-        <div className="news-state error">
-          {error} — <button onClick={() => setCategory(category)}>coba lagi</button>
-        </div>
+      {error !== null && (
+        <StateNotice
+          tone={online ? 'error' : 'offline'}
+          glyph={online ? 'alert' : 'cloud'}
+          title={online ? 'Beritanya belum bisa dimuat' : 'Kamu sedang offline'}
+          message={explainError(error, 'Gagal memuat berita.', online)}
+          actionLabel="Coba lagi"
+          onAction={reload}
+        />
       )}
 
-      {!posts && !error && (
-        <div className="news-grid">
-          {[0, 1, 2].map((i) => (
-            <div className="news-card skeleton" key={i}>
-              <div className="news-card-cover sk" />
-              <div className="news-card-body">
-                <div className="sk-line w80" />
-                <div className="sk-line w100" />
-                <div className="sk-line w60" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {!posts && !error && <NewsGridSkeleton />}
 
       {posts && posts.length === 0 && (
-        <div className="news-state">Belum ada berita di kategori ini.</div>
+        <StateNotice
+          tone="empty"
+          glyph="news"
+          title={
+            category === 'semua'
+              ? 'Belum ada berita'
+              : `Belum ada berita di kategori ${category}`
+          }
+          message="Begitu ada kabar baru, ia muncul di sini lebih dulu."
+          {...(category === 'semua'
+            ? {}
+            : { actionLabel: 'Lihat semua berita', onAction: () => setCategory('semua') })}
+        />
       )}
 
       {posts && posts.length > 0 && (
@@ -811,7 +826,9 @@ function NewsDetailPage({
   navigate: (r: Route) => void;
 }) {
   const [data, setData] = useState<{ post: NewsPost; comments: NewsComment[] } | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<unknown>(null);
+  const [nonce, reload] = useReload();
+  const online = useOnline();
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -824,7 +841,7 @@ function NewsDetailPage({
   useEffect(() => {
     let alive = true;
     setData(null);
-    setError('');
+    setError(null);
     fetchNewsPost(slug)
       .then((r) => {
         if (!alive) return;
@@ -833,12 +850,12 @@ function NewsDetailPage({
         setLiked(r.liked || localStorage.getItem(`xydesk.news.liked.${slug}`) === '1');
       })
       .catch((e) => {
-        if (alive) setError(e instanceof Error ? e.message : 'Berita tidak ditemukan.');
+        if (alive) setError(e);
       });
     return () => {
       alive = false;
     };
-  }, [slug]);
+  }, [slug, nonce]);
 
   const post = data?.post;
 
@@ -955,7 +972,16 @@ function NewsDetailPage({
         ← Semua berita
       </button>
 
-      {error && <div className="news-state error">{error}</div>}
+      {error !== null && (
+        <StateNotice
+          tone={online ? 'error' : 'offline'}
+          glyph={online ? 'alert' : 'cloud'}
+          title={online ? 'Berita ini belum bisa dibuka' : 'Kamu sedang offline'}
+          message={explainError(error, 'Berita tidak ditemukan.', online)}
+          actionLabel="Coba lagi"
+          onAction={reload}
+        />
+      )}
 
       {!post && !error && (
         <div className="news-detail-skeleton">
@@ -1046,7 +1072,13 @@ function NewsDetailPage({
             </div>
             <div className="comment-list">
               {comments.length === 0 && (
-                <p className="muted">Belum ada komentar. Jadilah yang pertama.</p>
+                <StateNotice
+                  tone="empty"
+                  glyph="comment"
+                  compact
+                  title="Belum ada komentar"
+                  message="Jadilah yang pertama menanggapi berita ini."
+                />
               )}
               {topLevel.map((c) => {
                 const replies = comments.filter((r) => r.parentId === c.id);
