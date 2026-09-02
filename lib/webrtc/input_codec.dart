@@ -113,7 +113,9 @@ class InputCodec {
   /// menggeser paket input mouse dan keyboard.
   static Uint8List clipboardSet(String s) {
     final utf8Bytes = utf8.encode(s);
-    var end = utf8Bytes.length <= clipboardMaxBytes ? utf8Bytes.length : clipboardMaxBytes;
+    var end = utf8Bytes.length <= clipboardMaxBytes
+        ? utf8Bytes.length
+        : clipboardMaxBytes;
     // Potongan bisa jatuh di tengah karakter multi-byte (aksara non-Latin
     // memakai sampai 4 byte). Buang ekor yang tidak lengkap supaya yang
     // terkirim selalu UTF-8 sah — kalau tidak, penerima menolak seluruh

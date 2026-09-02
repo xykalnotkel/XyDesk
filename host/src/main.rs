@@ -531,12 +531,7 @@ async fn main() -> Result<()> {
                                                 .await
                                                 {
                                                     Ok(Ok(text)) => {
-                                                        let mut out =
-                                                            Vec::with_capacity(1 + text.len());
-                                                        out.push(
-                                                            xydesk_host::input::tag::CLIPBOARD_SET,
-                                                        );
-                                                        out.extend_from_slice(text.as_bytes());
+                                                        let out = xydesk_host::input::encode_clipboard_set(&text);
                                                         let _ = dc.send(&bytes::Bytes::from(out)).await;
                                                     }
                                                     Ok(Err(e)) => eprintln!(

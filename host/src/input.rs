@@ -253,6 +253,33 @@ mod windows_inject {
     }
 }
 
+/// Encode isi papan klip untuk dikirim ke lawan (0x08 CLIPBOARD_SET).
+///
+/// Sengaja hidup bersebelahan dengan `decode`: format kawat harus punya satu
+/// rumah. Kalau encoder dan decoder terpisah, salah satunya bisa berubah
+/// tanpa yang lain — dan gejalanya baru terasa di tangan pengguna, bukan di
+/// layar kompilator.
+///
+/// Batas 64 KiB dipotong di batas karakter, sama seperti klien, supaya ekor
+/// UTF-8 yang tak lengkap tidak membuat seluruh pesan ditolak penerima.
+pub fn encode_clipboard_set(text: &str) -> Vec<u8> {
+    const MAX: usize = 64 * 1024;
+    let bytes = text.as_bytes();
+    let mut end = bytes.len().min(MAX);
+    while end > 0 && (bytes[end - 1] & 0xC0) == 0x80 {
+        end -= 1;
+    }
+    let mut out = Vec::with_capacity(1 + end);
+    out.push(tag::CLIPBOARD_SET);
+    out.extend_from_slice(&bytes[..end]);
+    out
+}
+
+/// Encode permintaan isi papan klip (0x09 CLIPBOARD_REQ).
+pub fn encode_clipboard_request() -> Vec<u8> {
+    vec![tag::CLIPBOARD_REQ; 8]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -291,6 +318,39 @@ mod tests {
             decode(&[tag::CLIPBOARD_REQ; 8]),
             Some(InputEvent::ClipboardRequest)
         );
+    }
+
+    #[test]
+    fn encode_clipboard_set_dan_kembali_lagi() {
+        let m = encode_clipboard_set("Halo");
+        assert_eq!(m[0], tag::CLIPBOARD_SET);
+        assert_eq!(decode(&m), Some(InputEvent::ClipboardSet("Halo".to_string())));
+    }
+
+    #[test]
+    fn encode_clipboard_set_kosong_tetap_terbaca() {
+        // Papan klip yang dikosongkan itu keadaan sah.
+        let m = encode_clipboard_set("");
+        assert_eq!(m, vec![tag::CLIPBOARD_SET]);
+        assert_eq!(decode(&m), Some(InputEvent::ClipboardSet(String::new())));
+    }
+
+    #[test]
+    fn encode_clipboard_set_memotong_di_batas_karakter() {
+        // 'é' = 2 byte. Memotong di tengahnya membuat seluruh pesan ditolak.
+        let m = encode_clipboard_set(&"é".repeat(200 * 1024));
+        assert_eq!(m[0], tag::CLIPBOARD_SET);
+        match decode(&m) {
+            Some(InputEvent::ClipboardSet(s)) => assert!(s.ends_with('é')),
+            lain => panic!("seharusnya tetap terbaca, dapat {lain:?}"),
+        }
+    }
+
+    #[test]
+    fn encode_clipboard_request_delapan_byte() {
+        let m = encode_clipboard_request();
+        assert_eq!(m.len(), 8);
+        assert_eq!(decode(&m), Some(InputEvent::ClipboardRequest));
     }
 
     #[test]
