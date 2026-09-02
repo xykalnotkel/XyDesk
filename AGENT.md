@@ -146,6 +146,14 @@ minta dipecah jadi dua sesi. Jangan diam-diam mengerjakan dua-duanya.
 - **Lisensi**: proprietary. Jangan menambah dependensi tanpa mencatatnya di
   `docs/THIRD-PARTY-LICENSES.md`, dan hanya yang gratis tanpa kartu kredit
   (aturan #2 ROADMAP).
+- **Izin push/merge (izin tetap dari operator, 2 Sep 2026)**: kalau check CI
+  untuk area kerjamu hijau, langsung push/merge ke `main` — tidak perlu
+  menunggu persetujuan per perubahan. **Kecuali** perubahan berisiko
+  produksi besar: menghapus/migrasi data, mengubah auth/keamanan, mengubah
+  harga/lisensi, atau apa pun yang tidak bisa di-rollback dengan revert
+  biasa — itu tetap wajib konfirmasi ke operator dulu. Merge PR selalu
+  pakai merge commit (bukan squash) supaya identitas tiap kontributor
+  tetap tercatat di history.
 
 ---
 
