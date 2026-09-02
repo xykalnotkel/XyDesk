@@ -43,9 +43,10 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Nilai-nilai ini dicerminkan dari lib/core/tokens.dart (tema "Paper"),
-     supaya web dan aplikasi memakai warna yang sama — bukan dua ungu yang
-     kebetulan mirip. Jika token aplikasi berubah, salin ke sini. */
+  /* Dicerminkan dari lib/core/tokens.dart (tema "Paper"). Ungu inti
+     diselaraskan dengan logo X baru (violet kaca #7C3AED–#A78BFA) pada
+     design pass 2026-09 — token aplikasi Flutter menyusul (lihat HANDOFF.md).
+     Jika token aplikasi berubah, salin ke sini. */
   --bg: #fafaf9;
   --raised: #ffffff;
   --overlay: #f5f3ff;
@@ -54,10 +55,10 @@
   --line-strong: #d5cde8;
   --ink: #18181b;
   --black: #0d0716;
-  --accent: #6142d6;
-  --accent-deep: #4f2fb5;
-  --accent-2: #9a7bff;
-  --accent-soft: rgba(97, 66, 214, 0.1);
+  --accent: #7c3aed;
+  --accent-deep: #5b21b6;
+  --accent-2: #a78bfa;
+  --accent-soft: rgba(124, 58, 237, 0.1);
   --text-hi: #18181b;
   --text-mid: #52525b;
   --text-low: #9a9aa2;
@@ -66,7 +67,14 @@
   --danger: #b91c1c;
   --radius: 14px;
   --radius-sm: 10px;
+  --radius-lg: 20px;
   --maxw: 1120px;
+  /* Elevasi bernada ungu — bayangan abu murni terasa asing di kanvas Paper. */
+  --shadow-sm: 0 1px 2px rgba(38, 18, 92, 0.06);
+  --shadow-md: 0 4px 14px rgba(38, 18, 92, 0.09);
+  --shadow-lg: 0 12px 32px rgba(38, 18, 92, 0.14);
+  --ring: 0 0 0 3px rgba(124, 58, 237, 0.25);
+  --speed: 0.16s;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1542,3 +1550,220 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   line-height: 1.5;
 }
 .comment-head .author-name { min-width: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   QUIET SURFACE v2 — design pass menyeluruh (2026-09)
+   Satu lapisan di akhir berkas: meng-upgrade seluruh primitive
+   (tombol, input, dropdown, kartu, grid, state, dsb.) lewat cascade
+   tanpa mengubah struktur markup. Token inti ada di :root.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Fondasi interaksi ── */
+::selection { background: rgba(124, 58, 237, 0.18); }
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-sm);
+}
+
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 3px solid var(--bg);
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--accent-2); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* ── Tombol ── */
+.btn {
+  border-radius: 12px;
+  transition: background var(--speed) ease, border-color var(--speed) ease,
+    color var(--speed) ease, transform var(--speed) ease, box-shadow var(--speed) ease;
+}
+.btn.primary {
+  background: linear-gradient(160deg, #8b5cf6 0%, var(--accent) 45%, var(--accent-deep) 100%);
+  border: 1px solid var(--accent-deep);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.btn.primary:hover {
+  background: linear-gradient(160deg, #9d70ff 0%, #8447f5 45%, var(--accent-deep) 100%);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+.btn.primary:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+.btn.primary:disabled, .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.btn.ghost {
+  background: var(--raised);
+  box-shadow: var(--shadow-sm);
+}
+.btn.ghost:hover {
+  background: var(--overlay);
+  border-color: var(--accent-2);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.connect-cta { transition: background var(--speed) ease, transform var(--speed) ease, box-shadow var(--speed) ease, opacity var(--speed) ease; }
+.connect-cta:not(:disabled):hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+/* ── Input, textarea, dropdown ── */
+input, textarea, select {
+  transition: border-color var(--speed) ease, box-shadow var(--speed) ease,
+    background var(--speed) ease;
+}
+input:hover:not(:focus), textarea:hover:not(:focus) { border-color: var(--line-strong); }
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+input::placeholder, textarea::placeholder { color: var(--text-low); }
+
+.field-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-mid);
+}
+
+/* Dropdown riwayat di Connect */
+.recents-list {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: dropdown-in 0.14s ease;
+}
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.recent-item {
+  width: 100%;
+  text-align: left;
+  padding: 11px 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  transition: background var(--speed) ease;
+}
+.recent-item:hover { background: var(--overlay); }
+.recent-item + .recent-item { border-top: 1px solid var(--line); }
+.recent-clear {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger);
+  border-top: 1px solid var(--line);
+  transition: background var(--speed) ease;
+}
+.recent-clear:hover { background: rgba(185, 28, 28, 0.06); }
+
+/* ── Kartu & permukaan ── */
+.news-card, .surface-card, .stage-card, .comment {
+  background: var(--raised);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--speed) ease, transform var(--speed) ease,
+    border-color var(--speed) ease;
+}
+.news-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: var(--accent-2);
+}
+.news-card-cover { overflow: hidden; }
+.news-card-cover img { transition: transform 0.35s ease; }
+.news-card:hover .news-card-cover img { transform: scale(1.04); }
+
+/* Chip kategori berita */
+.news-cat button, .news-cat a {
+  border-radius: 999px;
+  transition: background var(--speed) ease, color var(--speed) ease,
+    border-color var(--speed) ease;
+}
+
+/* ── Grid & section ── */
+.news-grid { gap: 22px; }
+.eyebrow {
+  color: var(--accent);
+  font-weight: 800;
+  letter-spacing: 1.6px;
+}
+.page-lead { color: var(--text-mid); max-width: 640px; }
+
+/* ── State: kosong, error, memuat ── */
+.state-body { padding: 34px 22px; }
+.state-glyph {
+  color: var(--accent-2);
+  background: var(--overlay);
+  border-radius: 50%;
+  padding: 14px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.state-title { font-weight: 700; color: var(--text-hi); }
+.state-message { color: var(--text-mid); }
+.state-body.error .state-glyph {
+  color: var(--danger);
+  background: rgba(185, 28, 28, 0.07);
+}
+
+/* Skeleton: kilau lembut, bukan kedip */
+.sk, .sk-line, .sk-block, .skeleton [class^='sk'] {
+  background: linear-gradient(100deg, var(--overlay) 38%, #ece7fb 50%, var(--overlay) 62%);
+  background-size: 220% 100%;
+  animation: sk-sheen 1.4s ease-in-out infinite;
+}
+@keyframes sk-sheen {
+  from { background-position: 130% 0; }
+  to { background-position: -30% 0; }
+}
+
+/* ── Komentar & avatar ── */
+.comment { border-radius: var(--radius); }
+.comment-avatar { box-shadow: inset 0 0 0 1px rgba(38, 18, 92, 0.1); }
+.comment-form textarea:focus { border-color: var(--accent); }
+.reply-banner {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-2);
+  border-radius: var(--radius-sm);
+  padding: 7px 11px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.reply-link { transition: color var(--speed) ease; }
+.reply-link:hover { color: var(--accent); }
+
+/* Foto profil resmi (pengirim berita) — foto manusia, bukan badge logo */
+.author-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: inset 0 0 0 1px rgba(38, 18, 92, 0.12);
+}
+
+/* ── Navigasi & footer ── */
+.top-nav { backdrop-filter: blur(10px); }
+.site-footer a { transition: color var(--speed) ease; }
+.site-footer a:hover { color: var(--accent-2); text-decoration: none; }
+
+/* ── Statistik strip ── */
+.stat strong { color: var(--accent-deep); }

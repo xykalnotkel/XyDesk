@@ -848,7 +848,7 @@ function AuthorName({
   if (!official) return <span className="author-name">{name}</span>;
   return (
     <span className={`author-name official ${size}`}>
-      <img className="author-badge" src="/logo.png" alt="" aria-hidden="true" />
+      <img className="author-badge" src="/team/founder.jpg" alt="" aria-hidden="true" />
       <strong>{name}</strong>
       <span className="official-tag" title="Diverifikasi — tim XyDesk">
         Resmi
@@ -1238,7 +1238,7 @@ function NewsDetailPage({
                     <div className="comment-head">
                       <img
                         className="comment-avatar"
-                        src={c.official ? '/logo.png' : newsAvatarUrl(c.author)}
+                        src={c.official ? '/team/founder.jpg' : newsAvatarUrl(c.author)}
                         alt=""
                         loading="lazy"
                       />
@@ -1256,7 +1256,7 @@ function NewsDetailPage({
                             <div className="comment-head">
                               <img
                                 className="comment-avatar sm"
-                                src={r.official ? '/logo.png' : newsAvatarUrl(r.author)}
+                                src={r.official ? '/team/founder.jpg' : newsAvatarUrl(r.author)}
                                 alt=""
                                 loading="lazy"
                               />

@@ -59,6 +59,16 @@ Kebijakan rilis:
 
 ### Diubah
 
+- **Logo baru: X ungu kaca.** Diganti lewat jalur resmi —
+  `design/logo-asli.png` diperbarui, `tool/gen_logo.py` melahirkan ulang
+  semua turunan: ikon launcher Android (5 kepadatan, legacy + adaptive),
+  splash, favicon web, ikon PWA, `.ico` Windows, dan aset Flutter.
+- Profil pengirim berita di web kini foto founder XySpace — bukan lagi
+  badge logo X — di baris penulis artikel dan komentar resmi.
+- Design pass "Quiet Surface v2" untuk seluruh UI web: ungu inti
+  diselaraskan dengan logo baru, tombol/input/dropdown/kartu/grid/state
+  kosong-error/skeleton/scrollbar/focus-ring dirapikan jadi satu bahasa
+  visual; menghormati `prefers-reduced-motion`.
 - Warna tema PWA web disamakan ke Paper `#fafaf9` (mengikuti `tokens.dart`
   dan `style.css`) — manifest sebelumnya `#ffffff`, bar PWA Android bisa
   beda warna dari situs.

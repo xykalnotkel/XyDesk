@@ -11,6 +11,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Client Flutter
 
+- [ ] (dari Danu - XySpace Team, 2026-09-02) — **Rebrand**: logo X baru sudah
+  masuk lewat `design/logo-asli.png` + `tool/gen_logo.py` (ikon launcher,
+  splash, aset Flutter ikut lahir ulang). Verifikasi hasilnya di build
+  Android nyata. Selaraskan juga token ungu `lib/core/tokens.dart` dengan
+  web: accent `#7C3AED`, deep `#5B21B6`, lavender `#A78BFA`.
+- [ ] (dari Danu - XySpace Team, 2026-09-02) — Avatar penulis resmi berita:
+  web kini memakai foto founder (`web/public/team/founder.jpg`, live di
+  `https://app.xystudio.my.id/team/founder.jpg`) menggantikan badge logo X.
+  Samakan di Flutter (boleh load dari URL itu).
 - [ ] (dari Danu - XySpace Team, 2026-09-02) — Render gambar inline
   `![keterangan](url)` di `lib/features/news/news_detail_page.dart` —
   web & desktop sudah; ini blocker terakhir sebelum berita bergambar boleh
@@ -26,6 +35,11 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Desktop Shell
 
+- [ ] (dari Danu - XySpace Team, 2026-09-02) — **Rebrand**: ikon Windows
+  (`packaging/windows/xydesk.ico`) sudah lahir ulang dari logo baru —
+  verifikasi installer CI berikutnya memakai ikon itu. Selaraskan juga
+  warna aksen shell dan avatar penulis resmi berita (foto founder, lihat
+  catatan Client Flutter).
 - [ ] (dari Danu - XySpace Team, 2026-09-02) — Form komentar berita: pindah
   ke BAWAH daftar komentar + auto-scroll saat "Balas" (web sudah; alasan:
   input di atas menyulitkan setelah membaca komentar).
@@ -46,7 +60,12 @@ _(kosong)_
 
 ## Untuk: Backend / Edge
 
-_(kosong)_
+- [ ] (dari Danu - XySpace Team, 2026-09-02) — Template email berita
+  (`news/src/worker.js`) memakai `badge-xyspace.png` dan menampilkan logo
+  lama sebagai identitas pengirim. `logo.png` di web sudah otomatis berganti
+  (URL sama, isi baru), tapi `badge-xyspace.png` TIDAK dihasilkan
+  `tool/gen_logo.py` — cek asalnya, regenerasi dengan brand baru, dan
+  pertimbangkan foto founder untuk blok penulis email.
 
 ## Untuk: News & Konten
 
