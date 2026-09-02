@@ -11,12 +11,8 @@ name: Deploy Signaling (Cloudflare Workers)
 # Variable repo: GOOGLE_CLIENT_ID dan RESEND_FROM
 
 on:
-  push:
-    # Tanpa filter branch, push cloudflare/** dari branch mana pun akan
-    # men-deploy Worker PRODUKSI. Batasi ke main saja.
-    branches: [main]
-    paths:
-      - 'cloudflare/**'
+  # Manual hanya (kebijakan 3 Sep 2026): deploy = setelah Build yang
+  # disetujui. Push ke `cloudflare/**` tidak men-deploy otomatis.
   workflow_dispatch:
 
 permissions:

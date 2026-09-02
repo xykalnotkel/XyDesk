@@ -7,11 +7,30 @@ perlu menjalankan Flutter, Android SDK, Rust, atau Visual Studio secara lokal.
 
 | Berkas | Pemicu | Hasil |
 |---|---|---|
-| `.github/workflows/build.yml` | push/PR (semua branch PR, manual) | gerbang mutu per-area (difilter), APK Android, `XyDesk.exe` + `XyDesk-Host.exe`, bundle Web |
-| `.github/workflows/deploy-signaling.yml` | perubahan `cloudflare/**`, manual | deploy Cloudflare Worker API/signaling |
-| `.github/workflows/deploy-web.yml` | Build `main` sukses **yang menyentuh `web/`**, manual recovery | deploy bundle Flutter Web terverifikasi ke Cloudflare Static Assets |
+| `.github/workflows/build.yml` | **manual** (`workflow_dispatch`) saja — tidak otomatis oleh push | gerbang mutu per-area, APK Android, `XyDesk.exe` + `XyDesk-Host.exe`, bundle Web |
+| `.github/workflows/deploy-signaling.yml` | **manual** (`workflow_dispatch`) | deploy Cloudflare Worker API/signaling |
+| `.github/workflows/deploy-web.yml` | Build `main` sukses, manual recovery | deploy bundle Flutter Web terverifikasi ke Cloudflare Static Assets |
 | `.github/workflows/release.yml` | Build `main` sukses + nilai `version` berubah, manual recovery | GitHub Release multi-platform + push OneSignal |
 | `.github/workflows/verify-push-auth.yml` | setiap push ke `main` | audit izin push: commit wajib memuat `Izin: <ID>` yang berstatus `DISETUJUI` di `AGENT_BOARD.md` |
+
+## Kebijakan pemicu (sejak 3 Sep 2026): build = izin manual
+
+Push **tidak** memicu build penuh. Yang tersisa otomatis hanya **bagian
+web**: push yang menyentuh `web/**` menjalankan Build dengan filter area
+(job `web` saja), lalu `deploy-web.yml` bila bundel Web ada. Semua jalur
+lain — build penuh, kemasan desktop, deploy news/signaling — hanya lewat
+`workflow_dispatch` (satu run penuh saat operator menyatakan siap: bump
+versi → Build → Release → deploy → berita). Alasan: build otomatis dari
+push perantara menghasilkan "hijau palsu" (run terfilter, artefak tak
+lengkap) dan run yang terbuang; hasil akhir yang dianggap bukti hanya run
+yang disetujui. `release.yml`/`deploy-web.yml` menyala HANYA setelah Build
+sukses — pemicu sebenarnya tetap satu.
+
+Untuk memicu Build penuh:
+
+```bash
+gh workflow run build.yml --ref main
+```
 
 ## Filter area di Build (sejak 3 Sep 2026)
 

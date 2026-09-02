@@ -5,11 +5,8 @@ name: Deploy News (Cloudflare Workers + D1)
 # produksi. Migrasi skema D1 dijalankan dulu (idempoten).
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'news/**'
-      - '.github/workflows/deploy-news.yml'
+  # Manual hanya (kebijakan 3 Sep 2026): deploy = setelah Build yang
+  # disetujui. Push ke `news/**` tidak men-deploy otomatis.
   workflow_dispatch:
 
 permissions:

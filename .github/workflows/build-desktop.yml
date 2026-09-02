@@ -8,11 +8,8 @@ name: Build Desktop (Electron + Next.js)
 # sintaks proses utama, typecheck renderer, dan static export.
 
 on:
-  push:
-    paths:
-      - 'desktop/**'
-      - 'host/**'
-      - '.github/workflows/build-desktop.yml'
+  # Manual hanya (kebijakan 3 Sep 2026): semua build butuh izin operator
+  # lewat `workflow_dispatch`, tidak otomatis oleh push.
   workflow_dispatch:
 
 permissions:

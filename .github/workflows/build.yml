@@ -29,17 +29,25 @@ name: Build
 #   status check (termasuk PR dokumen) — tidak ada lagi "PR tampil tanpa check".
 
 on:
+  # KEBIJAKAN (permintaan operator, 3 Sep 2026): push TIDAK memicu build
+  # penuh. Satu-satunya jalur otomatis yang tersisa adalah bagian web:
+  # push yang menyentuh `web/**` → Build workflow berjalan dengan filter
+  # area (job `web` saja) → `deploy-web.yml` ikut bila artefak bundel ada.
+  # Array push/pull_request/service lain di sini? Semuanya MANUAL via
+  # `workflow_dispatch` (run penuh — gerbang mutu + APK + host + Web) —
+  # termasuk bump versi (satu-satunya pemicu rilis), jadi rilis terjadi
+  # persis saat operator menekan tombol: Build → Release → deploy → berita.
+  #
+  # Mengapa: build otomatis dari push perantara menghasilkan "hijau palsu"
+  # (run terfilter, artefak tak lengkap) dan run yang terbuang. Hasil akhir
+  # yang dianggap bukti hanya run penuh yang disetujui.
+  #
+  # Kalau suatu saat area lain boleh memicu build parsial, tambahkan path
+  # di sini — job `changes` sudah mendukung pemfiltreran per-area.
   push:
     branches: [main]
-  # SENGAJA tanpa filter `branches`.
-  #
-  # Sebelumnya di sini ada `branches: [main]`, yang berarti workflow hanya
-  # berjalan untuk pull request yang menargetkan main. Pull request bertumpuk
-  # — PR kedua yang basisnya branch PR pertama, pola normal saat memecah
-  # perubahan besar — tidak diuji sama sekali dan tampil TANPA status check.
-  # Bukan merah, bukan hijau: kosong. Itu bentuk kegagalan paling berbahaya,
-  # karena terlihat seperti tidak ada masalah.
-  pull_request:
+    paths:
+      - 'web/**'
   workflow_dispatch:
 
 # Push baru membatalkan run lama di branch yang sama — hemat waktu runner
