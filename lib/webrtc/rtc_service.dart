@@ -351,12 +351,18 @@ class RtcService {
       init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly),
     );
 
-    // Audio forward (host → perangkat): transceiver recvonly agar offer
-    // memuat m-line audio — host mengisi track Opus ke sini bila WASAPI
-    // aktif. Nonaktif = direction `inactive` (tanpa negosiasi ulang).
+    // Audio dua arah (host → perangkat, dan mic perangkat → host).
+    //
+    // Arahnya HARUS SendRecv sejak offer pertama. Menurut aturan JSEP arah
+    // akhir adalah irisan penawaran klien dan keinginan host: dengan
+    // RecvOnly, host menjawab SendOnly dan tidak pernah menerima — track
+    // mic hasil getUserMedia tidak sampai ke host meski izin sudah diberikan.
+    // Dengan SendRecv, addTrack(track mic) sekadar menempel ke transceiver
+    // yang sudah ada: tidak ada offer kedua, tidak ada sesi yang dirombak
+    // (host membangun Session baru untuk setiap offer yang diterimanya).
     _audioTransceiver = await pc.addTransceiver(
       kind: RTCRtpMediaType.RTCRtpMediaTypeAudio,
-      init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly),
+      init: RTCRtpTransceiverInit(direction: TransceiverDirection.SendRecv),
     );
 
     // Data channel input: reliable + ordered (kontrol, bukan media).
@@ -476,7 +482,9 @@ class RtcService {
     if (t == null) return;
     try {
       await t.setDirection(
-        on ? TransceiverDirection.RecvOnly : TransceiverDirection.Inactive,
+        // Bukan Inactive: itu mematikan mic yang sedang dikirim juga.
+        // SendOnly = suara host berhenti, mic perangkat tetap jalan.
+        on ? TransceiverDirection.SendRecv : TransceiverDirection.SendOnly,
       );
     } catch (e) {
       DevLog.w('rtc', 'set direction audio gagal', '$e');
@@ -493,6 +501,9 @@ class RtcService {
         'video': false,
       });
       final track = stream.getAudioTracks().first;
+      // addTrack menempel ke transceiver audio SendRecv yang sudah ada
+      // (dibuat saat negotiate()), jadi TIDAK perlu offer baru. RTP mic
+      // langsung mengalir di m-line yang sudah disepakati sejak awal.
       await _pc?.addTrack(track, stream);
       _micStream = stream;
       _micEnabled = true;

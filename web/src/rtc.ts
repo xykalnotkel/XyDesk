@@ -189,9 +189,17 @@ export class RtcSession {
     this.pc = pc;
 
     pc.addTransceiver('video', { direction: 'recvonly' });
-    // Audio forward (host → browser): m-line audio di offer; host mengisi
-    // track Opus bila WASAPI aktif.
-    this.audioTransceiver = pc.addTransceiver('audio', { direction: 'recvonly' });
+    // Audio dua arah (host → browser, dan mic browser → host).
+    //
+    // Arahnya HARUS sendrecv sejak offer pertama, bukan recvonly lalu
+    // dinegosiasi ulang saat mic dinyalakan. Menurut aturan JSEP arah akhir
+    // adalah irisan antara penawaran klien dan keinginan host: kalau klien
+    // menawar recvonly, host menjawab sendonly — artinya host tidak pernah
+    // menerima, dan track mic hasil getUserMedia terkirim ke mana-mana
+    // kecuali ke host. Dengan sendrecv, addTrack(track mic) cukup menempel
+    // ke transceiver yang sudah ada: tidak ada offer kedua, tidak ada
+    // sesi yang dirombak (host membangun Session baru untuk setiap offer).
+    this.audioTransceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
     this.input = pc.createDataChannel('input');
     this.input.onmessage = (ev) => {
       // Host mengirim meta teks (layar + audio) di channel ini.
@@ -293,11 +301,15 @@ export class RtcSession {
     this.sendInput(b);
   }
 
-  /// Aktif/nonaktifkan pemutaran audio host (transceiver direction).
+  /// Aktif/nonaktifkan pemutaran audio host.
+  ///
+  /// Menyeluruh `inactive` juga mematikan mic yang sedang dikirim, jadi
+  /// keadaan "dibisukan" memakai `sendonly`: suara host berhenti, mic kamu
+  /// tetap jalan.
   async setAudioEnabled(on: boolean) {
     if (!this.audioTransceiver) return;
     try {
-      this.audioTransceiver.direction = on ? 'recvonly' : 'inactive';
+      this.audioTransceiver.direction = on ? 'sendrecv' : 'sendonly';
     } catch {
       /* abaikan — audio tidak tersedia */
     }
@@ -313,6 +325,9 @@ export class RtcSession {
       });
       const track = stream.getAudioTracks()[0];
       if (!track) throw new Error('track mic tidak ada');
+      // addTrack menempel ke transceiver audio sendrecv yang sudah ada
+      // (dibuat saat negotiate()), jadi TIDAK perlu offer baru. RTP mic
+      // langsung mengalir di m-line yang sudah disepakati sejak awal.
       this.pc?.addTrack(track, stream);
       this.micStream = stream;
       this.micEnabled = true;
