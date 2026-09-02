@@ -2150,3 +2150,161 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   .support-row { flex-wrap: wrap; }
   .field-tools { gap: 6px; }
 }
+
+/* ── Mode founder di form komentar ── */
+.admin-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--accent-2);
+  background: rgba(124, 58, 237, 0.07);
+  margin-bottom: 10px;
+  font-size: 13.5px;
+}
+.admin-banner img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.admin-banner .official-tag { margin-left: 6px; font-style: normal; }
+.admin-banner button {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  font-size: 12px;
+}
+.admin-setup {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--accent-2);
+  margin-bottom: 10px;
+}
+.admin-setup p { font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; }
+.admin-setup-row { display: flex; gap: 8px; }
+.admin-setup-row input { flex: 1; }
+
+/* ── Halaman Billing (Sewa PC) ── */
+.billing-page .grad {
+  background: linear-gradient(100deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.billing-pakets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 28px 0;
+}
+.paket-card {
+  position: relative;
+  text-align: left;
+  padding: 22px 20px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  transition: border-color var(--speed) ease, transform var(--speed) ease,
+    box-shadow var(--speed) ease;
+}
+.paket-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.paket-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+.paket-flag {
+  position: absolute;
+  top: -10px;
+  left: 18px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.paket-card h3 { font-size: 17px; margin-bottom: 6px; }
+.paket-harga { margin: 0 0 6px; color: var(--ink-soft); font-size: 13px; }
+.paket-harga strong { font-size: 20px; color: var(--ink); }
+.paket-ringkas { font-size: 13.5px; color: var(--ink-soft); margin-bottom: 10px; }
+.paket-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.paket-card li { font-size: 13px; color: var(--ink-soft); padding-left: 18px; position: relative; }
+.paket-card li::before { content: '✓'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+
+.billing-order { padding: 26px 28px; margin-bottom: 36px; }
+.billing-order h2 { font-size: 20px; margin-bottom: 14px; }
+.durasi-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.durasi-chip {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  font-size: 14px;
+  font-weight: 600;
+}
+.durasi-chip.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+.order-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--overlay);
+  border: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+.order-summary span { font-weight: 600; font-size: 14.5px; display: block; }
+.order-summary small { color: var(--ink-soft); font-size: 12.5px; }
+.order-summary strong { font-size: 22px; color: var(--accent-deep); }
+.billing-order .btn { width: 100%; text-align: center; justify-content: center; display: inline-flex; }
+.order-note { font-size: 12.5px; color: var(--ink-soft); margin: 12px 0 0; text-align: center; }
+
+.billing-steps { margin-bottom: 36px; }
+.billing-steps h2 { font-size: 20px; margin-bottom: 16px; }
+.billing-steps ol {
+  list-style: none;
+  counter-reset: langkah;
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+}
+.billing-steps li {
+  counter-increment: langkah;
+  position: relative;
+  padding: 14px 16px 14px 56px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+.billing-steps li::before {
+  content: counter(langkah);
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.billing-steps li strong { display: block; font-size: 15px; margin-bottom: 2px; }
+.billing-steps li p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+
+.billing-buy { padding: 24px 28px; text-align: center; margin-bottom: 40px; }
+.billing-buy h2 { font-size: 19px; margin-bottom: 6px; }
+.billing-buy .btn { margin-top: 14px; }
+
+@media (max-width: 760px) {
+  .billing-pakets { grid-template-columns: 1fr; }
+  .billing-order { padding: 20px 16px; }
+}

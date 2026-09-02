@@ -133,17 +133,41 @@ export function postComment(
   slug: string,
   content: string,
   parentId?: number | null,
+  admin?: { token: string },
 ): Promise<{ comment: NewsComment }> {
   return getJson(`${NEWS_BASE}/api/news/${encodeURIComponent(slug)}/comments`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      // Badge resmi tetap keputusan SERVER: header ini cuma bukti, worker
+      // yang memvalidasi token terhadap ADMIN_TOKEN miliknya.
+      ...(admin ? { 'x-admin-token': admin.token } : {}),
+    },
     body: JSON.stringify({
       fp: newsFingerprint(),
-      author: newsDisplayName(),
+      author: admin ? ADMIN_DISPLAY_NAME : newsDisplayName(),
       content,
       ...(parentId != null ? { parentId } : {}),
     }),
   });
+}
+
+// ── Mode admin (founder) ───────────────────────────────────────
+// Email Google founder → balasan tampil sebagai Haekal Saputra dengan foto
+// profil resmi + badge XySpace. Email hanya MEMBUKA UI-nya; otoritas
+// sesungguhnya tetap ADMIN_TOKEN yang divalidasi worker — email saja tidak
+// bisa memalsukan badge.
+export const ADMIN_EMAIL = 'xycdigital@gmail.com';
+export const ADMIN_DISPLAY_NAME = 'Haekal Saputra';
+const ADMIN_TOKEN_KEY = 'xydesk.news.adminToken';
+
+export function getAdminToken(): string {
+  return localStorage.getItem(ADMIN_TOKEN_KEY) ?? '';
+}
+
+export function setAdminToken(token: string): void {
+  if (token.trim()) localStorage.setItem(ADMIN_TOKEN_KEY, token.trim());
+  else localStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
 /// Daftarkan email untuk dikabari nanti.

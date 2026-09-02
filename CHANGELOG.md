@@ -43,6 +43,26 @@ Kebijakan rilis:
   FPS nominal 60 (16,67 ms) lewat `NOMINAL_FPS`/`frame_duration()` —
   sebelumnya angka 33 ms terpatri acak di `main.rs`, dan sumber pola uji
   (non-Windows) kini berpacing 60 fps, bukan ~30 fps.
+- Web: halaman **Sewa PC** (`/billing`) — pilih paket & spek, durasi mulai
+  1 jam / Rp 5.000, ringkasan total, pemesanan via WhatsApp; menjelaskan
+  alur ID+password+kode billing dengan verifikasi 4 digit akhir nomor WA.
+  Pembayaran otomatis (QRIS) belum aktif dan halaman mengatakannya jujur.
+- Web: mode founder di komentar berita — login Google `xycdigital@gmail.com`
+  + ADMIN_TOKEN (sekali, tersimpan lokal) membuat balasan tampil sebagai
+  Haekal Saputra dengan foto resmi dan badge; keabsahan tetap divalidasi
+  worker dari token, bukan dari email.
+
+- Client Flutter: **unggah foto profil dari galeri ke Cloudinary** (unsigned
+  upload preset, tanpa menyimpan `api_secret` di klien) — pilih foto lewat
+  `image_picker`, diunggah ke folder `profile`, lalu URL-nya dipakai sebagai
+  avatar. Yang tersisa: operator membuat unsigned preset di dasbor dan mengisi
+  `cloudinaryUploadPreset` (lihat `lib/core/cloudinary_upload.dart`). Kalau
+  belum diisi, opsi upload menampilkan pesan yang jelas, bukan gagal senyap.
+- Client Flutter: dependensi baru `image_picker` (untuk memilih foto dari
+  galeri). Inventaris lisensi pihak ketiga diregenerasi: **499 → 514**
+  komponen (Dart/Flutter 105 → 120).
+- Client Flutter: kontrak konfigurasi unggah Cloudinary dikunci lewat uji
+  (`test/core/cloudinary_upload_test.dart`).
 
 ## [6.3.0] - 2026-09-03
 
@@ -162,6 +182,14 @@ Kebijakan rilis:
   yang sama tidak bergeser tanpa terlihat nanti.
 
 ### Diubah
+- Web: badge penulis/komentar resmi kini bertuliskan **XySpace** (sebelumnya
+  "Resmi").
+- Web: teks beranda ditulis ulang membumi — hero tanpa jargon
+  "glass-to-glass", empat kartu fitur kini bicara manfaat pengguna, bukan
+  istilah teknis internal (HUD glyph, modifier sticky, NVENC).
+- Worker berita: CORS mengizinkan header `X-Admin-Token` agar mode founder
+  di web bisa mengirim komentar resmi dari browser.
+
 - Web: kata penting (cetak tebal) di badan artikel berita kini berwarna
   ungu brand agar penekanan langsung terlihat.
 - AGENT.md: aturan logo dipertegas — `design/logo-asli.png` (X ungu

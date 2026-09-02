@@ -81,6 +81,34 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 ## Untuk: Backend / Edge
 
 _(kosong)_
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Billing sewa PC otomatis**:
+  halaman `/billing` web sudah tayang (paket, durasi, total, pesan via WA;
+  operator konfirmasi manual). Otomasi penuh butuh: (1) gateway pembayaran
+  QRIS (Midtrans/Xendit — perlu keputusan operator + akun), (2) endpoint
+  provisioning yang mengirim ID+password XyDesk + kode billing setelah
+  webhook pembayaran, verifikasi penebusan = 4 digit akhir nomor WA pembeli.
+  Catatan CyberIndo: TIDAK ada API publik/dokumentasi developer (sistem
+  tertutup, terikat GCA) — integrasi langsung tidak mungkin tanpa
+  reverse-engineering. Jalur realistis: (a) helper kecil di PC server warnet
+  yang menerima perintah dari backend kita lalu membuat member/top-up, atau
+  (b) lepas dari billing CyberIndo untuk sesi remote — host XyDesk sendiri
+  yang membatasi durasi sesi.
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Verifikasi admin komentar
+  yang lebih mulus**: sekarang founder menempel ADMIN_TOKEN sekali di
+  perangkat (UI web sudah ada, worker memvalidasi). Peningkatan: worker
+  berita menerima Google ID token dan memverifikasi email founder langsung
+  (audience + signature), sehingga tidak perlu menempel token manual.
+
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Preset upload Cloudinary
+  unsigned** untuk foto profil: kode sisi klien sudah selesai (unggah lewat
+  `lib/core/cloudinary_upload.dart`, opsinya ada di menu edit profil). Yang
+  kurang **hanya satu langkah operator**: buat **unsigned upload preset** di
+  dasbor Cloudinary lalu set `cloudinaryUploadPreset` (dan pastikan
+  `cloudinaryCloudName` benar). Tidak ada yang perlu diubah di kode lagi.
+  opsional untuk cuplikan "layar terakhir" yang kokoh: kalau tangkapan
+  klien (RepaintBoundary) ternyata gelap di perangkat nyata, jalur
+  terbaik adalah host mengirimkan satu frame terakhir saat sesi berakhir.
+  Protokolnya bisa ditambahkan tanpa mengubah kontrak yang ada.
 
 ## Untuk: News & Konten
 

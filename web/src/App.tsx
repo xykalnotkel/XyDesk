@@ -25,16 +25,19 @@ import {
   GOOGLE_CLIENT_ID,
 } from './google';
 import {
+  ADMIN_EMAIL,
   fetchNewsList,
   fetchNewsPost,
   formatNewsDate,
   formatRelativeTime,
+  getAdminToken,
   NEWS_CATEGORIES,
   NEWS_SHARE_BASE,
   NewsComment,
   NewsPost,
   newsAvatarUrl,
   postComment,
+  setAdminToken,
   subscribeNews,
   toggleLike,
 } from './news';
@@ -54,12 +57,13 @@ import {
   STAGE_LABEL,
 } from './version';
 import { vkFromCode } from './vk';
+import BillingPage from './Billing';
 import { VirtualKeyboard, GamingPad, SessionPanel, DEFAULT_PREFS } from './session_ui';
 import type { SessionPrefs } from './session_ui';
 import { QrScanModal, ConnectGuide, SupportLinks } from './connect_extras';
 import { WhatsAppIcon, TelegramIcon, XIcon, FacebookIcon } from './brand-icons';
 
-type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news';
+type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news' | '/billing';
 type Route = StaticRoute | NewsDetailRoute;
 interface NewsDetailRoute {
   page: 'news-detail';
@@ -167,6 +171,7 @@ export default function App() {
   let page: React.ReactNode;
   if (route === '/download') page = <DownloadPage />;
   else if (route === '/legal') page = <LegalPage />;
+  else if (route === '/billing') page = <BillingPage />;
   else if (route === '/news') page = <NewsPage navigate={navigate} />;
   else if (typeof route === 'object' && route.page === 'news-detail')
     page = <NewsDetailPage slug={route.slug} navigate={navigate} />;
@@ -235,6 +240,9 @@ function SiteHeader({
           <button className={current === '/news' ? 'active' : ''} onClick={() => navigate('/news')}>
             Berita
           </button>
+          <button className={current === '/billing' ? 'active' : ''} onClick={() => navigate('/billing')}>
+            Sewa PC
+          </button>
           <button className={current === '/download' ? 'active' : ''} onClick={() => navigate('/download')}>
             Unduh
           </button>
@@ -290,6 +298,9 @@ function SiteHeader({
             <button className={current === '/news' ? 'active' : ''} onClick={() => go('/news')}>
               Berita
             </button>
+            <button className={current === '/billing' ? 'active' : ''} onClick={() => go('/billing')}>
+              Sewa PC
+            </button>
             <button className={current === '/download' ? 'active' : ''} onClick={() => go('/download')}>
               Unduh
             </button>
@@ -323,9 +334,9 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
             <span className="grad"> genggaman</span>.
           </h1>
           <p>
-            Akses layar PC dari HP atau browser dengan target glass-to-glass di
-            bawah 40 ms di LAN. Untuk kerja, untuk game — tanpa server perantara
-            yang menyimpan sesimu.
+            Akses layar PC dari HP atau browser, nyaris tanpa jeda di jaringan
+            lokal. Buat kerja atau main game — koneksinya langsung antar
+            perangkatmu, tanpa server perantara yang ikut melihat sesimu.
           </p>
           <div className="hero-cta">
             <button className="btn primary big" onClick={() => navigate('/download')}>
@@ -371,21 +382,21 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
       <section className="features">
         <h2>Dibangun untuk terasa lokal</h2>
         <div className="feature-grid">
-          <FeatureCard index="01" title="Panel gaming dua sisi">
-            Trackpad, keyboard virtual dengan modifier sticky, dan HUD glyph
-            border-only yang tidak menutupi piksel game.
+          <FeatureCard index="01" title="Main game langsung dari HP">
+            WASD, tombol yang bisa ditahan, keyboard lengkap, dan trackpad —
+            semua kontrol PC ada di layar HP tanpa menutupi jalannya game.
           </FeatureCard>
-          <FeatureCard index="02" title="Pasangan terenkripsi">
-            Pairing password dijaga pembatas laju (anti brute-force), sesi media
-            peer-to-peer lewat WebRTC.
+          <FeatureCard index="02" title="Koneksi pribadi dan aman">
+            Masuk pakai ID dan password dari PC-mu sendiri. Gambar dan suara
+            mengalir langsung antar perangkat, tidak mampir ke server kami.
           </FeatureCard>
-          <FeatureCard index="03" title="Encoder sadar konten">
-            NVENC hardware saat GPU ada, fallback software otomatis — dengan
-            bitrate terkendali agar Wi-Fi rumah tetap lega.
+          <FeatureCard index="03" title="Gambar mulus, jaringan hemat">
+            Encoding pakai hardware GPU bila ada, dan bitrate menyesuaikan
+            supaya Wi-Fi rumah tetap lega untuk perangkat lain.
           </FeatureCard>
-          <FeatureCard index="04" title="Jujur soal angka">
-            Status transport ditampilkan apa adanya: pairing, negosiasi,
-            koneksi — bukan layar dummy yang pura-pura tersambung.
+          <FeatureCard index="04" title="Langsung dari browser">
+            Tidak sempat pasang aplikasi? Buka halaman Connect, masukkan ID,
+            dan PC-mu tampil di tab browser — HP maupun laptop.
           </FeatureCard>
         </div>
       </section>
@@ -841,8 +852,8 @@ function AuthorName({
     <span className={`author-name official ${size}`}>
       <img className="author-badge" src="/team/founder.jpg" alt="" aria-hidden="true" />
       <strong>{name}</strong>
-      <span className="official-tag" title="Diverifikasi — tim XyDesk">
-        Resmi
+      <span className="official-tag" title="Diverifikasi — tim XySpace">
+        XySpace
       </span>
     </span>
   );
@@ -982,6 +993,19 @@ function NewsDetailPage({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [replyTo, setReplyTo] = useState<NewsComment | null>(null);
+  // Mode founder: login Google xycdigital@gmail.com membuka UI-nya;
+  // keabsahan badge tetap diputuskan worker dari ADMIN_TOKEN.
+  const [adminEligible, setAdminEligible] = useState(false);
+  const [adminToken, setAdminTokenState] = useState(getAdminToken);
+  const [adminDraft, setAdminDraft] = useState('');
+  useEffect(() => {
+    const jwt = localStorage.getItem('xydesk.web.jwt');
+    if (!jwt) return;
+    me(jwt)
+      .then((r) => setAdminEligible(r.user?.email?.toLowerCase() === ADMIN_EMAIL))
+      .catch(() => {});
+  }, []);
+  const adminActive = adminEligible && adminToken !== '';
   // Form komentar ada di BAWAH daftar; saat "Balas" ditekan dari komentar
   // paling atas, gulirkan ke form supaya pengguna tidak mencarinya.
   const commentFormRef = useRef<HTMLDivElement | null>(null);
@@ -1042,8 +1066,14 @@ function NewsDetailPage({
     setBusy(true);
     setNotice('');
     try {
-      // Username acak per perangkat — tanpa kolom nama manual.
-      const r = await postComment(post.slug, commentText.trim(), replyTo?.id ?? null);
+      // Username acak per perangkat — kecuali mode founder yang terverifikasi
+      // server: tampil sebagai Haekal Saputra + badge XySpace.
+      const r = await postComment(
+        post.slug,
+        commentText.trim(),
+        replyTo?.id ?? null,
+        adminActive ? { token: adminToken } : undefined,
+      );
       setData((d) =>
         d
           ? { post: { ...d.post, commentCount: d.post.commentCount + 1 }, comments: [...d.comments, r.comment] }
@@ -1264,6 +1294,53 @@ function NewsDetailPage({
               })}
             </div>
             <div className="comment-form" ref={commentFormRef}>
+              {adminActive && (
+                <div className="admin-banner">
+                  <img src="/team/founder.jpg" alt="" />
+                  <span>
+                    Membalas sebagai <strong>Haekal Saputra</strong>
+                    <em className="official-tag">XySpace</em>
+                  </span>
+                  <button
+                    type="button"
+                    title="Matikan mode tim di perangkat ini"
+                    onClick={() => {
+                      setAdminToken('');
+                      setAdminTokenState('');
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              {adminEligible && !adminActive && (
+                <div className="admin-setup">
+                  <p>
+                    Login founder terdeteksi. Tempel <code>ADMIN_TOKEN</code> sekali
+                    untuk membalas sebagai tim (tersimpan hanya di perangkat ini):
+                  </p>
+                  <div className="admin-setup-row">
+                    <input
+                      type="password"
+                      placeholder="ADMIN_TOKEN"
+                      value={adminDraft}
+                      onChange={(e) => setAdminDraft(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn primary"
+                      disabled={!adminDraft.trim()}
+                      onClick={() => {
+                        setAdminToken(adminDraft);
+                        setAdminTokenState(adminDraft.trim());
+                        setAdminDraft('');
+                      }}
+                    >
+                      Aktifkan
+                    </button>
+                  </div>
+                </div>
+              )}
               {replyTo && (
                 <div className="reply-banner">
                   <span>
