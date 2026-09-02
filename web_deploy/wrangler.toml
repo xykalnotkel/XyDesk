@@ -12,6 +12,10 @@ routes = [
 
 [assets]
 directory = "./site"
+# WAJIB: tanpa binding ini env.ASSETS undefined dan worker crash 500 untuk
+# semua deep link non-bot (/legal, /news/..., /connect) — bug produksi nyata,
+# direproduksi lokal 2 Sep 2026.
+binding = "ASSETS"
 not_found_handling = "single-page-application"
 html_handling = "auto-trailing-slash"
 

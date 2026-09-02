@@ -51,6 +51,15 @@ Kebijakan rilis:
 
 ### Diperbaiki
 
+- **Web produksi: semua deep link (bukan halaman muka) balas 500.**
+  `/legal`, `/download`, `/connect`, `/news`, dan setiap tautan berita yang
+  dibagikan berakhir di halaman error Cloudflare 1101 — binding `ASSETS`
+  tidak pernah dideklarasikan di `web_deploy/wrangler.toml`, jadi worker
+  crash saat menyajikan aplikasi untuk pengunjung biasa (crawler sosial
+  tidak kena, karena jalur OG tidak memakai binding itu). Direproduksi di
+  `wrangler dev` lokal, diperbaiki satu baris (`binding = "ASSETS"`), dan
+  diverifikasi ulang: deep link 200, fallback SPA jalan, halaman OG bot
+  tetap utuh.
 - CORS Worker gagal-tertutup: tanpa `CORS_ORIGINS` tidak ada origin yang
   diizinkan (sebelumnya `*`). `*` tetap tersedia bila ditulis eksplisit.
   Dikunci 10 test baru.
