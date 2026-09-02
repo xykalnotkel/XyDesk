@@ -43,6 +43,17 @@ Kebijakan rilis:
   sebelumnya angka 33 ms terpatri acak di `main.rs`, dan sumber pola uji
   (non-Windows) kini berpacing 60 fps, bukan ~30 fps.
 
+### Diperbaiki
+
+- Rilis tidak lagi gagal merah saat Build pemicunya hanya build terfilter
+  (mis. commit papan/dokumen tanpa artefak client): `release.yml` kini
+  memeriksa artefak `XyDesk-Android-APK` + `XyDesk-Windows-*` pada run
+  Build yang dipilih dan melewatkan rilis dengan tenang bila belum ada
+  (dulu `gh run download` gagal `BlobNotFound`). Build penuh via
+  `workflow_dispatch` juga dipindah ke jalur antrean `manual` sehingga
+  tidak bisa dibatalkan push biasa (run Build bump versi 6.3.0 sempat
+  batal karena push papan berikutnya).
+
 ## [6.3.0] - 2026-09-03
 
 ### Ditambahkan

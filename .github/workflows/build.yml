@@ -44,8 +44,13 @@ on:
 
 # Push baru membatalkan run lama di branch yang sama — hemat waktu runner
 # dan mencegah dua build berebut artefak dengan nama sama.
+#
+# Khusus dispatch (build penuh / pemulihan rilis) dijalankan di jalur
+# tersendiri (`manual`) supaya TIDAK dibatalkan push biasa. Pelajaran nyata
+# (3 Sep 2026): run Build penuh untuk bump versi 6.3.0 dibatalkan oleh push
+# "board" berikutnya akibat cancel-in-progress — rilis jadi buntu.
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && 'manual' || 'auto' }}
   cancel-in-progress: true
 
 permissions:

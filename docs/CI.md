@@ -45,6 +45,11 @@ Konsekuensi yang dijaga:
   bukan gagal.
 - **Job `skipped` = bukan areamu, bukan kegagalan.** Baca tabel *Ringkasan*
   pada run untuk melihat area yang terdeteksi.
+- **Release hanya mau Build penuh.** `release.yml` memeriksa artefak
+  `XyDesk-Android-APK` + `XyDesk-Windows-x64/arm64` pada run Build yang
+  dipilih; kalau tidak ada (run terfilter), rilis dilewati dengan
+  peringatan, bukan merah. Build penuh lewat `workflow_dispatch` berjalan
+  di jalur `manual` (tidak dibatalkan push biasa).
 - **Branch protection**: kalau ada, daftar required check nama-nama job
   berubah (mis. `Analisis Statis (Flutter)` menggantikan `Analisis Statis`).
 

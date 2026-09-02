@@ -84,6 +84,21 @@ jobs:
             echo "::error::Build sukses untuk $release_sha tidak ditemukan."
             exit 1
           fi
+          # Build kini difilter per area (build.yml): run untuk commit
+          # "papan/dokumen" TIDAK memuat artefak client — kalau rilis tetap
+          # jalan, `gh run download` gagal BlobNotFound dan run jadi merah
+          # (terjadi 3 Sep 2026). Wajib cek artefak yang dibutuhkan; kalau
+          # belum ada, rilis dilewati dengan tenang dan akan jalan pada
+          # Build penuh (commit bump versi / workflow_dispatch).
+          artifact_names="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$build_run_id/artifacts" \
+            --jq '.artifacts[].name')"
+          for required in XyDesk-Android-APK XyDesk-Windows-x64 XyDesk-Windows-arm64; do
+            if ! echo "$artifact_names" | grep -qx "$required"; then
+              echo "::warning::Build run $build_run_id tidak memuat artefak $required — run itu build terfilter, bukan bump versi/penuh. Rilis dilewati; akan jalan kala Build penuh sukses."
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
           conclusion="$(
             gh api "repos/$GITHUB_REPOSITORY/actions/runs/$build_run_id" \
               --jq '.conclusion'
