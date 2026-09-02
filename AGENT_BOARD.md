@@ -30,17 +30,18 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260903-CAKRA-NOTIF | Cakra - XySpace Team | CI / Release | LAGI KERJA | Notifikasi push tanpa izin (ntfy/Telegram) di verify-push-auth.yml | 2026-09-03 |
+| _(kosong)_ | | | | | |
 
 ## Antrean izin push
 
 | ID Sesi | Agent | Ringkasan perubahan | Status izin | Disetujui oleh | Kapan | Run CI |
 |---|---|---|---|---|---|---|
 | SESI-20260903-CAKRA-CI | Cakra - XySpace Team | Filter area di `build.yml` (job `changes` + jobs terpisah), `check-meta`/`check-news`/`check-signaling` baru, skip gracful `deploy-web.yml`, workflow `verify-push-auth.yml`, `AGENT_BOARD.md`, pembaruan `AGENT.md`/`docs/CI.md`/`CHANGELOG.md`/`CONTRIBUTORS.md` | DISETUJUI | Xyckal | 2026-09-03 | Run 1: Build 33663421875 + Verifikasi 33663421843 · Run 2: Build 33663874463 + Verifikasi 33663874589 |
-| SESI-20260903-CAKRA-NOTIF | Cakra - XySpace Team | Notifikasi push tanpa izin ke ntfy/Telegram pada `verify-push-auth.yml` + dokumentasi `docs/CI.md` + `CHANGELOG.md` | DISETUJUI | Xyckal | 2026-09-03 | — |
+| SESI-20260903-CAKRA-NOTIF | Cakra - XySpace Team | Notifikasi push tanpa izin ke ntfy/Telegram pada `verify-push-auth.yml` + dokumentasi `docs/CI.md` + `CHANGELOG.md` | DISETUJUI | Xyckal | 2026-09-03 | Build 33664638977 + Verifikasi 33664638941 |
 
 ## Riwayat sesi (hanya bertambah)
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
 | SESI-20260903-CAKRA-CI | Cakra - XySpace Team | CI / Release | SELESAI | Filter area CI (build.yml), skip pintar deploy-web.yml, gerbang verify-push-auth.yml, papan koordinasi, pembaruan AGENT.md/docs/CI.md/CHANGELOG/CONTRIBUTORS/HANDOFF | 2026-09-03 |
+| SESI-20260903-CAKRA-NOTIF | Cakra - XySpace Team | CI / Release | SELESAI | Notifikasi push tanpa izin (ntfy/Telegram) di verify-push-auth.yml + docs/CI.md | 2026-09-03 |

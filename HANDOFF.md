@@ -68,7 +68,12 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Web
 
-_(kosong)_
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — Push `0081742` (keyboard
+  virtual, panel gaming) membuat run `verify-push-auth.yml` MERAH: commit
+  tidak memuat penanda `Izin: <ID-SESI>` di body. Aturan baru (lihat
+  `AGENT.md` bagian 5): klaim sesi → minta persetujuan operator di
+  `AGENT_BOARD.md` → push dengan `Izin: ...` di body. Commit tetap masuk,
+  tapi audit mencatatnya sebagai pelanggaran.
 
 ## Untuk: Backend / Edge
 
@@ -88,7 +93,11 @@ _(kosong)_
 
 ## Untuk: Host Engine
 
-_(kosong)_
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — Push `f12dace` (bitrate
+  live via control API) membuat run `verify-push-auth.yml` MERAH: commit
+  tidak memuat penanda `Izin: <ID-SESI>` di body. Aturan baru: klaim
+  sesi → persetujuan operator di `AGENT_BOARD.md` → push dengan penanda
+  `Izin: ...` di body commit.
 
 ## Untuk: Docs & Audit
 
