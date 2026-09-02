@@ -249,6 +249,11 @@ mod windows_inject {
             }
             // Bukan injeksi — ditangani loop utama sesi (pindah monitor).
             InputEvent::DisplaySelect(_) => true,
+            // Bukan injeksi juga. Papan klip butuh akses ke data channel
+            // untuk membalas permintaan, dan thread injeksi ini tidak
+            // memilikinya — keduanya ditangani di loop utama sesi. Nilai
+            // `true` = bukan kegagalan, jangan dicatat sebagai inject gagal.
+            InputEvent::ClipboardSet(_) | InputEvent::ClipboardRequest => true,
         }
     }
 }
