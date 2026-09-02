@@ -30,8 +30,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260903-TARA-BACKEND | Tara - XySpace Team | Backend / Edge | LAGI KERJA | Paritas keamanan signaling Go (role di token, arah relay, privasi daftar) + email berita + pin Node ≥ 22 | 2026-09-03 |
-| SESI-20260903-CAKRA-GOTEST | Cakra - XySpace Team | CI / Release | LAGI KERJA | Integrasi `go vet` + `go test` ke check-signaling | 2026-09-03 |
+| _(kosong)_ | | | | | |
 
 ## Antrean izin push
 
@@ -40,8 +39,8 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260903-CAKRA-CI | Cakra - XySpace Team | Filter area di `build.yml` (job `changes` + jobs terpisah), `check-meta`/`check-news`/`check-signaling` baru, skip gracful `deploy-web.yml`, workflow `verify-push-auth.yml`, `AGENT_BOARD.md`, pembaruan `AGENT.md`/`docs/CI.md`/`CHANGELOG.md`/`CONTRIBUTORS.md` | DISETUJUI | Xyckal | 2026-09-03 | Run 1: Build 33663421875 + Verifikasi 33663421843 · Run 2: Build 33663874463 + Verifikasi 33663874589 |
 | SESI-20260903-CAKRA-NOTIF | Cakra - XySpace Team | Notifikasi push tanpa izin ke ntfy/Telegram pada `verify-push-auth.yml` + dokumentasi `docs/CI.md` + `CHANGELOG.md` | DISETUJUI | Xyckal | 2026-09-03 | Build 33664638977 + Verifikasi 33664638941 |
 | SESI-20260903-GALIH-HOST | Galih - XySpace Team | Host Engine: bitrate video live lewat control API (aksi `video-bitrate` 1–50 Mbps, `targetBitrateBps` di `/status`), perbaikan E0308 build Windows (satu sumber tipe NVENC), pindah konstanta/perakit NVENC ke `nvenc_config.rs` + uji | DISETUJUI | Xyckal (chat) | 2026-09-03 | Build 33665824839 + Verifikasi 33665824719 |
-| SESI-20260903-TARA-BACKEND | Tara - XySpace Team | Paritas keamanan signaling Go (token bind role, middleware tolak penyamar, relayAllowed, daftar host saja) + uji Go + email berita (badge 404) + engines Node ≥ 22 + dokumentasi protokol | DISETUJUI | Xyckal | 2026-09-03 | — |
-| SESI-20260903-CAKRA-GOTEST | Cakra - XySpace Team | `go vet` + `go test` signaling ditambahkan ke `check-signaling` + docs/CI.md | DISETUJUI | Xyckal | 2026-09-03 | — |
+| SESI-20260903-TARA-BACKEND | Tara - XySpace Team | Paritas keamanan signaling Go (token bind role, middleware tolak penyamar, relayAllowed, daftar host saja) + uji Go + email berita (badge 404) + engines Node ≥ 22 + dokumentasi protokol | DISETUJUI | Xyckal | 2026-09-03 | Build 33666899679 + Verifikasi 33666899695 + Deploy 33666899727 |
+| SESI-20260903-CAKRA-GOTEST | Cakra - XySpace Team | `go vet` + `go test` signaling ditambahkan ke `check-signaling` + docs/CI.md | DISETUJUI | Xyckal | 2026-09-03 | Build 33666899679 + Verifikasi 33666899695 |
 
 ## Riwayat sesi (hanya bertambah)
 
@@ -50,3 +49,5 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260903-CAKRA-CI | Cakra - XySpace Team | CI / Release | SELESAI | Filter area CI (build.yml), skip pintar deploy-web.yml, gerbang verify-push-auth.yml, papan koordinasi, pembaruan AGENT.md/docs/CI.md/CHANGELOG/CONTRIBUTORS/HANDOFF | 2026-09-03 |
 | SESI-20260903-CAKRA-NOTIF | Cakra - XySpace Team | CI / Release | SELESAI | Notifikasi push tanpa izin (ntfy/Telegram) di verify-push-auth.yml + docs/CI.md | 2026-09-03 |
 | SESI-20260903-GALIH-HOST | Galih - XySpace Team | Host Engine | SELESAI | Bitrate video live via control API (video-bitrate 1–50 Mbps + targetBitrateBps di /status) + uji; perbaikan E0308 build Windows; pindah konstanta/perakit NVENC ke nvenc_config.rs + uji | 2026-09-03 |
+| SESI-20260903-TARA-BACKEND | Tara - XySpace Team | Backend / Edge | SELESAI | Paritas keamanan signaling Go dgn Worker (role di token, middleware tolak penyamar, relayAllowed, daftar host saja) + uji Go + email berita (badge 404) + engines Node ≥ 22 + docs protokol | 2026-09-03 |
+| SESI-20260903-CAKRA-GOTEST | Cakra - XySpace Team | CI / Release | SELESAI | `go vet` + `go test` signaling jadi pengawal di check-signaling (kini step "Uji unit Go (signaling)") + docs/CI.md | 2026-09-03 |
