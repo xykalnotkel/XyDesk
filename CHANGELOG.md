@@ -19,6 +19,20 @@ Kebijakan rilis:
 
 ### Ditambahkan
 
+- Web dan desktop shell kini merender gambar inline di badan berita: baris
+  `![keterangan](url)` menjadi gambar + keterangan. Hanya URL
+  `app.xystudio.my.id` yang dirender (screenshot rilis dari
+  `web/public/news/shots/`); baris lain tetap paragraf biasa. Ini bagian
+  dari dukungan aturan screenshot `docs/NEWS_STYLE.md` — Android dan
+  halaman berbagi worker menyusul.
+- Aturan kerja agent AI: `AGENT.md` (satu sesi satu role, identitas
+  kontributor `Nama - XySpace Team`, kewajiban jujur soal apa yang sudah
+  dan belum diuji) dan `CONTRIBUTORS.md` (daftar hanya-tambah).
+- `docs/NEWS_STYLE.md` dirombak: berita rilis kini wajib detail lengkap —
+  setiap perubahan dijelaskan apa dan kenapa, ada bagian "Semua perubahan
+  di versi X.Y.Z" dalam bahasa pengguna, dan setiap perubahan visual wajib
+  screenshot asli dari build rilis (banner saja tidak cukup).
+
 - Panduan wajib untuk menulis berita: [`docs/NEWS_STYLE.md`](docs/NEWS_STYLE.md).
   Berita bukan changelog — tanpa nama berkas, tanpa nomor versi di judul,
   ditulis untuk pengguna dengan penulis `Tim XySpace`.

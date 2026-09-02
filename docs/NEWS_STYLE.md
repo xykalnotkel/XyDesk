@@ -1,10 +1,11 @@
 # Cara Menulis Berita XyDesk
 
-> **Satu kalimat yang mengatur semuanya:** berita bukan catatan kerjaan kita —
-> berita adalah kabar untuk orang yang memakai XyDesk.
+> **Satu kalimat yang mengatur semuanya:** berita adalah kabar untuk orang
+> yang memakai XyDesk — ditulis **lengkap, detail, dan jujur**: apa yang
+> berubah, **kenapa** diubah, dan **buktinya** (screenshot asli).
 >
-> Kalau satu kalimat cuma bermakna bagi orang yang pegang kodenya,
-> kalimat itu **tidak boleh** masuk berita.
+> Detail boleh dan wajib. Yang tetap dilarang: jargon internal yang cuma
+> bermakna bagi orang yang pegang kodenya.
 
 Dokumen ini wajib dibaca sebelum menekan tombol terbit di
 `news.xystudio.my.id`. Alurnya ada di [`news/README.md`](../news/README.md);
@@ -16,27 +17,32 @@ dokumen ini mengatur **isinya**.
 
 | ✅ Boleh | ❌ Jangan |
 |---|---|
-| "Sesi jarak jauh sekarang terasa lebih ringan di jaringan lambat." | "Optimasi pipeline encode H264 dan refactor `session.rs`." |
-| "Masalah login yang bikin sebagian dari kamu tertahan di layar masuk, sudah beres." | "Fix bug null pointer pada `auth_service.dart:214`." |
-| "Kami menambahkan 19 pengaman baru di sistem masuk." | "Menambahkan unit test pada `cloudflare/test/auth.test.js`." |
-| "Buat yang pakai dua monitor, sekarang bisa pindah layar dari dalam sesi." | "Implementasi `DISPLAY_SELECT` tag 0x07." |
+| "Sesi jarak jauh sekarang lebih ringan di jaringan lambat — sebelumnya video sering patah saat sinyal turun, sekarang kualitas menyesuaikan otomatis." | "Optimasi pipeline encode H264 dan refactor `session.rs`." |
+| "Masalah login yang bikin sebagian dari kamu tertahan di layar masuk, sudah beres. Penyebabnya: sesi lama tidak terhapus bersih saat ganti akun." | "Fix bug null pointer pada `auth_service.dart:214`." |
+| "Buat yang pakai dua monitor: sekarang bisa pindah layar dari dalam sesi. Ini permintaan yang paling sering masuk." | "Implementasi `DISPLAY_SELECT` tag 0x07." |
 
 Ringkasnya:
 
-- **Tulis dampaknya, bukan kerjanya.** Pembaca tidak pernah melihat repo kita.
-- **Changelog tidak pernah masuk berita.** Changelog hidup di `CHANGELOG.md`
-  dan di catatan GitHub Release. Berita punya satu job: bikin orang paham
-  *kenapa ini penting buat dia*.
-- **Nama berkas, nama modul, nama fungsi, nomor issue — tidak ada di berita.**
-- **Angka versi tidak pernah jadi judul.** Boleh disebut sekali di badan
-  berita kalau memang perlu, bukan di judul.
+- **Tulis dampaknya DAN alasannya.** Setiap perubahan dijelaskan dua sisi:
+  *apa yang berubah buat kamu* dan *kenapa kami mengubahnya*. Pembaca berhak
+  tahu alasan, bukan cuma hasil.
+- **Berita rilis wajib memuat changelog versi pengguna** — daftar LENGKAP
+  semua perubahan yang bisa dirasakan pengguna di rilis itu, diterjemahkan
+  ke bahasa manusia. Bukan salinan mentah `CHANGELOG.md` (itu tetap untuk
+  tim & GitHub Release), tapi juga bukan rangkuman yang menyembunyikan
+  perubahan. Kalau ada 9 perubahan yang kerasa, sembilan-sembilannya masuk.
+- **Nama berkas, nama modul, nama fungsi, nomor issue — tetap tidak ada di
+  berita.** Detail ≠ jargon.
+- **Angka versi tidak jadi judul**, tapi **wajib disebut di badan berita**
+  (sekali, di bagian changelog) supaya pembaca tahu persis rilis mana yang
+  dibahas.
 
 ---
 
 ## 2. Nada: Gaul, Formal, Manusiawi
 
 Bayangin lu lagi ngejelasin ke teman yang pintar tapi bukan programmer:
-hangat, jelas, nggak menggurui.
+hangat, jelas, nggak menggurui — tapi TUNTAS. Jangan pelit informasi.
 
 **Yang dipakai:**
 
@@ -45,6 +51,7 @@ hangat, jelas, nggak menggurui.
 - Kalimat pendek. Satu kalimat satu ide.
 - Kata kerja aktif: "kami tambahkan", "sekarang kamu bisa", "XyDesk akan".
 - Bicara apa adanya. Kalau ada yang belum beres, bilang belum beres.
+  Kalau sebuah fitur baru diuji terbatas, tulis begitu.
 
 **Yang tidak dipakai:**
 
@@ -53,7 +60,7 @@ hangat, jelas, nggak menggurui.
   "solusi terdepan", "game-changer".
 - Bahasa laporan: "telah dilakukan", "dalam rangka", "bersamaan dengan".
 - Emoji lebih dari satu per artikel.
-- Teknis internal, meski kelihatan keren.
+- Jargon internal (nama file/fungsi/modul), meski kelihatan keren.
 
 **Nama yang konsisten (wajib):**
 
@@ -67,9 +74,52 @@ Kata "XySpace" dipakai untuk timnya, bukan produknya. Jangan ketukar.
 
 ---
 
-## 3. Rumus Artikel Rilis
+## 3. Gambar: banner saja TIDAK cukup
 
-Semua berita rilis mengikuti pola yang sama. Tiga bagian, urut, tidak lebih.
+Aturan lama "satu sampul per artikel" sudah tidak berlaku. Mulai sekarang:
+
+1. **Sampul (banner) tetap wajib** — `1424×752`, di
+   `web/public/news/covers/`, jangan URL luar.
+2. **Setiap perubahan yang terlihat mata WAJIB disertai screenshot ASLI**
+   di badan berita, tepat di bawah paragraf yang menjelaskannya:
+   - Screenshot diambil dari **build yang benar-benar dirilis** — bukan
+     mockup, bukan desain Figma, bukan gambar hasil edit/AI, bukan build
+     lokal yang beda dari yang diterima pengguna.
+   - Untuk perubahan tampilan, format terbaik: **sebelum vs sesudah**
+     (dua gambar berurutan, keterangan jelas mana yang lama mana yang baru).
+   - Untuk fitur baru: screenshot fitur itu sedang dipakai, bukan layar
+     kosong.
+   - Perubahan yang tidak terlihat (performa, keamanan, perbaikan di
+     belakang layar) tidak butuh screenshot — jangan dipaksakan pakai
+     gambar hiasan/stok.
+3. Simpan screenshot di `web/public/news/shots/` dengan nama jelas:
+   `<versi>-<apa>.jpg` (contoh: `6.3.0-panel-koneksi-baru.jpg`,
+   `6.3.0-login-sebelum.jpg`, `6.3.0-login-sesudah.jpg`).
+   Ter-deploy otomatis ke `app.xystudio.my.id/news/shots/<file>.jpg`.
+4. Sintaks gambar di badan berita — satu baris sendiri, di antara paragraf:
+
+   ```text
+   ![Panel koneksi yang baru — daftar perangkat kini muncul duluan](https://app.xystudio.my.id/news/shots/6.3.0-panel-koneksi-baru.jpg)
+   ```
+
+   Teks di dalam `[...]` adalah keterangan gambar dan wajib diisi —
+   jelaskan apa yang sedang dilihat pembaca.
+
+> **Status dukungan (jujur, per 2 Sep 2026):** worker dan aplikasi saat ini
+> merender isi berita sebagai teks polos — sintaks `![...](...)` di atas
+> BELUM dirender jadi gambar di worker (`news/src/worker.js`), client
+> Flutter (`lib/features/news/news_detail_page.dart`), web, dan desktop.
+> Sebelum aturan screenshot ini bisa jalan penuh, dukungan render gambar
+> inline harus dibangun dulu di keempat tempat itu (masing-masing oleh role
+> yang sesuai — lihat `AGENT.md`). Sampai dukungan itu terbit, JANGAN
+> menerbitkan berita berisi sintaks gambar yang akan tampil sebagai teks
+> mentah di layar pengguna.
+
+---
+
+## 4. Rumus Artikel Rilis
+
+Semua berita rilis mengikuti pola yang sama. Empat bagian, urut.
 
 ### Judul — manfaatnya, bukan versinya
 
@@ -88,22 +138,34 @@ Dipakai di kartu berita, di pranala saat dibagikan, dan di notifikasi
 push. Ini kalimat yang paling banyak dibaca orang, jadi tulis paling akhir
 setelah badan berita selesai.
 
-### Badan berita — tiga bagian
+### Badan berita — empat bagian
 
-1. **Apa yang kerasa berubah.** Buka dengan dampak yang paling gampang
-   dirasakan. Bukan urutan pengerjaan.
-2. **Yang bisa kamu pakai sekarang.** Sebut 2–4 hal konkret. Satu paragraf
-   per hal, atau satu kalimat kalau memang pendek.
-3. **Yang sedang kami siapkan.** Satu paragraf penutup. Jujur — jangan
+1. **Pembuka: apa yang kerasa berubah.** 1–2 paragraf, dampak paling besar
+   duluan.
+2. **Rincian per perubahan.** Untuk SETIAP perubahan penting, tulis
+   blok kecil dengan pola tetap:
+   - *Apa yang berubah* — dijelaskan dari sisi pengguna.
+   - *Kenapa kami mengubahnya* — alasan jujurnya: keluhan pengguna, bug
+     yang ditemukan, hasil pengukuran, atau keputusan produk. Kalau
+     alasannya "kami salah desain sebelumnya", tulis begitu.
+   - *Screenshot asli* tepat di bawahnya (untuk perubahan visual —
+     lihat bagian 3).
+3. **Changelog rilis ini** — daftar lengkap dalam bahasa pengguna.
+   Sebut nomor versinya sekali di sini. Setiap butir satu kalimat:
+   perubahannya + efeknya. Butir kecil (perbaikan tulisan, geser posisi
+   tombol) tetap masuk — cukup satu baris. Ini bagian yang membuat
+   pembaca percaya kami tidak menyembunyikan apa pun.
+4. **Yang sedang kami siapkan.** Satu paragraf penutup. Jujur — jangan
    menjanjikan tanggal.
 
-Panjang total 150–300 kata. Lebih dari itu, orang berhenti baca.
+Panjang total: **bebas, selama setiap kalimatnya berisi.** Berita rilis yang
+benar biasanya 300–700 kata. Yang dilarang bukan panjang, tapi basa-basi.
 
 ---
 
-## 4. Contoh: Salah vs Benar
+## 5. Contoh: Salah vs Benar
 
-### ❌ Salah (ini changelog yang disalin)
+### ❌ Salah (changelog mentah yang disalin)
 
 > **Rilis 6.2.3**
 >
@@ -112,32 +174,49 @@ Panjang total 150–300 kata. Lebih dari itu, orang berhenti baca.
 > - `fix`: gofmt pada `signaling/auth.go` dan `signaling/protocol.go`
 > - `fix`: CORS default `*` menjadi kosong
 > - `test`: tambah `input_codec_test.dart` (17 test)
-> - upgrade `pubspec.lock`: 12 dependensi
 
-Kenapa salah: pembaca tidak tahu `pubspec.lock` itu apa, tidak peduli
-`gofmt`, dan tidak butuh daftar commit. Yang dia mau tahu: **apakah
-aplikasinya jadi lebih baik malam ini, dan apa yang berubah buat dia.**
+Kenapa salah: pembaca tidak tahu dan tidak peduli itu semua. Tidak ada
+alasan, tidak ada dampak, tidak ada bukti.
+
+### ❌ Juga salah (versi lama yang terlalu tipis)
+
+> Kamu yang suka mengatur ulang tombol, sekarang tidak perlu mengulang
+> dari nol di HP lain. Atur sekali, pakai di mana saja.
+
+Kenapa salah sekarang: enak dibaca, tapi menyembunyikan sisa isi rilis,
+tidak menjelaskan kenapa, dan tidak ada bukti visual. Pembaca yang teliti
+akan merasa dikasih brosur, bukan kabar.
 
 ### ✅ Benar
 
 > **Pengaturan kontrol kamu sekarang ikut ke mana pun kamu login**
 >
 > Kamu yang suka mengatur ulang tombol di sesi, sekarang tidak perlu
-> mengulangnya dari nol di HP lain. Susunan kontrol tersimpan di akun
-> kamu, jadi begitu login di perangkat lain, semuanya sudah menunggu.
+> mengulangnya dari nol di HP lain. Susunan kontrol tersimpan di akun kamu.
 >
-> Atur sekali, pakai di mana saja. Kalau kamu punya dua HP — satu buat
-> kerja, satu buat main — keduanya bisa memakai susunan yang sama, atau
-> kamu simpan beberapa susunan berbeda dan pilih sesuai kebutuhan.
+> **Kenapa kami mengubah ini:** dari komentar kalian di berita sebelumnya,
+> keluhan paling sering adalah mengatur ulang tombol tiap ganti perangkat.
+> Dulu susunan disimpan di HP masing-masing — itu keputusan awal kami yang
+> ternyata merepotkan, jadi kami pindahkan ke akun.
 >
-> Mulai sekarang juga kami memperbaiki kestabilan suara dua arah, supaya
-> ngobrol lewat XyDesk tidak perlu lagi aplikasi tambahan.
+> ![Layar pengaturan kontrol — tombol simpan susunan yang baru](https://app.xystudio.my.id/news/shots/6.3.0-preset-kontrol.jpg)
+>
+> **Semua perubahan di versi 6.3.0:**
+> - Susunan kontrol tersimpan di akun, ikut ke semua perangkatmu.
+> - Suara dua arah lebih stabil di jaringan naik-turun — sebelumnya suara
+>   bisa putus beberapa detik saat sinyal drop.
+> - Layar masuk tidak lagi menahan kamu setelah ganti akun.
+> - Teks di halaman perangkat dirapikan; beberapa istilah disamakan.
+>
+> **Yang sedang kami siapkan:** panggilan suara langsung dari sesi, tanpa
+> aplikasi tambahan. Belum ada tanggal — kami kabari begitu siap dicoba.
 
-Bedanya: nol kata teknis, dan pembaca langsung tahu apa untungnya buat dia.
+Bedanya: tetap nol jargon, tapi lengkap — apa, kenapa, bukti, dan daftar
+jujur semua perubahan.
 
 ---
 
-## 5. Template Siap Pakai
+## 6. Template Siap Pakai
 
 Salin, isi, kirim. Jangan diedit strukturnya.
 
@@ -148,18 +227,20 @@ curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
   -d '{
     "title": "<MANFAAT UTAMA, 40-70 karakter>",
     "excerpt": "<1-2 kalimat, maks 150 karakter, berisi dampak>",
-    "content": "<PARAGRAF 1: apa yang kerasa berubah>\n\n<PARAGRAF 2: yang bisa kamu pakai sekarang>\n\n<PARAGRAF 3: yang sedang kami siapkan>",
+    "content": "<PEMBUKA: apa yang kerasa berubah>\n\n<PER PERUBAHAN: apa + kenapa + ![keterangan](url screenshot) bila visual>\n\n<CHANGELOG: Semua perubahan di versi X.Y.Z: daftar lengkap bahasa pengguna>\n\n<PENUTUP: yang sedang kami siapkan>",
     "cover": "https://app.xystudio.my.id/news/covers/<file>.jpg",
     "category": "rilis",
     "author": "Tim XySpace"
   }'
 ```
 
-Sampul: `1424×752`, taruh di `web/public/news/covers/`, jangan pakai URL luar.
+Sampul: `1424×752` di `web/public/news/covers/`.
+Screenshot: di `web/public/news/shots/`, nama `<versi>-<apa>.jpg`.
+Jangan pakai URL luar untuk keduanya.
 
 ---
 
-## 6. Kategori
+## 7. Kategori
 
 | Kategori | Dipakai untuk |
 |---|---|
@@ -172,11 +253,11 @@ ada.
 
 ---
 
-## 7. Kapan Wajib Terbit
+## 8. Kapan Wajib Terbit
 
 - ✅ Setiap kali versi di `pubspec.yaml` naik. **Tidak ada rilis tanpa berita.**
 - ✅ Ada fitur yang bisa dipakai pengguna, sekecil apa pun.
-- ✅ Ada gangguan atau pemeliharaan—justru paling penting saat ini.
+- ✅ Ada gangguan atau pemeliharaan — justru paling penting saat ini.
 - ✅ Ada keputusan produk yang mengubah kebiasaan pengguna.
 - ❌ Jangan terbit hanya untuk perbaikan internal yang tidak mengubah apa
   pun yang dirasakan pengguna.
@@ -191,7 +272,7 @@ Singkat, jujur, tanpa menyalahkan siapa pun:
 ```text
 Judul   : "Layanan XyDesk sedang mengalami gangguan"
 Isi     : Apa yang tidak bisa dipakai, sejak kapan, apa yang sedang
-          dikerjakan, dan kapan Kabar berikutnya akan datang.
+          dikerjakan, dan kapan kabar berikutnya akan datang.
 Kategori: umum
 ```
 
@@ -199,27 +280,34 @@ Sebut waktu kabaran berikutnya, lalu tepati.
 
 ---
 
-## 8. Checklist Sebelum Terbit
+## 9. Checklist Sebelum Terbit
 
 Salin ke PR kalau perlu.
 
 ```text
 [ ] Judul berisi manfaat — bukan nomor versi
+[ ] Setiap perubahan penting punya blok: apa yang berubah + kenapa
+[ ] Bagian "Semua perubahan di versi X.Y.Z" ada, LENGKAP, bahasa pengguna
+[ ] Nomor versi disebut sekali di bagian changelog (bukan di judul)
 [ ] Tidak ada satu pun: nama berkas, nama fungsi, nomor issue, nama paket
-[ ] Tidak menyalin isi CHANGELOG.md
+[ ] Tidak menyalin baris mentah dari CHANGELOG.md
+[ ] Setiap perubahan visual punya screenshot ASLI dari build rilis
+[ ] Screenshot sebelum/sesudah untuk perubahan tampilan besar
+[ ] Semua gambar di web/public/news/ (covers/ dan shots/), bukan URL luar
+[ ] Setiap gambar punya keterangan yang menjelaskan isinya
+[ ] Tidak ada mockup, gambar stok, atau gambar hasil AI sebagai "screenshot"
 [ ] Penulis: "Tim XySpace"
 [ ] Sebutan merek benar: XyDesk = aplikasi, XySpace = tim
 [ ] Excerpt ≤ 150 karakter dan enak dibaca sendiri
-[ ] Badan 150–300 kata, tiga bagian
 [ ] Sudah dibaca keras-keras: terdengar seperti orang, bukan seperti bot
 [ ] Sampul 1424×752 ada di web/public/news/covers/
 [ ] Kategori sudah benar
-[ ] Setelah terbit: buka /n/<slug>, cek kartu + OG saat dibagikan
+[ ] Setelah terbit: buka /n/<slug>, cek kartu + OG + semua gambar tampil
 ```
 
 ---
 
-## 9. Yang Terjadi Setelah Terbit
+## 10. Yang Terjadi Setelah Terbit
 
 Worker mengurus sisanya sendiri (push OneSignal + email ke pelanggan), jadi
 **anggap berita ini sudah terbaca begitu tombol dikirim**. Tidak ada draft,
@@ -228,8 +316,11 @@ tidak ada tombol tarik kembali.
 Karena itu urutan yang benar:
 
 1. Rilisnya naik dulu (workflow Release hijau).
-2. Baru beritanya terbit.
-3. Baru diumumkan ke mana-mana.
+2. Screenshot diambil dari build rilis itu, di-commit ke
+   `web/public/news/shots/`, dan deploy web selesai (gambar bisa dibuka).
+3. Baru beritanya terbit.
+4. Baru diumumkan ke mana-mana.
 
 Jangan dibalik: berita yang menjanjikan sesuatu yang belum sampai ke
-pengguna adalah janji yang keburu terdengar.
+pengguna — atau menautkan gambar yang belum ter-deploy — adalah janji yang
+keburu terdengar.
