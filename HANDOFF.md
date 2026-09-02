@@ -31,12 +31,11 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   texture (`flutter_webrtc`), jadi di sebagian perangkat tangkapan bisa
   gelap/kosong. Kalau gelap, jalur kokohnya adalah endpoint screenshot
   dari host (lihat "Untuk: Host Engine"). Uji di Android nyata.
-- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Foto profil upload
-  Cloudinary**: sesi ini memakai preset/URL DiceBear (tanpa dependensi
-  baru). Upload penuh butuh `image_picker` (menambah ~15 dependensi →
-  regenerasi `docs/THIRD-PARTY-LICENSES.md` + `web/src/licenses.generated.ts`
-  → lintas area Docs/Web/CI) dan keputusan preset upload unsigned di
-  Cloudinary. Perlu persetujuan operator untuk menambah dependensi.
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Verifikasi unggah foto
+  Cloudinary di perangkat nyata**: alur pilih-foto → upload → avatar terpasang
+  baru bisa dites penuh setelah operator membuat unsigned upload preset dan
+  mengisi `cloudinaryUploadPreset`. Kode sisi klien sudah selesai (lihat
+  "Untuk: Backend / Edge").
 
 ## Untuk: Desktop Shell
 
@@ -87,13 +86,11 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 ## Untuk: Backend / Edge
 
 - [ ] (dari Laras - XySpace Team, 2026-09-03) — **Preset upload Cloudinary
-  unsigned** untuk foto profil: kalau foto profil mau diunggah ke
-  Cloudinary tanpa menyimpan API secret di klien (aturan "tanpa kartu
-  kredit / jangan commit rahasia"), operator perlu membuat **unsigned
-  upload preset** di dasbor Cloudinary dan menyerahkan `upload_preset` +
-  `cloud_name`. Klien saya sudah siap menerima nilai itu; yang kurang
-  hanya preset-nya.
-- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Endpoint screenshot host**
+  unsigned** untuk foto profil: kode sisi klien sudah selesai (unggah lewat
+  `lib/core/cloudinary_upload.dart`, opsinya ada di menu edit profil). Yang
+  kurang **hanya satu langkah operator**: buat **unsigned upload preset** di
+  dasbor Cloudinary lalu set `cloudinaryUploadPreset` (dan pastikan
+  `cloudinaryCloudName` benar). Tidak ada yang perlu diubah di kode lagi.
   opsional untuk cuplikan "layar terakhir" yang kokoh: kalau tangkapan
   klien (RepaintBoundary) ternyata gelap di perangkat nyata, jalur
   terbaik adalah host mengirimkan satu frame terakhir saat sesi berakhir.

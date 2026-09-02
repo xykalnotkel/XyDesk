@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/app_version.dart';
+import '../../core/cloudinary_upload.dart';
 import '../../core/devlog.dart';
 import '../../core/l10n_bridge.dart';
 import '../../core/store.dart';
@@ -682,6 +684,22 @@ Future<void> _editAvatar(BuildContext context, WidgetRef ref) async {
             ),
             const SizedBox(height: Gap.lg),
             ListTile(
+              leading: Icon(
+                LucideIcons.imageUp,
+                size: 18,
+                color: ctx.c.textMid,
+              ),
+              title: Text(
+                'Unggah dari galeri',
+                style: TextStyle(fontSize: 14, color: ctx.c.textHi),
+              ),
+              trailing: const Icon(LucideIcons.chevronRight, size: 16),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _uploadAvatar(context, ref);
+              },
+            ),
+            ListTile(
               leading: Icon(LucideIcons.link, size: 18, color: ctx.c.textMid),
               title: Text(
                 'Pakai URL gambar sendiri',
@@ -742,6 +760,53 @@ Future<String?> _askUrl(BuildContext context) async {
       ],
     ),
   );
+}
+
+/// Pilih foto dari galeri, unggah ke Cloudinary (unsigned preset), lalu
+/// simpan URL-nya sebagai avatar. Kalau preset belum dikonfigurasi, tampilkan
+/// pesan yang jelas (bukan gagal senyap).
+Future<void> _uploadAvatar(BuildContext context, WidgetRef ref) async {
+  final store = ref.read(storeProvider);
+
+  // Tangkap messenger SEBELUM `await` apa pun, supaya tidak memakai
+  // `BuildContext` di seberang async gap (bukan hal yang bisa aman).
+  final messenger = ScaffoldMessenger.of(context);
+  void toast(String message) =>
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+
+  // Kalau preset belum diisi operator, jangan buka galeri — beri tahu dulu.
+  if (cloudinaryUploadPreset.isEmpty) {
+    toast('Unggah foto belum aktif (preset Cloudinary belum diisi).');
+    return;
+  }
+
+  try {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+    if (picked == null) return; // dibatalkan pengguna
+
+    final bytes = await picked.readAsBytes();
+    if (bytes.isEmpty) {
+      toast('Gambar tidak terbaca. Coba pilih yang lain.');
+      return;
+    }
+
+    toast('Mengunggah foto…');
+
+    final url = await uploadProfileImage(bytes, filename: picked.name);
+
+    await saveAvatar(store, 'url:${Uri.encodeComponent(url)}');
+    messenger.clearSnackBars();
+    toast('Foto profil terpasang.');
+  } on CloudinaryUploadException catch (e) {
+    toast(e.message);
+  } catch (e) {
+    toast('Gagal memilih/unggah foto: $e');
+  }
 }
 
 /// Judul modal + tombol tutup, dipakai oleh lembar edit profil & avatar.

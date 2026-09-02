@@ -29,6 +29,7 @@ dependencies:
   # Pemindai QR nyata (CameraX/MLKit) — menggantikan halaman demo.
   mobile_scanner: ^7.4.0
   flutter_svg: ^2.3.0
+  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_lints: ^4.0.0

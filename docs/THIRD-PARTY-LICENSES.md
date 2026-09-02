@@ -10,18 +10,18 @@ bersama aplikasi, beserta lisensinya — diambil langsung dari lockfile dan
 teks lisensi paket yang benar-benar terpasang, bukan dari daftar ketik
 tangan yang bisa ketinggalan zaman.
 
-**Total komponen: 499**
-(Dart/Flutter 105 · Rust 324 · npm 59 · aset & layanan 11)
+**Total komponen: 504**
+(Dart/Flutter 110 · Rust 324 · npm 59 · aset & layanan 11)
 
 ## Ringkasan lisensi
 
 | Lisensi | Jumlah komponen |
 |---|---|
 | MIT OR Apache-2.0 | 196 |
-| BSD-3-Clause | 91 |
+| BSD-3-Clause | 94 |
 | MIT | 73 |
 | Apache-2.0 OR MIT | 30 |
-| Apache-2.0 | 19 |
+| Apache-2.0 | 21 |
 | Unicode-3.0 | 18 |
 | MIT/Apache-2.0 | 17 |
 | LGPL-3.0-or-later | 8 |
@@ -154,7 +154,7 @@ Login opsional dengan akun Google.
 
 ---
 
-## 2. Paket Dart / Flutter (105)
+## 2. Paket Dart / Flutter (110)
 
 Termasuk dependensi transitif yang ikut ter-bundle di APK.
 
@@ -162,18 +162,21 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 |---|---|---|
 | `args` | 2.7.0 | BSD-3-Clause |
 | `async` | 2.11.0 | BSD-3-Clause |
-| `boolean_selector` | 2.1.2 | BSD-3-Clause |
 | `characters` | 1.4.1 | BSD-3-Clause |
 | `clock` | 1.1.2 | Apache-2.0 |
 | `code_assets` | 1.2.1 | BSD-3-Clause |
 | `collection` | 1.19.1 | BSD-3-Clause |
+| `cross_file` | 0.3.5+5 | BSD-3-Clause |
 | `crypto` | 3.0.7 | BSD-3-Clause |
 | `dart_webrtc` | 1.8.1 | MIT |
-| `fake_async` | 1.3.3 | Apache-2.0 |
 | `ffi` | 2.2.0 | BSD-3-Clause |
 | `ffi_leak_tracker` | 0.1.2 | BSD-3-Clause |
 | `file` | 7.0.1 | BSD-3-Clause |
-| `flutter_lints` | 4.0.0 | BSD-3-Clause |
+| `file_selector_linux` | 0.9.4+1 | BSD-3-Clause |
+| `file_selector_macos` | 0.9.5+1 | BSD-3-Clause |
+| `file_selector_platform_interface` | 2.7.0 | BSD-3-Clause |
+| `file_selector_windows` | 0.9.3+6 | BSD-3-Clause |
+| `flutter_plugin_android_lifecycle` | 2.0.35 | BSD-3-Clause |
 | `flutter_riverpod` | 2.6.1 | MIT |
 | `flutter_secure_storage` | 11.0.0 | BSD-3-Clause |
 | `flutter_secure_storage_darwin` | 0.4.0 | BSD-3-Clause |
@@ -193,21 +196,25 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `hooks` | 2.0.2 | BSD-3-Clause |
 | `http` | 1.6.0 | BSD-3-Clause |
 | `http_parser` | 4.1.2 | BSD-3-Clause |
+| `image_picker` | 1.2.3 | Apache-2.0 |
+| `image_picker_android` | 0.8.13+21 | Apache-2.0 |
+| `image_picker_for_web` | 3.1.1 | BSD-3-Clause |
+| `image_picker_ios` | 0.8.13+7 | Apache-2.0 |
+| `image_picker_linux` | 0.2.2 | BSD-3-Clause |
+| `image_picker_macos` | 0.2.2+1 | BSD-3-Clause |
+| `image_picker_platform_interface` | 2.11.1 | BSD-3-Clause |
+| `image_picker_windows` | 0.2.2 | BSD-3-Clause |
 | `intl` | 0.20.2 | BSD-3-Clause |
 | `jni` | 1.0.3 | BSD-3-Clause |
 | `jni_flutter` | 1.0.2 | BSD-3-Clause |
 | `jni_util` | 1.0.0 | BSD-3-Clause |
 | `js` | 0.7.2 | BSD-3-Clause |
-| `leak_tracker` | 11.0.2 | BSD-3-Clause |
-| `leak_tracker_flutter_testing` | 3.0.10 | BSD-3-Clause |
-| `leak_tracker_testing` | 3.0.2 | BSD-3-Clause |
-| `lints` | 4.0.0 | BSD-3-Clause |
 | `logger` | 2.7.0 | MIT |
 | `logging` | 1.3.0 | BSD-3-Clause |
 | `lucide_icons_flutter` | 3.1.15 | MIT |
-| `matcher` | 0.12.19 | BSD-3-Clause |
 | `material_color_utilities` | 0.13.0 | Apache-2.0 |
 | `meta` | 1.18.0 | BSD-3-Clause |
+| `mime` | 2.1.0 | BSD-3-Clause |
 | `mobile_scanner` | 7.4.0 | BSD-3-Clause |
 | `objective_c` | 9.5.0 | BSD-3-Clause |
 | `onesignal_flutter` | 5.6.7 | MIT |
@@ -242,7 +249,6 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `string_scanner` | 1.3.0 | BSD-3-Clause |
 | `synchronized` | 3.4.1+2 | MIT |
 | `term_glyph` | 1.2.1 | BSD-3-Clause |
-| `test_api` | 0.7.11 | BSD-3-Clause |
 | `typed_data` | 1.4.0 | BSD-3-Clause |
 | `url_launcher` | 6.3.2 | BSD-3-Clause |
 | `url_launcher_android` | 6.3.17 | BSD-3-Clause |
@@ -256,7 +262,6 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `vector_graphics_codec` | 1.1.13 | BSD-3-Clause |
 | `vector_graphics_compiler` | 1.3.0 | BSD-3-Clause |
 | `vector_math` | 2.2.0 | BSD-3-Clause |
-| `vm_service` | 15.3.0 | BSD-3-Clause |
 | `web` | 1.1.1 | BSD-3-Clause |
 | `web_socket` | 1.0.1 | BSD-3-Clause |
 | `web_socket_channel` | 3.0.3 | BSD-3-Clause |

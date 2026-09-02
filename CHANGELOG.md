@@ -17,6 +17,19 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Ditambahkan
+- Client Flutter: **unggah foto profil dari galeri ke Cloudinary** (unsigned
+  upload preset, tanpa menyimpan `api_secret` di klien) — pilih foto lewat
+  `image_picker`, diunggah ke folder `profile`, lalu URL-nya dipakai sebagai
+  avatar. Yang tersisa: operator membuat unsigned preset di dasbor dan mengisi
+  `cloudinaryUploadPreset` (lihat `lib/core/cloudinary_upload.dart`). Kalau
+  belum diisi, opsi upload menampilkan pesan yang jelas, bukan gagal senyap.
+- Client Flutter: dependensi baru `image_picker` (untuk memilih foto dari
+  galeri). Inventaris lisensi pihak ketiga diregenerasi: **499 → 514**
+  komponen (Dart/Flutter 105 → 120).
+- Client Flutter: kontrak konfigurasi unggah Cloudinary dikunci lewat uji
+  (`test/core/cloudinary_upload_test.dart`).
+
 ## [6.3.0] - 2026-09-03
 
 ### Ditambahkan
