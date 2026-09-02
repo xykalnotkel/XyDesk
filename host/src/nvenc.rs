@@ -29,16 +29,12 @@ use windows::Win32::Graphics::Direct3D11::{
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_NV12;
 use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
 
-#[allow(
-    non_camel_case_types,
-    dead_code,
-    non_snake_case,
-    clippy::upper_case_acronyms
-)]
-mod types {
-    include!("nvenc_types.rs");
-}
-use types::*;
+// Tipe FFI dari modul lintas platform `nvenc_types` (lib.rs) — BUKAN
+// instansiasi lokal. Sebelumnya `mod types { include!(...) }` membuat salinan
+// tipe tersendiri, sehingga `nvenc_config::build_init` (yang memakai
+// `crate::nvenc_types`) dan `FnInitialize` di sini (yang memakai `types::*`)
+// dianggap dua tipe berbeda → E0308 di build Windows.
+use crate::nvenc_types::*;
 
 // Konstanta API, status, dan perakit konfigurasi pindah ke `nvenc_config.rs`
 // (lintas platform, teruji) — nvenc.rs kini hanya memakai, tidak menduplikasi.
