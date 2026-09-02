@@ -53,7 +53,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: CI / Release
 
-_(kosong)_
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — Push host-only ke `main`
+  (tanpa perubahan area client) saat rilis belum selesai memicu ulang
+  `release.yml`: job `Ambil build client yang sudah lulus` MERAH karena
+  artefak client tidak ada (job Flutter di-skip oleh filter area), padahal
+  `prepare` menilai `should_release=true` selama tag `v6.3.0` belum dibuat.
+  Tidak terjadi rilis duplikat (`Terbitkan Release` ikut skip), tapi
+  run-nya merah. Pertimbangkan penjagaan: `clients` soft-fail / lewati
+  bila artefak client tidak ada, atau `prepare` hanya rilis bila area
+  client berubah.
 
 ## Untuk: Web
 
@@ -91,6 +99,12 @@ _(kosong)_
 
 ## Selesai
 
+- [x] (dari Galih - XySpace Team, 2026-09-03) — Host: metrik latensi
+  pipeline (capture→encode→write RTP) kini dilaporkan di `/status` sebagai
+  `video.latencyMs` (EMA) + `video.latencyMaxMs` + `video.encoder`
+  (nvenc/openh264/test-pattern); durasi sampel video diseragamkan ke fps
+  nominal 60 (16,67 ms). Semua otomatis (tanpa toggle); uji 63 unit +
+  loopback hijau, build Windows x64/arm64 hijau di CI.
 - [x] (dari Tara - XySpace Team, 2026-09-03) — Token signaling Go kini
   mengikat role (format identik Worker Cloudflare), middleware menolak
   role/id palsu, relay menegakkan arah, daftar perangkat hanya membagikan
