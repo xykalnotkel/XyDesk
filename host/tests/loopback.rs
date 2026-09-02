@@ -1,18 +1,26 @@
 //! Loopback end-to-end: client (offerer) ↔ host (answerer) yang DIPAKAI
 //! PRODUKSI (`xydesk_host::session::Session`).
 //!
-//! Test ini adalah regresi untuk bug nyata: `add_video_track` dulu dipanggil
-//! SETELAH `create_answer`, sehingga SDP jawaban tidak memuat m-line video —
-//! koneksi tampak sukses tapi client tidak pernah menerima satu frame pun.
+//! Test ini adalah regresi untuk DUA bug nyata:
+//!   A. `add_video_track` dulu dipanggil SETELAH `create_answer`, sehingga
+//!      SDP jawaban tidak memuat m-line video — koneksi tampak sukses tapi
+//!      client tidak pernah menerima satu frame pun.
+//!   B. (3 Sep 2026) Frame IDR pertama yang membawa SPS/PPS ditulis sebelum
+//!      transport WebRTC `Connected`, sehingga dibuang jaringan; klien
+//!      menerima banyak paket P-frame tapi decoder tidak pernah bisa
+//!      memulai (`framesDecoded` = 0, layar hitam).
+//!
 //! Yang diuji di sini persis alur produksi:
 //!   1. client: transceiver video recvonly + data channel "input" + offer
 //!   2. host: `Session::answer` → SDP jawaban HARUS berisi `m=video`
-//!   3. host menulis frame (TestPatternEncoder) ke track yang dikembalikan
-//!   4. client menerima paket RTP video via `on_track`
+//!   3. host: `screen::spawn_frame_source` (pola uji → H264) + `video::pump_video`
+//!      (kode produksi yang sama dengan `main.rs`) → track RTP
+//!   4. client menerima paket RTP video — DAN minimal satu NAL SPS/PPS
+//!      (tanpa itu, decoder klien tidak pernah bisa mendecode: layar hitam)
 //!   5. data channel "input" dua arah: PING host ← client, PONG balik
 
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use anyhow::Context;
 use tokio::sync::mpsc;
@@ -27,12 +35,10 @@ use webrtc::rtp_transceiver::rtp_codec::RTPCodecType;
 use webrtc::rtp_transceiver::rtp_transceiver_direction::RTCRtpTransceiverDirection;
 use webrtc::rtp_transceiver::RTCRtpTransceiverInit;
 
-use xydesk_host::screen::TestPatternEncoder;
+use xydesk_host::control::ControlState;
+use xydesk_host::screen::{self, EncodedFrame};
 use xydesk_host::session::Session;
 
-const TEST_W: usize = 320;
-const TEST_H: usize = 180;
-const FRAMES_TO_WRITE: u64 = 60;
 const MIN_PACKETS: usize = 10;
 
 /// Bangun API WebRTC klien (persis pola `Session::new` di sisi host).
@@ -74,12 +80,65 @@ async fn loopback_video_flows_and_input_roundtrips() -> anyhow::Result<()> {
         .await
         .context("data channel gagal")?;
 
-    // Hitung paket RTP video yang diterima.
+    // Hitung paket RTP video yang diterima + cek SPS benar-benar tiba.
+    // Regresi bug B: test lama hanya menghitung paket dan tetap hijau
+    // padahal klien tidak pernah bisa mendecode satu frame pun.
     let (packets_tx, mut packets_rx) = mpsc::unbounded_channel::<usize>();
+    let sps_seen = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let sps_seen_in_track = sps_seen.clone();
     pc.on_track(Box::new(move |track, _receiver, _transceiver| {
         let packets_tx = packets_tx.clone();
+        let sps_seen = sps_seen_in_track.clone();
         Box::pin(async move {
-            while let Ok((_pkt, _attrs)) = track.read_rtp().await {
+            let mut n = 0usize;
+            while let Ok((pkt, _attrs)) = track.read_rtp().await {
+                // Payload RTP H264 (packetization-mode=1):
+                //  - NAL tunggal: byte pertama = header NAL.
+                //  - STAP-A (24): agregasi [2-byte ukuran][NAL]...
+                //    — payloader webrtc-rs menggabung SPS+PPS ke satu paket
+                //      STAP-A, jadi mengecek NAL 7/8 di byte pertama SAJA
+                //      tidak akan pernah melihat parameter set.
+                //  - FU-A (28): fragmentasi, lihat byte kedua (tipe asli).
+                let pl = &pkt.payload;
+                let mut param = false;
+                if let Some(&first) = pl.first() {
+                    let nal = first & 0x1F;
+                    if nal == 7 || nal == 8 {
+                        param = true;
+                    } else if nal == 24 {
+                        // STAP-A: lewati header, urai unit-unit di dalamnya.
+                        let mut pos = 1usize;
+                        while pos + 3 <= pl.len() {
+                            let sz = ((pl[pos] as usize) << 8) | pl[pos + 1] as usize;
+                            if pos + 2 + sz > pl.len() || sz == 0 {
+                                break;
+                            }
+                            let inner = pl[pos + 2] & 0x1F;
+                            if inner == 7 || inner == 8 {
+                                param = true;
+                            }
+                            pos += 2 + sz;
+                        }
+                    } else if nal == 28 && pl.len() >= 2 {
+                        let inner = (pl[1] & 0x1E) >> 1;
+                        if inner == 7 || inner == 8 {
+                            param = true;
+                        }
+                    }
+                    if n < 6 {
+                        eprintln!(
+                            "[loopback] RTP#{} nal={} len={} marker={} param={param}",
+                            n,
+                            nal,
+                            pl.len(),
+                            pkt.header.marker
+                        );
+                    }
+                    n += 1;
+                    if param {
+                        sps_seen.store(true, std::sync::atomic::Ordering::Relaxed);
+                    }
+                }
                 if packets_tx.send(1).is_err() {
                     break;
                 }
@@ -157,11 +216,11 @@ async fn loopback_video_flows_and_input_roundtrips() -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("offer tanpa local description"))?
         .sdp;
 
-    // ── Host: KODE PRODUKSI NYATA ──────────────────────────────────────
+    // ── Host (answerer): KODE PRODUKSI NYATA ───────────────────────────
     let host = Arc::new(Session::new(vec![], vec![]).await?);
     let (answer_sdp, track) = host.answer(&offer_sdp).await?;
 
-    // Bug guard: jawaban WAJIB memuat m-line video.
+    // Bug guard A: jawaban WAJIB memuat m-line video.
     assert!(
         answer_sdp.contains("m=video"),
         "SDP jawaban TIDAK memuat m-line video — track didaftarkan setelah \
@@ -172,41 +231,33 @@ async fn loopback_video_flows_and_input_roundtrips() -> anyhow::Result<()> {
         .await
         .context("client set answer gagal")?;
 
-    // ── Streamer host: pola uji → track video ─────────────────────────
-    let streamer = tokio::spawn(async move {
-        let mut enc = TestPatternEncoder::new()?;
-        let mut encode_total_us = 0u128;
-        let mut encode_samples = 0u128;
-        let start = Instant::now();
-        for i in 0..FRAMES_TO_WRITE {
-            let t0 = Instant::now();
-            let data = enc.encode_next(TEST_W, TEST_H)?;
-            encode_total_us += t0.elapsed().as_micros();
-            encode_samples += 1;
-            let sample = webrtc::media::Sample {
-                data: bytes::Bytes::from(data),
-                timestamp: std::time::SystemTime::now(),
-                duration: Duration::from_millis(33),
-                packet_timestamp: 0,
-                prev_dropped_packets: 0,
-                prev_padding_packets: 0,
-            };
-            if let Err(e) = track.write_sample(&sample).await {
-                eprintln!("[loopback] write_sample gagal: {e}");
-                break;
-            }
-            tokio::time::sleep(Duration::from_millis(20)).await;
-            let _ = i;
-        }
-        let elapsed = start.elapsed().as_secs_f64();
-        let avg = encode_total_us as f64 / encode_samples as f64 / 1000.0;
-        println!(
-            "[loopback] encode: rata-rata {avg:.2} ms/frame ({} frame, {:.1} fps)",
-            FRAMES_TO_WRITE,
-            FRAMES_TO_WRITE as f64 / elapsed
-        );
-        Ok::<(), anyhow::Error>(())
-    });
+    // ── Streamer host: jalur produksi PENUH ────────────────────────────
+    // spawn_frame_source (pola uji → encoder H264) + video::pump_video
+    // (gate Connected + keyframe segar) → track RTP. Dulu test ini
+    // menulis frame sendiri dengan TestPatternEncoder — kebal terhadap
+    // bug B karena tidak pernah meniru gate + keyframe produksi.
+    let streamer = {
+        let host = host.clone();
+        let track = track.clone();
+        tokio::spawn(async move {
+            let frames = screen::spawn_frame_source();
+            let (vtx, vrx) = tokio::sync::mpsc::channel::<EncodedFrame>(1);
+            std::thread::spawn(move || {
+                while let Ok(frame) = frames.recv() {
+                    if vtx.blocking_send(frame).is_err() {
+                        break;
+                    }
+                }
+            });
+            let control = Arc::new(Mutex::new(ControlState::new(
+                "test-device".into(),
+                "test".into(),
+                "ws://127.0.0.1/test".into(),
+            )));
+            xydesk_host::video::pump_video(&host, &track, vrx, control).await;
+            Ok::<(), anyhow::Error>(())
+        })
+    };
 
     // ── Input: host menerima PING lalu membalas PONG ───────────────────
     let host_input = {
@@ -259,20 +310,28 @@ async fn loopback_video_flows_and_input_roundtrips() -> anyhow::Result<()> {
         packets >= MIN_PACKETS,
         "client hanya menerima {packets} paket video — loop video tidak jalan"
     );
+    let sps = sps_seen.load(std::sync::atomic::Ordering::Relaxed);
+    assert!(
+        sps,
+        "client TIDAK menerima SPS/PPS sama sekali — decoder tidak pernah bisa \
+         memulai (layar hitam). Frame IDR pertama kemungkinan ditulis sebelum \
+         transport Connected lalu dibuang jaringan. Video::pump_video harus \
+         gate ke Connected + minta keyframe segar."
+    );
     assert_eq!(
         pong.as_deref(),
         Some(b"PONG".as_slice()),
         "host tidak membalas PING lewat data channel"
     );
     println!(
-        "[loopback] OK: {packets} paket video + PING/PONG dua arah — loop capture→RTP→client terbukti"
+        "[loopback] OK: {packets} paket video (dengan SPS/PPS) + PING/PONG dua arah — \
+         jalur produksi capture→encode→RTP→client terbukti"
     );
 
-    // Bersih-bersih.
+    // Bersih-bersih. Pump produksi berjalan tanpa batas (seperti di
+    // main.rs) — buang task-nya; runtime tokio menyapu sisanya.
     ping_task.await??;
     host_input.await??;
-    streamer.await.context("task streamer panik")??;
-    pc.close().await.context("close client gagal")?;
-    host.close().await.context("close host gagal")?;
+    streamer.abort();
     Ok(())
 }

@@ -40,6 +40,24 @@ static TARGET_BPS: std::sync::atomic::AtomicU32 =
 /// dengan nilai baru). Disetel `set_target_bitrate_bps`, dikosongkan thread
 /// capture saat respawn.
 static BITRATE_DIRTY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Permintaan keyframe dari task streaming: encoder di-respawn sehingga
+/// frame berikutnya adalah IDR yang membawa SPS/PPS. Dipakai saat koneksi
+/// WebRTC baru saja Connected — frame yang ditulis sebelum transport siap
+/// dibuang jaringan, dan tanpa SPS/PPS decoder klien tidak pernah bisa
+/// memulai (layar hitam selamanya).
+static REQUEST_KEYFRAME: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Minta encoder menghasilkan IDR (SPS/PPS + slice) secepatnya.
+pub fn request_keyframe() {
+    REQUEST_KEYFRAME.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Ambil (dan bersihkan) permintaan keyframe. Dipakai loop sumber frame
+/// (produksi) dan uji integrasi — memakai satu helper agar tidak ada dua
+/// sumber kebenaran untuk bendera ini.
+pub fn take_keyframe_request() -> bool {
+    REQUEST_KEYFRAME.swap(false, std::sync::atomic::Ordering::Relaxed)
+}
 
 /// Bitrate target aktif dalam bps.
 pub fn target_bitrate_bps() -> u32 {
@@ -213,6 +231,13 @@ pub fn spawn_frame_source() -> mpsc::Receiver<EncodedFrame> {
                     );
                     continue;
                 }
+                // Koneksi baru siap? Respawn agar frame berikutnya IDR
+                // (SPS/PPS + slice) — kalau tidak, decoder klien tidak
+                // pernah mendapatkan parameter set dan layarnya hitam.
+                if take_keyframe_request() {
+                    println!("[xydesk-host] capture di-respawn: keyframe diminta");
+                    continue;
+                }
                 // Tanpa permintaan apa pun, capture berakhir karena sesi
                 // selesai (handler berhenti) — thread ini pun keluar.
                 break;
@@ -232,6 +257,18 @@ pub fn spawn_frame_source() -> mpsc::Receiver<EncodedFrame> {
                 }
             };
             loop {
+                // Keyframe diminta (mis. koneksi baru Connected): bangun
+                // encoder baru supaya frame berikutnya IDR + SPS/PPS.
+                if take_keyframe_request() {
+                    println!("[xydesk-host] pola uji: encoder di-reset untuk keyframe");
+                    match TestPatternEncoder::new() {
+                        Ok(e) => enc = e,
+                        Err(e) => {
+                            eprintln!("[xydesk-host] encoder gagal di-reset: {e}");
+                            break;
+                        }
+                    }
+                }
                 let t0 = std::time::Instant::now();
                 match enc.encode_next(TEST_WIDTH, TEST_HEIGHT) {
                     Ok(data) => {

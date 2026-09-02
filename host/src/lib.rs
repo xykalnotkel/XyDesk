@@ -16,6 +16,7 @@ pub mod pairguard;
 pub mod pixfmt;
 pub mod screen;
 pub mod session;
+pub mod video;
 
 // Tipe data FFI NVENC (layout diverifikasi vs header C — test jalan di semua
 // platform). Driver NVENC sendiri hanya untuk Windows.

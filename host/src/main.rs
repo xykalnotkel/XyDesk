@@ -18,13 +18,10 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::Message;
 
+use xydesk_host::control::{ControlState, EngineState};
 use xydesk_host::pairedpeers::PairedPeers;
 use xydesk_host::pairguard::{self, PairGuard};
 use xydesk_host::session::{IceCandidate, Session};
-use xydesk_host::{
-    control::{ControlState, EngineState},
-    screen,
-};
 
 /// SDP ter-serialisasi (objek `{type, sdp}` — identik dgn sisi client).
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -566,11 +563,13 @@ async fn main() -> Result<()> {
                 // Sumber video: capture layar (Windows DXGI) atau pola uji.
                 // Frame H264 ter-encode diambil dari channel, ditulis ke track
                 // yang sudah terdaftar di dalam `Session::answer` di atas.
+                // Loop streaming + statistik ada di `video::pump_video` (juga
+                // dipakai test integrasi — jalur yang diuji = kode produksi).
                 {
                     let control = control.clone();
+                    let session = session.clone();
                     tokio::spawn(async move {
                         let track = video_track;
-                        println!("[xydesk-host] track video siap — streaming");
 
                         // Channel std (blocking) dari capture TIDAK boleh
                         // di-recv langsung di task async — itu membekukan
@@ -578,7 +577,7 @@ async fn main() -> Result<()> {
                         // frame ke channel tokio berkapasitas 1 (frame usang
                         // dibuang, latency menang).
                         let frames = xydesk_host::screen::spawn_frame_source();
-                        let (vtx, mut vrx) =
+                        let (vtx, vrx) =
                             tokio::sync::mpsc::channel::<xydesk_host::screen::EncodedFrame>(1);
                         std::thread::spawn(move || {
                             while let Ok(frame) = frames.recv() {
@@ -588,45 +587,7 @@ async fn main() -> Result<()> {
                             }
                         });
 
-                        // Statistik video untuk control API (shell desktop):
-                        // frame terkirim + FPS rata-rata jendela 1 detik +
-                        // status encoder + latensi pipeline host.
-                        let mut fps_window: u64 = 0;
-                        let mut fps_start = std::time::Instant::now();
-                        let mut fps_now = 0.0_f64;
-
-                        while let Some(frame) = vrx.recv().await {
-                            // Latensi pipeline host: sejak frame ditangkap di
-                            // thread capture sampai saat ini (sesaat sebelum
-                            // ditulis ke track RTP).
-                            let latency_ms = frame.captured_at.elapsed().as_secs_f64() * 1000.0;
-                            let sample = webrtc::media::Sample {
-                                data: bytes::Bytes::from(frame.data),
-                                timestamp: std::time::SystemTime::now(),
-                                duration: xydesk_host::screen::frame_duration(),
-                                packet_timestamp: 0,
-                                prev_dropped_packets: 0,
-                                prev_padding_packets: 0,
-                            };
-                            if let Err(e) = track.write_sample(&sample).await {
-                                eprintln!("[xydesk-host] kirim frame gagal: {e}");
-                                break;
-                            }
-                            fps_window += 1;
-                            let elapsed = fps_start.elapsed();
-                            if elapsed >= std::time::Duration::from_secs(1) {
-                                fps_now = fps_window as f64 / elapsed.as_secs_f64();
-                                fps_window = 0;
-                                fps_start = std::time::Instant::now();
-                            }
-                            {
-                                let mut st = control.lock().unwrap();
-                                st.video.record_frame(latency_ms);
-                                st.video.fps = fps_now;
-                                st.video.nvenc = screen::nvenc_active();
-                                st.video.encoder = screen::encoder_label();
-                            }
-                        }
+                        xydesk_host::video::pump_video(&session, &track, vrx, control).await;
                     });
                 }
 
