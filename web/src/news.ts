@@ -120,12 +120,19 @@ export function postComment(
   });
 }
 
-/// Daftarkan email untuk langganan berita (kirim via email saat artikel baru).
-export function subscribeNews(email: string): Promise<{ ok: boolean }> {
+/// Daftarkan email untuk dikabari nanti.
+///
+/// `source` menentukan ia dikabari saat apa: 'berita' saat artikel baru
+/// terbit, 'unduhan' saat tombol unduh dibuka. Keduanya tersimpan di tabel
+/// yang sama (lihat news/migrations/0003).
+export function subscribeNews(
+  email: string,
+  source: 'berita' | 'unduhan' = 'berita',
+): Promise<{ ok: boolean; subscribed?: boolean; reason?: string }> {
   return getJson(`${NEWS_BASE}/api/subscribe`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, source }),
   });
 }
 

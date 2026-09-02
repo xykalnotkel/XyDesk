@@ -1,5 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import type { ReactElement } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
+import type { FormEvent, ReactElement } from 'react';
 import {
   ApiError,
   createGuestSession,
@@ -423,9 +423,7 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
             Unduh untuk Android
           </a>
         ) : (
-          <button className="btn primary big" disabled title={DOWNLOAD_DISABLED_REASON}>
-            Belum tersedia
-          </button>
+          <NotifyMeForm />
         )}
       </section>
     </main>
@@ -509,6 +507,96 @@ function PlatformTables({ compact = false }: { compact?: boolean }) {
   );
 }
 
+/**
+ * "Ingatkan saya" — pengganti tombol unduh selama unduhan ditahan.
+ *
+ * Kenapa bukan tombol unduh yang dinonaktifkan saja: tombol mati hanya
+ * menghentikan orang, dan orang yang berhenti tidak pernah kembali. Form ini
+ * menangkap niatnya — alamat email disimpan berlabel 'unduhan', sehingga
+ * kelak ia bisa dikabari satu kali saat unduhan benar-benar dibuka.
+ *
+ * Email tidak dikirim ke mana pun hari ini. Ia disimpan, dan hanya dipakai
+ * untuk satu kabar itu (lihat news/migrations/0003).
+ */
+function NotifyMeForm() {
+  const inputId = useId();
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  const [note, setNote] = useState('');
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (status === 'sending') return;
+    const value = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) {
+      setStatus('error');
+      setNote('Alamat emailnya belum benar. Periksa lagi ya.');
+      return;
+    }
+    setStatus('sending');
+    setNote('');
+    try {
+      const r = await subscribeNews(value, 'unduhan');
+      if (!r.ok) throw new Error('ditolak server');
+      setStatus('done');
+      if (r.subscribed === false) setNote('Email kamu sudah pernah terdaftar — kami tetap ingat.');
+    } catch {
+      setStatus('error');
+      setNote('Gagal menyimpan email kamu. Coba lagi sebentar.');
+    }
+  };
+
+  if (status === 'done') {
+    return (
+      <div className="notify-me done">
+        <p className="notify-title">
+          <strong>Siap.</strong> Kami kabari {email} begitu unduhan dibuka.
+        </p>
+        {note && <p className="notify-note">{note}</p>}
+        <a className="notify-alt" href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
+          Mau lebih cepat? Ikuti saluran WhatsApp kami
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <form className={`notify-me${status === 'error' ? ' invalid' : ''}`} onSubmit={submit} noValidate>
+      <label htmlFor={inputId}>Ingatkan saya saat unduhan dibuka</label>
+      <div className="notify-row">
+        <input
+          id={inputId}
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          placeholder="nama@email.com"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (status === 'error') {
+              setStatus('idle');
+              setNote('');
+            }
+          }}
+          aria-invalid={status === 'error'}
+          aria-describedby={note ? `${inputId}-note` : undefined}
+        />
+        <button className="btn primary" type="submit" disabled={status === 'sending'}>
+          {status === 'sending' ? 'Menyimpan…' : 'Ingatkan saya'}
+        </button>
+      </div>
+      {note && (
+        <p className="notify-note error" id={`${inputId}-note`} role="alert">
+          {note}
+        </p>
+      )}
+      <a className="notify-alt" href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
+        Atau pantau lewat saluran WhatsApp kami
+      </a>
+    </form>
+  );
+}
+
 function DownloadPage() {
   const recommended = useRecommendedDownload();
 
@@ -552,6 +640,7 @@ function DownloadPage() {
         >
           Lihat kabar terbaru
         </button>
+        <NotifyMeForm />
         <a className="channel-link" href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
           Mau dikabari saat sudah bisa diunduh? Ikuti saluran WhatsApp kami
         </a>
