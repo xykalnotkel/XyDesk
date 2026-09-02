@@ -169,3 +169,132 @@ export function GamingPad({ send }: { send: Send }) {
     </>
   );
 }
+
+// ── Panel pengaturan sesi ──────────────────────────────────────
+// Cermin ringkas SessionControlPanel aplikasi Android — hanya setelan
+// yang BENAR-BENAR bisa dikendalikan browser. Tidak ada slider palsu.
+export type SessionPrefs = {
+  /// Volume audio PC di sisi browser (elemen <audio>), 0..1.
+  volume: number;
+  /// Sensitivitas gerak kursor mode trackpad.
+  sens: number;
+  /// Ketuk singkat = klik kiri (mode trackpad).
+  tapClick: boolean;
+  /// Arah scroll dua jari dibalik.
+  reverseScroll: boolean;
+};
+
+export const DEFAULT_PREFS: SessionPrefs = {
+  volume: 0.8,
+  sens: 1.7,
+  tapClick: true,
+  reverseScroll: false,
+};
+
+function ToggleRow({
+  label,
+  hint,
+  on,
+  onToggle,
+}: {
+  label: string;
+  hint?: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="spanel-row">
+      <div className="spanel-copy">
+        <span>{label}</span>
+        {hint && <small>{hint}</small>}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        className={`spanel-switch${on ? ' on' : ''}`}
+        onClick={onToggle}
+      >
+        <i />
+      </button>
+    </div>
+  );
+}
+
+export function SessionPanel({
+  prefs,
+  onChange,
+  onClose,
+  hostId,
+  onDisconnect,
+}: {
+  prefs: SessionPrefs;
+  onChange: (next: SessionPrefs) => void;
+  onClose: () => void;
+  hostId: string;
+  onDisconnect: () => void;
+}) {
+  return (
+    <aside className="spanel" onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+      <header className="spanel-head">
+        <strong>Pengaturan sesi</strong>
+        <button type="button" className="spanel-close" onClick={onClose} title="Tutup">
+          ✕
+        </button>
+      </header>
+
+      <p className="spanel-section">Audio</p>
+      <div className="spanel-row">
+        <div className="spanel-copy">
+          <span>Volume audio PC</span>
+          <small>{Math.round(prefs.volume * 100)}%</small>
+        </div>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(prefs.volume * 100)}
+        onChange={(e) => onChange({ ...prefs, volume: Number(e.target.value) / 100 })}
+      />
+
+      <p className="spanel-section">Trackpad</p>
+      <div className="spanel-row">
+        <div className="spanel-copy">
+          <span>Sensitivitas kursor</span>
+          <small>{prefs.sens.toFixed(1)}×</small>
+        </div>
+      </div>
+      <input
+        type="range"
+        min={8}
+        max={30}
+        value={Math.round(prefs.sens * 10)}
+        onChange={(e) => onChange({ ...prefs, sens: Number(e.target.value) / 10 })}
+      />
+      <ToggleRow
+        label="Ketuk untuk klik"
+        hint="Ketukan singkat tanpa geser = klik kiri"
+        on={prefs.tapClick}
+        onToggle={() => onChange({ ...prefs, tapClick: !prefs.tapClick })}
+      />
+      <ToggleRow
+        label="Scroll terbalik"
+        hint="Balik arah scroll dua jari"
+        on={prefs.reverseScroll}
+        onToggle={() => onChange({ ...prefs, reverseScroll: !prefs.reverseScroll })}
+      />
+
+      <p className="spanel-section">Sesi</p>
+      <div className="spanel-row">
+        <div className="spanel-copy">
+          <span>Terhubung ke</span>
+          <small className="spanel-host">{hostId}</small>
+        </div>
+      </div>
+      <button type="button" className="spanel-disconnect" onClick={onDisconnect}>
+        Putuskan sesi
+      </button>
+    </aside>
+  );
+}

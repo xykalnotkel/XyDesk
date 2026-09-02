@@ -18,6 +18,10 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Ditambahkan
+- Web: panel pengaturan sesi (tombol "Panel" di bar sesi) — volume audio
+  PC, sensitivitas kursor trackpad, ketuk-untuk-klik, arah scroll, info
+  host, dan tombol putus; tersimpan permanen di perangkat.
+
 - Web: keyboard virtual QWERTY penuh di layar sesi — baris F1–F12, angka,
   simbol, panah, dan modifier lengket (Ctrl/Shift/Alt/Win ditahan sampai
   tombol berikutnya) — setara keyboard virtual aplikasi Android.

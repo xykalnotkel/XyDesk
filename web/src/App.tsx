@@ -54,7 +54,8 @@ import {
   STAGE_LABEL,
 } from './version';
 import { vkFromCode } from './vk';
-import { VirtualKeyboard, GamingPad } from './session_ui';
+import { VirtualKeyboard, GamingPad, SessionPanel, DEFAULT_PREFS } from './session_ui';
+import type { SessionPrefs } from './session_ui';
 import { WhatsAppIcon, TelegramIcon, XIcon, FacebookIcon } from './brand-icons';
 
 type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news';
@@ -1642,6 +1643,20 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const [kbOpen, setKbOpen] = useState(false);
   const [padOpen, setPadOpen] = useState(false);
   const [trackpad, setTrackpad] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  // Preferensi sesi — bertahan antar sesi di perangkat ini.
+  const [prefs, setPrefs] = useState<SessionPrefs>(() => {
+    try {
+      return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem('xydesk.session.prefs') ?? '{}') };
+    } catch {
+      return DEFAULT_PREFS;
+    }
+  });
+  useEffect(() => {
+    prefsRef.current = prefs;
+    localStorage.setItem('xydesk.session.prefs', JSON.stringify(prefs));
+    if (audioRef.current) audioRef.current.volume = prefs.volume;
+  }, [prefs]);
   const [retryInfo, setRetryInfo] = useState('');
   // Jejak jari untuk mode trackpad: posisi terakhir per pointer, penanda
   // "sudah bergerak" (pembeda tap vs geser), dan stempel waktu turun.
@@ -1650,6 +1665,9 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     moved: false,
     downAt: 0,
   });
+  // Ref cermin prefs agar handler yang dibuat di closure lama (mis.
+  // onAudioTrack) selalu membaca nilai terbaru.
+  const prefsRef = useRef(DEFAULT_PREFS as SessionPrefs);
   const sessionRef = useRef<RtcSession | null>(null);
   const retryRef = useRef({ tries: 0, timer: 0 as ReturnType<typeof setTimeout> | 0, wasConnected: false });
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -1726,7 +1744,10 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       };
       // Audio sistem host — diputar lewat elemen audio terpisah.
       session.onAudioTrack = (stream) => {
-        if (audioRef.current) audioRef.current.srcObject = stream;
+        if (audioRef.current) {
+          audioRef.current.srcObject = stream;
+          audioRef.current.volume = prefsRef.current.volume;
+        }
       };
       // Meta host (daftar layar + status audio) untuk pemilih monitor.
       session.onMeta = (meta) => setHostMeta(meta);
@@ -1743,6 +1764,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     sessionRef.current = null;
     setKbOpen(false);
     setPadOpen(false);
+    setPanelOpen(false);
     setPhase('');
     if (window.location.hash === '#session') {
       window.history.replaceState({}, '', '/connect');
@@ -1788,8 +1810,8 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   // ── Mode trackpad: layar jadi touchpad, bukan layar sentuh ──────
   // Satu jari geser = gerak kursor relatif; ketuk singkat tanpa geser =
   // klik kiri; dua jari geser = scroll. Cocok untuk HP karena kursor
-  // tidak "meloncat" ke posisi jari.
-  const TP_SENS = 1.7;
+  // tidak "meloncat" ke posisi jari. Sensitivitas & perilaku diatur
+  // lewat panel pengaturan sesi.
   const tpDown = (e: React.PointerEvent) => {
     const t = touchRef.current;
     t.points.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1807,17 +1829,19 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     t.points.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (Math.abs(dx) + Math.abs(dy) > 2) t.moved = true;
     if (t.points.size >= 2) {
-      // Dua jari: scroll. Arah alami — konten mengikuti jari.
-      send(InputCodec.scroll(0, Math.round(dy * 2)));
+      // Dua jari: scroll. Arah alami — konten mengikuti jari — kecuali
+      // dibalik lewat pengaturan.
+      const dir = prefs.reverseScroll ? -1 : 1;
+      send(InputCodec.scroll(0, Math.round(dy * 2 * dir)));
     } else {
-      send(InputCodec.mouseMoveRel(Math.round(dx * TP_SENS), Math.round(dy * TP_SENS)));
+      send(InputCodec.mouseMoveRel(Math.round(dx * prefs.sens), Math.round(dy * prefs.sens)));
     }
   };
   const tpUp = (e: React.PointerEvent) => {
     const t = touchRef.current;
     const known = t.points.delete(e.pointerId);
     if (!known) return;
-    if (t.points.size === 0 && !t.moved && performance.now() - t.downAt < 300) {
+    if (t.points.size === 0 && !t.moved && prefs.tapClick && performance.now() - t.downAt < 300) {
       send(InputCodec.mouseButton(0, true));
       send(InputCodec.mouseButton(0, false));
     }
@@ -1988,6 +2012,13 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
             Trackpad
           </button>
           <button title="Layar penuh" onClick={() => void enterImmersive()}>Fullscreen</button>
+          <button
+            title="Pengaturan sesi: volume, sensitivitas trackpad, arah scroll"
+            className={panelOpen ? 'on' : ''}
+            onClick={() => setPanelOpen((v) => !v)}
+          >
+            Panel
+          </button>
           <button className="hud-icon-btn danger-action" title="Putuskan" onClick={disconnect}>
             <img src="/hud-disconnect.png" alt="Putuskan" />
           </button>
@@ -2013,6 +2044,15 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           </button>
         </div>
         {retryInfo && <p className="session-retry">{retryInfo}</p>}
+        {panelOpen && (
+          <SessionPanel
+            prefs={prefs}
+            onChange={setPrefs}
+            onClose={() => setPanelOpen(false)}
+            hostId={hostId}
+            onDisconnect={disconnect}
+          />
+        )}
         {padOpen && <GamingPad send={send} />}
         {kbOpen && <VirtualKeyboard send={send} />}
       </div>
