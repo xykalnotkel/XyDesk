@@ -1653,6 +1653,11 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const [recents, setRecents] = useState<RecentEntry[]>(loadRecents);
   const [recentsOpen, setRecentsOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  // Pindai QR butuh getUserMedia — sembunyikan tombolnya di browser tanpa
+  // API kamera (konteks non-HTTPS / browser tua) daripada memamerkan
+  // tombol yang pasti gagal.
+  const canScanQr =
+    typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
   const [kbOpen, setKbOpen] = useState(false);
   const [padOpen, setPadOpen] = useState(false);
   const [trackpad, setTrackpad] = useState(false);
@@ -1882,6 +1887,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           <div className="field-head">
             <span className="field-label">ID perangkat</span>
             <span className="field-tools">
+            {canScanQr && (
             <button
               type="button"
               className="recents-toggle"
@@ -1891,6 +1897,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
               <QrIcon />
               Pindai QR
             </button>
+            )}
             {recents.length > 0 && (
               <button
                 type="button"
