@@ -77,6 +77,15 @@ jobs:
       - name: Analisis statis tanpa toleransi diagnostic
         run: flutter analyze --fatal-infos --fatal-warnings
 
+      # Uji unit Dart. Sampai sekarang tidak pernah dijalankan CI, padahal
+      # test/webrtc/input_codec_test.dart mengunci format protokol input
+      # biner yang dipakai host/src/input.rs — kalau formatnya bergeser
+      # tanpa sengaja, yang rusak bukan "test yang merah", melainkan
+      # keyboard dan mouse di komputer orang. Uji yang tidak pernah
+      # dijalankan sama saja dengan tidak punya uji.
+      - name: Uji unit Dart
+        run: flutter test
+
       # Inventaris lisensi wajib mencerminkan lockfile saat ini. Kalau
       # dependensi berubah tanpa regenerasi, dokumen legal jadi bohong —
       # dan itu kewajiban hukum, bukan sekadar dokumentasi.
