@@ -30,7 +30,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260903-CAKRA-RILIS | Cakra - XySpace Team | CI / Release | LAGI KERJA | Rilis 6.3.0: bump versi + changelog + artikel berita + verifikasi rilis | 2026-09-03 |
+| SESI-20260903-CAKRA-RILIS | Cakra - XySpace Team | CI / Release | SELESAI | Rilis 6.3.0: bump versi + changelog + artikel berita + verifikasi rilis — v6.3.0 terbit (Build+Release hijau, artikel changelog-v6-3-0 live) | 2026-09-03 |
 
 ## Antrean izin push
 
