@@ -56,6 +56,7 @@ import {
 import { vkFromCode } from './vk';
 import { VirtualKeyboard, GamingPad, SessionPanel, DEFAULT_PREFS } from './session_ui';
 import type { SessionPrefs } from './session_ui';
+import { QrScanModal, ConnectGuide, SupportLinks } from './connect_extras';
 import { WhatsAppIcon, TelegramIcon, XIcon, FacebookIcon } from './brand-icons';
 
 type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news';
@@ -1634,12 +1635,24 @@ function HistoryIcon() {
   );
 }
 
+function QrIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M14 14h3v3h-3zM21 14v.01M14 21v.01M21 21v.01M17.5 17.5H21" />
+    </svg>
+  );
+}
+
 function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) {
   const [hostId, setHostId] = useState(() => localStorage.getItem(LAST_HOST_KEY) ?? '');
   const [pin, setPin] = useState('');
   const [phase, setPhase] = useState<RtcPhase | ''>('');
   const [recents, setRecents] = useState<RecentEntry[]>(loadRecents);
   const [recentsOpen, setRecentsOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const [kbOpen, setKbOpen] = useState(false);
   const [padOpen, setPadOpen] = useState(false);
   const [trackpad, setTrackpad] = useState(false);
@@ -1860,6 +1873,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   };
 
   return (
+    <>
     <section className={connected ? 'remote-session' : 'connect-card surface-card'}>
       {!connected && (
         <div className="connect-form">
@@ -1867,6 +1881,16 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           <p className="muted">Tidak perlu akun. Ambil ID dan password dari XyDesk Host di PC.</p>
           <div className="field-head">
             <span className="field-label">ID perangkat</span>
+            <span className="field-tools">
+            <button
+              type="button"
+              className="recents-toggle"
+              onClick={() => setQrOpen(true)}
+              title="Pindai QR dari XyDesk Host"
+            >
+              <QrIcon />
+              Pindai QR
+            </button>
             {recents.length > 0 && (
               <button
                 type="button"
@@ -1878,6 +1902,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
                 Riwayat
               </button>
             )}
+            </span>
           </div>
           {recentsOpen && (
             <div className="recents-list">
@@ -2057,6 +2082,23 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
         {kbOpen && <VirtualKeyboard send={send} />}
       </div>
     </section>
+    {qrOpen && (
+      <QrScanModal
+        onClose={() => setQrOpen(false)}
+        onResult={(id) => {
+          setHostId(formatHostId(id));
+          setQrOpen(false);
+          pinRef.current?.focus();
+        }}
+      />
+    )}
+    {!connected && (
+      <>
+        <ConnectGuide />
+        <SupportLinks />
+      </>
+    )}
+    </>
   );
 }
 

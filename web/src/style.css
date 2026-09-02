@@ -1997,3 +1997,156 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   font-size: 13.5px;
 }
 .spanel-disconnect:hover { background: rgba(220, 38, 38, 0.32); }
+
+/* ── Connect: alat di kepala field (Pindai QR + Riwayat) ── */
+.field-tools { display: inline-flex; gap: 8px; }
+
+/* ── Pemindai QR ── */
+.qr-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(10, 6, 18, 0.72);
+  backdrop-filter: blur(4px);
+}
+.qr-box {
+  width: min(420px, 100%);
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.qr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.qr-head strong { font-size: 16px; }
+.qr-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  font-size: 12px;
+}
+.qr-view {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0d0716;
+}
+.qr-view video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.qr-frame {
+  position: absolute;
+  inset: 14%;
+  border: 2.5px solid var(--accent-2);
+  border-radius: 16px;
+  /* Hanya sudut-sudutnya: bingkai penuh menghalangi pandangan. */
+  mask:
+    linear-gradient(#000 0 0) top left / 34% 34% no-repeat,
+    linear-gradient(#000 0 0) top right / 34% 34% no-repeat,
+    linear-gradient(#000 0 0) bottom left / 34% 34% no-repeat,
+    linear-gradient(#000 0 0) bottom right / 34% 34% no-repeat;
+}
+.qr-hint { font-size: 13px; color: var(--ink-soft); text-align: center; margin: 0; }
+.qr-error { font-size: 13.5px; color: #b91c1c; margin: 0; }
+
+/* ── Panduan main (Connect) ── */
+.connect-guide {
+  max-width: 600px;
+  margin: 0 auto 28px;
+  padding: 26px 28px;
+  text-align: left;
+}
+.connect-guide h2 { font-size: 20px; margin-bottom: 4px; }
+.guide-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin: 14px 0 18px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--overlay);
+}
+.guide-toggle button {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.guide-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+}
+.guide-steps {
+  list-style: none;
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+}
+.guide-steps li { display: flex; gap: 12px; align-items: flex-start; }
+.guide-num {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.guide-steps strong { display: block; font-size: 14.5px; margin-bottom: 2px; }
+.guide-steps p { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; }
+
+/* ── Sosmed "Dukung kami di" (Connect) ── */
+.support-block {
+  max-width: 600px;
+  margin: 0 auto 60px;
+  text-align: center;
+  display: grid;
+  gap: 12px;
+}
+.support-title { font-size: 12px; color: var(--ink-soft); }
+.support-row { display: flex; justify-content: center; gap: 12px; }
+.support-row a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  transition: border-color var(--speed) ease, transform var(--speed) ease;
+}
+.support-row a:hover { border-color: var(--accent-2); transform: translateY(-1px); }
+.support-row svg { width: 18px; height: 18px; }
+
+@media (max-width: 640px) {
+  .connect-guide { padding: 20px 16px; }
+  .support-row { flex-wrap: wrap; }
+  .field-tools { gap: 6px; }
+}

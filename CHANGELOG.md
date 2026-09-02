@@ -28,6 +28,14 @@ Kebijakan rilis:
   `captured_at` sejak detik ditangkap di thread capture, dan latensi
   dihitung sesaat sebelum `write_sample` — pemantauan target roadmap
   < 40 ms glass-to-glass tanpa alat eksternal.
+- Web: pemindai QR di halaman Connect — arahkan kamera ke QR XyDesk Host
+  dan ID terisi otomatis; pakai BarcodeDetector bawaan browser, jsQR
+  (dimuat lambat) sebagai cadangan; format payload sama dengan aplikasi
+  Android (`xydesk://connect?id=` atau 9 digit polos).
+- Web: bagian "Cara main" di halaman Connect — panduan 4 langkah dengan
+  toggle sisi client/sisi host, teks dari GuidePage aplikasi Android.
+- Web: blok "Dukung kami di" (Telegram, WhatsApp, TikTok) di halaman
+  Connect — tautan sama dengan aplikasi Android.
 
 ### Diubah
 - Host: durasi sampel video (maju timestamp RTP per frame) diseragamkan ke
