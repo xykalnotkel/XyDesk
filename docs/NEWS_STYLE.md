@@ -105,15 +105,12 @@ Aturan lama "satu sampul per artikel" sudah tidak berlaku. Mulai sekarang:
    Teks di dalam `[...]` adalah keterangan gambar dan wajib diisi —
    jelaskan apa yang sedang dilihat pembaca.
 
-> **Status dukungan (jujur, per 2 Sep 2026):** worker dan aplikasi saat ini
-> merender isi berita sebagai teks polos — sintaks `![...](...)` di atas
-> BELUM dirender jadi gambar di worker (`news/src/worker.js`), client
-> Flutter (`lib/features/news/news_detail_page.dart`), web, dan desktop.
-> Sebelum aturan screenshot ini bisa jalan penuh, dukungan render gambar
-> inline harus dibangun dulu di keempat tempat itu (masing-masing oleh role
-> yang sesuai — lihat `AGENT.md`). Sampai dukungan itu terbit, JANGAN
-> menerbitkan berita berisi sintaks gambar yang akan tampil sebagai teks
-> mentah di layar pengguna.
+> **Status dukungan (kini, per 3 Sep 2026):** sintaks `![...](...)` di atas
+> SUDAH dirender jadi gambar di aplikasi Android (Flutter), web, dan desktop
+> shell — hanya URL dari domain sendiri (`app.xystudio.my.id`) yang
+> dirender, baris lain tetap paragraf biasa. Halaman berbagi `/n/<slug>`
+> hanya memuat metadata (judul, ringkasan, sampul), jadi tidak menampilkan
+> teks mentah. Berita rilis sudah bisa memakai blok gambar.
 
 ---
 

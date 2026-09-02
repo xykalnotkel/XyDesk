@@ -17,6 +17,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+## [6.3.0] - 2026-09-03
+
 ### Ditambahkan
 - Web: panel pengaturan sesi (tombol "Panel" di bar sesi) — volume audio
   PC, sensitivitas kursor trackpad, ketuk-untuk-klik, arah scroll, info
@@ -37,8 +39,8 @@ Kebijakan rilis:
   `![keterangan](url)` menjadi gambar + keterangan. Hanya URL
   `app.xystudio.my.id` yang dirender (screenshot rilis dari
   `web/public/news/shots/`); baris lain tetap paragraf biasa. Ini bagian
-  dari dukungan aturan screenshot `docs/NEWS_STYLE.md` — Android dan
-  halaman berbagi worker menyusul.
+  dari dukungan aturan screenshot `docs/NEWS_STYLE.md` — Android kini
+  ikut merender gambar yang sama; halaman berbagi hanya memuat metadata.
 - Aturan kerja agent AI: `AGENT.md` (satu sesi satu role, identitas
   kontributor `Nama - XySpace Team`, kewajiban jujur soal apa yang sudah
   dan belum diuji, izin push per sesi — wajib disetujui operator di

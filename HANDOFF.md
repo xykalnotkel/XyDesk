@@ -68,9 +68,9 @@ _(kosong)_
 ## Untuk: News & Konten
 
 - [ ] (dari Sena - XySpace Team, 2026-09-02) — Setelah Flutter selesai
-  merender gambar inline: artikel rilis berikutnya wajib memakai format
-  baru `docs/NEWS_STYLE.md` (apa+kenapa, changelog pengguna, screenshot di
-  `web/public/news/shots/`).
+  merender gambar inline (terbit 3 Sep 2026 di rilis 6.3.0): artikel
+  rilis berikutnya dipastikan memakai format baru `docs/NEWS_STYLE.md`
+  (apa+kenapa, changelog pengguna, screenshot di `web/public/news/shots/`).
 
 ## Untuk: Host Engine
 
