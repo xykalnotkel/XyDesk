@@ -53,18 +53,44 @@ export function newsFingerprint(): string {
 
 /// Nama tampilan acak per perangkat — stabil antar kunjungan.
 /// Tidak ada kolom nama manual: pengguna cukup berkomentar.
+///
+/// Nama dibentuk dari daftar nama manusia (bukan "tamu-xxxx") supaya kolom
+/// komentar terasa hidup. Turunan deterministik dari sidik jari perangkat:
+/// orang yang sama selalu muncul dengan nama yang sama.
+const NAME_FIRST = [
+  'Raka', 'Sinta', 'Bima', 'Dewi', 'Aldi', 'Nadia', 'Fajar', 'Laras',
+  'Galih', 'Ayu', 'Reza', 'Putri', 'Dimas', 'Ratna', 'Yoga', 'Salsa',
+  'Ilham', 'Maya', 'Rio', 'Tania', 'Bagus', 'Intan', 'Eka', 'Wulan',
+  'Arif', 'Citra', 'Damar', 'Nirmala', 'Panji', 'Kirana', 'Satria', 'Anggi',
+];
+const NAME_LAST = [
+  'Saputra', 'Pratama', 'Lestari', 'Wijaya', 'Ramadhan', 'Maharani',
+  'Nugroho', 'Anggraini', 'Santoso', 'Utami', 'Firmansyah', 'Puspita',
+  'Hidayat', 'Safitri', 'Kurniawan', 'Melati', 'Gunawan', 'Andini',
+  'Prasetyo', 'Rahayu', 'Mahendra', 'Paramita', 'Wibowo', 'Larasati',
+];
+
 export function newsDisplayName(): string {
   const KEY = 'xydesk.news.name';
   let name = localStorage.getItem(KEY);
-  if (!name) {
-    // Turunan 4 digit dari sidik jari (hex) → stabil & anonim.
+  // Regenerasi juga untuk pengguna lama yang masih tersimpan "tamu-xxxx".
+  if (!name || /^tamu-/i.test(name)) {
     const fp = newsFingerprint();
     let h = 0;
     for (let i = 0; i < fp.length; i++) h = (h * 31 + fp.charCodeAt(i)) >>> 0;
-    name = `tamu-${h.toString(16).padStart(4, '0')}`;
+    const first = NAME_FIRST[h % NAME_FIRST.length];
+    const last = NAME_LAST[Math.floor(h / NAME_FIRST.length) % NAME_LAST.length];
+    name = `${first} ${last}`;
     localStorage.setItem(KEY, name);
   }
   return name;
+}
+
+/// Foto profil komentator — dihasilkan DiceBear (gratis, tanpa kunci API)
+/// dari nama penulis: nama sama = wajah sama, di perangkat mana pun.
+/// Komentar resmi (official) tidak lewat sini — mereka memakai logo XyDesk.
+export function newsAvatarUrl(author: string): string {
+  return `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(author)}&backgroundColor=ede9fe,fde68a,bbf7d0,bae6fd`;
 }
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {

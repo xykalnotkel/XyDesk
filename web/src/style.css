@@ -751,6 +751,7 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   gap: 10px;
   background: var(--overlay);
   border: 1px solid var(--line);
+  margin-top: 16px; /* form kini di bawah daftar komentar */
   border-radius: var(--radius);
   padding: 16px;
   margin-bottom: 22px;
@@ -793,12 +794,22 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 }
 .comment-head {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: 10px;
   font-size: 13px;
   color: var(--text-low);
   margin-bottom: 6px;
 }
+.comment-head > span:last-child { margin-left: auto; }
+.comment-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--overlay);
+  flex-shrink: 0;
+  object-fit: cover;
+}
+.comment-avatar.sm { width: 24px; height: 24px; }
 .comment-head strong { color: var(--ink); }
 .comment p { font-size: 14.5px; }
 .reply-link {
@@ -968,17 +979,29 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   justify-content: center;
   position: relative;
 }
+/* `display: flex` di atas mengalahkan atribut `hidden` bawaan browser —
+   inilah sebab kotak hitam kosong dulu selalu nongol di bawah form connect
+   sebelum tersambung. Hormati `hidden` secara eksplisit. */
+.video-surface[hidden] { display: none; }
 .video-surface video { width: 100%; height: 100%; object-fit: contain; }
+/* Status di dalam form connect: elemen biasa yang mengalir, bukan overlay. */
 .status-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin: 2px 0 0;
+}
+/* Status sebagai overlay HANYA di atas permukaan video. */
+.video-surface .status-text {
   position: absolute;
   bottom: 12px;
   left: 12px;
   font-size: 12px;
-  font-weight: 600;
   color: #e9e2fa;
   background: rgba(13, 7, 22, 0.65);
   padding: 4px 10px;
   border-radius: 999px;
+  margin: 0;
 }
 .hud-icon-btn {
   position: absolute;

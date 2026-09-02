@@ -45,13 +45,21 @@ Kebijakan rilis:
   tahu halaman lain ada.
 - Folder `web/public/news/shots/` disiapkan (plus aturan penamaan) sebagai
   wadah screenshot artikel berita sesuai `docs/NEWS_STYLE.md`.
+- Komentar berita di web kini punya wajah: foto profil unik per nama
+  (dihasilkan otomatis, gratis, tanpa akun), dan nama komentator baru
+  berupa nama manusia (mis. "Raka Saputra") menggantikan label
+  "tamu-xxxx" — tetap anonim dan stabil per perangkat.
+- `HANDOFF.md`: papan serah-terima antar role agent — temuan lintas area
+  kini wajib ditulis di sana, bukan hanya diucapkan.
 
 ### Diubah
 
 - Warna tema PWA web disamakan ke Paper `#fafaf9` (mengikuti `tokens.dart`
   dan `style.css`) — manifest sebelumnya `#ffffff`, bar PWA Android bisa
   beda warna dari situs.
-
+- Form komentar berita di web dipindah ke bawah daftar komentar (dulu di
+  atas — menyulitkan setelah membaca), dengan gulir otomatis saat menekan
+  "Balas".
 - **Logo asli dipakai di semua platform.** `design/logo-asli.png` menjadi satu
   sumber; `tool/gen_logo.py` menurunkan darinya: ikon aplikasi Android
   (5 kepadatan, legacy + adaptive), splash Android, logo web, favicon, ikon
@@ -60,6 +68,10 @@ Kebijakan rilis:
 
 ### Diperbaiki
 
+- Halaman Connect web: kotak hitam 16:9 tidak lagi tampil sebelum
+  tersambung (CSS `display: flex` mengalahkan atribut `hidden`), dan teks
+  status koneksi kini mengalir rapi di dalam form — bukan melayang absolut
+  di posisi acak.
 - **Web produksi: semua deep link (bukan halaman muka) balas 500.**
   `/legal`, `/download`, `/connect`, `/news`, dan setiap tautan berita yang
   dibagikan berakhir di halaman error Cloudflare 1101 — binding `ASSETS`

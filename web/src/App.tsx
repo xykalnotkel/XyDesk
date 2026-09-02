@@ -32,6 +32,7 @@ import {
   NEWS_SHARE_BASE,
   NewsComment,
   NewsPost,
+  newsAvatarUrl,
   postComment,
   subscribeNews,
   toggleLike,
@@ -990,6 +991,17 @@ function NewsDetailPage({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [replyTo, setReplyTo] = useState<NewsComment | null>(null);
+  // Form komentar ada di BAWAH daftar; saat "Balas" ditekan dari komentar
+  // paling atas, gulirkan ke form supaya pengguna tidak mencarinya.
+  const commentFormRef = useRef<HTMLDivElement | null>(null);
+  const focusCommentForm = (target: NewsComment | null) => {
+    setReplyTo(target);
+    setNotice('');
+    requestAnimationFrame(() => {
+      commentFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      commentFormRef.current?.querySelector('textarea')?.focus({ preventScroll: true });
+    });
+  };
   const [email, setEmail] = useState('');
   const [subBusy, setSubBusy] = useState(false);
 
@@ -1209,7 +1221,58 @@ function NewsDetailPage({
 
           <section className="comments">
             <h2>Komentar ({comments.length})</h2>
-            <div className="comment-form">
+            <div className="comment-list">
+              {comments.length === 0 && (
+                <StateNotice
+                  tone="empty"
+                  glyph="comment"
+                  compact
+                  title="Belum ada komentar"
+                  message="Jadilah yang pertama menanggapi berita ini."
+                />
+              )}
+              {topLevel.map((c) => {
+                const replies = comments.filter((r) => r.parentId === c.id);
+                return (
+                  <div className="comment" key={c.id}>
+                    <div className="comment-head">
+                      <img
+                        className="comment-avatar"
+                        src={c.official ? '/logo.png' : newsAvatarUrl(c.author)}
+                        alt=""
+                        loading="lazy"
+                      />
+                      <AuthorName name={c.author} official={c.official} />
+                      <span>{formatNewsDate(c.createdAt)}</span>
+                    </div>
+                    <p>{c.content}</p>
+                    <button className="reply-link" onClick={() => focusCommentForm(c)}>
+                      Balas
+                    </button>
+                    {replies.length > 0 && (
+                      <div className="replies">
+                        {replies.map((r) => (
+                          <div className="reply" key={r.id}>
+                            <div className="comment-head">
+                              <img
+                                className="comment-avatar sm"
+                                src={r.official ? '/logo.png' : newsAvatarUrl(r.author)}
+                                alt=""
+                                loading="lazy"
+                              />
+                              <AuthorName name={r.author} official={r.official} />
+                              <span>{formatNewsDate(r.createdAt)}</span>
+                            </div>
+                            <p>{r.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="comment-form" ref={commentFormRef}>
               {replyTo && (
                 <div className="reply-banner">
                   <span>
@@ -1233,45 +1296,6 @@ function NewsDetailPage({
               >
                 {busy ? 'Mengirim…' : 'Kirim komentar'}
               </button>
-            </div>
-            <div className="comment-list">
-              {comments.length === 0 && (
-                <StateNotice
-                  tone="empty"
-                  glyph="comment"
-                  compact
-                  title="Belum ada komentar"
-                  message="Jadilah yang pertama menanggapi berita ini."
-                />
-              )}
-              {topLevel.map((c) => {
-                const replies = comments.filter((r) => r.parentId === c.id);
-                return (
-                  <div className="comment" key={c.id}>
-                    <div className="comment-head">
-                      <AuthorName name={c.author} official={c.official} />
-                      <span>{formatNewsDate(c.createdAt)}</span>
-                    </div>
-                    <p>{c.content}</p>
-                    <button className="reply-link" onClick={() => { setReplyTo(c); setNotice(''); }}>
-                      Balas
-                    </button>
-                    {replies.length > 0 && (
-                      <div className="replies">
-                        {replies.map((r) => (
-                          <div className="reply" key={r.id}>
-                            <div className="comment-head">
-                              <AuthorName name={r.author} official={r.official} />
-                              <span>{formatNewsDate(r.createdAt)}</span>
-                            </div>
-                            <p>{r.content}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
             </div>
           </section>
 
