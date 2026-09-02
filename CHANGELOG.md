@@ -66,6 +66,12 @@ Kebijakan rilis:
 
 ### Diperbaiki
 
+- Inventaris lisensi pihak ketiga (`docs/THIRD-PARTY-LICENSES.md`,
+  `web/src/licenses.generated.ts`, `tool/license-data.json`) diregenerasi
+  dengan cache dependensi lengkap: 10 komponen Dart yang sebelumnya tercatat
+  "lihat berkas LICENSE paket" kini punya SPDX (BSD-3-Clause/Apache-2.0) dan
+  daftar hanya memuat paket **runtime** (bukan seluruh lockfile). Sebelumnya
+  regenerasi tanpa SDK menghasilkan inventaris yang selalu "usang" di CI.
 - Rilis tidak lagi gagal merah saat Build pemicunya hanya build terfilter
   (mis. commit papan/dokumen tanpa artefak client): `release.yml` kini
   memeriksa artefak `XyDesk-Android-APK` + `XyDesk-Windows-*` pada run
