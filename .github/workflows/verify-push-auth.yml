@@ -99,10 +99,10 @@ jobs:
           done < /tmp/commits.txt
 
           echo "ids<<EOF" >> "$GITHUB_OUTPUT"
-          sort -u "$ids" 2>/dev/null || true
+          sort -u "$ids" 2>/dev/null >> "$GITHUB_OUTPUT" || true
           echo "EOF" >> "$GITHUB_OUTPUT"
           echo "tanpa<<EOF" >> "$GITHUB_OUTPUT"
-          cat "$tanpa" 2>/dev/null || true
+          cat "$tanpa" 2>/dev/null >> "$GITHUB_OUTPUT" || true
           echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Cocokkan dengan persetujuan di AGENT_BOARD.md
