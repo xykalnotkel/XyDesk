@@ -51,6 +51,11 @@ Kebijakan rilis:
   "tamu-xxxx" — tetap anonim dan stabil per perangkat.
 - `HANDOFF.md`: papan serah-terima antar role agent — temuan lintas area
   kini wajib ditulis di sana, bukan hanya diucapkan.
+- Host: konversi RGBA → NV12 dipisah ke modul lintas platform `pixfmt.rs`
+  dengan uji regresi (warna referensi BT.601 full-range, rata-rata blok
+  2x2, pemakaian ulang buffer). Sebelumnya fungsi ini tersembunyi di dalam
+  modul Windows `screen.rs` tanpa satu pun pengujian — padahal ia jalur
+  piksel menuju NVENC.
 
 ### Diubah
 
@@ -65,6 +70,11 @@ Kebijakan rilis:
   (5 kepadatan, legacy + adaptive), splash Android, logo web, favicon, ikon
   PWA, `.ico` Windows, dan aset Flutter. Mengedit berkas hasil generate tidak
   lagi ada gunanya — generator akan menimpanya.
+- `host/README.md`: tabel status tidak lagi menulis sumber video DXGI+NVENC
+  "belum diimplementasi". Implementasinya sudah ada (`screen.rs` +
+  `nvenc.rs`); yang belum hanya verifikasi di lab Windows nyata dan jalur
+  zero-copy. Bagian "Rencana implementasi" diganti uraian cara kerja, dan
+  struktur folder ikut disesuaikan.
 
 ### Diperbaiki
 
@@ -88,6 +98,10 @@ Kebijakan rilis:
   (`flutter_lints`, `lints`, dan paket test) sebagai komponen yang ikut ke
   perangkat pengguna: 490 menjadi 488.
 - `npm test` di `news/` tidak lagi gagal (skrip `test` ditambahkan).
+- Host: `rgba_to_nv12` kini menolak dimensi ganjil secara eksplisit
+  (`debug_assert!`). Sebelumnya kode memakai `.min()` defensif yang memberi
+  kesan aman, padahal dimensi ganjil tetap menulis melewati batas plane Y —
+  kontrak "dimensi genap" kini terdokumentasi, bukan tersirat.
 
 ## [6.2.2] - 2026-09-01
 

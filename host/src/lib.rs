@@ -12,6 +12,8 @@ pub mod input;
 pub mod opus_ffi;
 pub mod pairedpeers;
 pub mod pairguard;
+/// Konversi format piksel (RGBA → NV12) untuk jalur encode NVENC.
+pub mod pixfmt;
 pub mod screen;
 pub mod session;
 

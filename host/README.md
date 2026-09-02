@@ -10,13 +10,15 @@ meng-encode, dan mengirim via WebRTC ke client.
 | Signaling client (daftar, pair, negosiasi) | ✅ jadi, lintas platform |
 | Sesi WebRTC (answerer) + data channel "input" | ✅ implementasi tersedia |
 | **Media plane: track video H264 + encode → RTP → decode** | ✅ implementasi tersedia (openh264, pola frame) |
-| Sumber video: capture layar (DXGI) + encode (NVENC) | ⏳ Windows-only, belum diimplementasi |
+| Sumber video: capture layar (DXGI) + encode (NVENC) | ✅ implementasi tersedia (`screen.rs` + `nvenc.rs`); ⏳ belum diverifikasi di lab Windows |
 
 Artinya: jalur media **sudah terbukti end-to-end** — host meng-encode frame
-(openh264) → kirim lewat RTP → client menerima & men-decode. Yang tersisa
-hanya menukar sumber frame dari pola uji ke **capture layar DXGI + NVENC**
-di Windows (GPU). Alur kode sudah disiapkan agar penggantian sumber itu
-cukup menukar implementasi `encode_next()`.
+(openh264) → kirim lewat RTP → client menerima & men-decode. Di Windows,
+`screen.rs` menangkap layar via DXGI Desktop Duplication (`windows-capture`)
+lalu meng-encode dengan **NVENC** bila GPU NVIDIA tersedia, dan jatuh ke
+openh264 (software) bila tidak. Yang belum dilakukan: verifikasi di lab
+Windows nyata (runner CI tanpa GPU — lihat `test-lab.yml`) dan jalur
+zero-copy NVENC (ID3D11Texture2D → NVENC tanpa bolak-balik CPU).
 
 ## Identitas (ID + Password) — dipakai untuk connect dari HP
 
@@ -55,17 +57,23 @@ GitHub Actions membangun host Windows secara otomatis. Untuk build manual:
 cargo build --release
 ```
 
-## Rencana implementasi sumber video (Windows)
+## Sumber video (Windows) — cara kerjanya
 
-1. **Capture** — `windows-capture` crate (DXGI Desktop Duplication),
-   `AcquireNextFrame` di thread terpisah, budget ≤ 8 ms/frame.
-2. **Encode** — jalur cepat PoC: FFmpeg (`ffmpeg-next`) `h264_nvenc -preset p1 -tune ll`;
-   produksi: NVIDIA Video Codec SDK (zero-copy CUDA→NVENC).
-3. **Kirim** — dorong frame ter-encode ke `TrackLocalStaticSample`
-   (SampleBuilder → WriteSample → RTP) di `src/session.rs`.
+1. **Capture** — `screen.rs` memakai crate `windows-capture` (DXGI Desktop
+   Duplication / Graphics Capture API) di thread terpisah,
+   `ColorFormat::Rgba8`.
+2. **Encode** — `nvenc.rs` memanggil `nvEncodeAPI64.dll` langsung (NVIDIA
+   Video Codec SDK 12.2, dimuat dinamis): H264 baseline CBR low-latency.
+   Bila GPU NVIDIA / driver R550+ tidak ada, otomatis jatuh ke openh264
+   (software) — sesi tidak mati.
+3. **Kirim** — frame ter-encode didorong ke track video lewat
+   `track.write_sample` di `src/session.rs`; channel frame berukuran kecil
+   agar frame usang dibuang (latency diutamakan dari kelengkapan).
 
+> NVENC zero-copy (ID3D11Texture2D → NVENC tanpa salin CPU) masih TODO —
+> hari ini jalurnya CPU RGBA→NV12 (`pixfmt.rs`) → texture D3D11.
 > Cross-compile dari Linux **tidak** didukung untuk bagian capture (butuh
-> Win32). Uji langsung di Windows.
+> Win32). Verifikasi di lab Windows lewat workflow `test-lab.yml`.
 
 ## Struktur
 
@@ -73,9 +81,11 @@ cargo build --release
 host/
 ├── Cargo.toml
 ├── src/
-│   ├── lib.rs       # pub mod identity; pub mod screen; pub mod session;
+│   ├── lib.rs       # pub mod identity; pub mod pixfmt; pub mod screen; ...
 │   ├── main.rs      # CLI + signaling client + wiring sesi
 │   ├── identity.rs  # ID 9 digit + password pairing (persisten, customizable)
 │   ├── session.rs   # WebRTC answerer + data channel input
-│   └── screen.rs    # sumber video (Windows DXGI — TODO)
+│   ├── screen.rs    # sumber video: DXGI capture (Windows) + pola uji (fallback)
+│   ├── nvenc.rs     # encoder H264 hardware NVIDIA (dinamis, Windows-only)
+│   └── pixfmt.rs    # RGBA → NV12 (lintas platform, teruji)
 ```

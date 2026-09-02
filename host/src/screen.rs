@@ -269,7 +269,7 @@ mod windows {
         ) -> Result<Vec<u8>, String> {
             match self {
                 EncoderKind::Nvenc(enc) => {
-                    rgba_to_nv12(rgba_tight, width, height, nv12);
+                    crate::pixfmt::rgba_to_nv12(rgba_tight, width, height, nv12);
                     enc.encode(nv12)
                 }
                 EncoderKind::Soft(enc) => {
@@ -283,50 +283,8 @@ mod windows {
         }
     }
 
-    /// RGBA8 (baris rapat) → NV12 (BT.601 full-range, subsampling 2x2).
-    /// Ukuran keluaran = w*h*3/2; buffer `out` dipakai ulang.
-    fn rgba_to_nv12(rgba: &[u8], width: usize, height: usize, out: &mut Vec<u8>) {
-        let size = width * height * 3 / 2;
-        out.resize(size, 0);
-        let (y_out, uv_part) = out.split_at_mut(width * height);
-        let y_dst = &mut y_out[..];
-        let uv_dst = &mut uv_part[..];
-        // Iterasi 2x2 blok sekaligus untuk U/V (subsampling horizontal+vertikal).
-        for y in (0..height).step_by(2) {
-            let row_y0 = y * width * 4;
-            let row_y1 = (y + 1).min(height - 1) * width * 4;
-            let y_row = y * width;
-            let uv_row = (y / 2) * width;
-            for x in (0..width).step_by(2) {
-                let i00 = row_y0 + x * 4;
-                let i01 = row_y0 + (x + 1).min(width - 1) * 4;
-                let i10 = row_y1 + x * 4;
-                let i11 = row_y1 + (x + 1).min(width - 1) * 4;
-                let (r0, g0, b0) = (rgba[i00] as u32, rgba[i00 + 1] as u32, rgba[i00 + 2] as u32);
-                let (r1, g1, b1) = (rgba[i01] as u32, rgba[i01 + 1] as u32, rgba[i01 + 2] as u32);
-                let (r2, g2, b2) = (rgba[i10] as u32, rgba[i10 + 1] as u32, rgba[i10 + 2] as u32);
-                let (r3, g3, b3) = (rgba[i11] as u32, rgba[i11 + 1] as u32, rgba[i11 + 2] as u32);
-                let (rr, gg, bb) = (
-                    (r0 + r1 + r2 + r3) / 4,
-                    (g0 + g1 + g2 + g3) / 4,
-                    (b0 + b1 + b2 + b3) / 4,
-                );
-                // Y untuk keempat piksel; U/V dari rata-rata 2x2 (BT.601
-                // full-range — cocok untuk layar; VUI full-range di-set di
-                // NVENC agar decoder tidak menerapkan studio swing).
-                y_dst[y_row + x] = ((77 * r0 + 150 * g0 + 29 * b0 + 128) >> 8) as u8;
-                y_dst[y_row + x + 1] = ((77 * r1 + 150 * g1 + 29 * b1 + 128) >> 8) as u8;
-                y_dst[y_row + width + x] = ((77 * r2 + 150 * g2 + 29 * b2 + 128) >> 8) as u8;
-                y_dst[y_row + width + x + 1] = ((77 * r3 + 150 * g3 + 29 * b3 + 128) >> 8) as u8;
-                let c_u = ((128i32 * bb as i32 - 43 * rr as i32 - 85 * gg as i32 + 128) >> 8) + 128;
-                let c_v =
-                    ((128i32 * rr as i32 - 107 * gg as i32 - 21 * bb as i32 + 128) >> 8) + 128;
-                let uv = uv_row + x;
-                uv_dst[uv] = c_u.clamp(0, 255) as u8;
-                uv_dst[uv + 1] = c_v.clamp(0, 255) as u8;
-            }
-        }
-    }
+    /// RGBA8 (baris rapat) → NV12 dikerjakan `crate::pixfmt::rgba_to_nv12`
+    /// (lintas platform, teruji — lihat `pixfmt.rs`).
 
     /// Penangkap layar primer: tiap frame → proper → encode H264 (NVENC
     /// bila ada; fallback openh264) → kirim ke channel (mpsc::SyncSender<Vec<u8>>).

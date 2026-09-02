@@ -11,3 +11,4 @@ baris milik orang lain. Format nama agent: `Nama - XySpace Team`
 | Sena - XySpace Team | Docs & Audit | 2026-09 |
 | Danu - XySpace Team | Web | 2026-09 |
 | Bara - XySpace Team | Desktop Shell | 2026-09 |
+| Galih - XySpace Team | Host Engine | 2026-09 |

@@ -57,7 +57,10 @@ _(kosong)_
 
 ## Untuk: Host Engine
 
-_(kosong)_
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — `nvenc.rs`: `ok()` hanya
+  menulis "NVENC status {n}" tanpa nama error. Petakan kode status → nama
+  (`NV_ENC_ERR_UNSUPPORTED_DEVICE`, dll.) + test, supaya log fallback ke
+  openh264 terbaca manusia, bukan angka.
 
 ## Untuk: Docs & Audit
 
