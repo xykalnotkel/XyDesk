@@ -265,9 +265,17 @@ mod windows_inject {
 pub fn encode_clipboard_set(text: &str) -> Vec<u8> {
     const MAX: usize = 64 * 1024;
     let bytes = text.as_bytes();
-    let mut end = bytes.len().min(MAX);
-    while end > 0 && (bytes[end - 1] & 0xC0) == 0x80 {
-        end -= 1;
+    let mut end = bytes.len();
+    // Pembersihan ekor HANYA bila teksnya benar-benar dipotong. Byte
+    // terakhir teks yang sah pun bisa berupa kelanjutan UTF-8, jadi
+    // membersihkannya tanpa memotong berarti menghapus karakter terakhir
+    // dan menyisakan byte lead yang menggantung — penerima lalu menolak
+    // SELURUH pesan.
+    if end > MAX {
+        end = MAX;
+        while end > 0 && (bytes[end] & 0xC0) == 0x80 {
+            end -= 1;
+        }
     }
     let mut out = Vec::with_capacity(1 + end);
     out.push(tag::CLIPBOARD_SET);
@@ -324,7 +332,21 @@ mod tests {
     fn encode_clipboard_set_dan_kembali_lagi() {
         let m = encode_clipboard_set("Halo");
         assert_eq!(m[0], tag::CLIPBOARD_SET);
-        assert_eq!(decode(&m), Some(InputEvent::ClipboardSet("Halo".to_string())));
+        assert_eq!(
+            decode(&m),
+            Some(InputEvent::ClipboardSet("Halo".to_string()))
+        );
+    }
+
+    #[test]
+    fn encode_clipboard_set_menjaga_karakter_non_ascii() {
+        // Pernah melenceng: pembersihan ekor UTF-8 dijalankan walau teks
+        // tidak dipotong, sehingga karakter terakhir yang sah ikut terbuang
+        // dan menyisakan byte lead yang menggantung. Gejalanya bukan satu
+        // huruf hilang, melainkan SELURUH pesan ditolak penerima.
+        let isi = "Gaskeun \u{1f525} — \"mantap\"";
+        let m = encode_clipboard_set(isi);
+        assert_eq!(decode(&m), Some(InputEvent::ClipboardSet(isi.to_string())));
     }
 
     #[test]

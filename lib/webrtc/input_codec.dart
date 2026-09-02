@@ -113,15 +113,24 @@ class InputCodec {
   /// menggeser paket input mouse dan keyboard.
   static Uint8List clipboardSet(String s) {
     final utf8Bytes = utf8.encode(s);
-    var end = utf8Bytes.length <= clipboardMaxBytes
-        ? utf8Bytes.length
-        : clipboardMaxBytes;
-    // Potongan bisa jatuh di tengah karakter multi-byte (aksara non-Latin
-    // memakai sampai 4 byte). Buang ekor yang tidak lengkap supaya yang
-    // terkirim selalu UTF-8 sah — kalau tidak, penerima menolak seluruh
-    // pesan hanya gara-gara satu karakter kepotong di ujung.
-    while (end > 0 && (utf8Bytes[end - 1] & 0xC0) == 0x80) {
-      end--;
+    var end = utf8Bytes.length;
+    // Pemotongan HANYA bila teksnya kepanjangan. Ekor karakter dibuang
+    // supaya yang terkirim selalu UTF-8 sah.
+    //
+    // Jangan jalankan pembersihan ini kalau tidak memotong: byte terakhir
+    // teks yang sah pun bisa berupa kelanjutan (emoji, tanda kutip cantik,
+    // aksara non-Latin). Memotongnya berarti menghapus karakter terakhir
+    // dan menyisakan byte lead yang menggantung — akibatnya penerima
+    // menolak SELURUH pesan, bukan sekadar kehilangan satu huruf.
+    if (end > clipboardMaxBytes) {
+      end = clipboardMaxBytes;
+      // Yang menentukan apakah potongan ini merusak karakter bukan byte
+      // terakhir yang ikut, melainkan byte pertama yang DIBUANG: kalau ia
+      // byte kelanjutan (10xxxxxx), berarti kita memotong di tengah
+      // karakter. Mundur sampai kita berdiri di awal karakter.
+      while (end > 0 && (utf8Bytes[end] & 0xC0) == 0x80) {
+        end--;
+      }
     }
     final b = Uint8List(1 + end);
     b[0] = 0x08;

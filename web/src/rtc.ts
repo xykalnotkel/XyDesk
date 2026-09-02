@@ -86,10 +86,16 @@ export const InputCodec = {
   /// berarti setiap ketikan pengguna menimpa papan klip PC.
   clipboardSet(s: string): Uint8Array {
     const utf8 = new TextEncoder().encode(s);
-    let end = Math.min(utf8.length, 64 * 1024);
-    // Potong di batas karakter: ekor UTF-8 yang tidak lengkap membuat
-    // penerima menolak SELURUH pesan, bukan sekadar kehilangan huruf ujung.
-    while (end > 0 && (utf8[end - 1] & 0xc0) === 0x80) end--;
+    let end = utf8.length;
+    // Pemotongan HANYA bila teksnya kepanjangan. Sama seperti klien Dart:
+    // membersihkan ekor walau tidak memotong akan menghapus karakter
+    // terakhir yang sah dan membuat seluruh pesan ditolak penerima.
+    if (end > 64 * 1024) {
+      end = 64 * 1024;
+      // Mundur berdasar byte pertama yang DIBUANG, bukan yang terakhir
+      // diikutkan — lihat penjelasan di klien Dart.
+      while (end > 0 && (utf8[end] & 0xc0) === 0x80) end--;
+    }
     const b = new Uint8Array(1 + end);
     b[0] = 0x08;
     b.set(utf8.subarray(0, end), 1);
