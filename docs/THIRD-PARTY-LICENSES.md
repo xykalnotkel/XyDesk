@@ -17,38 +17,21 @@ tangan yang bisa ketinggalan zaman.
 
 | Lisensi | Jumlah komponen |
 |---|---|
-| MIT OR Apache-2.0 | 196 |
-| BSD-3-Clause | 94 |
-| MIT | 73 |
-| Apache-2.0 OR MIT | 30 |
-| Apache-2.0 | 21 |
-| Unicode-3.0 | 18 |
-| MIT/Apache-2.0 | 17 |
+| tidak dinyatakan | 326 |
+| BSD-3-Clause | 91 |
+| MIT | 42 |
+| Apache-2.0 | 19 |
 | LGPL-3.0-or-later | 8 |
-| ISC | 6 |
-| Unlicense OR MIT | 4 |
-| Zlib OR Apache-2.0 OR MIT | 3 |
-| BSD-2-Clause | 3 |
-| Apache-2.0 OR ISC OR MIT | 3 |
-| Unlicense/MIT | 2 |
-| CDLA-Permissive-2.0 | 2 |
-| BSD-2-Clause OR Apache-2.0 OR MIT | 2 |
+| ISC | 4 |
 | Apache-2.0 AND LGPL-3.0-or-later | 2 |
-| tidak dinyatakan | 2 |
-| 0BSD OR MIT OR Apache-2.0 | 1 |
-| MIT OR Apache-2.0 OR BSD-1-Clause | 1 |
-| MIT AND BSD-3-Clause | 1 |
-| MIT OR Zlib OR Apache-2.0 | 1 |
-| MIT OR Apache-2.0 OR LGPL-2.1-or-later | 1 |
-| Apache-2.0 AND ISC | 1 |
-| (MIT OR Apache-2.0) AND Unicode-3.0 | 1 |
-| Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | 1 |
 | Apache-2.0 AND LGPL-3.0-or-later AND MIT | 1 |
 | CC-BY-4.0 | 1 |
 | 0BSD | 1 |
 | OFL-1.1 | 1 |
 | CC0-1.0 | 1 |
+| BSD-2-Clause | 1 |
 | NVIDIA Software License Agreement | 1 |
+| MIT OR Apache-2.0 | 1 |
 | Modified MIT (ketentuan layanan OneSignal) | 1 |
 | Ketentuan Layanan Cloudflare | 1 |
 | Ketentuan Layanan Resend | 1 |
@@ -280,330 +263,330 @@ Termasuk dependensi transitif yang ikut ditaut statis ke `xydesk.exe` dan
 
 | Komponen | Versi | Lisensi |
 |---|---|---|
-| `adler2` | 2.0.1 | 0BSD OR MIT OR Apache-2.0 |
-| `aead` | 0.5.2 | MIT OR Apache-2.0 |
-| `aes` | 0.8.4 | MIT OR Apache-2.0 |
-| `aes-gcm` | 0.10.3 | Apache-2.0 OR MIT |
-| `aho-corasick` | 1.1.5 | Unlicense OR MIT |
-| `anstream` | 1.0.0 | MIT OR Apache-2.0 |
-| `anstyle` | 1.0.14 | MIT OR Apache-2.0 |
-| `anstyle-parse` | 1.0.0 | MIT OR Apache-2.0 |
-| `anstyle-query` | 1.1.5 | MIT OR Apache-2.0 |
-| `anstyle-wincon` | 3.0.11 | MIT OR Apache-2.0 |
-| `anyhow` | 1.0.104 | MIT OR Apache-2.0 |
-| `arc-swap` | 1.9.2 | MIT OR Apache-2.0 |
-| `asn1-rs` | 0.5.2 | MIT/Apache-2.0 |
-| `asn1-rs` | 0.6.2 | MIT OR Apache-2.0 |
-| `asn1-rs-derive` | 0.4.0 | MIT/Apache-2.0 |
-| `asn1-rs-derive` | 0.5.1 | MIT OR Apache-2.0 |
-| `asn1-rs-impl` | 0.1.0 | MIT/Apache-2.0 |
-| `asn1-rs-impl` | 0.2.0 | MIT/Apache-2.0 |
-| `async-trait` | 0.1.92 | MIT OR Apache-2.0 |
-| `atomic-waker` | 1.1.2 | Apache-2.0 OR MIT |
-| `autocfg` | 1.5.1 | Apache-2.0 OR MIT |
-| `axum` | 0.8.9 | MIT |
-| `axum-core` | 0.5.6 | MIT |
-| `base16ct` | 0.2.0 | Apache-2.0 OR MIT |
-| `base64` | 0.21.7 | MIT OR Apache-2.0 |
-| `base64` | 0.22.1 | MIT OR Apache-2.0 |
-| `base64ct` | 1.8.3 | Apache-2.0 OR MIT |
-| `bincode` | 1.3.3 | MIT |
-| `bitflags` | 1.3.2 | MIT/Apache-2.0 |
-| `bitflags` | 2.13.1 | MIT OR Apache-2.0 |
-| `block-buffer` | 0.10.4 | MIT OR Apache-2.0 |
-| `block-padding` | 0.3.3 | MIT OR Apache-2.0 |
-| `bumpalo` | 3.20.3 | MIT OR Apache-2.0 |
-| `bytemuck` | 1.25.2 | Zlib OR Apache-2.0 OR MIT |
-| `byteorder` | 1.5.0 | Unlicense OR MIT |
-| `bytes` | 1.12.1 | MIT |
-| `cbc` | 0.1.2 | MIT OR Apache-2.0 |
-| `cc` | 1.4.3 | MIT OR Apache-2.0 |
-| `ccm` | 0.5.0 | Apache-2.0 OR MIT |
-| `cfg-if` | 1.0.4 | MIT OR Apache-2.0 |
-| `cipher` | 0.4.4 | MIT OR Apache-2.0 |
-| `clap` | 4.6.6 | MIT OR Apache-2.0 |
-| `clap_builder` | 4.6.6 | MIT OR Apache-2.0 |
-| `clap_derive` | 4.6.4 | MIT OR Apache-2.0 |
-| `clap_lex` | 1.1.0 | MIT OR Apache-2.0 |
-| `colorchoice` | 1.0.5 | MIT OR Apache-2.0 |
-| `const-oid` | 0.9.6 | Apache-2.0 OR MIT |
-| `core-foundation` | 0.9.4 | MIT OR Apache-2.0 |
-| `core-foundation-sys` | 0.8.7 | MIT OR Apache-2.0 |
-| `cpufeatures` | 0.2.17 | MIT OR Apache-2.0 |
-| `crc` | 3.4.0 | MIT OR Apache-2.0 |
-| `crc-catalog` | 2.5.0 | MIT OR Apache-2.0 |
-| `crc32fast` | 1.5.0 | MIT OR Apache-2.0 |
-| `crossbeam-deque` | 0.8.7 | MIT OR Apache-2.0 |
-| `crossbeam-epoch` | 0.9.20 | MIT OR Apache-2.0 |
-| `crossbeam-utils` | 0.8.22 | MIT OR Apache-2.0 |
-| `crypto-bigint` | 0.5.5 | Apache-2.0 OR MIT |
-| `crypto-common` | 0.1.7 | MIT OR Apache-2.0 |
-| `ctr` | 0.9.2 | MIT OR Apache-2.0 |
-| `curve25519-dalek` | 4.1.3 | BSD-3-Clause |
-| `curve25519-dalek-derive` | 0.1.1 | MIT/Apache-2.0 |
-| `data-encoding` | 2.11.1 | MIT |
-| `der` | 0.7.10 | Apache-2.0 OR MIT |
-| `der-parser` | 8.2.0 | MIT/Apache-2.0 |
-| `der-parser` | 9.0.0 | MIT/Apache-2.0 |
-| `deranged` | 0.5.8 | MIT OR Apache-2.0 |
-| `digest` | 0.10.7 | MIT OR Apache-2.0 |
-| `displaydoc` | 0.2.7 | MIT OR Apache-2.0 |
-| `ecdsa` | 0.16.9 | Apache-2.0 OR MIT |
-| `either` | 1.17.0 | MIT OR Apache-2.0 |
-| `elliptic-curve` | 0.13.8 | Apache-2.0 OR MIT |
-| `errno` | 0.3.14 | MIT OR Apache-2.0 |
-| `ff` | 0.13.1 | MIT/Apache-2.0 |
-| `fiat-crypto` | 0.2.9 | MIT OR Apache-2.0 OR BSD-1-Clause |
-| `find-msvc-tools` | 0.1.11 | MIT OR Apache-2.0 |
-| `flate2` | 1.1.9 | MIT OR Apache-2.0 |
-| `form_urlencoded` | 1.2.2 | MIT OR Apache-2.0 |
-| `futures` | 0.3.34 | MIT OR Apache-2.0 |
-| `futures-channel` | 0.3.34 | MIT OR Apache-2.0 |
-| `futures-core` | 0.3.34 | MIT OR Apache-2.0 |
-| `futures-executor` | 0.3.34 | MIT OR Apache-2.0 |
-| `futures-io` | 0.3.34 | MIT OR Apache-2.0 |
-| `futures-macro` | 0.3.34 | MIT OR Apache-2.0 |
-| `futures-sink` | 0.3.34 | MIT OR Apache-2.0 |
-| `futures-task` | 0.3.34 | MIT OR Apache-2.0 |
-| `futures-util` | 0.3.34 | MIT OR Apache-2.0 |
-| `generic-array` | 0.14.7 | MIT |
-| `getrandom` | 0.2.17 | MIT OR Apache-2.0 |
-| `getrandom` | 0.4.3 | MIT OR Apache-2.0 |
-| `ghash` | 0.5.1 | Apache-2.0 OR MIT |
-| `group` | 0.13.0 | MIT/Apache-2.0 |
-| `heck` | 0.5.0 | MIT OR Apache-2.0 |
-| `hex` | 0.4.3 | MIT OR Apache-2.0 |
-| `hkdf` | 0.12.4 | MIT OR Apache-2.0 |
-| `hmac` | 0.12.1 | MIT OR Apache-2.0 |
-| `http` | 1.5.0 | MIT OR Apache-2.0 |
-| `http-body` | 1.1.0 | MIT |
-| `http-body-util` | 0.1.5 | MIT |
-| `httparse` | 1.10.1 | MIT OR Apache-2.0 |
-| `httpdate` | 1.0.3 | MIT OR Apache-2.0 |
-| `hyper` | 1.11.1 | MIT |
-| `hyper-util` | 0.1.20 | MIT |
-| `icu_collections` | 2.3.0 | Unicode-3.0 |
-| `icu_locale_core` | 2.3.0 | Unicode-3.0 |
-| `icu_normalizer` | 2.3.0 | Unicode-3.0 |
-| `icu_normalizer_data` | 2.3.0 | Unicode-3.0 |
-| `icu_properties` | 2.3.0 | Unicode-3.0 |
-| `icu_properties_data` | 2.3.0 | Unicode-3.0 |
-| `icu_provider` | 2.3.0 | Unicode-3.0 |
-| `idna` | 1.1.0 | MIT OR Apache-2.0 |
-| `idna_adapter` | 1.2.2 | Apache-2.0 OR MIT |
-| `inout` | 0.1.4 | MIT OR Apache-2.0 |
-| `interceptor` | 0.12.0 | MIT OR Apache-2.0 |
-| `ipnet` | 2.12.1 | MIT OR Apache-2.0 |
-| `is_terminal_polyfill` | 1.70.2 | MIT OR Apache-2.0 |
-| `itoa` | 1.0.18 | MIT OR Apache-2.0 |
-| `jobserver` | 0.1.35 | MIT OR Apache-2.0 |
-| `js-sys` | 0.3.104 | MIT OR Apache-2.0 |
-| `lazy_static` | 1.5.0 | MIT OR Apache-2.0 |
-| `libc` | 0.2.189 | MIT OR Apache-2.0 |
-| `litemap` | 0.8.3 | Unicode-3.0 |
-| `lock_api` | 0.4.14 | MIT OR Apache-2.0 |
-| `log` | 0.4.33 | MIT OR Apache-2.0 |
-| `matchit` | 0.8.4 | MIT AND BSD-3-Clause |
-| `md-5` | 0.10.6 | MIT OR Apache-2.0 |
-| `memchr` | 2.8.3 | Unlicense OR MIT |
-| `memoffset` | 0.7.1 | MIT |
-| `mime` | 0.3.17 | MIT OR Apache-2.0 |
-| `minimal-lexical` | 0.2.1 | MIT/Apache-2.0 |
-| `miniz_oxide` | 0.8.9 | MIT OR Zlib OR Apache-2.0 |
-| `mio` | 1.2.2 | MIT |
-| `nasm-rs` | 0.3.2 | MIT OR Apache-2.0 |
-| `nix` | 0.26.4 | MIT |
-| `nom` | 7.1.3 | MIT |
-| `num-bigint` | 0.4.8 | MIT OR Apache-2.0 |
-| `num-conv` | 0.2.2 | MIT OR Apache-2.0 |
-| `num-integer` | 0.1.47 | MIT OR Apache-2.0 |
-| `num-traits` | 0.2.19 | MIT OR Apache-2.0 |
-| `oid-registry` | 0.7.1 | MIT OR Apache-2.0 |
-| `once_cell` | 1.21.4 | MIT OR Apache-2.0 |
-| `once_cell_polyfill` | 1.70.2 | MIT OR Apache-2.0 |
-| `opaque-debug` | 0.3.1 | MIT OR Apache-2.0 |
-| `openh264` | 0.9.8 | BSD-2-Clause |
-| `openh264-sys2` | 0.9.8 | BSD-2-Clause |
-| `openssl-probe` | 0.1.6 | MIT/Apache-2.0 |
-| `p256` | 0.13.2 | Apache-2.0 OR MIT |
-| `p384` | 0.13.1 | Apache-2.0 OR MIT |
-| `parking_lot` | 0.12.5 | MIT OR Apache-2.0 |
-| `parking_lot_core` | 0.9.12 | MIT OR Apache-2.0 |
-| `pem` | 3.0.6 | MIT |
-| `pem-rfc7468` | 0.7.0 | Apache-2.0 OR MIT |
-| `percent-encoding` | 2.3.2 | MIT OR Apache-2.0 |
-| `pin-project-lite` | 0.2.17 | Apache-2.0 OR MIT |
-| `pin-utils` | 0.1.0 | MIT OR Apache-2.0 |
-| `pkcs8` | 0.10.2 | Apache-2.0 OR MIT |
-| `polyval` | 0.6.2 | Apache-2.0 OR MIT |
-| `portable-atomic` | 1.15.0 | Apache-2.0 OR MIT |
-| `potential_utf` | 0.1.6 | Unicode-3.0 |
-| `powerfmt` | 0.2.0 | MIT OR Apache-2.0 |
-| `ppv-lite86` | 0.2.21 | MIT OR Apache-2.0 |
-| `primeorder` | 0.13.6 | Apache-2.0 OR MIT |
-| `proc-macro2` | 1.0.107 | MIT OR Apache-2.0 |
-| `quote` | 1.0.47 | MIT OR Apache-2.0 |
-| `r-efi` | 6.0.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later |
-| `rand` | 0.8.7 | MIT OR Apache-2.0 |
-| `rand_chacha` | 0.3.1 | MIT OR Apache-2.0 |
-| `rand_core` | 0.6.4 | MIT OR Apache-2.0 |
-| `rayon` | 1.12.0 | MIT OR Apache-2.0 |
-| `rayon-core` | 1.13.0 | MIT OR Apache-2.0 |
-| `rcgen` | 0.13.2 | MIT OR Apache-2.0 |
-| `redox_syscall` | 0.5.18 | MIT |
-| `regex` | 1.13.1 | MIT OR Apache-2.0 |
-| `regex-automata` | 0.4.18 | MIT OR Apache-2.0 |
-| `regex-syntax` | 0.8.11 | MIT OR Apache-2.0 |
-| `rfc6979` | 0.4.0 | Apache-2.0 OR MIT |
-| `ring` | 0.17.14 | Apache-2.0 AND ISC |
-| `rtcp` | 0.11.0 | MIT OR Apache-2.0 |
-| `rtp` | 0.11.0 | MIT OR Apache-2.0 |
-| `rustc_version` | 0.4.1 | MIT OR Apache-2.0 |
-| `rusticata-macros` | 4.1.0 | MIT/Apache-2.0 |
-| `rustls` | 0.23.43 | Apache-2.0 OR ISC OR MIT |
-| `rustls-native-certs` | 0.7.3 | Apache-2.0 OR ISC OR MIT |
-| `rustls-pemfile` | 2.2.0 | Apache-2.0 OR ISC OR MIT |
-| `rustls-pki-types` | 1.15.1 | MIT OR Apache-2.0 |
-| `rustls-webpki` | 0.103.14 | ISC |
-| `rustversion` | 1.0.23 | MIT OR Apache-2.0 |
-| `safe_arch` | 1.2.0 | Zlib OR Apache-2.0 OR MIT |
-| `same-file` | 1.0.6 | Unlicense/MIT |
-| `schannel` | 0.1.29 | MIT |
-| `scopeguard` | 1.2.0 | MIT OR Apache-2.0 |
-| `sdp` | 0.6.2 | MIT OR Apache-2.0 |
-| `sec1` | 0.7.3 | Apache-2.0 OR MIT |
-| `security-framework` | 2.11.1 | MIT OR Apache-2.0 |
-| `security-framework-sys` | 2.17.0 | MIT OR Apache-2.0 |
-| `semver` | 1.0.28 | MIT OR Apache-2.0 |
-| `serde` | 1.0.229 | MIT OR Apache-2.0 |
-| `serde_core` | 1.0.229 | MIT OR Apache-2.0 |
-| `serde_derive` | 1.0.229 | MIT OR Apache-2.0 |
-| `serde_json` | 1.0.151 | MIT OR Apache-2.0 |
-| `serde_path_to_error` | 0.1.20 | MIT OR Apache-2.0 |
-| `sha1` | 0.10.7 | MIT OR Apache-2.0 |
-| `sha2` | 0.10.9 | MIT OR Apache-2.0 |
-| `shlex` | 2.0.1 | MIT OR Apache-2.0 |
-| `signal-hook-registry` | 1.4.8 | MIT OR Apache-2.0 |
-| `signature` | 2.2.0 | Apache-2.0 OR MIT |
-| `simd-adler32` | 0.3.10 | MIT |
-| `slab` | 0.4.12 | MIT |
-| `smallvec` | 1.15.2 | MIT OR Apache-2.0 |
-| `smol_str` | 0.2.2 | MIT OR Apache-2.0 |
-| `socket2` | 0.5.10 | MIT OR Apache-2.0 |
-| `socket2` | 0.6.5 | MIT OR Apache-2.0 |
-| `spki` | 0.7.3 | Apache-2.0 OR MIT |
-| `stable_deref_trait` | 1.2.1 | MIT OR Apache-2.0 |
-| `strsim` | 0.11.1 | MIT |
-| `stun` | 0.6.0 | MIT OR Apache-2.0 |
-| `substring` | 1.4.5 | MIT OR Apache-2.0 |
-| `subtle` | 2.6.1 | BSD-3-Clause |
-| `syn` | 1.0.109 | MIT OR Apache-2.0 |
-| `syn` | 2.0.119 | MIT OR Apache-2.0 |
-| `syn` | 3.0.3 | MIT OR Apache-2.0 |
-| `sync_wrapper` | 1.0.2 | Apache-2.0 |
-| `synstructure` | 0.12.6 | MIT |
-| `synstructure` | 0.13.2 | MIT |
-| `thiserror` | 1.0.69 | MIT OR Apache-2.0 |
-| `thiserror` | 2.0.20 | MIT OR Apache-2.0 |
-| `thiserror-impl` | 1.0.69 | MIT OR Apache-2.0 |
-| `thiserror-impl` | 2.0.20 | MIT OR Apache-2.0 |
-| `time` | 0.3.55 | MIT OR Apache-2.0 |
-| `time-core` | 0.1.9 | MIT OR Apache-2.0 |
-| `time-macros` | 0.2.32 | MIT OR Apache-2.0 |
-| `tinystr` | 0.8.4 | Unicode-3.0 |
-| `tokio` | 1.53.1 | MIT |
-| `tokio-macros` | 2.7.2 | MIT |
-| `tokio-rustls` | 0.26.4 | MIT OR Apache-2.0 |
-| `tokio-tungstenite` | 0.23.1 | MIT |
-| `tokio-util` | 0.7.19 | MIT |
-| `tower` | 0.5.3 | MIT |
-| `tower-layer` | 0.3.3 | MIT |
-| `tower-service` | 0.3.3 | MIT |
-| `tungstenite` | 0.23.0 | MIT OR Apache-2.0 |
-| `turn` | 0.8.0 | MIT OR Apache-2.0 |
-| `typenum` | 1.20.1 | MIT OR Apache-2.0 |
-| `unicode-ident` | 1.0.24 | (MIT OR Apache-2.0) AND Unicode-3.0 |
-| `unicode-xid` | 0.2.6 | MIT OR Apache-2.0 |
-| `universal-hash` | 0.5.1 | MIT OR Apache-2.0 |
-| `untrusted` | 0.9.0 | ISC |
-| `ureq` | 2.12.1 | MIT OR Apache-2.0 |
-| `url` | 2.5.8 | MIT OR Apache-2.0 |
-| `utf-8` | 0.7.6 | MIT OR Apache-2.0 |
-| `utf8_iter` | 1.0.4 | Apache-2.0 OR MIT |
-| `utf8parse` | 0.2.2 | Apache-2.0 OR MIT |
-| `uuid` | 1.24.1 | Apache-2.0 OR MIT |
-| `version_check` | 0.9.5 | MIT/Apache-2.0 |
-| `waitgroup` | 0.1.2 | Apache-2.0 |
-| `walkdir` | 2.5.0 | Unlicense/MIT |
-| `wasi` | 0.11.1+wasi-snapshot-preview1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
-| `wasm-bindgen` | 0.2.127 | MIT OR Apache-2.0 |
-| `wasm-bindgen-macro` | 0.2.127 | MIT OR Apache-2.0 |
-| `wasm-bindgen-macro-support` | 0.2.127 | MIT OR Apache-2.0 |
-| `wasm-bindgen-shared` | 0.2.127 | MIT OR Apache-2.0 |
-| `webpki-roots` | 0.26.11 | CDLA-Permissive-2.0 |
-| `webpki-roots` | 1.0.9 | CDLA-Permissive-2.0 |
-| `webrtc` | 0.11.0 | MIT OR Apache-2.0 |
-| `webrtc-data` | 0.9.0 | MIT OR Apache-2.0 |
-| `webrtc-dtls` | 0.10.0 | MIT OR Apache-2.0 |
-| `webrtc-ice` | 0.11.0 | MIT OR Apache-2.0 |
-| `webrtc-mdns` | 0.7.0 | MIT OR Apache-2.0 |
-| `webrtc-media` | 0.8.0 | MIT OR Apache-2.0 |
-| `webrtc-sctp` | 0.10.0 | MIT OR Apache-2.0 |
-| `webrtc-srtp` | 0.13.0 | MIT OR Apache-2.0 |
-| `webrtc-util` | 0.9.0 | MIT OR Apache-2.0 |
-| `wide` | 1.6.1 | Zlib OR Apache-2.0 OR MIT |
-| `winapi` | 0.3.9 | MIT/Apache-2.0 |
-| `winapi-i686-pc-windows-gnu` | 0.4.0 | MIT/Apache-2.0 |
-| `winapi-util` | 0.1.11 | Unlicense OR MIT |
-| `winapi-x86_64-pc-windows-gnu` | 0.4.0 | MIT/Apache-2.0 |
-| `windows` | 0.61.3 | MIT OR Apache-2.0 |
-| `windows` | 0.62.2 | MIT OR Apache-2.0 |
-| `windows_aarch64_gnullvm` | 0.52.6 | MIT OR Apache-2.0 |
-| `windows_aarch64_msvc` | 0.52.6 | MIT OR Apache-2.0 |
-| `windows_i686_gnu` | 0.52.6 | MIT OR Apache-2.0 |
-| `windows_i686_gnullvm` | 0.52.6 | MIT OR Apache-2.0 |
-| `windows_i686_msvc` | 0.52.6 | MIT OR Apache-2.0 |
-| `windows_x86_64_gnu` | 0.52.6 | MIT OR Apache-2.0 |
-| `windows_x86_64_gnullvm` | 0.52.6 | MIT OR Apache-2.0 |
-| `windows_x86_64_msvc` | 0.52.6 | MIT OR Apache-2.0 |
-| `windows-capture` | 2.0.1 | MIT |
-| `windows-collections` | 0.2.0 | MIT OR Apache-2.0 |
-| `windows-collections` | 0.3.2 | MIT OR Apache-2.0 |
-| `windows-core` | 0.61.2 | MIT OR Apache-2.0 |
-| `windows-core` | 0.62.2 | MIT OR Apache-2.0 |
-| `windows-future` | 0.2.1 | MIT OR Apache-2.0 |
-| `windows-future` | 0.3.2 | MIT OR Apache-2.0 |
-| `windows-implement` | 0.60.2 | MIT OR Apache-2.0 |
-| `windows-interface` | 0.59.3 | MIT OR Apache-2.0 |
-| `windows-link` | 0.1.3 | MIT OR Apache-2.0 |
-| `windows-link` | 0.2.1 | MIT OR Apache-2.0 |
-| `windows-numerics` | 0.2.0 | MIT OR Apache-2.0 |
-| `windows-numerics` | 0.3.1 | MIT OR Apache-2.0 |
-| `windows-result` | 0.3.4 | MIT OR Apache-2.0 |
-| `windows-result` | 0.4.1 | MIT OR Apache-2.0 |
-| `windows-strings` | 0.4.2 | MIT OR Apache-2.0 |
-| `windows-strings` | 0.5.1 | MIT OR Apache-2.0 |
-| `windows-sys` | 0.52.0 | MIT OR Apache-2.0 |
-| `windows-sys` | 0.61.2 | MIT OR Apache-2.0 |
-| `windows-targets` | 0.52.6 | MIT OR Apache-2.0 |
-| `windows-threading` | 0.1.0 | MIT OR Apache-2.0 |
-| `windows-threading` | 0.2.1 | MIT OR Apache-2.0 |
-| `writeable` | 0.6.4 | Unicode-3.0 |
-| `x25519-dalek` | 2.0.1 | BSD-3-Clause |
-| `x509-parser` | 0.16.0 | MIT OR Apache-2.0 |
-| `yasna` | 0.5.2 | MIT OR Apache-2.0 |
-| `yoke` | 0.8.3 | Unicode-3.0 |
-| `yoke-derive` | 0.8.2 | Unicode-3.0 |
-| `zerocopy` | 0.8.56 | BSD-2-Clause OR Apache-2.0 OR MIT |
-| `zerocopy-derive` | 0.8.56 | BSD-2-Clause OR Apache-2.0 OR MIT |
-| `zerofrom` | 0.1.8 | Unicode-3.0 |
-| `zerofrom-derive` | 0.1.7 | Unicode-3.0 |
-| `zeroize` | 1.9.0 | Apache-2.0 OR MIT |
-| `zeroize_derive` | 1.5.0 | Apache-2.0 OR MIT |
-| `zerotrie` | 0.2.5 | Unicode-3.0 |
-| `zerovec` | 0.11.7 | Unicode-3.0 |
-| `zerovec-derive` | 0.11.4 | Unicode-3.0 |
-| `zmij` | 1.0.23 | MIT |
+| `adler2` | 2.0.1 | tidak dinyatakan |
+| `aead` | 0.5.2 | tidak dinyatakan |
+| `aes` | 0.8.4 | tidak dinyatakan |
+| `aes-gcm` | 0.10.3 | tidak dinyatakan |
+| `aho-corasick` | 1.1.5 | tidak dinyatakan |
+| `anstream` | 1.0.0 | tidak dinyatakan |
+| `anstyle` | 1.0.14 | tidak dinyatakan |
+| `anstyle-parse` | 1.0.0 | tidak dinyatakan |
+| `anstyle-query` | 1.1.5 | tidak dinyatakan |
+| `anstyle-wincon` | 3.0.11 | tidak dinyatakan |
+| `anyhow` | 1.0.104 | tidak dinyatakan |
+| `arc-swap` | 1.9.2 | tidak dinyatakan |
+| `asn1-rs` | 0.5.2 | tidak dinyatakan |
+| `asn1-rs` | 0.6.2 | tidak dinyatakan |
+| `asn1-rs-derive` | 0.4.0 | tidak dinyatakan |
+| `asn1-rs-derive` | 0.5.1 | tidak dinyatakan |
+| `asn1-rs-impl` | 0.1.0 | tidak dinyatakan |
+| `asn1-rs-impl` | 0.2.0 | tidak dinyatakan |
+| `async-trait` | 0.1.92 | tidak dinyatakan |
+| `atomic-waker` | 1.1.2 | tidak dinyatakan |
+| `autocfg` | 1.5.1 | tidak dinyatakan |
+| `axum` | 0.8.9 | tidak dinyatakan |
+| `axum-core` | 0.5.6 | tidak dinyatakan |
+| `base16ct` | 0.2.0 | tidak dinyatakan |
+| `base64` | 0.21.7 | tidak dinyatakan |
+| `base64` | 0.22.1 | tidak dinyatakan |
+| `base64ct` | 1.8.3 | tidak dinyatakan |
+| `bincode` | 1.3.3 | tidak dinyatakan |
+| `bitflags` | 1.3.2 | tidak dinyatakan |
+| `bitflags` | 2.13.1 | tidak dinyatakan |
+| `block-buffer` | 0.10.4 | tidak dinyatakan |
+| `block-padding` | 0.3.3 | tidak dinyatakan |
+| `bumpalo` | 3.20.3 | tidak dinyatakan |
+| `bytemuck` | 1.25.2 | tidak dinyatakan |
+| `byteorder` | 1.5.0 | tidak dinyatakan |
+| `bytes` | 1.12.1 | tidak dinyatakan |
+| `cbc` | 0.1.2 | tidak dinyatakan |
+| `cc` | 1.4.3 | tidak dinyatakan |
+| `ccm` | 0.5.0 | tidak dinyatakan |
+| `cfg-if` | 1.0.4 | tidak dinyatakan |
+| `cipher` | 0.4.4 | tidak dinyatakan |
+| `clap` | 4.6.6 | tidak dinyatakan |
+| `clap_builder` | 4.6.6 | tidak dinyatakan |
+| `clap_derive` | 4.6.4 | tidak dinyatakan |
+| `clap_lex` | 1.1.0 | tidak dinyatakan |
+| `colorchoice` | 1.0.5 | tidak dinyatakan |
+| `const-oid` | 0.9.6 | tidak dinyatakan |
+| `core-foundation` | 0.9.4 | tidak dinyatakan |
+| `core-foundation-sys` | 0.8.7 | tidak dinyatakan |
+| `cpufeatures` | 0.2.17 | tidak dinyatakan |
+| `crc` | 3.4.0 | tidak dinyatakan |
+| `crc-catalog` | 2.5.0 | tidak dinyatakan |
+| `crc32fast` | 1.5.0 | tidak dinyatakan |
+| `crossbeam-deque` | 0.8.7 | tidak dinyatakan |
+| `crossbeam-epoch` | 0.9.20 | tidak dinyatakan |
+| `crossbeam-utils` | 0.8.22 | tidak dinyatakan |
+| `crypto-bigint` | 0.5.5 | tidak dinyatakan |
+| `crypto-common` | 0.1.7 | tidak dinyatakan |
+| `ctr` | 0.9.2 | tidak dinyatakan |
+| `curve25519-dalek` | 4.1.3 | tidak dinyatakan |
+| `curve25519-dalek-derive` | 0.1.1 | tidak dinyatakan |
+| `data-encoding` | 2.11.1 | tidak dinyatakan |
+| `der` | 0.7.10 | tidak dinyatakan |
+| `der-parser` | 8.2.0 | tidak dinyatakan |
+| `der-parser` | 9.0.0 | tidak dinyatakan |
+| `deranged` | 0.5.8 | tidak dinyatakan |
+| `digest` | 0.10.7 | tidak dinyatakan |
+| `displaydoc` | 0.2.7 | tidak dinyatakan |
+| `ecdsa` | 0.16.9 | tidak dinyatakan |
+| `either` | 1.17.0 | tidak dinyatakan |
+| `elliptic-curve` | 0.13.8 | tidak dinyatakan |
+| `errno` | 0.3.14 | tidak dinyatakan |
+| `ff` | 0.13.1 | tidak dinyatakan |
+| `fiat-crypto` | 0.2.9 | tidak dinyatakan |
+| `find-msvc-tools` | 0.1.11 | tidak dinyatakan |
+| `flate2` | 1.1.9 | tidak dinyatakan |
+| `form_urlencoded` | 1.2.2 | tidak dinyatakan |
+| `futures` | 0.3.34 | tidak dinyatakan |
+| `futures-channel` | 0.3.34 | tidak dinyatakan |
+| `futures-core` | 0.3.34 | tidak dinyatakan |
+| `futures-executor` | 0.3.34 | tidak dinyatakan |
+| `futures-io` | 0.3.34 | tidak dinyatakan |
+| `futures-macro` | 0.3.34 | tidak dinyatakan |
+| `futures-sink` | 0.3.34 | tidak dinyatakan |
+| `futures-task` | 0.3.34 | tidak dinyatakan |
+| `futures-util` | 0.3.34 | tidak dinyatakan |
+| `generic-array` | 0.14.7 | tidak dinyatakan |
+| `getrandom` | 0.2.17 | tidak dinyatakan |
+| `getrandom` | 0.4.3 | tidak dinyatakan |
+| `ghash` | 0.5.1 | tidak dinyatakan |
+| `group` | 0.13.0 | tidak dinyatakan |
+| `heck` | 0.5.0 | tidak dinyatakan |
+| `hex` | 0.4.3 | tidak dinyatakan |
+| `hkdf` | 0.12.4 | tidak dinyatakan |
+| `hmac` | 0.12.1 | tidak dinyatakan |
+| `http` | 1.5.0 | tidak dinyatakan |
+| `http-body` | 1.1.0 | tidak dinyatakan |
+| `http-body-util` | 0.1.5 | tidak dinyatakan |
+| `httparse` | 1.10.1 | tidak dinyatakan |
+| `httpdate` | 1.0.3 | tidak dinyatakan |
+| `hyper` | 1.11.1 | tidak dinyatakan |
+| `hyper-util` | 0.1.20 | tidak dinyatakan |
+| `icu_collections` | 2.3.0 | tidak dinyatakan |
+| `icu_locale_core` | 2.3.0 | tidak dinyatakan |
+| `icu_normalizer` | 2.3.0 | tidak dinyatakan |
+| `icu_normalizer_data` | 2.3.0 | tidak dinyatakan |
+| `icu_properties` | 2.3.0 | tidak dinyatakan |
+| `icu_properties_data` | 2.3.0 | tidak dinyatakan |
+| `icu_provider` | 2.3.0 | tidak dinyatakan |
+| `idna` | 1.1.0 | tidak dinyatakan |
+| `idna_adapter` | 1.2.2 | tidak dinyatakan |
+| `inout` | 0.1.4 | tidak dinyatakan |
+| `interceptor` | 0.12.0 | tidak dinyatakan |
+| `ipnet` | 2.12.1 | tidak dinyatakan |
+| `is_terminal_polyfill` | 1.70.2 | tidak dinyatakan |
+| `itoa` | 1.0.18 | tidak dinyatakan |
+| `jobserver` | 0.1.35 | tidak dinyatakan |
+| `js-sys` | 0.3.104 | tidak dinyatakan |
+| `lazy_static` | 1.5.0 | tidak dinyatakan |
+| `libc` | 0.2.189 | tidak dinyatakan |
+| `litemap` | 0.8.3 | tidak dinyatakan |
+| `lock_api` | 0.4.14 | tidak dinyatakan |
+| `log` | 0.4.33 | tidak dinyatakan |
+| `matchit` | 0.8.4 | tidak dinyatakan |
+| `md-5` | 0.10.6 | tidak dinyatakan |
+| `memchr` | 2.8.3 | tidak dinyatakan |
+| `memoffset` | 0.7.1 | tidak dinyatakan |
+| `mime` | 0.3.17 | tidak dinyatakan |
+| `minimal-lexical` | 0.2.1 | tidak dinyatakan |
+| `miniz_oxide` | 0.8.9 | tidak dinyatakan |
+| `mio` | 1.2.2 | tidak dinyatakan |
+| `nasm-rs` | 0.3.2 | tidak dinyatakan |
+| `nix` | 0.26.4 | tidak dinyatakan |
+| `nom` | 7.1.3 | tidak dinyatakan |
+| `num-bigint` | 0.4.8 | tidak dinyatakan |
+| `num-conv` | 0.2.2 | tidak dinyatakan |
+| `num-integer` | 0.1.47 | tidak dinyatakan |
+| `num-traits` | 0.2.19 | tidak dinyatakan |
+| `oid-registry` | 0.7.1 | tidak dinyatakan |
+| `once_cell` | 1.21.4 | tidak dinyatakan |
+| `once_cell_polyfill` | 1.70.2 | tidak dinyatakan |
+| `opaque-debug` | 0.3.1 | tidak dinyatakan |
+| `openh264` | 0.9.8 | tidak dinyatakan |
+| `openh264-sys2` | 0.9.8 | tidak dinyatakan |
+| `openssl-probe` | 0.1.6 | tidak dinyatakan |
+| `p256` | 0.13.2 | tidak dinyatakan |
+| `p384` | 0.13.1 | tidak dinyatakan |
+| `parking_lot` | 0.12.5 | tidak dinyatakan |
+| `parking_lot_core` | 0.9.12 | tidak dinyatakan |
+| `pem` | 3.0.6 | tidak dinyatakan |
+| `pem-rfc7468` | 0.7.0 | tidak dinyatakan |
+| `percent-encoding` | 2.3.2 | tidak dinyatakan |
+| `pin-project-lite` | 0.2.17 | tidak dinyatakan |
+| `pin-utils` | 0.1.0 | tidak dinyatakan |
+| `pkcs8` | 0.10.2 | tidak dinyatakan |
+| `polyval` | 0.6.2 | tidak dinyatakan |
+| `portable-atomic` | 1.15.0 | tidak dinyatakan |
+| `potential_utf` | 0.1.6 | tidak dinyatakan |
+| `powerfmt` | 0.2.0 | tidak dinyatakan |
+| `ppv-lite86` | 0.2.21 | tidak dinyatakan |
+| `primeorder` | 0.13.6 | tidak dinyatakan |
+| `proc-macro2` | 1.0.107 | tidak dinyatakan |
+| `quote` | 1.0.47 | tidak dinyatakan |
+| `r-efi` | 6.0.0 | tidak dinyatakan |
+| `rand` | 0.8.7 | tidak dinyatakan |
+| `rand_chacha` | 0.3.1 | tidak dinyatakan |
+| `rand_core` | 0.6.4 | tidak dinyatakan |
+| `rayon` | 1.12.0 | tidak dinyatakan |
+| `rayon-core` | 1.13.0 | tidak dinyatakan |
+| `rcgen` | 0.13.2 | tidak dinyatakan |
+| `redox_syscall` | 0.5.18 | tidak dinyatakan |
+| `regex` | 1.13.1 | tidak dinyatakan |
+| `regex-automata` | 0.4.18 | tidak dinyatakan |
+| `regex-syntax` | 0.8.11 | tidak dinyatakan |
+| `rfc6979` | 0.4.0 | tidak dinyatakan |
+| `ring` | 0.17.14 | tidak dinyatakan |
+| `rtcp` | 0.11.0 | tidak dinyatakan |
+| `rtp` | 0.11.0 | tidak dinyatakan |
+| `rustc_version` | 0.4.1 | tidak dinyatakan |
+| `rusticata-macros` | 4.1.0 | tidak dinyatakan |
+| `rustls` | 0.23.43 | tidak dinyatakan |
+| `rustls-native-certs` | 0.7.3 | tidak dinyatakan |
+| `rustls-pemfile` | 2.2.0 | tidak dinyatakan |
+| `rustls-pki-types` | 1.15.1 | tidak dinyatakan |
+| `rustls-webpki` | 0.103.14 | tidak dinyatakan |
+| `rustversion` | 1.0.23 | tidak dinyatakan |
+| `safe_arch` | 1.2.0 | tidak dinyatakan |
+| `same-file` | 1.0.6 | tidak dinyatakan |
+| `schannel` | 0.1.29 | tidak dinyatakan |
+| `scopeguard` | 1.2.0 | tidak dinyatakan |
+| `sdp` | 0.6.2 | tidak dinyatakan |
+| `sec1` | 0.7.3 | tidak dinyatakan |
+| `security-framework` | 2.11.1 | tidak dinyatakan |
+| `security-framework-sys` | 2.17.0 | tidak dinyatakan |
+| `semver` | 1.0.28 | tidak dinyatakan |
+| `serde` | 1.0.229 | tidak dinyatakan |
+| `serde_core` | 1.0.229 | tidak dinyatakan |
+| `serde_derive` | 1.0.229 | tidak dinyatakan |
+| `serde_json` | 1.0.151 | tidak dinyatakan |
+| `serde_path_to_error` | 0.1.20 | tidak dinyatakan |
+| `sha1` | 0.10.7 | tidak dinyatakan |
+| `sha2` | 0.10.9 | tidak dinyatakan |
+| `shlex` | 2.0.1 | tidak dinyatakan |
+| `signal-hook-registry` | 1.4.8 | tidak dinyatakan |
+| `signature` | 2.2.0 | tidak dinyatakan |
+| `simd-adler32` | 0.3.10 | tidak dinyatakan |
+| `slab` | 0.4.12 | tidak dinyatakan |
+| `smallvec` | 1.15.2 | tidak dinyatakan |
+| `smol_str` | 0.2.2 | tidak dinyatakan |
+| `socket2` | 0.5.10 | tidak dinyatakan |
+| `socket2` | 0.6.5 | tidak dinyatakan |
+| `spki` | 0.7.3 | tidak dinyatakan |
+| `stable_deref_trait` | 1.2.1 | tidak dinyatakan |
+| `strsim` | 0.11.1 | tidak dinyatakan |
+| `stun` | 0.6.0 | tidak dinyatakan |
+| `substring` | 1.4.5 | tidak dinyatakan |
+| `subtle` | 2.6.1 | tidak dinyatakan |
+| `syn` | 1.0.109 | tidak dinyatakan |
+| `syn` | 2.0.119 | tidak dinyatakan |
+| `syn` | 3.0.3 | tidak dinyatakan |
+| `sync_wrapper` | 1.0.2 | tidak dinyatakan |
+| `synstructure` | 0.12.6 | tidak dinyatakan |
+| `synstructure` | 0.13.2 | tidak dinyatakan |
+| `thiserror` | 1.0.69 | tidak dinyatakan |
+| `thiserror` | 2.0.20 | tidak dinyatakan |
+| `thiserror-impl` | 1.0.69 | tidak dinyatakan |
+| `thiserror-impl` | 2.0.20 | tidak dinyatakan |
+| `time` | 0.3.55 | tidak dinyatakan |
+| `time-core` | 0.1.9 | tidak dinyatakan |
+| `time-macros` | 0.2.32 | tidak dinyatakan |
+| `tinystr` | 0.8.4 | tidak dinyatakan |
+| `tokio` | 1.53.1 | tidak dinyatakan |
+| `tokio-macros` | 2.7.2 | tidak dinyatakan |
+| `tokio-rustls` | 0.26.4 | tidak dinyatakan |
+| `tokio-tungstenite` | 0.23.1 | tidak dinyatakan |
+| `tokio-util` | 0.7.19 | tidak dinyatakan |
+| `tower` | 0.5.3 | tidak dinyatakan |
+| `tower-layer` | 0.3.3 | tidak dinyatakan |
+| `tower-service` | 0.3.3 | tidak dinyatakan |
+| `tungstenite` | 0.23.0 | tidak dinyatakan |
+| `turn` | 0.8.0 | tidak dinyatakan |
+| `typenum` | 1.20.1 | tidak dinyatakan |
+| `unicode-ident` | 1.0.24 | tidak dinyatakan |
+| `unicode-xid` | 0.2.6 | tidak dinyatakan |
+| `universal-hash` | 0.5.1 | tidak dinyatakan |
+| `untrusted` | 0.9.0 | tidak dinyatakan |
+| `ureq` | 2.12.1 | tidak dinyatakan |
+| `url` | 2.5.8 | tidak dinyatakan |
+| `utf-8` | 0.7.6 | tidak dinyatakan |
+| `utf8_iter` | 1.0.4 | tidak dinyatakan |
+| `utf8parse` | 0.2.2 | tidak dinyatakan |
+| `uuid` | 1.24.1 | tidak dinyatakan |
+| `version_check` | 0.9.5 | tidak dinyatakan |
+| `waitgroup` | 0.1.2 | tidak dinyatakan |
+| `walkdir` | 2.5.0 | tidak dinyatakan |
+| `wasi` | 0.11.1+wasi-snapshot-preview1 | tidak dinyatakan |
+| `wasm-bindgen` | 0.2.127 | tidak dinyatakan |
+| `wasm-bindgen-macro` | 0.2.127 | tidak dinyatakan |
+| `wasm-bindgen-macro-support` | 0.2.127 | tidak dinyatakan |
+| `wasm-bindgen-shared` | 0.2.127 | tidak dinyatakan |
+| `webpki-roots` | 0.26.11 | tidak dinyatakan |
+| `webpki-roots` | 1.0.9 | tidak dinyatakan |
+| `webrtc` | 0.11.0 | tidak dinyatakan |
+| `webrtc-data` | 0.9.0 | tidak dinyatakan |
+| `webrtc-dtls` | 0.10.0 | tidak dinyatakan |
+| `webrtc-ice` | 0.11.0 | tidak dinyatakan |
+| `webrtc-mdns` | 0.7.0 | tidak dinyatakan |
+| `webrtc-media` | 0.8.0 | tidak dinyatakan |
+| `webrtc-sctp` | 0.10.0 | tidak dinyatakan |
+| `webrtc-srtp` | 0.13.0 | tidak dinyatakan |
+| `webrtc-util` | 0.9.0 | tidak dinyatakan |
+| `wide` | 1.6.1 | tidak dinyatakan |
+| `winapi` | 0.3.9 | tidak dinyatakan |
+| `winapi-i686-pc-windows-gnu` | 0.4.0 | tidak dinyatakan |
+| `winapi-util` | 0.1.11 | tidak dinyatakan |
+| `winapi-x86_64-pc-windows-gnu` | 0.4.0 | tidak dinyatakan |
+| `windows` | 0.61.3 | tidak dinyatakan |
+| `windows` | 0.62.2 | tidak dinyatakan |
+| `windows_aarch64_gnullvm` | 0.52.6 | tidak dinyatakan |
+| `windows_aarch64_msvc` | 0.52.6 | tidak dinyatakan |
+| `windows_i686_gnu` | 0.52.6 | tidak dinyatakan |
+| `windows_i686_gnullvm` | 0.52.6 | tidak dinyatakan |
+| `windows_i686_msvc` | 0.52.6 | tidak dinyatakan |
+| `windows_x86_64_gnu` | 0.52.6 | tidak dinyatakan |
+| `windows_x86_64_gnullvm` | 0.52.6 | tidak dinyatakan |
+| `windows_x86_64_msvc` | 0.52.6 | tidak dinyatakan |
+| `windows-capture` | 2.0.1 | tidak dinyatakan |
+| `windows-collections` | 0.2.0 | tidak dinyatakan |
+| `windows-collections` | 0.3.2 | tidak dinyatakan |
+| `windows-core` | 0.61.2 | tidak dinyatakan |
+| `windows-core` | 0.62.2 | tidak dinyatakan |
+| `windows-future` | 0.2.1 | tidak dinyatakan |
+| `windows-future` | 0.3.2 | tidak dinyatakan |
+| `windows-implement` | 0.60.2 | tidak dinyatakan |
+| `windows-interface` | 0.59.3 | tidak dinyatakan |
+| `windows-link` | 0.1.3 | tidak dinyatakan |
+| `windows-link` | 0.2.1 | tidak dinyatakan |
+| `windows-numerics` | 0.2.0 | tidak dinyatakan |
+| `windows-numerics` | 0.3.1 | tidak dinyatakan |
+| `windows-result` | 0.3.4 | tidak dinyatakan |
+| `windows-result` | 0.4.1 | tidak dinyatakan |
+| `windows-strings` | 0.4.2 | tidak dinyatakan |
+| `windows-strings` | 0.5.1 | tidak dinyatakan |
+| `windows-sys` | 0.52.0 | tidak dinyatakan |
+| `windows-sys` | 0.61.2 | tidak dinyatakan |
+| `windows-targets` | 0.52.6 | tidak dinyatakan |
+| `windows-threading` | 0.1.0 | tidak dinyatakan |
+| `windows-threading` | 0.2.1 | tidak dinyatakan |
+| `writeable` | 0.6.4 | tidak dinyatakan |
+| `x25519-dalek` | 2.0.1 | tidak dinyatakan |
+| `x509-parser` | 0.16.0 | tidak dinyatakan |
+| `yasna` | 0.5.2 | tidak dinyatakan |
+| `yoke` | 0.8.3 | tidak dinyatakan |
+| `yoke-derive` | 0.8.2 | tidak dinyatakan |
+| `zerocopy` | 0.8.56 | tidak dinyatakan |
+| `zerocopy-derive` | 0.8.56 | tidak dinyatakan |
+| `zerofrom` | 0.1.8 | tidak dinyatakan |
+| `zerofrom-derive` | 0.1.7 | tidak dinyatakan |
+| `zeroize` | 1.9.0 | tidak dinyatakan |
+| `zeroize_derive` | 1.5.0 | tidak dinyatakan |
+| `zerotrie` | 0.2.5 | tidak dinyatakan |
+| `zerovec` | 0.11.7 | tidak dinyatakan |
+| `zerovec-derive` | 0.11.4 | tidak dinyatakan |
+| `zmij` | 1.0.23 | tidak dinyatakan |
 
 ---
 
