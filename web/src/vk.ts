@@ -51,31 +51,3 @@ export function vkFromCode(code: string): number | null {
   if (/^Numpad[0-9]$/.test(code)) return 0x60 + Number(code.slice(6));
   return null;
 }
-
-/// Baris tombol keyboard virtual layar sentuh (label -> VK).
-export const TOUCH_ROWS: [string, number][][] = [
-  [
-    ['Esc', 0x1b],
-    ['Tab', 0x09],
-    ['Win', 0x5b],
-    ['Alt', 0xa4],
-    ['Ctrl', 0xa2],
-    ['Del', 0x2e],
-  ],
-  [
-    ['F1', 0x70],
-    ['F2', 0x71],
-    ['F4', 0x73],
-    ['F5', 0x74],
-    ['F11', 0x7a],
-    ['\u232b', 0x08],
-  ],
-  [
-    ['\u2190', 0x25],
-    ['\u2191', 0x26],
-    ['\u2193', 0x28],
-    ['\u2192', 0x27],
-    ['Spasi', 0x20],
-    ['Enter', 0x0d],
-  ],
-];

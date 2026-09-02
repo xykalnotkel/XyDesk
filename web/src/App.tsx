@@ -53,7 +53,8 @@ import {
   RELEASE_STAGE,
   STAGE_LABEL,
 } from './version';
-import { TOUCH_ROWS, vkFromCode } from './vk';
+import { vkFromCode } from './vk';
+import { VirtualKeyboard, GamingPad } from './session_ui';
 import { WhatsAppIcon, TelegramIcon, XIcon, FacebookIcon } from './brand-icons';
 
 type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news';
@@ -1639,7 +1640,16 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const [recents, setRecents] = useState<RecentEntry[]>(loadRecents);
   const [recentsOpen, setRecentsOpen] = useState(false);
   const [kbOpen, setKbOpen] = useState(false);
+  const [padOpen, setPadOpen] = useState(false);
+  const [trackpad, setTrackpad] = useState(false);
   const [retryInfo, setRetryInfo] = useState('');
+  // Jejak jari untuk mode trackpad: posisi terakhir per pointer, penanda
+  // "sudah bergerak" (pembeda tap vs geser), dan stempel waktu turun.
+  const touchRef = useRef({
+    points: new Map<number, { x: number; y: number }>(),
+    moved: false,
+    downAt: 0,
+  });
   const sessionRef = useRef<RtcSession | null>(null);
   const retryRef = useRef({ tries: 0, timer: 0 as ReturnType<typeof setTimeout> | 0, wasConnected: false });
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -1732,6 +1742,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     sessionRef.current?.stop();
     sessionRef.current = null;
     setKbOpen(false);
+    setPadOpen(false);
     setPhase('');
     if (window.location.hash === '#session') {
       window.history.replaceState({}, '', '/connect');
@@ -1767,15 +1778,49 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected]);
 
-  const tapKey = (vk: number) => {
-    send(InputCodec.key(vk, true));
-    send(InputCodec.key(vk, false));
-  };
   const onPointerMove = (event: React.PointerEvent) => {
     const element = surfaceRef.current;
     if (!element) return;
     const rect = element.getBoundingClientRect();
     send(InputCodec.mouseMoveAbs((event.clientX - rect.left) / rect.width, (event.clientY - rect.top) / rect.height));
+  };
+
+  // ── Mode trackpad: layar jadi touchpad, bukan layar sentuh ──────
+  // Satu jari geser = gerak kursor relatif; ketuk singkat tanpa geser =
+  // klik kiri; dua jari geser = scroll. Cocok untuk HP karena kursor
+  // tidak "meloncat" ke posisi jari.
+  const TP_SENS = 1.7;
+  const tpDown = (e: React.PointerEvent) => {
+    const t = touchRef.current;
+    t.points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (t.points.size === 1) {
+      t.moved = false;
+      t.downAt = performance.now();
+    }
+  };
+  const tpMove = (e: React.PointerEvent) => {
+    const t = touchRef.current;
+    const prev = t.points.get(e.pointerId);
+    if (!prev) return; // hover mouse tanpa tekan — abaikan di mode trackpad
+    const dx = e.clientX - prev.x;
+    const dy = e.clientY - prev.y;
+    t.points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (Math.abs(dx) + Math.abs(dy) > 2) t.moved = true;
+    if (t.points.size >= 2) {
+      // Dua jari: scroll. Arah alami — konten mengikuti jari.
+      send(InputCodec.scroll(0, Math.round(dy * 2)));
+    } else {
+      send(InputCodec.mouseMoveRel(Math.round(dx * TP_SENS), Math.round(dy * TP_SENS)));
+    }
+  };
+  const tpUp = (e: React.PointerEvent) => {
+    const t = touchRef.current;
+    const known = t.points.delete(e.pointerId);
+    if (!known) return;
+    if (t.points.size === 0 && !t.moved && performance.now() - t.downAt < 300) {
+      send(InputCodec.mouseButton(0, true));
+      send(InputCodec.mouseButton(0, false));
+    }
   };
 
   const labels: Record<string, string> = {
@@ -1857,9 +1902,10 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
         ref={surfaceRef}
         className="video-surface"
         hidden={!connected}
-        onPointerMove={onPointerMove}
-        onPointerDown={(e) => send(InputCodec.mouseButton(e.button === 2 ? 1 : 0, true))}
-        onPointerUp={(e) => send(InputCodec.mouseButton(e.button === 2 ? 1 : 0, false))}
+        onPointerMove={trackpad ? tpMove : onPointerMove}
+        onPointerDown={trackpad ? tpDown : (e) => send(InputCodec.mouseButton(e.button === 2 ? 1 : 0, true))}
+        onPointerUp={trackpad ? tpUp : (e) => send(InputCodec.mouseButton(e.button === 2 ? 1 : 0, false))}
+        onPointerCancel={trackpad ? tpUp : undefined}
         onWheel={(e) => send(InputCodec.scroll(-e.deltaX, -e.deltaY))}
         onContextMenu={(e) => e.preventDefault()}
       >
@@ -1923,7 +1969,24 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           >
             Clipboard
           </button>
-          <button title="Keyboard" onClick={() => setKbOpen((v) => !v)}>Keyboard</button>
+          <button title="Keyboard" className={kbOpen ? 'on' : ''} onClick={() => setKbOpen((v) => !v)}>Keyboard</button>
+          <button
+            title="Panel gaming: WASD, Shift, Spasi, E/Q/R/F — tombol tahan"
+            className={padOpen ? 'on' : ''}
+            onClick={() => setPadOpen((v) => !v)}
+          >
+            Gamepad
+          </button>
+          <button
+            title="Mode trackpad: geser = gerak kursor, ketuk = klik, dua jari = scroll"
+            className={trackpad ? 'on' : ''}
+            onClick={() => {
+              touchRef.current.points.clear();
+              setTrackpad((v) => !v);
+            }}
+          >
+            Trackpad
+          </button>
           <button title="Layar penuh" onClick={() => void enterImmersive()}>Fullscreen</button>
           <button className="hud-icon-btn danger-action" title="Putuskan" onClick={disconnect}>
             <img src="/hud-disconnect.png" alt="Putuskan" />
@@ -1950,19 +2013,8 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           </button>
         </div>
         {retryInfo && <p className="session-retry">{retryInfo}</p>}
-        {kbOpen && (
-          <div className="touch-kb" onPointerDown={(e) => e.stopPropagation()}>
-            {TOUCH_ROWS.map((row, i) => (
-              <div className="touch-kb-row" key={i}>
-                {row.map(([label, vk]) => (
-                  <button key={label} onClick={() => tapKey(vk)}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
+        {padOpen && <GamingPad send={send} />}
+        {kbOpen && <VirtualKeyboard send={send} />}
       </div>
     </section>
   );

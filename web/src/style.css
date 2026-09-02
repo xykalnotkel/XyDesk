@@ -1032,25 +1032,6 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 .recent-clear:hover { color: var(--danger); }
 .recents-list { margin-top: 10px; }
 
-.touch-kb {
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  background: var(--overlay);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  margin-top: 12px;
-}
-.touch-kb-row { display: flex; gap: 6px; }
-.touch-kb-row button {
-  flex: 1;
-  padding: 10px 0;
-  background: var(--bg);
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-}
 
 /* ── Auth / modal ───────────────────────────────────────────── */
 .auth-panel {
@@ -1818,23 +1799,6 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   font-weight: 600;
   backdrop-filter: blur(6px);
 }
-.video-surface .touch-kb {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 62px;
-  margin: 0;
-  z-index: 7;
-  background: rgba(13, 7, 22, 0.88);
-  border-color: #4c3580;
-  backdrop-filter: blur(8px);
-}
-.video-surface .touch-kb-row button {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: #4c3580;
-  color: #fff;
-}
-.video-surface .touch-kb-row button:active { background: var(--accent); }
 
 /* ── Connect & sesi di layar sempit ── */
 @media (max-width: 640px) {
@@ -1857,6 +1821,80 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   .video-surface { border-radius: 10px; }
   /* Kontrol sesi: baris tombol naik di atas HUD mouse agar tidak rebutan */
   .session-actions { right: 12px; bottom: 64px; }
-  .video-surface .touch-kb { bottom: 112px; padding: 8px; }
-  .video-surface .touch-kb-row button { padding: 9px 0; font-size: 13px; }
+  .vkb { bottom: 108px; padding: 6px; gap: 4px; }
+  .vkb-key { font-size: 10px; min-height: 30px; }
+  .gp-cluster { bottom: 108px; }
+  .gp-key { width: 46px; height: 46px; font-size: 12px; }
+}
+
+/* ── Keyboard virtual penuh (overlay sesi) ─────────────────────
+   QWERTY lengkap dengan baris F dan modifier lengket — cermin dari
+   keyboard virtual aplikasi Android. */
+.vkb {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 62px;
+  z-index: 7;
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border-radius: var(--radius);
+  background: rgba(13, 7, 22, 0.9);
+  border: 1px solid #4c3580;
+  backdrop-filter: blur(8px);
+}
+.vkb-row { display: flex; gap: 4px; }
+.vkb-key {
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 2px;
+  border-radius: 7px;
+  border: 1px solid #4c3580;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: background 80ms ease;
+}
+.vkb-key:active { background: var(--accent); }
+.vkb-key.mod { color: var(--accent-2); }
+.vkb-key.mod.on {
+  background: var(--accent);
+  border-color: var(--accent-2);
+  color: #fff;
+}
+
+/* ── Panel gaming dua sisi ─────────────────────────────────────
+   Glyph border-only agar tidak menutupi game; tombol TAHAN
+   (down saat sentuh, up saat lepas) untuk WASD/sprint/lompat. */
+.gp-cluster {
+  position: absolute;
+  bottom: 62px;
+  z-index: 6;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+.gp-left { left: 16px; }
+.gp-right { right: 16px; }
+.gp-row { display: flex; gap: 8px; justify-content: center; }
+.gp-key {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  background: rgba(13, 7, 22, 0.25);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13.5px;
+  font-weight: 700;
+  backdrop-filter: blur(3px);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.gp-key.wide { width: 86px; }
+.gp-key.down {
+  background: rgba(124, 58, 237, 0.55);
+  border-color: var(--accent-2);
 }

@@ -18,6 +18,16 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Ditambahkan
+- Web: keyboard virtual QWERTY penuh di layar sesi — baris F1–F12, angka,
+  simbol, panah, dan modifier lengket (Ctrl/Shift/Alt/Win ditahan sampai
+  tombol berikutnya) — setara keyboard virtual aplikasi Android.
+- Web: panel gaming dua sisi di layar sesi — gugus WASD + Shift/Ctrl di
+  kiri, Spasi/E/Q/R/F/Esc/Enter di kanan; tombol tahan (down saat sentuh,
+  up saat lepas) dengan glyph border-only yang tidak menutupi game.
+- Web: mode trackpad — layar jadi touchpad: geser menggerakkan kursor
+  relatif, ketuk singkat = klik kiri, dua jari = scroll. Pelengkap mode
+  sentuh langsung yang sudah ada.
+
 
 - Web dan desktop shell kini merender gambar inline di badan berita: baris
   `![keterangan](url)` menjadi gambar + keterangan. Hanya URL
