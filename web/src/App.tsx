@@ -86,13 +86,13 @@ const downloads = [
   {
     platform: 'Windows',
     architecture: 'x64',
-    file: 'XyDesk-Windows-x64-Setup.exe',
+    file: 'XyDesk-x64.exe',
     note: 'Aplikasi terpadu Connect + Host untuk Intel atau AMD',
   },
   {
     platform: 'Windows',
     architecture: 'Arm64',
-    file: 'XyDesk-Windows-arm64-Setup.exe',
+    file: 'XyDesk-arm64.exe',
     note: 'Aplikasi terpadu Connect + Host untuk Windows on Arm',
   },
 ] as const;
@@ -187,6 +187,30 @@ function SiteHeader({
   bare?: boolean;
 }) {
   const current = typeof route === 'string' ? route : '/news';
+  // Di layar sempit menu atas disembunyikan (lihat style.css). Dulu tidak ada
+  // penggantinya, jadi pengunjung HP tidak bisa mencapai Berita dan Unduh
+  // sama sekali. Panel ini menggantikannya.
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Tutup menu setiap halaman berganti, atau pengguna menekan Escape.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [route]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+
+  const go = (r: Route) => {
+    setMenuOpen(false);
+    navigate(r);
+  };
+
   return (
     <header className={bare ? 'site-header bare' : 'site-header'}>
       <button className="brand" onClick={() => navigate('/')} aria-label="Beranda XyDesk">
@@ -208,12 +232,12 @@ function SiteHeader({
       )}
       <div className="header-actions">
         {!bare && (
-          <button className="btn ghost" onClick={() => navigate('/connect')}>
+          <button className="btn ghost desktop-only" onClick={() => navigate('/connect')}>
             Connect Web
           </button>
         )}
         {DOWNLOAD_ENABLED ? (
-          <a className="btn primary" href={`${RELEASE_BASE}/XyDesk-Windows-x64-Setup.exe`}>
+          <a className="btn primary" href={`${RELEASE_BASE}/XyDesk-x64.exe`}>
             Unduh Windows
           </a>
         ) : (
@@ -225,7 +249,44 @@ function SiteHeader({
             {STAGE_LABEL[RELEASE_STAGE]}
           </button>
         )}
+        {!bare && (
+          <button
+            className="nav-toggle"
+            aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            {menuOpen ? (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            )}
+          </button>
+        )}
       </div>
+
+      {menuOpen && !bare && (
+        <>
+          <div className="nav-backdrop" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+          <nav id="mobile-nav" className="mobile-nav">
+            <button className={current === '/' ? 'active' : ''} onClick={() => go('/')}>
+              Beranda
+            </button>
+            <button className={current === '/news' ? 'active' : ''} onClick={() => go('/news')}>
+              Berita
+            </button>
+            <button className={current === '/download' ? 'active' : ''} onClick={() => go('/download')}>
+              Unduh
+            </button>
+            <button onClick={() => go('/connect')}>Connect Web</button>
+          </nav>
+        </>
+      )}
     </header>
   );
 }
@@ -1813,7 +1874,7 @@ function SiteFooter({ navigate }: { navigate: (r: Route) => void }) {
             {DOWNLOAD_ENABLED ? (
               <>
                 <a href={`${RELEASE_BASE}/XyDesk-Android-arm64-v8a.apk`}>Android</a>
-                <a href={`${RELEASE_BASE}/XyDesk-Windows-x64-Setup.exe`}>Windows</a>
+                <a href={`${RELEASE_BASE}/XyDesk-x64.exe`}>Windows</a>
               </>
             ) : (
               <>

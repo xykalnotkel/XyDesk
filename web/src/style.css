@@ -1,3 +1,38 @@
+/* ── Inter: font yang sama dengan aplikasi ─────────────────────────
+   Sebelumnya situs menyebut 'Inter' di font-family tetapi tidak pernah
+   memuatnya, jadi yang tampil font sistem — beda rupa dengan aplikasi.
+   Berkasnya disubset ke Latin (16 KB/berkas, dari 410 KB TTF) dan
+   disajikan sendiri: tidak ada ketergantungan ke CDN luar, sehingga
+   tampilan tetap benar walau jaringan pihak ketiga diblokir. */
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Bold.woff2') format('woff2');
+  font-weight: 700 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    XyDesk Web — revisi total v6.0
    Identitas: UNGU (#7c3aed) menonjol — hero ungu pekat, tombol utama
@@ -8,21 +43,24 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  --bg: #ffffff;
+  /* Nilai-nilai ini dicerminkan dari lib/core/tokens.dart (tema "Paper"),
+     supaya web dan aplikasi memakai warna yang sama — bukan dua ungu yang
+     kebetulan mirip. Jika token aplikasi berubah, salin ke sini. */
+  --bg: #fafaf9;
   --raised: #ffffff;
   --overlay: #f5f3ff;
   --input: #ffffff;
   --line: #e9e5f2;
   --line-strong: #d5cde8;
-  --ink: #160f2b;
+  --ink: #18181b;
   --black: #0d0716;
-  --accent: #7c3aed;
-  --accent-deep: #6d28d9;
-  --accent-2: #a78bfa;
-  --accent-soft: rgba(124, 58, 237, 0.1);
-  --text-hi: #160f2b;
-  --text-mid: #5b5570;
-  --text-low: #9a94ad;
+  --accent: #6142d6;
+  --accent-deep: #4f2fb5;
+  --accent-2: #9a7bff;
+  --accent-soft: rgba(97, 66, 214, 0.1);
+  --text-hi: #18181b;
+  --text-mid: #52525b;
+  --text-low: #9a9aa2;
   --success: #15803d;
   --warning: #b45309;
   --danger: #b91c1c;
@@ -138,6 +176,60 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   gap: 4px;
   margin-right: auto;
 }
+/* Tombol menu & panel navigasi layar sempit.
+   Sampai sekarang menu atas sekadar disembunyikan di layar sempit tanpa
+   pengganti — pengunjung HP kehilangan akses ke Berita dan Unduh. */
+.site-header .nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--ink);
+  cursor: pointer;
+}
+.site-header .nav-toggle:hover { border-color: var(--accent); }
+
+.nav-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(13, 7, 22, 0.35);
+}
+
+.mobile-nav {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 45;
+  display: none;
+  flex-direction: column;
+  padding: 4px 20px 12px;
+  background: var(--raised);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 14px 30px rgba(13, 7, 22, 0.12);
+}
+.mobile-nav button {
+  min-height: 48px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-hi);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.mobile-nav button:last-child { border-bottom: 0; }
+.mobile-nav button.active { color: var(--accent-deep); }
+
 .site-header .top-nav button {
   padding: 7px 13px;
   border-radius: 8px;
@@ -638,6 +730,9 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 }
 /* Layar sempit: logo saja, label disembunyikan agar barisnya tidak patah. */
 @media (max-width: 560px) {
+  .site-header { padding: 10px 16px; }
+  .site-header .brand { font-size: 16px; }
+  .site-header .brand img { width: 26px; height: 26px; }
   .social-chip { padding: 9px; gap: 0; }
   .social-chip span { display: none; }
 }
@@ -1148,7 +1243,13 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   .stats-strip .stat:nth-child(2) { border-radius: 0 var(--radius) 0 0; }
   .stats-strip .stat:nth-child(3) { border-radius: 0 0 0 var(--radius); }
   .stats-strip .stat:last-child { border-radius: 0 0 var(--radius) 0; }
+
+  /* Menu atas diganti panel: tombolnya muncul, tautannya pindah ke panel. */
+  .site-header { gap: 14px; }
   .site-header .top-nav { display: none; }
+  .site-header .nav-toggle { display: inline-flex; }
+  .site-header .header-actions .desktop-only { display: none; }
+  .mobile-nav { display: flex; }
 }
 
 /* ── Sesi: pemilih layar & tombol audio/mic ────────────────────── */
