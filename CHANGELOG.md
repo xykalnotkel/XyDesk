@@ -132,6 +132,12 @@ Kebijakan rilis:
 
 ### Diperbaiki
 
+- Layar sesi web ditata ulang: tombol Audio/Mic/Clipboard/Keyboard/
+  Fullscreen kini pil overlay rapi di atas video (dulu teks polos tanpa
+  gaya yang mengalir di tengah video), dua tombol HUD mouse tidak lagi
+  menumpuk di satu titik, dan keyboard sentuh melayang di atas kontrol.
+- Halaman Connect kini responsif di layar sempit: kartu, ID besar,
+  tombol riwayat, dan bar akun menyesuaikan; tombol konek selebar layar.
 - Halaman Connect web: kotak hitam 16:9 tidak lagi tampil sebelum
   tersambung (CSS `display: flex` mengalahkan atribut `hidden`), dan teks
   status koneksi kini mengalir rapi di dalam form — bukan melayang absolut

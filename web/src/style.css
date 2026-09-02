@@ -1751,3 +1751,112 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
 
 /* ── Statistik strip ── */
 .stat strong { color: var(--accent-deep); }
+
+/* ── Layar sesi: overlay di atas video, bukan elemen nyasar ────
+   Dulu .session-actions mengalir DI DALAM flex video-surface (tombol
+   teks polos melayang di tengah video), dan .hud-icon-btn diberi
+   position:absolute sehingga dua tombol mouse menumpuk di titik yang
+   sama. Semua kontrol kini overlay berlapis rapi. */
+.video-surface { display: block; }
+.video-surface video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.session-actions {
+  position: absolute;
+  left: 12px;
+  right: 128px;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  z-index: 6;
+}
+.session-actions > button {
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(13, 7, 22, 0.65);
+  color: #e9e2fa;
+  font-size: 12.5px;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+  transition: background var(--speed) ease, border-color var(--speed) ease;
+}
+.session-actions > button:hover { background: rgba(13, 7, 22, 0.88); }
+.session-actions button.on {
+  background: var(--accent);
+  border-color: var(--accent-2);
+  color: #fff;
+}
+.hud-icon-btn { position: static; }
+.hud-icon-btn img { width: 22px; height: 22px; }
+.session-actions .hud-icon-btn { width: 36px; height: 36px; padding: 0; }
+.hud-mouse {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 10px;
+  z-index: 6;
+}
+.session-retry {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 6;
+  margin: 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(13, 7, 22, 0.65);
+  color: #e9e2fa;
+  font-size: 12.5px;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+.video-surface .touch-kb {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 62px;
+  margin: 0;
+  z-index: 7;
+  background: rgba(13, 7, 22, 0.88);
+  border-color: #4c3580;
+  backdrop-filter: blur(8px);
+}
+.video-surface .touch-kb-row button {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #4c3580;
+  color: #fff;
+}
+.video-surface .touch-kb-row button:active { background: var(--accent); }
+
+/* ── Connect & sesi di layar sempit ── */
+@media (max-width: 640px) {
+  .connect-page { padding: 16px 12px 56px; }
+  .connect-account-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .connect-card {
+    padding: 20px 16px;
+    margin: 0 auto 44px;
+    border-radius: var(--radius);
+  }
+  .connect-form h1 { font-size: 21px; }
+  .connect-form input.host-id { font-size: 20px; letter-spacing: 4px; }
+  .connect-cta { width: 100%; }
+  .field-head { flex-wrap: wrap; row-gap: 6px; }
+  .recents-list { max-height: 40vh; overflow-y: auto; }
+  .video-surface { border-radius: 10px; }
+  /* Kontrol sesi: baris tombol naik di atas HUD mouse agar tidak rebutan */
+  .session-actions { right: 12px; bottom: 64px; }
+  .video-surface .touch-kb { bottom: 112px; padding: 8px; }
+  .video-surface .touch-kb-row button { padding: 9px 0; font-size: 13px; }
+}
