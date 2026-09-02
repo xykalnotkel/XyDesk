@@ -607,6 +607,31 @@ if (process.argv.includes('--check')) {
   if (stale.length) {
     console.error('Inventaris lisensi usang:\n  ' + stale.join('\n  '));
     console.error('\nJalankan: node tool/gen-licenses.mjs');
+    // Bantu diagnosis: tampilkan cuplikan isi yang berbeda (untuk melihat
+    // PERSIS apa yang bergeser di lingkungan yang menjalankan pemeriksaan).
+    // Bandingkan langsung string yang diharapkan dengan isi berkas, lalu
+    // cetak beberapa baris pertama yang berbeda.
+    for (const [p, want] of [
+      [mdPath, md],
+      [tsPath, ts],
+      [dartPath, dartFile],
+      [totalPath, totalFile],
+    ]) {
+      if (!stale.includes(p)) continue;
+      const have = existsSync(p) ? readFileSync(p, 'utf8') : '';
+      const a = have.split('\n');
+      const b = want.split('\n');
+      let shown = 0;
+      console.error(`\n--- diff ${p.split('/').pop()} (berkas kini vs yang seharusnya) ---`);
+      for (let i = 0; i < Math.max(a.length, b.length) && shown < 24; i++) {
+        if (a[i] !== b[i]) {
+          console.error(`  baris ${i + 1}:`);
+          if (a[i] !== undefined) console.error(`    - ${a[i].slice(0, 160)}`);
+          if (b[i] !== undefined) console.error(`    + ${b[i].slice(0, 160)}`);
+          shown++;
+        }
+      }
+    }
     process.exit(1);
   }
   console.log(`Inventaris lisensi mutakhir (${data.dart.length + data.rust.length + data.npm.length + data.manual.length} komponen).`);
