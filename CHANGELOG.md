@@ -17,70 +17,6 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
-### Ditambahkan
-- Host: `/status` kini melaporkan **latensi pipeline video** dan **label
-  encoder** — `video.latencyMs` (rata-rata EMA capture → tulis RTP),
-  `video.latencyMaxMs` (terburuk yang pernah terukur), dan
-  `video.encoder` (`nvenc`/`openh264`/`test-pattern`). Sebelumnya tidak ada
-  ukuran latensi host sama sekali: webrtc-rs 0.11 mengabaikan
-  `packet_timestamp` (timestamp RTP dibuat otomatis packetizer), jadi
-  penanda tidak bisa ditanam lewat bidang itu. Kini setiap frame membawa
-  `captured_at` sejak detik ditangkap di thread capture, dan latensi
-  dihitung sesaat sebelum `write_sample` — pemantauan target roadmap
-  < 40 ms glass-to-glass tanpa alat eksternal.
-- Web: pemindai QR di halaman Connect — arahkan kamera ke QR XyDesk Host
-  dan ID terisi otomatis; pakai BarcodeDetector bawaan browser, jsQR
-  (dimuat lambat) sebagai cadangan; format payload sama dengan aplikasi
-  Android (`xydesk://connect?id=` atau 9 digit polos).
-- Web: bagian "Cara main" di halaman Connect — panduan 4 langkah dengan
-  toggle sisi client/sisi host, teks dari GuidePage aplikasi Android.
-- Web: blok "Dukung kami di" (Telegram, WhatsApp, TikTok) di halaman
-  Connect — tautan sama dengan aplikasi Android.
-- Client Flutter: halaman **Billing** kini punya ilustrasi hero (sewa PC) —
-  PNG/WebP transparan hasil AI (`design/billing-hero-source.png`) yang
-  dibersihkan latarnya (rembg), dipasang di atas gradien brand. Sebelumnya
-  halaman hanya teks "XyDesk Beta" tanpa gambar.
-- Client Flutter: foto profil yang bisa diubah. Pengguna memilih avatar
-  preset (DiceBear, tanpa backend/kunci) atau memasukkan URL gambar
-  sendiri; tersimpan lokal. Tap avatar di header Akun membuka menu
-  "ganti nama & foto". Tombol avatar juga muncul di **topbar** di samping
-  notifikasi, dan membawa ke tab Akun saat diketuk.
-- Client Flutter: halaman detail PC menampilkan **cuplikan layar terakhir**
-  dari sesi remote (disimpan per perangkat via `session_preview`) saat
-  tersedia — menggantikan ilustrasi statis. Belum ada cuplikan → keterangan
-  jujur "Belum ada cuplikan layar", bukan gambar khayalan.
-- Client Flutter: kontrak penyimpanan cuplikan & parsing foto profil dikunci
-  lewat uji otomatis (`test/core/session_preview_test.dart`,
-  `test/widgets/profile_avatar_parse_test.dart`).
-
-### Diubah
-- Host: durasi sampel video (maju timestamp RTP per frame) diseragamkan ke
-  FPS nominal 60 (16,67 ms) lewat `NOMINAL_FPS`/`frame_duration()` —
-  sebelumnya angka 33 ms terpatri acak di `main.rs`, dan sumber pola uji
-  (non-Windows) kini berpacing 60 fps, bukan ~30 fps.
-- Client Flutter: layar sesi sudah memakai **satu rail tipis di tepi kanan**
-  (bar melayang tengah-atas & tengah-bawah sudah dihapus pada rilis
-  sebelumnya), dan keyboard virtual sudah mengirim input pada saat
-  **tekan-turun** (`onTapDown`), bukan saat lepas — keduanya sudah optimal,
-  tidak diubah lagi di sesi ini.
-
-### Diperbaiki
-
-- Inventaris lisensi pihak ketiga (`docs/THIRD-PARTY-LICENSES.md`,
-  `web/src/licenses.generated.ts`, `tool/license-data.json`) diregenerasi
-  dengan cache dependensi lengkap: 10 komponen Dart yang sebelumnya tercatat
-  "lihat berkas LICENSE paket" kini punya SPDX (BSD-3-Clause/Apache-2.0) dan
-  daftar hanya memuat paket **runtime** (bukan seluruh lockfile). Sebelumnya
-  regenerasi tanpa SDK menghasilkan inventaris yang selalu "usang" di CI.
-- Rilis tidak lagi gagal merah saat Build pemicunya hanya build terfilter
-  (mis. commit papan/dokumen tanpa artefak client): `release.yml` kini
-  memeriksa artefak `XyDesk-Android-APK` + `XyDesk-Windows-*` pada run
-  Build yang dipilih dan melewatkan rilis dengan tenang bila belum ada
-  (dulu `gh run download` gagal `BlobNotFound`). Build penuh via
-  `workflow_dispatch` juga dipindah ke jalur antrean `manual` sehingga
-  tidak bisa dibatalkan push biasa (run Build bump versi 6.3.0 sempat
-  batal karena push papan berikutnya).
-
 ## [6.3.0] - 2026-09-03
 
 ### Ditambahkan
@@ -191,6 +127,15 @@ Kebijakan rilis:
   URL avatar DiceBear dicek sesuai aturan `web/src/news.ts`, supaya aturan
   yang sama tidak bergeser tanpa terlihat nanti.
 
+
+- Host: `/status` kini melaporkan **latensi pipeline video** dan **label
+- Web: pemindai QR di halaman Connect — arahkan kamera ke QR XyDesk Host
+- Web: bagian "Cara main" di halaman Connect — panduan 4 langkah dengan
+- Web: blok "Dukung kami di" (Telegram, WhatsApp, TikTok) di halaman
+- Client Flutter: halaman **Billing** kini punya ilustrasi hero (sewa PC) —
+- Client Flutter: foto profil yang bisa diubah. Pengguna memilih avatar
+- Client Flutter: halaman detail PC menampilkan **cuplikan layar terakhir**
+- Client Flutter: kontrak penyimpanan cuplikan & parsing foto profil dikunci
 ### Diubah
 - Web: kata penting (cetak tebal) di badan artikel berita kini berwarna
   ungu brand agar penekanan langsung terlihat.
@@ -281,6 +226,9 @@ Kebijakan rilis:
   Kedua jalur encoder (openh264 & NVENC) membacanya saat encoder dibangun,
   dan perubahan di tengah sesi memicu respawn capture dengan encoder baru.
 
+
+- Host: durasi sampel video (maju timestamp RTP per frame) diseragamkan ke
+- Client Flutter: layar sesi sudah memakai **satu rail tipis di tepi kanan**
 ### Diperbaiki
 
 - Layar sesi web ditata ulang: tombol Audio/Mic/Clipboard/Keyboard/
@@ -313,6 +261,10 @@ Kebijakan rilis:
   (`debug_assert!`). Sebelumnya kode memakai `.min()` defensif yang memberi
   kesan aman, padahal dimensi ganjil tetap menulis melewati batas plane Y —
   kontrak "dimensi genap" kini terdokumentasi, bukan tersirat.
+
+
+- Inventaris lisensi pihak ketiga (`docs/THIRD-PARTY-LICENSES.md`,
+- Rilis tidak lagi gagal merah saat Build pemicunya hanya build terfilter
 
 ## [6.2.2] - 2026-09-01
 
