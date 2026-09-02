@@ -97,7 +97,40 @@ Kebijakan rilis:
   baru `video-bitrate` (Mbps, 1–50) dan `/status` melaporkan
   `targetBitrateBps`. Sebelumnya target 8 Mbps terpatri konstan.
 
+- Client Flutter: komentar berita kini punya wajah. Komentar dan balasan
+  menampilkan avatar bulat — foto pendiri XySpace untuk komentar resmi,
+  DiceBear `adventurer` SVG (dari nama penulis, gratis tanpa kunci API)
+  untuk lainnya — dengan fallback siluet bila gambar gagal termuat
+  (`lib/widgets/official_badge.dart` + helper `lib/features/news/`
+  `news_avatar.dart`). Sebelumnya kolom komentar tidak punya avatar.
+- Client Flutter: badan artikel berita kini merender gambar inline. Baris
+  `![keterangan](url)` dari domain `app.xystudio.my.id` menjadi gambar
+  berbingkai + keterangan; baris lain tetap paragraf biasa — meniru web
+  (`NEWS_IMAGE_BLOCK` di `web/src/App.tsx`). Sebelumnya seluruh isi berita
+  ditampilkan sebagai teks polos, sehingga berita bergambar tidak bisa
+  tampil di Android.
+- Client Flutter: kontrak identitas komentator dikunci pakai uji otomatis
+  (`test/news/news_identity_test.dart`) — nama manusia deterministik dan
+  URL avatar DiceBear dicek sesuai aturan `web/src/news.ts`, supaya aturan
+  yang sama tidak bergeser tanpa terlihat nanti.
+
 ### Diubah
+
+- Client Flutter: nama komentator kini nama manusia deterministik dari
+  sidik jari perangkat (daftar `_nameFirst`/`_nameLast`, hash
+  `h = h*31 + codeUnit-at >> 0`) menggantikan label `tamu-xxxx`; pengguna
+  lama yang masih tersimpan `tamu-*` ikut dibangkitkan ulang — selaras
+  dengan web (`web/src/news.ts`), supaya perangkat yang sama selalu
+  memunculkan nama yang sama.
+- Client Flutter: penanda resmi penulis artikel dan komentar memakai foto
+  pendiri XySpace (`app.xystudio.my.id/team/founder.jpg`) menggantikan
+  badge logo X, meniru web. Bila gagal dimuat (mis. offline), kembalikan
+  ke logo agar identitas resmi tetap terbaca.
+- Client Flutter: token ungu brand diselaraskan dengan web
+  (`lib/core/tokens.dart`): aksen utama `#7C3AED`, deep `#5B21B6`,
+  lavender `#A78BFA` (sebelumnya `#7654F6`/`#6142D6` dari gradasi logo
+  lama). Deep & lavender diekspos di `AppPalette` sebagai `accentDeep` dan
+  `accentLavender`.
 
 - **Logo baru: X ungu kaca.** Diganti lewat jalur resmi —
   `design/logo-asli.png` diperbarui, `tool/gen_logo.py` melahirkan ulang

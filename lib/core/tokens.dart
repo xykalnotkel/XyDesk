@@ -12,8 +12,13 @@ class AppColors {
   static const raisedDark = Color(0xFF1B1B1E);
   static const overlayDark = Color(0xFF232326);
   static const inputDark = Color(0xFF202023);
-  // Ungu brand — diambil dari logo X (gradasi #7654F6..#9A7BFF).
-  static const accentDark = Color(0xFF7654F6);
+  // ── Ungu brand — diselaraskan dengan web (web/src/style.css) sejak
+  // rebrand "logo X ungu kaca": aksen utama #7C3AED, deep #5B21B6 untuk
+  // teks/aksen di latar terang, lavender #A78BFA untuk aksen sekunder.
+  // Sama di dua mode (light dipakai; dark dipertahankan konsisten).
+  static const accentDark = Color(0xFF7C3AED);
+  static const accentDeep = Color(0xFF5B21B6);
+  static const accentLavender = Color(0xFFA78BFA);
   static const textHiDark = Color(0xFFEDEDEF);
   static const textMidDark = Color(0xFFA0A0A8);
   static const textLowDark = Color(0xFF6B6B73);
@@ -23,8 +28,8 @@ class AppColors {
   static const raisedLight = Color(0xFFFFFFFF);
   static const overlayLight = Color(0xFFFFFFFF);
   static const inputLight = Color(0xFFF2F2F0);
-  // Ungu brand versi light — lebih pekat agar kontras di latar Paper.
-  static const accentLight = Color(0xFF6142D6);
+  // Ungu brand versi light — sama dengan web (primary), dipakai di Paper.
+  static const accentLight = Color(0xFF7C3AED);
   static const textHiLight = Color(0xFF18181B);
   static const textMidLight = Color(0xFF52525B);
   static const textLowLight = Color(0xFF9A9AA2);
@@ -51,6 +56,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.overlay,
     required this.input,
     required this.accent,
+    required this.accentDeep,
+    required this.accentLavender,
     required this.textHi,
     required this.textMid,
     required this.textLow,
@@ -59,7 +66,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.dangerText,
   });
 
-  final Color bg, raised, overlay, input, accent, textHi, textMid, textLow;
+  final Color bg, raised, overlay, input, accent, accentDeep;
+  final Color accentLavender, textHi, textMid, textLow;
   final Color successText, warningText, dangerText;
 
   Color get success => AppColors.success;
@@ -75,6 +83,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     overlay: AppColors.overlayDark,
     input: AppColors.inputDark,
     accent: AppColors.accentDark,
+    accentDeep: AppColors.accentDeep,
+    accentLavender: AppColors.accentLavender,
     textHi: AppColors.textHiDark,
     textMid: AppColors.textMidDark,
     textLow: AppColors.textLowDark,
@@ -89,6 +99,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     overlay: AppColors.overlayLight,
     input: AppColors.inputLight,
     accent: AppColors.accentLight,
+    accentDeep: AppColors.accentDeep,
+    accentLavender: AppColors.accentLavender,
     textHi: AppColors.textHiLight,
     textMid: AppColors.textMidLight,
     textLow: AppColors.textLowLight,
@@ -104,6 +116,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? overlay,
     Color? input,
     Color? accent,
+    Color? accentDeep,
+    Color? accentLavender,
     Color? textHi,
     Color? textMid,
     Color? textLow,
@@ -117,6 +131,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
       overlay: overlay ?? this.overlay,
       input: input ?? this.input,
       accent: accent ?? this.accent,
+      accentDeep: accentDeep ?? this.accentDeep,
+      accentLavender: accentLavender ?? this.accentLavender,
       textHi: textHi ?? this.textHi,
       textMid: textMid ?? this.textMid,
       textLow: textLow ?? this.textLow,
@@ -135,6 +151,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
       overlay: Color.lerp(overlay, other.overlay, t)!,
       input: Color.lerp(input, other.input, t)!,
       accent: Color.lerp(accent, other.accent, t)!,
+      accentDeep: Color.lerp(accentDeep, other.accentDeep, t)!,
+      accentLavender: Color.lerp(accentLavender, other.accentLavender, t)!,
       textHi: Color.lerp(textHi, other.textHi, t)!,
       textMid: Color.lerp(textMid, other.textMid, t)!,
       textLow: Color.lerp(textLow, other.textLow, t)!,

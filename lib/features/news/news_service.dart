@@ -91,6 +91,72 @@ class NewsComment {
 /// Kategori berita yang dipakai filter UI.
 const newsCategories = ['semua', 'rilis', 'teknik', 'umum'];
 
+/// Daftar nama manusia untuk komentator — salinan `web/src/news.ts`
+/// (NAME_FIRST / NAME_LAST) supaya aturan pembangkitan identik lintas
+/// platform: perangkat yang sama selalu dapat nama yang sama, dan kolom
+/// komentar terasa hidup (bukan "tamu-xxxx").
+const _nameFirst = [
+  'Raka',
+  'Sinta',
+  'Bima',
+  'Dewi',
+  'Aldi',
+  'Nadia',
+  'Fajar',
+  'Laras',
+  'Galih',
+  'Ayu',
+  'Reza',
+  'Putri',
+  'Dimas',
+  'Ratna',
+  'Yoga',
+  'Salsa',
+  'Ilham',
+  'Maya',
+  'Rio',
+  'Tania',
+  'Bagus',
+  'Intan',
+  'Eka',
+  'Wulan',
+  'Arif',
+  'Citra',
+  'Damar',
+  'Nirmala',
+  'Panji',
+  'Kirana',
+  'Satria',
+  'Anggi',
+];
+
+const _nameLast = [
+  'Saputra',
+  'Pratama',
+  'Lestari',
+  'Wijaya',
+  'Ramadhan',
+  'Maharani',
+  'Nugroho',
+  'Anggraini',
+  'Santoso',
+  'Utami',
+  'Firmansyah',
+  'Puspita',
+  'Hidayat',
+  'Safitri',
+  'Kurniawan',
+  'Melati',
+  'Gunawan',
+  'Andini',
+  'Prasetyo',
+  'Rahayu',
+  'Mahendra',
+  'Paramita',
+  'Wibowo',
+  'Larasati',
+];
+
 class NewsApiException implements Exception {
   NewsApiException(this.message);
   final String message;
@@ -201,12 +267,31 @@ class NewsApi {
   }
 
   /// Nama tampilan acak per perangkat — tidak ada kolom nama manual.
-  /// Stabil antar sesi: turunan 4 digit dari sidik jari perangkat.
+  /// Stabil antar sesi, dan identik caranya dengan web (`web/src/news.ts`):
+  /// turunan deterministik dari sidik jari perangkat memilih satu nama dari
+  /// daftar nama manusia. Orang yang sama selalu muncul dengan nama sama.
+  ///
+  /// Pengguna lama yang masih tersimpan `tamu-xxxx` ikut dibangkitkan ulang
+  /// (sama seperti web) supaya kolom komentar tidak lagi menampilkan label
+  /// teknis setelah pembaruan ini.
   String get displayName {
     final existing = _store.getStr('news_display_name');
-    if (existing != null && existing.isNotEmpty) return existing;
-    final h = fingerprint.hashCode.abs().toRadixString(16).padLeft(4, '0');
-    final name = 'tamu-$h';
+    if (existing != null &&
+        existing.isNotEmpty &&
+        !existing.startsWith('tamu-')) {
+      return existing;
+    }
+    // Hash sama dengan web: h = (h*31 + charCode) >>> 0, lalu h % jumlah
+    // nama depan untuk nama depan, dan (h / jumlahNamaDepan) % jumlah nama
+    // belakang untuk nama belakang.
+    final fp = fingerprint;
+    var h = 0;
+    for (var i = 0; i < fp.length; i++) {
+      h = (h * 31 + fp.codeUnitAt(i)) & 0xFFFFFFFF;
+    }
+    final first = _nameFirst[h % _nameFirst.length];
+    final last = _nameLast[(h ~/ _nameFirst.length) % _nameLast.length];
+    final name = '$first $last';
     _store.setStr('news_display_name', name);
     return name;
   }

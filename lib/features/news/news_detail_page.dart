@@ -17,6 +17,15 @@ import '../../widgets/seamless.dart';
 import 'news_service.dart';
 import '../../widgets/brand_icons.dart';
 
+/// Blok gambar di badan berita: baris sendiri berbentuk
+/// `![keterangan](url)`. Hanya gambar dari domain sendiri
+/// (`app.xystudio.my.id`) yang dirender — sesuai `docs/NEWS_STYLE.md`;
+/// baris lain tetap tampil sebagai paragraf biasa. Meniru web
+/// (`NEWS_IMAGE_BLOCK` di `web/src/App.tsx`).
+final _newsImageBlock = RegExp(
+  r'^!\[([^\]]*)\]\((https://app\.xystudio\.my\.id/[^\s)]+)\)$',
+);
+
 class NewsDetailPage extends ConsumerStatefulWidget {
   const NewsDetailPage({super.key, required this.slug});
 
@@ -270,6 +279,68 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
     return '${local.day} ${bulan[local.month - 1]} ${local.year}';
   }
 
+  /// Satu blok isi berita. Baris gambar `![keterangan](url)` — hanya URL
+  /// domain sendiri (`app.xystudio.my.id`) — dirender sebagai gambar
+  /// berbingkai + keterangan; baris lain tetap paragraf biasa. Meniru web.
+  Widget _newsContentBlock(BuildContext context, String para) {
+    final c = context.c;
+    final img = _newsImageBlock.firstMatch(para.trim());
+    if (img == null) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: Gap.md),
+        child: Text(
+          para,
+          style: TextStyle(
+            fontSize: 15,
+            height: 1.65,
+            color: c.textHi.withValues(alpha: 0.92),
+          ),
+        ),
+      );
+    }
+
+    final alt = (img.group(1) ?? '').trim();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Gap.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(R.lg),
+            child: Image.network(
+              img.group(2)!,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => ColoredBox(
+                color: c.overlay,
+                child: Center(
+                  child: Icon(LucideIcons.imageOff, size: 26, color: c.textLow),
+                ),
+              ),
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return ColoredBox(
+                  color: c.overlay,
+                  child: const Center(
+                    child: SkeletonBox(width: 24, height: 24),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (alt.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                alt,
+                style: TextStyle(fontSize: 11.5, color: c.textLow),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -426,17 +497,7 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                 ),
                 const SizedBox(height: Gap.xxl),
                 for (final para in post.content.split(RegExp(r'\n\n+')))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: Gap.md),
-                    child: Text(
-                      para,
-                      style: TextStyle(
-                        fontSize: 15,
-                        height: 1.65,
-                        color: c.textHi.withValues(alpha: 0.92),
-                      ),
-                    ),
-                  ),
+                  _newsContentBlock(context, para),
                 const SizedBox(height: Gap.lg),
                 // ── Komentar ──
                 Text(
@@ -544,54 +605,77 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: AuthorName(
-                                    name: comment.author,
-                                    official: comment.official,
-                                  ),
+                                CommentAvatar(
+                                  author: comment.author,
+                                  official: comment.official,
+                                  size: 32,
                                 ),
-                                Text(
-                                  _date(comment.createdAt),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: c.textLow,
+                                const SizedBox(width: Gap.sm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: AuthorName(
+                                              name: comment.author,
+                                              official: comment.official,
+                                            ),
+                                          ),
+                                          Text(
+                                            _date(comment.createdAt),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: c.textLow,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        comment.content,
+                                        style: const TextStyle(
+                                          fontSize: 13.5,
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton.icon(
+                                          style: TextButton.styleFrom(
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                            ),
+                                          ),
+                                          icon: const Icon(
+                                            LucideIcons.cornerUpLeft,
+                                            size: 13,
+                                          ),
+                                          label: Text(
+                                            context.tr('news_reply'),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            setState(() => _replyTo = comment);
+                                            _commentText.clear();
+                                          },
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              comment.content,
-                              style: const TextStyle(
-                                fontSize: 13.5,
-                                height: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  LucideIcons.cornerUpLeft,
-                                  size: 13,
-                                ),
-                                label: Text(
-                                  context.tr('news_reply'),
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                onPressed: () {
-                                  setState(() => _replyTo = comment);
-                                  _commentText.clear();
-                                },
-                              ),
                             ),
                             // Balasan (satu tingkat) tampil menjorok di bawah.
                             for (final reply in _comments.where(
@@ -622,11 +706,25 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          AuthorName(
-                                            name: reply.author,
-                                            official: reply.official,
-                                            trailing: _date(reply.createdAt),
-                                            fontSize: 11.5,
+                                          Row(
+                                            children: [
+                                              CommentAvatar(
+                                                author: reply.author,
+                                                official: reply.official,
+                                                size: 22,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: AuthorName(
+                                                  name: reply.author,
+                                                  official: reply.official,
+                                                  trailing: _date(
+                                                    reply.createdAt,
+                                                  ),
+                                                  fontSize: 11.5,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                           const SizedBox(height: 2),
                                           Text(

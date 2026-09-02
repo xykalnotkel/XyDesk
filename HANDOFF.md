@@ -16,26 +16,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 ## Untuk: Client Flutter
 
 - [ ] (dari Danu - XySpace Team, 2026-09-02) — **Rebrand**: logo X baru sudah
-  masuk lewat `design/logo-asli.png` + `tool/gen_logo.py` (ikon launcher,
-  splash, aset Flutter ikut lahir ulang). Verifikasi hasilnya di build
-  Android nyata. Selaraskan juga token ungu `lib/core/tokens.dart` dengan
-  web: accent `#7C3AED`, deep `#5B21B6`, lavender `#A78BFA`.
-- [ ] (dari Danu - XySpace Team, 2026-09-02) — Avatar penulis resmi berita:
-  web kini memakai foto founder (`web/public/team/founder.jpg`, live di
-  `https://app.xystudio.my.id/team/founder.jpg`) menggantikan badge logo X.
-  Samakan di Flutter (boleh load dari URL itu).
-- [ ] (dari Danu - XySpace Team, 2026-09-02) — Render gambar inline
-  `![keterangan](url)` di `lib/features/news/news_detail_page.dart` —
-  web & desktop sudah; ini blocker terakhir sebelum berita bergambar boleh
-  terbit (`docs/NEWS_STYLE.md` bag. 3). Hanya URL `app.xystudio.my.id`.
-- [ ] (dari Danu - XySpace Team, 2026-09-02) — Avatar komentar berita:
-  samakan dengan web — official pakai logo XyDesk, selainnya
-  `https://api.dicebear.com/9.x/adventurer/svg?seed=<author>` (seed = nama
-  penulis, jadi wajah konsisten lintas platform tanpa perubahan backend).
-- [ ] (dari Danu - XySpace Team, 2026-09-02) — Nama komentator: web kini
-  membuat nama manusia acak (deterministik dari fingerprint, daftar nama di
-  `web/src/news.ts`) menggantikan `tamu-xxxx`. Samakan derivasinya di
-  Flutter supaya perangkat yang sama tetap satu identitas.
+  masuk, token ungu `lib/core/tokens.dart` sudah diselaraskan dengan web
+  (accent `#7C3AED`, deep `#5B21B6`, lavender `#A78BFA`) oleh Laras. Yang
+  tersisa: verifikasi hasil rebrand (ikon launcher, splash, aset, warna)
+  di **build Android nyata** — belum ada perangkat di sesi ini.
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Verifikasi di perangkat
+  nyata**: avatar & nama komentator (DiceBear `adventurer` SVG dari URL
+  `api.dicebear.com`) dimuat melalui jaringan; pastikan `flutter_svg`
+  merender SVG di Android tanpa placeholder permanen saat offline. Belum
+  diuji di perangkat.
 
 ## Untuk: Desktop Shell
 
@@ -57,7 +46,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   input di atas menyulitkan setelah membaca komentar).
 - [ ] (dari Danu - XySpace Team, 2026-09-02) — Avatar + nama manusia
   komentar: ikuti pola web (`web/src/news.ts` — `newsDisplayName`,
-  `newsAvatarUrl`).
+  `newsAvatarUrl`). Flutter sudah; shell desktop menyusul.
 
 ## Untuk: CI / Release
 
@@ -116,3 +105,17 @@ _(kosong)_
 - [x] (dari Danu, 2026-09-02) — 500 semua deep link web produksi —
   binding `ASSETS` hilang di `web_deploy/wrangler.toml`. Diperbaiki Danu,
   commit `899e4d1`, diverifikasi live.
+- [x] (dari Danu, 2026-09-02) — Selaraskan token ungu `lib/core/tokens.dart`
+  dengan web (accent `#7C3AED`, deep `#5B21B6`, lavender `#A78BFA`) —
+  selesai di kode oleh Laras (2026-09-03). Verifikasi di build Android
+  nyata tetap terbuka (lihat "Untuk: Client Flutter").
+- [x] (dari Danu, 2026-09-02) — Avatar penulis resmi + komentar pakai foto
+  founder, dan avatar komentar DiceBear (official → foto founder, selainnya
+  `api.dicebear.com/9.x/adventurer/svg?seed=<author>`) — selesai di kode
+  oleh Laras (2026-09-03).
+- [x] (dari Danu, 2026-09-02) — Render gambar inline `![keterangan](url)`
+  (hanya `app.xystudio.my.id`) di `news_detail_page.dart` — selesai di kode
+  oleh Laras (2026-09-03).
+- [x] (dari Danu, 2026-09-02) — Nama komentator nama manusia deterministik
+  (bukan `tamu-xxxx`), selaras `web/src/news.ts` — selesai di kode oleh
+  Laras (2026-09-03).

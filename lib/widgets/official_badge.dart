@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../core/tokens.dart';
+import '../features/news/news_avatar.dart';
 import 'brand.dart';
 
 /// Nama penulis dengan badge resmi XyDesk.
@@ -20,6 +23,9 @@ import 'brand.dart';
 ///
 /// Widget ini hanya menggambar hasil keputusan itu. Ia tidak pernah menebak
 /// dari nama; kalau `official` salah, tidak ada badge.
+///
+/// Sejak rebrand, penanda resmi memakai foto pendiri XySpace
+/// (samakan dengan web) — bukan lagi badge logo X.
 class AuthorName extends StatelessWidget {
   const AuthorName({
     super.key,
@@ -56,11 +62,30 @@ class AuthorName extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset(
-          Img.logo,
-          width: fontSize + 4,
-          height: fontSize + 4,
-          fit: BoxFit.contain,
+        ClipOval(
+          child: Image.network(
+            newsFounderAvatar,
+            width: fontSize + 4,
+            height: fontSize + 4,
+            fit: BoxFit.cover,
+            // Kalau gagal (mis. offline), jangan kosongkan baris penulis —
+            // kembalikan ke logo agar identitas resmi tetap terbaca.
+            errorBuilder: (_, __, ___) => Image.asset(
+              Img.logo,
+              width: fontSize + 4,
+              height: fontSize + 4,
+              fit: BoxFit.contain,
+            ),
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return Image.asset(
+                Img.logo,
+                width: fontSize + 4,
+                height: fontSize + 4,
+                fit: BoxFit.contain,
+              );
+            },
+          ),
         ),
         const SizedBox(width: 6),
         Flexible(
@@ -100,6 +125,67 @@ class AuthorName extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Avatar bulat komentator — meniru web (`web/src/App.tsx`).
+///
+/// Resmi memakai foto pendiri; selainnya DiceBear SVG dari nama penulis
+/// ([newsAvatarUrl]). Bentuknya bulat dan tidak pernah membuat baris gagal:
+/// kalau gambar tidak termuat, tampilkan siluet netral, bukan layar kosong.
+class CommentAvatar extends StatelessWidget {
+  const CommentAvatar({
+    super.key,
+    required this.author,
+    this.official = false,
+    this.size = 34,
+  });
+
+  final String author;
+
+  /// Ditetapkan server, bukan tebakan klien — lihat [AuthorName].
+  final bool official;
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+
+    Widget fallback() =>
+        Icon(LucideIcons.user, size: size * 0.5, color: c.textLow);
+
+    final Widget inner = official
+        ? Image.network(
+            newsFounderAvatar,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => fallback(),
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return fallback();
+            },
+          )
+        // DiceBear mengembalikan SVG, jadi pakai flutter_svg (bukan
+        // Image.network yang hanya bisa PNG/JPEG).
+        : SvgPicture.network(
+            newsAvatarUrl(author),
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            placeholderBuilder: (_) => fallback(),
+          );
+
+    return ClipOval(
+      child: Container(
+        width: size,
+        height: size,
+        color: c.overlay,
+        alignment: Alignment.center,
+        child: inner,
+      ),
     );
   }
 }
