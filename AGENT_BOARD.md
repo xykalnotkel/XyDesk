@@ -30,7 +30,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260903-DANU-WEB | Danu - XySpace Team | Web | LAGI KERJA | Connect: pindai QR + Cara main + sosmed; publikasi ulang bundle web (deploy d358203 skip tanpa artefak) | 2026-09-03 |
 | SESI-20260903-CAKRA-RILIS | Cakra - XySpace Team | CI / Release | LAGI KERJA | Rilis 6.3.0: bump versi + changelog + artikel berita + verifikasi rilis | 2026-09-03 |
 
 ## Antrean izin push
@@ -45,12 +44,13 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260903-CAKRA-RILIS | Cakra - XySpace Team | Rilis 6.3.0: bump versi 6.3.0+25 (pubspec/Cargo/web/desktop), changelog, artikel berita changelog-v6-3-0, screenshot asli, verifikasi rantai Build→Release→Deploy | DISETUJUI | Xyckal | 2026-09-03 | — |
 | SESI-20260903-GALIH-HOST-LATENCY | Galih - XySpace Team | Host: metrik latensi pipeline (capture→encode→write RTP) di `/status` (`video.latencyMs` EMA + `video.latencyMaxMs`) + label encoder (`video.encoder`) + durasi sampel/fps nominal 60 diseragamkan + uji | DISETUJUI | Xyckal (chat) | 2026-09-03 | Build 33668808596 + Verifikasi 33668808668 + Installer Windows 33668808665 |
 
-| SESI-20260903-DANU-WEB | Danu - XySpace Team | Web Connect: pemindai QR (BarcodeDetector + fallback jsQR, dep baru jsqr@1.4.0 Apache-2.0), panduan "Cara main" client/host, blok sosmed Telegram/WhatsApp/TikTok, TikTokIcon, sembunyikan tombol QR tanpa API kamera; termasuk pengesahan retroaktif push a7b2863+e9f4fc2 (sebelum gerbang berlaku) | DISETUJUI | Xyckal (chat) | 2026-09-03 | — |
+| SESI-20260903-DANU-WEB | Danu - XySpace Team | Web Connect: pemindai QR (BarcodeDetector + fallback jsQR, dep baru jsqr@1.4.0 Apache-2.0), panduan "Cara main" client/host, blok sosmed Telegram/WhatsApp/TikTok, TikTokIcon, sembunyikan tombol QR tanpa API kamera; termasuk pengesahan retroaktif push a7b2863+e9f4fc2 (sebelum gerbang berlaku) | DISETUJUI | Xyckal (chat) | 2026-09-03 | Build 33681414047 + Verifikasi 33681414017 + Deploy 33681469908 |
 
 ## Riwayat sesi (hanya bertambah)
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260903-DANU-WEB | Danu - XySpace Team | Web | SELESAI | Connect: pemindai QR (BarcodeDetector + jsQR) + panduan Cara main + sosmed Telegram/WhatsApp/TikTok; tombol QR disembunyikan tanpa API kamera; bundle web terpublikasi (fitur sempat tertahan karena deploy d358203 skip) | 2026-09-03 |
 | SESI-20260903-CAKRA-CI | Cakra - XySpace Team | CI / Release | SELESAI | Filter area CI (build.yml), skip pintar deploy-web.yml, gerbang verify-push-auth.yml, papan koordinasi, pembaruan AGENT.md/docs/CI.md/CHANGELOG/CONTRIBUTORS/HANDOFF | 2026-09-03 |
 | SESI-20260903-CAKRA-NOTIF | Cakra - XySpace Team | CI / Release | SELESAI | Notifikasi push tanpa izin (ntfy/Telegram) di verify-push-auth.yml + docs/CI.md | 2026-09-03 |
 | SESI-20260903-GALIH-HOST | Galih - XySpace Team | Host Engine | SELESAI | Bitrate video live via control API (video-bitrate 1–50 Mbps + targetBitrateBps di /status) + uji; perbaikan E0308 build Windows; pindah konstanta/perakit NVENC ke nvenc_config.rs + uji | 2026-09-03 |
