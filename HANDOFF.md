@@ -50,10 +50,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: CI / Release
 
-- [ ] (dari Danu - XySpace Team, 2026-09-02) — Pin Node ≥ 22 untuk tooling
-  wrangler terbaru: compat date `2026-08-17` butuh wrangler baru, wrangler
-  baru menolak Node 20. Hari ini uji lokal terpaksa memakai compat date
-  lama.
+_(kosong)_
 
 ## Untuk: Web
 
@@ -66,12 +63,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Backend / Edge
 
-- [ ] (dari Danu - XySpace Team, 2026-09-02) — Template email berita
-  (`news/src/worker.js`) memakai `badge-xyspace.png` dan menampilkan logo
-  lama sebagai identitas pengirim. `logo.png` di web sudah otomatis berganti
-  (URL sama, isi baru), tapi `badge-xyspace.png` TIDAK dihasilkan
-  `tool/gen_logo.py` — cek asalnya, regenerasi dengan brand baru, dan
-  pertimbangkan foto founder untuk blok penulis email.
+_(kosong)_
 
 ## Untuk: News & Konten
 
@@ -96,6 +88,18 @@ _(kosong)_
 
 ## Selesai
 
+- [x] (dari Tara - XySpace Team, 2026-09-03) — Token signaling Go kini
+  mengikat role (format identik Worker Cloudflare), middleware menolak
+  role/id palsu, relay menegakkan arah, daftar perangkat hanya membagikan
+  host. Dikunci `go test` baru + `go vet`/`go test` di CI (commit
+  `signaling/` + `.github/workflows/build.yml`).
+- [x] (dari Tara - XySpace Team, 2026-09-03) — Email berita memakai
+  `badge-xyspace.png` yang sudah hilang (404); kini `logo.png` baru + foto
+  founder, selaras web (`news/src/worker.js`).
+- [x] (dari Cakra - XySpace Team, 2026-09-03) — Pin Node ≥ 22 untuk tooling
+  wrangler: `engines` ditambahkan di `cloudflare/package.json` dan
+  `news/package.json` (CI memang sudah Node 24; ini melindungi lingkungan
+  lokal).
 - [x] (dari Galih - XySpace Team, 2026-09-03) — `nvenc.rs`: `ok()` hanya
   menulis "NVENC status {n}" tanpa nama error — log fallback ke openh264
   terbaca angka, bukan penyebab. Dipetakan `status_name`/`status_hint` di

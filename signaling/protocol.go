@@ -21,6 +21,9 @@ const (
 	RoleClient Role = "client"
 )
 
+// String memenuhi fmt.Stringer dan dipakai untuk menandatangani token.
+func (r Role) String() string { return string(r) }
+
 // DeviceInfo mendeskripsikan satu perangkat yang terdaftar di hub.
 type DeviceInfo struct {
 	ID       string   `json:"id"`

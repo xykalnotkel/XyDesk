@@ -21,6 +21,12 @@ type Client struct {
 	hub *Hub
 	ws  *websocket.Conn
 
+	// role dan verifiedID diisi handler dari header yang ditulis middleware
+	// auth (hasil verifikasi query ?id= & ?role=). Pesan `hello` TIDAK bisa
+	// menggantinya — lihat router.go untuk penolakan id yang tidak cocok.
+	role       Role
+	verifiedID string
+
 	id       string
 	info     DeviceInfo
 	lastPong time.Time

@@ -88,10 +88,25 @@ func (h *Hub) snapshot() []DeviceInfo {
 	return out
 }
 
-// touch mengirim daftar perangkat ke semua client yang menaruh minat
-// (semua client role=client menerima siaran daftar host).
+// hostList hanya mengembalikan perangkat ber-role host. ID client tidak
+// disiarkan — sejalan dengan Worker Cloudflare yang mengembalikan daftar
+// kosong (privasi). Discovery LAN tetap berguna: yang dicari client memang
+// hanya host.
+func (h *Hub) hostList() []DeviceInfo {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	out := make([]DeviceInfo, 0, len(h.clients))
+	for _, c := range h.clients {
+		if c.info.Role == RoleHost {
+			out = append(out, c.info)
+		}
+	}
+	return out
+}
+
+// touch mengirim daftar HOST ke semua client yang menaruh minat.
 func (h *Hub) touch() {
-	h.broadcast(Message{Type: TMsgDevices, Devices: h.snapshot()})
+	h.broadcast(Message{Type: TMsgDevices, Devices: h.hostList()})
 }
 
 // lastSeen dipakai untuk deteksi koneksi mati mendadak (lihat main.go).

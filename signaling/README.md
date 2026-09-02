@@ -21,10 +21,15 @@ go run . -addr :8443 -cert cert.pem -key key.pem
 ## Terbitkan token (untuk host & client)
 
 ```bash
-XYDESK_SECRET=... go run . -issue <deviceId>   # host pakai deviceId, client pakai apa pun
+XYDESK_SECRET=... go run . -issue <deviceId> -role host    # host (deviceId 9 digit)
+XYDESK_SECRET=... go run . -issue perangkat-abc -role client
 ```
 
 Token berlaku 5 menit; dibawa sebagai `Authorization: Bearer <token>`.
+**Role ikut ditandatangani** (format identik dengan Worker Cloudflare, lihat
+`docs/PROTOCOL.md`): token client tidak bisa dipakai ulang sebagai host, dan
+id/role di query wajib cocok dengan token — pesan `hello` tidak bisa
+memalsukannya (sejak 3 Sep 2026, disamakan dengan `cloudflare/src/hub.js`).
 
 ## Deploy gratis
 

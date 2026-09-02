@@ -26,6 +26,7 @@ func main() {
 	cert := flag.String("cert", "", "path sertifikat TLS (opsional)")
 	key := flag.String("key", "", "path kunci TLS (opsional)")
 	issue := flag.String("issue", "", "terbitkan token untuk <purpose> lalu keluar")
+	issueRole := flag.String("issue-role", "client", "role token terbitan (host|client)")
 	flag.Parse()
 
 	secret := os.Getenv("XYDESK_SECRET")
@@ -38,7 +39,11 @@ func main() {
 	auth := NewAuth(secret)
 
 	if *issue != "" {
-		logger.Printf("token (%s): %s", *issue, auth.Issue(*issue))
+		role := RoleClient
+		if *issueRole == RoleHost.String() {
+			role = RoleHost
+		}
+		logger.Printf("token (%s, %s): %s", *issue, role, auth.Issue(*issue, role.String()))
 		return
 	}
 
@@ -64,6 +69,8 @@ func main() {
 			return
 		}
 		c := NewClient(hub, conn, logger)
+		c.role = Role(r.Header.Get("X-XyDesk-Role"))
+		c.verifiedID = r.Header.Get("X-XyDesk-Id")
 		go c.writePump()
 		go c.readPump()
 	})))

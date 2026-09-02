@@ -100,6 +100,13 @@ Kebijakan rilis:
 - Host: bitrate video kini bisa diatur dari shell — control API dapat aksi
   baru `video-bitrate` (Mbps, 1–50) dan `/status` melaporkan
   `targetBitrateBps`. Sebelumnya target 8 Mbps terpatri konstan.
+- Uji unit Go untuk signaling self-host (`signaling/auth_test.go` +
+  `router_test.go`): ikatan role pada token, middleware, arah relay, filter
+  daftar host. `go vet` + `go test` kini ikut wajib hijau di job
+  `check-signaling` — dulu hanya `gofmt` yang diawasi CI.
+- `engines: node >= 22` dipin di `cloudflare/package.json` dan
+  `news/package.json` — wrangler 4.123 menolak Node 20; dulu tidak ada
+  pengaman eksplisit sehingga lingkungan lokal bisa rusak diam-diam.
 
 - Client Flutter: komentar berita kini punya wajah. Komentar dan balasan
   menampilkan avatar bulat — foto pendiri XySpace untuk komentar resmi,
@@ -142,6 +149,22 @@ Kebijakan rilis:
   lama). Deep & lavender diekspos di `AppPalette` sebagai `accentDeep` dan
   `accentLavender`.
 
+- **Token signaling server Go kini mengikat role** — format disamakan
+  dengan Worker Cloudflare: `HMAC(secret, purpose \x00 role \x00 ts)`.
+  Sebelumnya role tidak ditandatangani dan diambil dari pesan `hello`
+  klien, sehingga token client bisa dipakai menyamar sebagai host di
+  jalur self-host. Konsekuensi: token lama (tanpa role) ditolak — token
+  berumur 5 menit, cukup terbitkan ulang.
+- Relay signaling Go kini menegakkan arah seperti hub.js produksi
+  (`pair`/`offer` hanya client→host, `pair-response`/`answer` hanya
+  host→client, `ice`/`bye` beda role), dan `hello` wajib membawa id yang
+  sudah diverifikasi token. Daftar perangkat Go hanya membagikan host —
+  id client tidak disiarkan (sepadan dengan Worker yang sengaja
+  mengembalikan daftar kosong).
+- Email berita (`news/src/worker.js`) tidak lagi memuat gambar
+  `badge-xyspace.png` yang sudah hilang sejak rebrand (404 di email):
+  header memakai `logo.png` baru dan blok penulis memakai foto founder,
+  selaras dengan web.
 - **Logo baru: X ungu kaca.** Diganti lewat jalur resmi —
   `design/logo-asli.png` diperbarui, `tool/gen_logo.py` melahirkan ulang
   semua turunan: ikon launcher Android (5 kepadatan, legacy + adaptive),

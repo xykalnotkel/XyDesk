@@ -11,14 +11,36 @@ Authorization: Bearer <token>
 ```
 
 - `token` = HMAC-SHA256 berumur 5 menit, diterbitkan dengan secret bersama.
-  Buat token: `XYDESK_SECRET=... ./signaling -issue <deviceId>`.
+  Format (IDENTIK di Worker Cloudflare dan server Go self-host):
+
+  ```
+  <detik-unix>.<purpose>.<sig>
+  sig = HMAC-SHA256(secret, purpose \x00 role \x00 <detik-unix>)
+  ```
+
+  **Role ikut ditandatangani** — token untuk `role=client` tidak bisa dipakai
+  ulang sebagai `host`, dan sebaliknya. `purpose` = deviceId (host) atau
+  `client`.
+- `id` dan `role` di URL diwajibkan cocok dengan token; pesan `hello` tidak
+  dapat mengganti identitas setelah gerbang auth.
 - `deviceId` unik per perangkat; duplikat online ditolak (`id sudah online`).
+
+Terbitkan token:
+
+```bash
+# Cloudflare (produksi): endpoint operator /issue (header X-Admin).
+curl -H "X-Admin: $ADMIN_SECRET" "https://signal.xystudio.my.id/issue?purpose=gaming-pc-01"
+
+# Server Go (self-host): flag -issue, role dipilih eksplisit.
+XYDESK_SECRET=... ./signaling -issue gaming-pc-01 -role host
+XYDESK_SECRET=... ./signaling -issue client-abc -role client
+```
 
 ## Tipe pesan
 
 | Tipe | Arah | Isi | Arti |
 |---|---|---|---|
-| `hello` | c→s | `to`=id, `from`=nama, `reason`=role/platform | daftar perangkat |
+| `hello` | c→s | `to`=id, `from`=nama, `reason`=platform | daftar perangkat (`id` wajib cocok dengan token; role diambil dari token, bukan pesan) |
 | `welcome` | s→c | `from`=id | ack registrasi |
 | `pair` | client→host | `to`, `pin` | minta pairing (PIN diverifikasi host) |
 | `pair-response` | host→client | `to`, `accepted` | terima/tolak |
@@ -26,7 +48,7 @@ Authorization: Bearer <token>
 | `ice` | peer↔peer | `to`, `candidate` | ICE candidate |
 | `bye` | peer↔peer | `to` | sesi berakhir |
 | `list` | c→s | — | minta daftar perangkat |
-| `devices` | s→c | `devices[]` | daftar (juga disiarkan otomatis) |
+| `devices` | s→c | `devices[]` | daftar perangkat — id client TIDAK PERNAH disiarkan. Worker Cloudflare mengembalikan kosong; server Go self-host membagikan host saja (disiarkan otomatis saat host naik/turun) |
 | `ping` / `pong` | dua arah | — | keep-alive (server juga ping level WS) |
 | `error` | s→c | `error`, `reason` | kesalahan |
 
