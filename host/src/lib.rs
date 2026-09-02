@@ -21,6 +21,8 @@ pub mod session;
 // platform). Driver NVENC sendiri hanya untuk Windows.
 #[cfg(target_os = "windows")]
 pub mod nvenc;
+/// Konstanta, status, dan perakit konfigurasi NVENC — lintas platform, teruji.
+pub mod nvenc_config;
 #[allow(
     non_camel_case_types,
     dead_code,

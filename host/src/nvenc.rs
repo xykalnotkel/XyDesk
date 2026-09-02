@@ -13,6 +13,7 @@
 //!
 //! Tipe data FFI: `nvenc_types.rs` (hasil generator, layout diverifikasi
 //! terhadap header C n12.2 — lisensi MIT, NVIDIA Corporation).
+//! Konstanta API, pemetaan status, dan perakit konfigurasi: `nvenc_config.rs`.
 
 #![allow(non_snake_case, dead_code)]
 
@@ -39,73 +40,17 @@ mod types {
 }
 use types::*;
 
-// ── Konstanta API (SDK 12.2) ────────────────────────────────────────────────
-const NVENCAPI_VERSION: u32 = 12 | (2u32 << 24); // MAJOR=12, MINOR=2
-const fn struct_ver(ver: u32) -> u32 {
-    NVENCAPI_VERSION | (ver << 16) | (0x7 << 28)
-}
-#[allow(unused)]
-pub const NV_ENC_CONFIG_VER: u32 = struct_ver(9) | (1u32 << 31);
-#[allow(unused)]
-pub const NV_ENC_INITIALIZE_PARAMS_VER: u32 = struct_ver(7) | (1u32 << 31);
-#[allow(unused)]
-pub const NV_ENC_PIC_PARAMS_VER: u32 = struct_ver(7) | (1u32 << 31);
-#[allow(unused)]
-pub const NV_ENC_LOCK_BITSTREAM_VER: u32 = struct_ver(2) | (1u32 << 31);
-#[allow(unused)]
-pub const NV_ENC_REGISTER_RESOURCE_VER: u32 = struct_ver(5);
-#[allow(unused)]
-pub const NV_ENC_MAP_INPUT_RESOURCE_VER: u32 = struct_ver(4);
-#[allow(unused)]
-pub const NV_ENC_CREATE_BITSTREAM_BUFFER_VER: u32 = struct_ver(1);
-#[allow(unused)]
-pub const NV_ENC_RC_PARAMS_VER: u32 = struct_ver(1);
-const NV_ENCODE_API_FUNCTION_LIST_VER: u32 = struct_ver(2);
-
-/// GUID — konstanta dari nvEncodeAPI.h n12.2.
-const fn guid(d1: u32, d2: u16, d3: u16, d4: [u8; 8]) -> GUID {
-    GUID {
-        Data1: d1,
-        Data2: d2,
-        Data3: d3,
-        Data4: d4,
-    }
-}
-const NV_ENC_CODEC_H264_GUID: GUID = guid(
-    0x6bc82762,
-    0x4e63,
-    0x4ca4,
-    [0xaa, 0x85, 0x1e, 0x50, 0xf3, 0x21, 0xf6, 0xbf],
-);
-const NV_ENC_H264_PROFILE_BASELINE_GUID: GUID = guid(
-    0x0727bcaa,
-    0x78c4,
-    0x4c83,
-    [0x8c, 0x2f, 0xef, 0x3d, 0xff, 0x26, 0x7c, 0x6a],
-);
-const NV_ENC_PRESET_P4_GUID: GUID = guid(
-    0x90a7b826,
-    0xdf06,
-    0x4862,
-    [0xb9, 0xd2, 0xcd, 0x6d, 0x73, 0xa0, 0x86, 0x81],
-);
-
-// Enum (nilai dari header):
-const NV_ENC_DEVICE_TYPE_DIRECTX: u32 = 0;
-const NV_ENC_BUFFER_FORMAT_NV12: u32 = 0x1;
-const NV_ENC_PIC_STRUCT_FRAME: u32 = 0x01;
-const NV_ENC_PIC_FLAG_FORCEIDR: u32 = 0x2;
-const NV_ENC_PARAMS_RC_CBR: u32 = 0x2;
-const NV_ENC_BUFFER_USAGE_INPUT_IMAGE: u32 = 0x0;
-const NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX: u32 = 0x0;
-const NV_ENC_MEMORY_HEAP_AUTOSELECT: u32 = 0;
-
-// Field bitfield (posisi bit di `u32` — urutan deklarasi di header, diverifikasi):
-/// RC_PARAMS.zeroReorderDelay — bit ke-9 (tanpa buffer reorder → latensi rendah).
-const RC_FLAG_ZERO_REORDER_DELAY: u32 = 1 << 9;
-/// CONFIG_H264.repeatSPSPPS — bit ke-12 (SPS/PPS berulang tiap IDR; klien bisa
-/// mulai decode kapan pun — penting untuk WebRTC).
-const H264_FLAG_REPEAT_SPSPPS: u32 = 1 << 12;
+// Konstanta API, status, dan perakit konfigurasi pindah ke `nvenc_config.rs`
+// (lintas platform, teruji) — nvenc.rs kini hanya memakai, tidak menduplikasi.
+// Nilai enum & GUID di sana diambil dari nvEncodeAPI.h SDK 12.x.
+use crate::nvenc_config::{
+    build_config, build_init, status_hint, status_name, NVENCAPI_VERSION,
+    NV_ENCODE_API_FUNCTION_LIST_VER, NV_ENC_BUFFER_FORMAT_NV12, NV_ENC_BUFFER_USAGE_INPUT_IMAGE,
+    NV_ENC_CREATE_BITSTREAM_BUFFER_VER, NV_ENC_DEVICE_TYPE_DIRECTX,
+    NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX, NV_ENC_LOCK_BITSTREAM_VER, NV_ENC_MAP_INPUT_RESOURCE_VER,
+    NV_ENC_MEMORY_HEAP_AUTOSELECT, NV_ENC_PIC_FLAG_FORCEIDR, NV_ENC_PIC_PARAMS_VER,
+    NV_ENC_PIC_STRUCT_FRAME, NV_ENC_REGISTER_RESOURCE_VER,
+};
 
 type NvEncApiList = NV_ENCODE_API_FUNCTION_LIST;
 type FnOpenSession = unsafe extern "system" fn(*mut c_void, u32, *mut *mut c_void) -> i32;
@@ -140,13 +85,19 @@ struct ApiFns {
     destroy: FnDestroyEncoder,
 }
 
-/// Status NVENC (NVENCSTATUS) — sukses = 0.
+/// Status NVENC (NVENCSTATUS) — sukses = 0. Kegagalan diberi nama resmi
+/// (`status_name`) + petunjuk (`status_hint`) supaya log terbaca manusia,
+/// bukan angka telanjang.
 #[inline]
 fn ok(status: i32) -> Result<(), String> {
     if status == 0 {
         Ok(())
     } else {
-        Err(format!("NVENC status {status}"))
+        let name = status_name(status);
+        match status_hint(status) {
+            Some(hint) => Err(format!("{name} ({status}): {hint}")),
+            None => Err(format!("{name} ({status})")),
+        }
     }
 }
 
@@ -185,9 +136,10 @@ fn load_impl() -> Result<ApiFns, String> {
             return Err(format!("NvEncodeAPICreateInstance gagal: status {status}"));
         }
         let major = (list.version >> 24) & 0xFF;
-        if major < 12 {
+        let required_major = (NVENCAPI_VERSION >> 24) & 0xFF;
+        if major < required_major {
             return Err(format!(
-                "driver NVENC terlalu lama (major {major}); butuh 12+ (driver R550+, 2024+)"
+                "driver NVENC terlalu lama (major {major}); butuh {required_major}+ (driver R550+, 2024+)"
             ));
         }
         Ok(ApiFns {
@@ -288,43 +240,11 @@ impl NvEnc {
             ))
             .map_err(|e| format!("NvEncOpenEncodeSession: {e}"))?;
 
-            // 3) Inisialisasi: H264 baseline, CBR, low-latency.
-            let mut cfg: NV_ENC_CONFIG = std::mem::zeroed();
-            cfg.version = NV_ENC_CONFIG_VER;
-            cfg.profileGUID = NV_ENC_H264_PROFILE_BASELINE_GUID;
-            cfg.gopLength = 120; // IDR ~2 dtk @60fps — pulih cepat dari packet loss
-            cfg.frameIntervalP = 1; // tanpa B-frame → latensi minimal
-            cfg.rcParams.version = NV_ENC_RC_PARAMS_VER;
-            cfg.rcParams.rateControlMode = NV_ENC_PARAMS_RC_CBR;
-            cfg.rcParams.averageBitRate = bitrate_bps;
-            cfg.rcParams.maxBitRate = bitrate_bps;
-            cfg.rcParams.vbvBufferSize = bitrate_bps / 2;
-            cfg.rcParams
-                .bitfieldsEnableminqpEnablemaxqpEnableinitialrcqpEnableaqReservedbitfield1EnablelookaheadDisableiadaptDisablebadaptEnabletemporalaqZeroreorderdelayEnablenonrefpStrictgoptargetAqstrengthEnableextlookaheadReservedbitfields =
-                RC_FLAG_ZERO_REORDER_DELAY;
-            cfg.encodeCodecConfig
-                .h264Config
-                .bitfieldsEnabletemporalsvcEnablestereomvcHierarchicalpframesHierarchicalbframesOutputbufferingperiodseiOutputpicturetimingseiOutputaudDisablespsppsOutputframepackingseiOutputrecoverypointseiEnableintrarefreshEnableconstrainedencodingRepeatspsppsEnablevfrEnableltrQpprimeyzerotransformbypassflagUseconstrainedintrapredEnablefillerdatainsertionDisablesvcprefixnaluEnablescalabilityinfoseiSinglesliceintrarefreshEnabletimecodeReservedbitfields =
-                H264_FLAG_REPEAT_SPSPPS;
-            // Layar = full-range (RGB 0..255 dipetakan langsung), bukan
-            // studio swing — kalau tidak, kontras gambar jadi pudar.
-            cfg.encodeCodecConfig
-                .h264Config
-                .h264VUIParameters
-                .videoFullRangeFlag = 1;
-
-            let mut init: NV_ENC_INITIALIZE_PARAMS = std::mem::zeroed();
-            init.version = NV_ENC_INITIALIZE_PARAMS_VER;
-            init.encodeGUID = NV_ENC_CODEC_H264_GUID;
-            init.presetGUID = NV_ENC_PRESET_P4_GUID;
-            init.encodeWidth = width;
-            init.encodeHeight = height;
-            init.frameRateNum = 60;
-            init.frameRateDen = 1;
-            init.enableEncodeAsync = 0; // sinkron — PoC latensi rendah
-            init.enablePTD = 1; // NVENC memilih tipe frame (kecuali force IDR)
-            init.bufferFormat = NV_ENC_BUFFER_FORMAT_NV12;
-            init.encodeConfig = &mut cfg as *mut NV_ENC_CONFIG;
+            // 3) Inisialisasi: H264 baseline, CBR, low-latency. Kontrak
+            // (GOP, frameIntervalP, VBV, bitfield, full-range) dirakit &
+            // dikunci uji di nvenc_config.rs — di sini tinggal memakai.
+            let mut cfg = build_config(width, height, bitrate_bps);
+            let mut init = build_init(width, height, &mut cfg);
 
             ok((fns.initialize)(encoder, &mut init))
                 .map_err(|e| format!("NvEncInitializeEncoder: {e}"))?;

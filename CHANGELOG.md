@@ -56,6 +56,11 @@ Kebijakan rilis:
   2x2, pemakaian ulang buffer). Sebelumnya fungsi ini tersembunyi di dalam
   modul Windows `screen.rs` tanpa satu pun pengujian — padahal ia jalur
   piksel menuju NVENC.
+- Host: `nvenc_config.rs` memetakan kode status NVENC (0–26 dari
+  `nvEncodeAPI.h`) ke nama resmi + petunjuk manusiawi. Sebelumnya log
+  fallback ke openh264 hanya menulis "NVENC status 15" — tidak bisa
+  dibedakan versi struct yang salah dari GPU yang tidak didukung. Perakit
+  `build_config`/`build_init` ikut dipindah ke sana dan dikunci uji.
 
 ### Diubah
 
@@ -85,6 +90,11 @@ Kebijakan rilis:
   `nvenc.rs`); yang belum hanya verifikasi di lab Windows nyata dan jalur
   zero-copy. Bagian "Rencana implementasi" diganti uraian cara kerja, dan
   struktur folder ikut disesuaikan.
+- Host: konfigurasi NVENC dikecilkan buffer VBV dari `bitrate/2` (boleh
+  menahan bit sampai ~0,5 detik) menjadi 1 frame (`bitrate/60`) dan
+  `tuningInfo` disetel `LOW_LATENCY`. Keduanya mengejar target roadmap
+  (< 40 ms glass-to-glass): buffer lama dan tuning `UNDEFINED` bertentangan
+  langsung dengan target itu. Kontraknya dikunci uji di `nvenc_config.rs`.
 
 ### Diperbaiki
 

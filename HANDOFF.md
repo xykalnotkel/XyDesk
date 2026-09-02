@@ -76,10 +76,7 @@ _(kosong)_
 
 ## Untuk: Host Engine
 
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — `nvenc.rs`: `ok()` hanya
-  menulis "NVENC status {n}" tanpa nama error. Petakan kode status → nama
-  (`NV_ENC_ERR_UNSUPPORTED_DEVICE`, dll.) + test, supaya log fallback ke
-  openh264 terbaca manusia, bukan angka.
+_(kosong)_
 
 ## Untuk: Docs & Audit
 
@@ -89,6 +86,12 @@ _(kosong)_
 
 ## Selesai
 
+- [x] (dari Galih - XySpace Team, 2026-09-03) — `nvenc.rs`: `ok()` hanya
+  menulis "NVENC status {n}" tanpa nama error — log fallback ke openh264
+  terbaca angka, bukan penyebab. Dipetakan `status_name`/`status_hint` di
+  `nvenc_config.rs` (0–26 dari nvEncodeAPI.h) + test. Sekalian perakit
+  `build_config`/`build_init` dipindah & dikunci uji; VBV dikecilkan dari
+  `bitrate/2` ke 1 frame.
 - [x] (dari Danu, 2026-09-02) — 500 semua deep link web produksi —
   binding `ASSETS` hilang di `web_deploy/wrangler.toml`. Diperbaiki Danu,
   commit `899e4d1`, diverifikasi live.
