@@ -47,7 +47,7 @@
      diselaraskan dengan logo X baru (violet kaca #7C3AED–#A78BFA) pada
      design pass 2026-09 — token aplikasi Flutter menyusul (lihat HANDOFF.md).
      Jika token aplikasi berubah, salin ke sini. */
-  --bg: #fafaf9;
+  --bg: #ffffff;
   --raised: #ffffff;
   --overlay: #f5f3ff;
   --input: #ffffff;
@@ -256,6 +256,7 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 .site-header .header-actions { display: flex; gap: 10px; align-items: center; }
 
 /* ── Hero — ungu pekat, identitas XyDesk ─────────────────────── */
+/* ── Hero — terang, bersih, logo asli sebagai bintang ────────── */
 .hero {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
@@ -263,30 +264,39 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   align-items: center;
   max-width: none;
   margin: 0;
-  padding: 96px max(24px, calc((100vw - var(--maxw)) / 2)) 88px;
+  padding: 84px max(24px, calc((100vw - var(--maxw)) / 2)) 96px;
   background:
-    radial-gradient(900px 500px at 15% 0%, rgba(167, 139, 250, 0.25) 0%, rgba(124, 58, 237, 0) 60%),
-    linear-gradient(160deg, #2a0f55 0%, #1b0b3b 45%, #0d0716 100%);
-  color: #ffffff;
+    radial-gradient(760px 460px at 82% 8%, rgba(167, 139, 250, 0.16) 0%, rgba(167, 139, 250, 0) 62%),
+    radial-gradient(620px 400px at 4% 96%, rgba(124, 58, 237, 0.08) 0%, rgba(124, 58, 237, 0) 60%),
+    var(--bg);
+  color: var(--ink);
 }
 
 .hero-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #c4b5fd;
-  margin-bottom: 20px;
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+  border: 1px solid rgba(167, 139, 250, 0.5);
+  border-radius: 999px;
+  padding: 6px 14px;
+  margin-bottom: 22px;
 }
 .hero-eyebrow .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #a78bfa;
-  box-shadow: 0 0 10px rgba(167, 139, 250, 0.9);
+  background: var(--accent);
+  animation: dot-pulse 2.4s ease-in-out infinite;
+}
+@keyframes dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(124, 58, 237, 0); }
 }
 
 .hero h1 {
@@ -295,133 +305,55 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   letter-spacing: -0.03em;
   line-height: 1.06;
   margin-bottom: 22px;
-  color: #ffffff;
+  color: var(--ink);
 }
 .hero h1 .grad {
   color: transparent;
-  background: linear-gradient(100deg, #c4b5fd, #a78bfa 60%, #8b5cf6);
+  background: linear-gradient(100deg, #8b5cf6, var(--accent) 55%, var(--accent-deep));
   -webkit-background-clip: text;
   background-clip: text;
 }
 
 .hero-copy > p {
   font-size: 17px;
-  color: #d9d0ee;
+  color: var(--text-mid);
   max-width: 520px;
   margin-bottom: 28px;
 }
 
 .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
 
-.hero-cta .btn.primary {
-  background: #ffffff;
-  color: var(--accent-deep);
-  border-color: #ffffff;
-}
-.hero-cta .btn.primary:hover { background: #f1eaff; }
-
-.hero-cta .btn.ghost {
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.4);
-}
-.hero-cta .btn.ghost:hover { border-color: #ffffff; color: #ffffff; }
-
 .hero-note {
   margin-top: 16px;
   font-size: 13px;
-  color: #a89bc9;
+  color: var(--text-low);
 }
 
-/* Kartu hitam dengan X putih — kontras di dalam hero ungu */
+/* Logo asli mengambang di atas kolam cahaya — tanpa layar tiruan,
+   tanpa angka pura-pura. */
 .hero-art {
   position: relative;
-  min-height: 420px;
+  min-height: 400px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--black);
-  border-radius: 22px;
-  overflow: hidden;
-  border: 1px solid rgba(167, 139, 250, 0.35);
 }
-
-.hero-art::before {
-  content: '';
+.hero-glow {
   position: absolute;
-  inset: 0;
-  background-image: url('/logo-white.png');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 180px 180px;
-  opacity: 0.14;
+  width: min(440px, 90%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.22) 0%, rgba(139, 92, 246, 0.07) 45%, rgba(139, 92, 246, 0) 70%);
 }
-
-.hero-screen {
-  width: min(430px, 82%);
-  background: #181126;
-  border: 1px solid #372457;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+.hero-logo {
+  width: min(330px, 68%);
+  filter: drop-shadow(0 26px 48px rgba(91, 33, 182, 0.32));
+  animation: hero-float 7s ease-in-out infinite;
 }
-.screen-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid #372457;
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
 }
-.screen-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #e9e2fa;
-}
-.screen-logo img { width: 14px; height: 14px; }
-.screen-live {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #c4b5fd;
-  background: rgba(124, 58, 237, 0.3);
-  padding: 3px 9px;
-  border-radius: 999px;
-}
-.screen-body {
-  position: relative;
-  height: 250px;
-  background: radial-gradient(1200px 500px at 70% -10%, #2c1a4e 0%, #181126 55%);
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding: 16px;
-}
-.screen-fps {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #ffffff;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid #4c3580;
-  padding: 5px 11px;
-  border-radius: 8px;
-}
-.screen-vignette {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(0,0,0,0.35));
-}
-
-.float-el {
-  position: absolute;
-  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.4));
-}
-.el-phone  { width: 92px; bottom: 26px; left: -18px; }
-.el-kb     { width: 150px; bottom: -14px; right: 46px; }
-.el-mouse  { width: 64px; top: 40px; right: -10px; }
 
 /* ── Stats strip — ungu menonjol ─────────────────────────────── */
 .stats-strip {
@@ -942,17 +874,69 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 .account-name { font-weight: 600; font-size: 14.5px; }
 .account-actions { display: flex; gap: 14px; align-items: center; }
 
-.connect-cta {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 26px;
-  background: var(--raised);
-  display: grid;
-  gap: 16px;
-  max-width: 560px;
+/* Kartu connect: terpusat, satu kolom yang tenang */
+.connect-card {
+  max-width: 600px;
+  margin: 8px auto 80px;
+  padding: 30px 28px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
-.connect-cta h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
-.connect-cta p { color: var(--text-mid); font-size: 14.5px; }
+.connect-form h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.connect-form > .muted { margin-bottom: 6px; }
+
+.field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+.recents-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-deep);
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  transition: background var(--speed) ease, border-color var(--speed) ease;
+}
+.recents-toggle:hover { background: var(--overlay); }
+.recents-toggle.open { background: var(--accent-soft); border-color: var(--accent-2); }
+.recent-id { font-weight: 700; letter-spacing: 0.06em; }
+.recent-pw { color: var(--text-low); font-size: 12.5px; }
+
+/* ID host: angka besar terpusat — elemen utama halaman ini */
+.connect-form input.host-id {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-align: center;
+  padding: 14px;
+}
+
+/* Tombol konek: tombol utama sungguhan.
+   Dulu class ini tanpa sengaja bergaya KARTU (padding 26px, grid, latar
+   putih) sehingga tombol "Konek sekarang" tampil sebagai balok pucat —
+   sumber utama kesan berantakan halaman ini. */
+.connect-cta {
+  margin-top: 6px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(160deg, #8b5cf6 0%, var(--accent) 45%, var(--accent-deep) 100%);
+  border: 1px solid var(--accent-deep);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.connect-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Sesi live memakai lebar penuh */
+.remote-session { max-width: none; }
 
 .connect-form { display: grid; gap: 12px; }
 .field-label {
@@ -1531,13 +1515,13 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 .author-name { display: inline-flex; align-items: center; gap: 6px; }
 .author-name.official strong { font-weight: 650; color: var(--ink); }
 .author-badge {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  object-fit: contain;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
   flex: none;
 }
-.author-name.md .author-badge { width: 19px; height: 19px; border-radius: 5px; }
+.author-name.md .author-badge { width: 22px; height: 22px; border-radius: 50%; }
 .official-tag {
   font-size: 10px;
   font-weight: 700;

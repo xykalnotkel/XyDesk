@@ -74,6 +74,20 @@ Kebijakan rilis:
   diselaraskan dengan logo baru, tombol/input/dropdown/kartu/grid/state
   kosong-error/skeleton/scrollbar/focus-ring dirapikan jadi satu bahasa
   visual; menghormati `prefers-reduced-motion`.
+- Tema web kini putih bersih (`#ffffff`) sebagai bawaan — halaman, PWA,
+  dan bar browser satu warna.
+- Hero halaman utama dirombak: terang, logo X asli mengambang di kolam
+  cahaya — layar tiruan "LIVE · 9 ms / 60 FPS" dan gambar mengambang
+  dihapus (angka pura-pura tidak sejalan dengan nilai kejujuran produk).
+- Halaman Connect ditata ulang: kartu terpusat, ID perangkat jadi angka
+  besar di tengah, tombol riwayat berbentuk chip, dan tombol
+  "Konek sekarang" kini tombol utama sungguhan — sebelumnya class-nya
+  tanpa sengaja bergaya kartu (balok putih besar) dan beberapa elemen
+  (riwayat, kepala field) tidak punya gaya sama sekali.
+- Waktu komentar berita kini relatif ("5 menit lalu", "2 hari lalu");
+  lewat sebulan kembali ke tanggal biasa.
+- Foto profil pengirim berita kini bulat penuh di semua ukuran (dulu
+  kotak membulat di baris penulis artikel).
 - Warna tema PWA web disamakan ke Paper `#fafaf9` (mengikuti `tokens.dart`
   dan `style.css`) — manifest sebelumnya `#ffffff`, bar PWA Android bisa
   beda warna dari situs.

@@ -40,6 +40,10 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   verifikasi installer CI berikutnya memakai ikon itu. Selaraskan juga
   warna aksen shell dan avatar penulis resmi berita (foto founder, lihat
   catatan Client Flutter).
+- [ ] (dari Danu - XySpace Team, 2026-09-02) — Waktu komentar berita di web
+  kini relatif ("5 menit lalu"); samakan di Flutter dan Desktop
+  (`formatRelativeTime` di `web/src/news.ts` sebagai acuan). Avatar
+  penulis resmi juga kini bulat penuh.
 - [ ] (dari Danu - XySpace Team, 2026-09-02) — Form komentar berita: pindah
   ke BAWAH daftar komentar + auto-scroll saat "Balas" (web sudah; alasan:
   input di atas menyulitkan setelah membaca komentar).

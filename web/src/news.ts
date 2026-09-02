@@ -168,3 +168,21 @@ export function formatNewsDate(iso: string): string {
   if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+/// Waktu relatif untuk komentar: "1 detik lalu", "5 menit lalu", dst.
+/// Lewat 4 minggu kembali ke tanggal biasa — "37 minggu lalu" menyulitkan.
+export function formatRelativeTime(iso: string): string {
+  const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
+  if (Number.isNaN(d.getTime())) return formatNewsDate(iso);
+  const s = Math.max(1, Math.floor((Date.now() - d.getTime()) / 1000));
+  if (s < 60) return `${s} detik lalu`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} menit lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  const hari = Math.floor(h / 24);
+  if (hari < 7) return `${hari} hari lalu`;
+  const minggu = Math.floor(hari / 7);
+  if (minggu < 5) return `${minggu} minggu lalu`;
+  return formatNewsDate(iso);
+}

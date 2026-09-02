@@ -28,6 +28,7 @@ import {
   fetchNewsList,
   fetchNewsPost,
   formatNewsDate,
+  formatRelativeTime,
   NEWS_CATEGORIES,
   NEWS_SHARE_BASE,
   NewsComment,
@@ -338,21 +339,8 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           </p>
         </div>
         <div className="hero-art" aria-hidden="true">
-          <div className="hero-screen">
-            <div className="screen-top">
-              <span className="screen-logo">
-                <img src="/logo-white.png" alt="" /> XyDesk
-              </span>
-              <span className="screen-live">LIVE · 9 ms</span>
-            </div>
-            <div className="screen-body">
-              <div className="screen-fps">60 FPS</div>
-              <div className="screen-vignette" />
-            </div>
-          </div>
-          <img className="float-el el-phone" src="/float-controller.webp" alt="" />
-          <img className="float-el el-kb" src="/float-keyboard.webp" alt="" />
-          <img className="float-el el-mouse" src="/float-mouse.webp" alt="" />
+          <div className="hero-glow" />
+          <img className="hero-logo" src="/logo.png" alt="" />
         </div>
       </section>
 
@@ -1243,7 +1231,7 @@ function NewsDetailPage({
                         loading="lazy"
                       />
                       <AuthorName name={c.author} official={c.official} />
-                      <span>{formatNewsDate(c.createdAt)}</span>
+                      <span>{formatRelativeTime(c.createdAt)}</span>
                     </div>
                     <p>{c.content}</p>
                     <button className="reply-link" onClick={() => focusCommentForm(c)}>
@@ -1261,7 +1249,7 @@ function NewsDetailPage({
                                 loading="lazy"
                               />
                               <AuthorName name={r.author} official={r.official} />
-                              <span>{formatNewsDate(r.createdAt)}</span>
+                              <span>{formatRelativeTime(r.createdAt)}</span>
                             </div>
                             <p>{r.content}</p>
                           </div>
