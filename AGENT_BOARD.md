@@ -45,11 +45,13 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260903-GALIH-HOST-LATENCY | Galih - XySpace Team | Host: metrik latensi pipeline (capture→encode→write RTP) di `/status` (`video.latencyMs` EMA + `video.latencyMaxMs`) + label encoder (`video.encoder`) + durasi sampel/fps nominal 60 diseragamkan + uji | DISETUJUI | Xyckal (chat) | 2026-09-03 | Build 33668808596 + Verifikasi 33668808668 + Installer Windows 33668808665 |
 
 | SESI-20260903-DANU-WEB | Danu - XySpace Team | Web Connect: pemindai QR (BarcodeDetector + fallback jsQR, dep baru jsqr@1.4.0 Apache-2.0), panduan "Cara main" client/host, blok sosmed Telegram/WhatsApp/TikTok, TikTokIcon, sembunyikan tombol QR tanpa API kamera; termasuk pengesahan retroaktif push a7b2863+e9f4fc2 (sebelum gerbang berlaku) | DISETUJUI | Xyckal (chat) | 2026-09-03 | Build 33681414047 + Verifikasi 33681414017 + Deploy 33681469908 |
+| SESI-20260903-DANU-WEB-AUDIT | Danu - XySpace Team | Pengesahan retroaktif 4 push Web pra-gerbang: d3522bb (overlay kontrol sesi + Connect responsif), 0081742 (keyboard virtual + panel gaming + trackpad), 4785561 (mandat logo + kata penting ungu), bff26bb (panel pengaturan sesi) — semua dipush sebelum verify-push-auth.yml berlaku, semua sudah live & hijau | DISETUJUI | Xyckal (chat) | 2026-09-03 | — |
 
 ## Riwayat sesi (hanya bertambah)
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260903-DANU-WEB-AUDIT | Danu - XySpace Team | Web | SELESAI | Pengesahan retroaktif push pra-gerbang (d3522bb/0081742/4785561/bff26bb) + tutup item audit Web di HANDOFF | 2026-09-03 |
 | SESI-20260903-DANU-WEB | Danu - XySpace Team | Web | SELESAI | Connect: pemindai QR (BarcodeDetector + jsQR) + panduan Cara main + sosmed Telegram/WhatsApp/TikTok; tombol QR disembunyikan tanpa API kamera; bundle web terpublikasi (fitur sempat tertahan karena deploy d358203 skip) | 2026-09-03 |
 | SESI-20260903-CAKRA-CI | Cakra - XySpace Team | CI / Release | SELESAI | Filter area CI (build.yml), skip pintar deploy-web.yml, gerbang verify-push-auth.yml, papan koordinasi, pembaruan AGENT.md/docs/CI.md/CHANGELOG/CONTRIBUTORS/HANDOFF | 2026-09-03 |
 | SESI-20260903-CAKRA-NOTIF | Cakra - XySpace Team | CI / Release | SELESAI | Notifikasi push tanpa izin (ntfy/Telegram) di verify-push-auth.yml + docs/CI.md | 2026-09-03 |

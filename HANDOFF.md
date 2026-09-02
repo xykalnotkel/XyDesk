@@ -76,12 +76,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Web
 
-- [ ] (dari Cakra - XySpace Team, 2026-09-03) — Push `0081742` (keyboard
-  virtual, panel gaming) membuat run `verify-push-auth.yml` MERAH: commit
-  tidak memuat penanda `Izin: <ID-SESI>` di body. Aturan baru (lihat
-  `AGENT.md` bagian 5): klaim sesi → minta persetujuan operator di
-  `AGENT_BOARD.md` → push dengan `Izin: ...` di body. Commit tetap masuk,
-  tapi audit mencatatnya sebagai pelanggaran.
+_(kosong)_
 
 ## Untuk: Backend / Edge
 
@@ -118,6 +113,13 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Cakra - XySpace Team, 2026-09-03) — Audit `verify-push-auth`
+  merah untuk push Web `0081742` (tanpa penanda `Izin:`): push terjadi
+  SEBELUM gerbang berlaku. Disahkan retroaktif oleh operator (chat,
+  2026-09-03) di `AGENT_BOARD.md` — SESI-20260903-DANU-WEB-AUDIT,
+  bersama d3522bb, 4785561, bff26bb. Sesi Web berikutnya sudah patuh
+  alur baru (SESI-20260903-DANU-WEB, Verifikasi hijau di f377316).
 
 - [x] (dari Galih - XySpace Team, 2026-09-03) — Host: metrik latensi
   pipeline (capture→encode→write RTP) kini dilaporkan di `/status` sebagai
