@@ -319,19 +319,34 @@ export async function addComment(env, slug, body, request) {
 }
 
 // ── Langganan email ─────────────────────────────────────────────────────
-async function subscribe(env, body) {
+export async function subscribe(env, body) {
   const email = clean(body.email).slice(0, 120).toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
     return json({ error: 'alamat email tidak valid' }, 400);
   }
+  // Asal langganan menentukan siapa dikabari saat apa. Klien hanya boleh
+  // memilih di antara dua nilai yang dikenal; nilai lain dibuang, bukan
+  // disimpan — kolom ini dipakai untuk memilih kelompok penerima, jadi
+  // nilai bebas membuatnya tidak bisa dipakai.
+  const source = clean(body.source).toLowerCase() === 'unduhan' ? 'unduhan' : 'berita';
+
   const existing = await env.DB.prepare(
-    'SELECT id FROM subscribers WHERE email = ?'
+    'SELECT id, source FROM subscribers WHERE email = ?'
   ).bind(email).first();
   if (existing) {
+    // Yang sudah terdaftar sebagai pelanggan berita lalu meminta diingatkan
+    // soal unduhan: tandai juga, supaya ia ikut dikabari saat unduhan dibuka.
+    if (source === 'unduhan' && existing.source !== 'unduhan') {
+      await env.DB.prepare('UPDATE subscribers SET source = ? WHERE email = ?')
+        .bind('unduhan', email)
+        .run();
+    }
     return json({ ok: true, subscribed: false, reason: 'sudah terdaftar' });
   }
-  await env.DB.prepare('INSERT INTO subscribers (email) VALUES (?)').bind(email).run();
-  return json({ ok: true, subscribed: true });
+  await env.DB.prepare('INSERT INTO subscribers (email, source) VALUES (?, ?)')
+    .bind(email, source)
+    .run();
+  return json({ ok: true, subscribed: true, source });
 }
 
 // ── Terbitkan artikel (admin) + notifikasi push & email ─────────────────

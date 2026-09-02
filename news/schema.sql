@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS comments (
 CREATE TABLE IF NOT EXISTS subscribers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT UNIQUE NOT NULL,
+  -- 'berita' (bawaan) atau 'unduhan' — lihat migrations/0003.
+  source TEXT NOT NULL DEFAULT 'berita',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

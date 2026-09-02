@@ -47,9 +47,28 @@ if (tables[0].results.length === 0) {
   run(`CREATE TABLE subscribers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
+    source TEXT NOT NULL DEFAULT 'berita',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`);
   console.log('migrasi: tabel subscribers dibuat');
 } else {
   console.log('migrasi: subscribers sudah ada');
+}
+
+// 4) asal langganan di subscribers.
+//
+// Tanpa kolom ini, "Ingatkan saya" di halaman unduh tidak bisa dibedakan
+// dari pelanggan berita — padahal yang satu menunggu artikel dan yang lain
+// menunggu tombol unduh dibuka. Baris lama otomatis bernilai 'berita'
+// (default), jadi tidak ada data yang perlu diisi ulang.
+//
+// Ingat urutannya: Worker yang menyisipkan kolom ini HARUS menyala sesudah
+// migrasi ini berhasil — persis pelajaran `official` di atas.
+const subCols = run(`PRAGMA table_info(subscribers)`);
+if (!subCols[0].results.some((c) => c.name === 'source')) {
+  run(`ALTER TABLE subscribers ADD COLUMN source TEXT NOT NULL DEFAULT 'berita'`);
+  run(`CREATE INDEX IF NOT EXISTS idx_subscribers_source ON subscribers(source)`);
+  console.log('migrasi: source ditambahkan');
+} else {
+  console.log('migrasi: source sudah ada');
 }
