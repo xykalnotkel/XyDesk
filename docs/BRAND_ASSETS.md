@@ -15,8 +15,6 @@ The sign-in control keeps the mark's original colors and aspect ratio and uses
 Google's light/dark button boundary colors. Do not recolor, distort, trace, or
 replace this file with a custom `CustomPainter` approximation.
 
-## XyDesk launch mark
-
 ## XyDesk logo — satu sumber untuk semua platform
 
 `design/logo-asli.png` is the single source of truth: a square, transparent

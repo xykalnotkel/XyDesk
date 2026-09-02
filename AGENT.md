@@ -201,8 +201,11 @@ kerja apa.** Aturannya:
   tanpa versi di judul, penulis `Tim XySpace` (lihat `docs/NEWS_STYLE.md`).
 - **Versi**: rilis wajib bump `pubspec.yaml X.Y.Z+NN`, `package.json`
   web/desktop, dan `Cargo.toml` host (lihat `docs/VERSIONING.md`).
-- **Logo/aset generate**: JANGAN edit hasil generate. Satu sumber
-  `design/logo-asli.png`, semua turunan lewat `tool/gen_logo.py`.
+- **Logo/aset generate**: logo resmi XyDesk = X ungu glossy
+  `design/logo-asli.png` — WAJIB dipakai di SEMUA platform (Android, web,
+  desktop, host, email, materi rilis). JANGAN edit hasil generate dan
+  jangan bikin varian sendiri. Satu sumber `design/logo-asli.png`, semua
+  turunan lewat `tool/gen_logo.py` (rincian di `docs/BRAND_ASSETS.md`).
 - **Tema Android**: terang (Paper) saja. Jangan menambahkan dark mode.
 - **Desktop shell**: hanya shell — logika inti tetap di engine Rust.
 - **Lisensi**: proprietary. Jangan menambah dependensi tanpa mencatatnya di

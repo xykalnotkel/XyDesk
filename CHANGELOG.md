@@ -115,6 +115,12 @@ Kebijakan rilis:
   yang sama tidak bergeser tanpa terlihat nanti.
 
 ### Diubah
+- Web: kata penting (cetak tebal) di badan artikel berita kini berwarna
+  ungu brand agar penekanan langsung terlihat.
+- AGENT.md: aturan logo dipertegas — `design/logo-asli.png` (X ungu
+  glossy) WAJIB dipakai semua platform, turunan hanya lewat
+  `tool/gen_logo.py`.
+
 
 - Client Flutter: nama komentator kini nama manusia deterministik dari
   sidik jari perangkat (daftar `_nameFirst`/`_nameLast`, hash
