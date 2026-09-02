@@ -75,6 +75,28 @@ pelanggaran tampil merah di tab Actions. Agar menjadi **gerbang keras**
    deskripsi/isi PR, karena squash memakai isi PR sebagai body commit.
    Merge commit sendiri (tindakan operator) dikecualikan.
 
+## Notifikasi push tanpa izin
+
+Saat gerbang menolak push, langkah terakhir workflow mengirim peringatan ke
+operator. Dua kanal didukung — salah satu saja sudah cukup, keduanya juga
+boleh:
+
+**ntfy (paling cepat dipasang, tanpa akun)** — buat topic di
+<https://ntfy.sh> (mis. `xydesk-izin`), lalu tambahkan repository variable:
+`NTFY_WEBHOOK = https://ntfy.sh/xydesk-izin`. Untuk produksi, sebaiknya
+self-host ntfy di server sendiri (topic publik bisa dibaca siapa pun yang
+tahu namanya).
+
+**Telegram** — buat bot lewat [@BotFather](https://t.me/BotFather)
+(perintah `/newbot`, simpan token-nya), cari `chat_id` (kirim pesan ke bot,
+lalu GET `https://api.telegram.org/bot<TOKEN>/getUpdates`), lalu:
+- secret: `TELEGRAM_BOT_TOKEN` (Settings → Secrets and variables → Actions → Secrets)
+- variable: `TELEGRAM_CHAT_ID`
+
+Keduanya tidak wajib tersedia: kalau kosong, workflow hanya memberi
+peringatan di log dan pelanggaran tetap terlihat merah. Tidak ada
+dependensi baru — pengiriman memakai `curl` bawaan runner.
+
 
 
 Sejak 1 Sep 2026 seluruh gerbang host berada di dalam `build.yml`. Sebelumnya

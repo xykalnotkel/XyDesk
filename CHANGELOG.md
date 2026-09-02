@@ -66,7 +66,9 @@ Kebijakan rilis:
   commit non-merge wajib memuat `Izin: <ID-SESI>` dan ID-nya berstatus
   `DISETUJUI` di `AGENT_BOARD.md`; commit merge dan commit operator
   (`OPERATOR_LOGIN`) dikecualikan. Berfungsi sebagai audit, dan bisa
-  dijadikan gerbang keras lewat branch protection.
+  dijadikan gerbang keras lewat branch protection. Saat pelanggaran
+  terdeteksi, operator dikabari lewat ntfy (`NTFY_WEBHOOK`) atau Telegram
+  (`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`) — keduanya opsional.
 - `deploy-web.yml` melewati deploy dengan peringatan (alih-alih gagal)
   bila run Build pemicunya tidak memuat artefak `XyDesk-Web` — misalnya
   karena perubahan tidak menyentuh `web/`.

@@ -154,3 +154,45 @@ jobs:
           fi
           echo ""
           echo "SEMUA COMMIT PADA PUSH INI MEMILIKI IZIN YANG DISETUJUI. ✔"
+
+      # Berjalan hanya bila langkah audit di atas GAGAL (push tanpa izin).
+      # Dua kanal yang didukung, keduanya opsional (kalau tidak diset,
+      # tidak ada yang dikirim — pelanggaran tetap terlihat merah di run):
+      #   - ntfy  : variables repo NTFY_WEBHOOK, mis. https://ntfy.sh/xydesk-izin
+      #   - Telegram: secret TELEGRAM_BOT_TOKEN + variables TELEGRAM_CHAT_ID
+      # Petunjuk lengkap: docs/CI.md → "Notifikasi push tanpa izin".
+      - name: Kabari operator bila push tanpa izin
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ vars.TELEGRAM_CHAT_ID }}
+          NTFY_WEBHOOK: ${{ vars.NTFY_WEBHOOK }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NTFY_WEBHOOK:-}" ] && { [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; }; then
+            echo "::warning::Kanal notifikasi belum diset — atur NTFY_WEBHOOK atau TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (docs/CI.md)."
+            exit 0
+          fi
+          pesan="PUSH TANPA IZIN — ${GITHUB_REPOSITORY}
+          Commit ${GITHUB_SHA:0:7} di ${GITHUB_REF_NAME}
+          Periksa: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          Aturan: setiap commit wajib memuat 'Izin: <ID-SESI>' yang berstatus DISETUJUI di AGENT_BOARD.md."
+          if [ -n "${NTFY_WEBHOOK:-}" ]; then
+            curl -sS -X POST \
+              -H "Title: XyDesk — Push Tanpa Izin" \
+              -H "Tags: warning" \
+              -H "Priority: high" \
+              --data-binary "$pesan" "$NTFY_WEBHOOK" >/dev/null \
+              && echo "Notifikasi ntfy terkirim." \
+              || echo "::warning::Gagal mengirim notifikasi ntfy."
+          fi
+          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            curl -sS -X POST \
+              "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+              --data-urlencode "text=${pesan}" \
+              --data-urlencode "disable_web_page_preview=true" \
+              >/dev/null \
+              && echo "Notifikasi Telegram terkirim." \
+              || echo "::warning::Gagal mengirim notifikasi Telegram."
+          fi
