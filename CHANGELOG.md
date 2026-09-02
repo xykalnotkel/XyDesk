@@ -91,6 +91,9 @@ Kebijakan rilis:
   fallback ke openh264 hanya menulis "NVENC status 15" — tidak bisa
   dibedakan versi struct yang salah dari GPU yang tidak didukung. Perakit
   `build_config`/`build_init` ikut dipindah ke sana dan dikunci uji.
+- Host: bitrate video kini bisa diatur dari shell — control API dapat aksi
+  baru `video-bitrate` (Mbps, 1–50) dan `/status` melaporkan
+  `targetBitrateBps`. Sebelumnya target 8 Mbps terpatri konstan.
 
 ### Diubah
 
@@ -139,6 +142,10 @@ Kebijakan rilis:
   `tuningInfo` disetel `LOW_LATENCY`. Keduanya mengejar target roadmap
   (< 40 ms glass-to-glass): buffer lama dan tuning `UNDEFINED` bertentangan
   langsung dengan target itu. Kontraknya dikunci uji di `nvenc_config.rs`.
+- Host: `TARGET_BPS` bukan lagi konstanta — jadi setting runtime
+  (`screen::target_bitrate_bps`/`set_target_bitrate_bps`, bawaan 8 Mbps).
+  Kedua jalur encoder (openh264 & NVENC) membacanya saat encoder dibangun,
+  dan perubahan di tengah sesi memicu respawn capture dengan encoder baru.
 
 ### Diperbaiki
 

@@ -132,6 +132,9 @@ pub struct Status {
     pub video: VideoStats,
     pub audio: AudioStatus,
     pub displays: DisplayStatus,
+    /// Target bitrate video aktif (bps) — dipakai UI untuk menampilkan dan
+    /// mengubah batas pemakaian internet selama sesi.
+    pub target_bitrate_bps: u32,
     pub last_error: Option<String>,
 }
 
@@ -199,6 +202,7 @@ impl ControlState {
                 list: displays,
                 wanted: crate::screen::wanted_display(),
             },
+            target_bitrate_bps: crate::screen::target_bitrate_bps(),
             last_error: self.last_error.clone(),
         }
     }
@@ -244,6 +248,9 @@ pub struct ActionRequest {
     /// Indeks monitor untuk aksi `display-select`.
     #[serde(default)]
     pub index: Option<usize>,
+    /// Target bitrate (Mbps) untuk aksi `video-bitrate`.
+    #[serde(default)]
+    pub bitrate_mbps: Option<u32>,
 }
 
 /// Jawaban aksi. `password` berisi nilai baru untuk `new-password` dan
@@ -478,6 +485,29 @@ async fn action(
                 ))))
             }
         }
+        // Setel target bitrate video (Mbps). Berlaku seketika di sesi aktif
+        // (capture di-respawn dengan encoder baru) atau jadi nilai sesi
+        // berikutnya. Batas: MIN_TARGET_BPS..=MAX_TARGET_BPS (screen.rs).
+        "video-bitrate" => {
+            let Some(mbps) = req.bitrate_mbps else {
+                return Ok(Json(ActionResponse::err("bitrate_mbps tidak disertakan")));
+            };
+            let bps = mbps.saturating_mul(1_000_000);
+            if crate::screen::set_target_bitrate_bps(bps) {
+                Ok(Json(ActionResponse {
+                    ok: true,
+                    error: None,
+                    password: None,
+                    stopped: None,
+                }))
+            } else {
+                Ok(Json(ActionResponse::err(format!(
+                    "bitrate {mbps} Mbps di luar batas {}-{} Mbps",
+                    crate::screen::MIN_TARGET_BPS / 1_000_000,
+                    crate::screen::MAX_TARGET_BPS / 1_000_000
+                ))))
+            }
+        }
         other => Ok(Json(ActionResponse::err(format!(
             "aksi tidak dikenal: {other}"
         )))),
@@ -574,7 +604,14 @@ mod tests {
         assert_eq!(v["state"], "starting");
         assert_eq!(v["signalingUrl"], "ws://localhost:8787/ws");
         // Bidang yang dipakai UI harus selalu ada.
-        for key in ["startedAtMs", "uptimeMs", "video", "session", "lastError"] {
+        for key in [
+            "startedAtMs",
+            "uptimeMs",
+            "video",
+            "session",
+            "targetBitrateBps",
+            "lastError",
+        ] {
             assert!(v.get(key).is_some(), "bidang {key} hilang: {body}");
         }
         assert_eq!(v["video"]["framesSent"], 0);
@@ -656,6 +693,55 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&body).expect("JSON valid");
         assert_eq!(v["ok"], true);
         assert_eq!(v["stopped"], false);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn aksi_video_bitrate_mengubah_target_dan_terlihat_di_status() {
+        let (addr, token) = spawn().await;
+        // Lock diambil SETELAH await terakhir — MutexGuard std tidak Send,
+        // tidak boleh hidup melintasi await di body test tokio.
+        let _g = crate::screen::test_support::BITRATE_LOCK.lock().unwrap();
+        let (code, body) = http_request(
+            addr,
+            "POST",
+            "/action",
+            &[(TOKEN_HEADER, &token)],
+            Some(r#"{"action":"video-bitrate","bitrate_mbps":12}"#),
+        );
+        assert_eq!(code, 200);
+        let v: serde_json::Value = serde_json::from_str(&body).expect("JSON valid");
+        assert_eq!(v["ok"], true, "body: {body}");
+        assert_eq!(crate::screen::target_bitrate_bps(), 12_000_000);
+
+        let (code, body) = http_request(addr, "GET", "/status", &[(TOKEN_HEADER, &token)], None);
+        assert_eq!(code, 200);
+        let v: serde_json::Value = serde_json::from_str(&body).expect("JSON valid");
+        assert_eq!(v["targetBitrateBps"], 12_000_000);
+        // Kembalikan bawaan agar test lain yang membaca bawaan aman.
+        crate::screen::set_target_bitrate_bps(crate::screen::DEFAULT_TARGET_BPS);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn aksi_video_bitrate_di_luar_batas_ditolak() {
+        let (addr, token) = spawn().await;
+        let _g = crate::screen::test_support::BITRATE_LOCK.lock().unwrap();
+        for mbps in ["0", "999"] {
+            let body = format!(r#"{{"action":"video-bitrate","bitrate_mbps":{mbps}}}"#);
+            let (code, resp) = http_request(
+                addr,
+                "POST",
+                "/action",
+                &[(TOKEN_HEADER, &token)],
+                Some(&body),
+            );
+            assert_eq!(code, 200, "mbps={mbps}");
+            let v: serde_json::Value = serde_json::from_str(&resp).expect("JSON valid");
+            assert_eq!(v["ok"], false, "mbps={mbps}: {resp}");
+            assert!(
+                v["error"].as_str().unwrap_or("").contains("di luar batas"),
+                "mbps={mbps}: {resp}"
+            );
+        }
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

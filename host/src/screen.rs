@@ -20,9 +20,44 @@ use openh264::formats::YUVBuffer;
 pub const TEST_WIDTH: usize = 320;
 pub const TEST_HEIGHT: usize = 180;
 
-/// Bitrate target jalur produksi. 8 Mbps cukup untuk 1080p screen content
-/// dengan openh264; disengaja konservatif agar Wi-Fi rumah kuat.
-pub const TARGET_BPS: u32 = 8_000_000;
+/// Bitrate target bawaan jalur produksi: 8 Mbps. Cukup untuk 1080p screen
+/// content, disengaja konservatif agar Wi-Fi rumah kuat.
+pub const DEFAULT_TARGET_BPS: u32 = 8_000_000;
+
+/// Batas bawah bitrate yang bisa diatur lewat control API (1 Mbps).
+pub const MIN_TARGET_BPS: u32 = 1_000_000;
+
+/// Batas atas bitrate yang bisa diatur lewat control API (50 Mbps).
+pub const MAX_TARGET_BPS: u32 = 50_000_000;
+
+/// Bitrate target yang sedang aktif (bps). Dibaca tiap kali encoder dibangun;
+/// berubah lewat [`set_target_bitrate_bps`] (control API aksi
+/// `video-bitrate`). Bawaan [`DEFAULT_TARGET_BPS`].
+static TARGET_BPS: std::sync::atomic::AtomicU32 =
+    std::sync::atomic::AtomicU32::new(DEFAULT_TARGET_BPS);
+
+/// Tanda bitrate berubah dan capture perlu di-respawn (encoder dibangun ulang
+/// dengan nilai baru). Disetel `set_target_bitrate_bps`, dikosongkan thread
+/// capture saat respawn.
+static BITRATE_DIRTY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Bitrate target aktif dalam bps.
+pub fn target_bitrate_bps() -> u32 {
+    TARGET_BPS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Setel bitrate target (bps). Berlaku seketika bila ada sesi berjalan
+/// (capture di-respawn dengan encoder baru); selain itu menjadi nilai sesi
+/// berikutnya. Ditolak (mengembalikan `false`) bila di luar
+/// [`MIN_TARGET_BPS`]..=[`MAX_TARGET_BPS`].
+pub fn set_target_bitrate_bps(bps: u32) -> bool {
+    if !(MIN_TARGET_BPS..=MAX_TARGET_BPS).contains(&bps) {
+        return false;
+    }
+    TARGET_BPS.store(bps, std::sync::atomic::Ordering::Relaxed);
+    BITRATE_DIRTY.store(true, std::sync::atomic::Ordering::Relaxed);
+    true
+}
 
 /// Keyframe (IDR) tiap ~2 detik @60fps: pemulihan cepat setelah packet loss
 /// tanpa membebani bitrate (IDR jauh lebih besar dari P-frame).
@@ -34,7 +69,7 @@ pub const IDR_INTERVAL_FRAMES: u32 = 120;
 ///
 /// Alasan tiap tuner (lihat juga `ScreenCapturer::new`):
 ///   - ScreenContentRealTime: mode deteksi konten teks/UI openh264.
-///   - Bitrate + 8 Mbps: kualitas konsisten, bukan default 120 kbps.
+///   - Bitrate target (bawaan 8 Mbps): kualitas konsisten, bukan default 120 kbps.
 ///   - skip_frames(true): WAJIB. OpenH264 mengeluarkan peringatan
 ///     "bitrate can't be controlled ... without enabling skip frame" —
 ///     dengan skip mati, mode bitrate tidak berfungsi dan stream bisa
@@ -48,7 +83,7 @@ pub fn prod_encoder_config() -> EncoderConfig {
     EncoderConfig::new()
         .usage_type(UsageType::ScreenContentRealTime)
         .rate_control_mode(RateControlMode::Bitrate)
-        .bitrate(BitRate::from_bps(TARGET_BPS))
+        .bitrate(BitRate::from_bps(target_bitrate_bps()))
         .max_frame_rate(FrameRate::from_hz(60.0))
         .skip_frames(true)
         .profile(Profile::Baseline)
@@ -123,14 +158,24 @@ pub fn spawn_frame_source() -> mpsc::Receiver<Vec<u8>> {
                     eprintln!("[xydesk-host] capture layar (monitor {current}) gagal: {e}");
                 }
                 // Ada permintaan pindah monitor? Respawn dengan indeks baru.
-                // Tanpa permintaan, capture berakhir karena sesi selesai
-                // (handler berhenti) — thread ini pun keluar.
                 let next = SWITCH_TO.swap(usize::MAX, std::sync::atomic::Ordering::Relaxed);
-                if next == usize::MAX {
-                    break;
+                if next != usize::MAX {
+                    current = next;
+                    println!("[xydesk-host] pindah capture ke monitor {current}");
+                    continue;
                 }
-                current = next;
-                println!("[xydesk-host] pindah capture ke monitor {current}");
+                // Bitrate berubah di tengah sesi? Respawn dengan monitor yang
+                // sama — encoder dibangun ulang dengan target bitrate baru.
+                if BITRATE_DIRTY.swap(false, std::sync::atomic::Ordering::Relaxed) {
+                    println!(
+                        "[xydesk-host] capture di-respawn: bitrate target {} kbps",
+                        target_bitrate_bps() / 1000
+                    );
+                    continue;
+                }
+                // Tanpa permintaan apa pun, capture berakhir karena sesi
+                // selesai (handler berhenti) — thread ini pun keluar.
+                break;
             }
         });
         rx
@@ -332,9 +377,12 @@ mod windows {
             frame: &mut Frame,
             capture_control: InternalCaptureControl,
         ) -> Result<(), Self::Error> {
-            // Permintaan pindah monitor: hentikan handler ini — thread
-            // capture di atasnya akan respawn dengan monitor baru.
-            if super::SWITCH_TO.load(std::sync::atomic::Ordering::Relaxed) != usize::MAX {
+            // Permintaan pindah monitor ATAU bitrate baru: hentikan handler
+            // ini — thread capture di atasnya akan respawn (monitor baru,
+            // atau monitor sama dengan encoder bitrate baru).
+            if super::SWITCH_TO.load(std::sync::atomic::Ordering::Relaxed) != usize::MAX
+                || super::BITRATE_DIRTY.load(std::sync::atomic::Ordering::Relaxed)
+            {
                 capture_control.stop();
                 return Ok(());
             }
@@ -368,13 +416,17 @@ mod windows {
             if self.frames == 0 {
                 super::NVENC_ACTIVE.store(false, std::sync::atomic::Ordering::Relaxed);
                 if width.is_multiple_of(2) && height.is_multiple_of(2) {
-                    match crate::nvenc::NvEnc::new(width as u32, height as u32, super::TARGET_BPS) {
+                    match crate::nvenc::NvEnc::new(
+                        width as u32,
+                        height as u32,
+                        super::target_bitrate_bps(),
+                    ) {
                         Ok(enc) => {
                             println!(
                                 "[xydesk-host] NVENC aktif: H264 hardware {}x{} @ {} kbps CBR",
                                 width,
                                 height,
-                                super::TARGET_BPS / 1000
+                                super::target_bitrate_bps() / 1000
                             );
                             super::NVENC_ACTIVE.store(true, std::sync::atomic::Ordering::Relaxed);
                             self.encoder = EncoderKind::Nvenc(enc);
@@ -506,3 +558,46 @@ mod windows {
 
 // TODO(optimasi lanjutan): NVENC zero-copy (ID3D11Texture2D → CUDA → NVENC)
 // menggantikan jalur CPU RGBA→I420→openh264 bila profil latency menuntutnya.
+
+#[cfg(test)]
+pub mod test_support {
+    use std::sync::Mutex;
+
+    /// Serialisasi test yang menyentuh bitrate global (AtomicU32 proses-wide).
+    /// Test di modul berbeda (screen, control) boleh mengubah nilainya — tanpa
+    /// lock ini test paralel saling menimpa dan hasil baca-ulang jadi acak.
+    /// Setiap test memegang lock ini seumur test.
+    pub static BITRATE_LOCK: Mutex<()> = Mutex::new(());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bitrate_bawaan_dan_batas_ditolak() {
+        let _g = test_support::BITRATE_LOCK.lock().unwrap();
+        set_target_bitrate_bps(DEFAULT_TARGET_BPS);
+        assert_eq!(target_bitrate_bps(), DEFAULT_TARGET_BPS);
+        // Di bawah batas minimum: ditolak, nilai tidak berubah.
+        assert!(!set_target_bitrate_bps(MIN_TARGET_BPS - 1));
+        assert_eq!(target_bitrate_bps(), DEFAULT_TARGET_BPS);
+        // Di atas batas maksimum: ditolak, nilai tidak berubah.
+        assert!(!set_target_bitrate_bps(MAX_TARGET_BPS + 1));
+        assert_eq!(target_bitrate_bps(), DEFAULT_TARGET_BPS);
+    }
+
+    #[test]
+    fn bitrate_valid_disimpan_dan_tepi_batas_diterima() {
+        let _g = test_support::BITRATE_LOCK.lock().unwrap();
+        assert!(set_target_bitrate_bps(12_000_000));
+        assert_eq!(target_bitrate_bps(), 12_000_000);
+        // Tepi batas sah.
+        assert!(set_target_bitrate_bps(MIN_TARGET_BPS));
+        assert_eq!(target_bitrate_bps(), MIN_TARGET_BPS);
+        assert!(set_target_bitrate_bps(MAX_TARGET_BPS));
+        assert_eq!(target_bitrate_bps(), MAX_TARGET_BPS);
+        // Kembalikan bawaan agar test lain yang membaca nilai bawaan aman.
+        set_target_bitrate_bps(DEFAULT_TARGET_BPS);
+    }
+}

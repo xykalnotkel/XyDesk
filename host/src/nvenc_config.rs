@@ -224,7 +224,7 @@ pub fn status_hint(code: i32) -> Option<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::screen::TARGET_BPS;
+    use crate::screen::DEFAULT_TARGET_BPS;
 
     const W: u32 = 1920;
     const H: u32 = 1080;
@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn config_mengunci_kontrak_low_latency() {
-        let cfg = build_config(W, H, TARGET_BPS);
+        let cfg = build_config(W, H, DEFAULT_TARGET_BPS);
         assert_eq!(cfg.version, NV_ENC_CONFIG_VER);
         assert_eq!(cfg.profileGUID, NV_ENC_H264_PROFILE_BASELINE_GUID);
         assert_eq!(cfg.gopLength, GOP_LENGTH);
@@ -301,10 +301,13 @@ mod tests {
         // Rate control CBR, average == max, VBV satu frame.
         assert_eq!(cfg.rcParams.version, NV_ENC_RC_PARAMS_VER);
         assert_eq!(cfg.rcParams.rateControlMode, NV_ENC_PARAMS_RC_CBR);
-        assert_eq!(cfg.rcParams.averageBitRate, TARGET_BPS);
-        assert_eq!(cfg.rcParams.maxBitRate, TARGET_BPS);
-        assert_eq!(cfg.rcParams.vbvBufferSize, TARGET_BPS / ENCODE_FPS);
-        assert_eq!(cfg.rcParams.vbvInitialDelay, TARGET_BPS / ENCODE_FPS);
+        assert_eq!(cfg.rcParams.averageBitRate, DEFAULT_TARGET_BPS);
+        assert_eq!(cfg.rcParams.maxBitRate, DEFAULT_TARGET_BPS);
+        assert_eq!(cfg.rcParams.vbvBufferSize, DEFAULT_TARGET_BPS / ENCODE_FPS);
+        assert_eq!(
+            cfg.rcParams.vbvInitialDelay,
+            DEFAULT_TARGET_BPS / ENCODE_FPS
+        );
         // Bitfield: hanya bit yang kita maksud, tidak lebih.
         assert_eq!(
             cfg.rcParams
@@ -332,7 +335,7 @@ mod tests {
 
     #[test]
     fn init_mengunci_kontrak_sesi_sinkron() {
-        let mut cfg = build_config(W, H, TARGET_BPS);
+        let mut cfg = build_config(W, H, DEFAULT_TARGET_BPS);
         let init = build_init(W, H, &mut cfg);
         assert_eq!(init.version, NV_ENC_INITIALIZE_PARAMS_VER);
         assert_eq!(init.encodeGUID, NV_ENC_CODEC_H264_GUID);
