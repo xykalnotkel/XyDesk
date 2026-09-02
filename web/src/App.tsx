@@ -62,8 +62,13 @@ interface NewsDetailRoute {
 }
 type AuthStep = 'closed' | 'login' | 'otp';
 
-const TOKEN_KEY = 'xydesk.web.jwt';
-const GUEST_TOKEN_KEY = 'xydesk.web.guestJwt';
+// Blok gambar di badan berita: baris sendiri berbentuk
+// ![keterangan](https://app.xystudio.my.id/news/shots/....jpg).
+// Hanya gambar dari domain sendiri yang dirender — sesuai docs/NEWS_STYLE.md;
+// baris lain tetap tampil sebagai paragraf biasa.
+const NEWS_IMAGE_BLOCK = /^!\[([^\]]*)\]\((https:\/\/app\.xystudio\.my\.id\/[^\s)]+)\)$/;
+
+const TOKEN_KEY = 'xydesk.web.jwt';const GUEST_TOKEN_KEY = 'xydesk.web.guestJwt';
 const LAST_HOST_KEY = 'xydesk.web.lastHost';
 const RELEASE_BASE =
   'https://github.com/xykalnotkel/XyDesk/releases/latest/download';
@@ -1188,9 +1193,18 @@ function NewsDetailPage({
           </div>
 
           <div className="post-body">
-            {post.content.split(/\n\n+/).map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
+            {post.content.split(/\n\n+/).map((p, i) => {
+              const img = NEWS_IMAGE_BLOCK.exec(p.trim());
+              if (img) {
+                return (
+                  <figure key={i}>
+                    <img src={img[2]} alt={img[1]} loading="lazy" />
+                    {img[1] && <figcaption>{img[1]}</figcaption>}
+                  </figure>
+                );
+              }
+              return <p key={i}>{p}</p>;
+            })}
           </div>
 
           <section className="comments">

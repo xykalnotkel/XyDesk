@@ -739,6 +739,9 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 
 .post-body { font-size: 16px; line-height: 1.75; color: #2b2440; }
 .post-body p { margin-bottom: 18px; }
+.post-body figure { margin: 4px 0 22px; }
+.post-body figure img { display: block; width: 100%; border-radius: 14px; background: var(--overlay); }
+.post-body figcaption { margin-top: 8px; font-size: 13px; line-height: 1.5; color: var(--text-mid); text-align: center; }
 
 /* ── Komentar + balasan ─────────────────────────────────────── */
 .comments { margin-top: 40px; }
