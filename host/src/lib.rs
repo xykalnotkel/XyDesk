@@ -4,6 +4,7 @@
 //! identitas perangkat, dan sumber video tetap terstruktur.
 
 pub mod audio;
+pub mod clipboard;
 pub mod control;
 pub mod identity;
 pub mod input;

@@ -78,6 +78,49 @@ export const InputCodec = {
     b.set(utf8, 1);
     return b;
   },
+
+  /// 0x08 CLIPBOARD_SET — isi papan klip, UTF-8 mulai byte 1.
+  ///
+  /// Sengaja terpisah dari 0x06 TEXT: TEXT berarti "ketikkan ini",
+  /// CLIPBOARD_SET berarti "jadikan ini isi papan klipmu". Mencampurnya
+  /// berarti setiap ketikan pengguna menimpa papan klip PC.
+  clipboardSet(s: string): Uint8Array {
+    const utf8 = new TextEncoder().encode(s);
+    let end = Math.min(utf8.length, 64 * 1024);
+    // Potong di batas karakter: ekor UTF-8 yang tidak lengkap membuat
+    // penerima menolak SELURUH pesan, bukan sekadar kehilangan huruf ujung.
+    while (end > 0 && (utf8[end - 1] & 0xc0) === 0x80) end--;
+    const b = new Uint8Array(1 + end);
+    b[0] = 0x08;
+    b.set(utf8.subarray(0, end), 1);
+    return b;
+  },
+
+  /// 0x09 CLIPBOARD_REQ — minta host mengirim isi papan klipnya. Ia
+  /// membalas dengan 0x08, yang diteruskan lewat `onClipboard`.
+  ///
+  /// Model tarik, bukan pantau: host tidak punya pengamat papan klip
+  /// Windows, jadi "PC → browser otomatis" tidak bisa dijanjikan tanpa
+  /// berbohong.
+  clipboardRequest(): Uint8Array {
+    const b = new Uint8Array(8);
+    b[0] = 0x09;
+    return b;
+  },
+
+  /// Urai 0x08 yang datang dari host. `null` bila bukan pesan papan klip
+  /// atau isinya bukan UTF-8 sah — jangan menuliskan byte rusak ke papan
+  /// klip pengguna hanya karena paketnya berhasil lewat.
+  decodeClipboardSet(b: Uint8Array): string | null {
+    if (b.length === 0 || b[0] !== 0x08) return null;
+    if (b.length - 1 > 64 * 1024) return null;
+    if (b.length === 1) return '';
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(b.subarray(1));
+    } catch {
+      return null;
+    }
+  },
 };
 
 /// Meta host (layar + audio) — dikirim host lewat data channel input.
@@ -111,6 +154,8 @@ export class RtcSession {
   onTrack: (stream: MediaStream) => void = () => {};
   onAudioTrack: (stream: MediaStream) => void = () => {};
   onMeta: (meta: HostMeta) => void = () => {};
+  /// Isi papan klip PC — balasan dari `requestClipboard()`.
+  onClipboard: (text: string) => void = () => {};
 
   meta: HostMeta | null = null;
   micEnabled = false;
@@ -202,6 +247,12 @@ export class RtcSession {
     this.audioTransceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
     this.input = pc.createDataChannel('input');
     this.input.onmessage = (ev) => {
+      // Balasan biner: 0x08 CLIPBOARD_SET (isi papan klip PC).
+      if (ev.data instanceof ArrayBuffer) {
+        const teks = InputCodec.decodeClipboardSet(new Uint8Array(ev.data));
+        if (teks !== null) this.onClipboard(teks);
+        return;
+      }
       // Host mengirim meta teks (layar + audio) di channel ini.
       if (typeof ev.data === 'string') {
         try {
@@ -291,6 +342,17 @@ export class RtcSession {
 
   sendInput(event: Uint8Array) {
     if (this.input?.readyState === 'open') this.input.send(event.buffer as ArrayBuffer);
+  }
+
+  /// Kirim isi papan klip browser ke PC (0x08 CLIPBOARD_SET).
+  sendClipboard(text: string) {
+    this.sendInput(InputCodec.clipboardSet(text));
+  }
+
+  /// Minta PC mengirim isi papan klipnya (0x09 CLIPBOARD_REQ).
+  /// Hasilnya datang lewat `onClipboard`.
+  requestClipboard() {
+    this.sendInput(InputCodec.clipboardRequest());
   }
 
   /// 0x07 DISPLAY_SELECT — pindah monitor host.
