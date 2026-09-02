@@ -40,8 +40,17 @@ Kebijakan rilis:
 - Kontrol mutu CI untuk Worker signaling: 19 test auth/OTP/rate-limit kini
   jalan di setiap PR (sebelumnya hanya saat deploy ke `main`).
 - Pengawasan `gofmt` untuk signaling Go.
+- Sitemap web kini memuat semua halaman (`/download`, `/news`, `/connect`,
+  `/legal`) — sebelumnya hanya beranda, jadi mesin pencari tidak diberi
+  tahu halaman lain ada.
+- Folder `web/public/news/shots/` disiapkan (plus aturan penamaan) sebagai
+  wadah screenshot artikel berita sesuai `docs/NEWS_STYLE.md`.
 
 ### Diubah
+
+- Warna tema PWA web disamakan ke Paper `#fafaf9` (mengikuti `tokens.dart`
+  dan `style.css`) — manifest sebelumnya `#ffffff`, bar PWA Android bisa
+  beda warna dari situs.
 
 - **Logo asli dipakai di semua platform.** `design/logo-asli.png` menjadi satu
   sumber; `tool/gen_logo.py` menurunkan darinya: ikon aplikasi Android
