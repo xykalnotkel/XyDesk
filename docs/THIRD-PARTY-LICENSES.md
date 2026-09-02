@@ -18,13 +18,12 @@ tangan yang bisa ketinggalan zaman.
 | Lisensi | Jumlah komponen |
 |---|---|
 | MIT OR Apache-2.0 | 196 |
-| BSD-3-Clause | 82 |
+| BSD-3-Clause | 91 |
 | MIT | 73 |
 | Apache-2.0 OR MIT | 30 |
-| Apache-2.0 | 18 |
+| Apache-2.0 | 19 |
 | Unicode-3.0 | 18 |
 | MIT/Apache-2.0 | 17 |
-| lihat berkas LICENSE paket | 10 |
 | LGPL-3.0-or-later | 8 |
 | ISC | 6 |
 | Unlicense OR MIT | 4 |
@@ -163,18 +162,18 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 |---|---|---|
 | `args` | 2.7.0 | BSD-3-Clause |
 | `async` | 2.11.0 | BSD-3-Clause |
-| `boolean_selector` | 2.1.2 | lihat berkas LICENSE paket |
+| `boolean_selector` | 2.1.2 | BSD-3-Clause |
 | `characters` | 1.4.1 | BSD-3-Clause |
 | `clock` | 1.1.2 | Apache-2.0 |
 | `code_assets` | 1.2.1 | BSD-3-Clause |
 | `collection` | 1.19.1 | BSD-3-Clause |
 | `crypto` | 3.0.7 | BSD-3-Clause |
 | `dart_webrtc` | 1.8.1 | MIT |
-| `fake_async` | 1.3.3 | lihat berkas LICENSE paket |
+| `fake_async` | 1.3.3 | Apache-2.0 |
 | `ffi` | 2.2.0 | BSD-3-Clause |
 | `ffi_leak_tracker` | 0.1.2 | BSD-3-Clause |
 | `file` | 7.0.1 | BSD-3-Clause |
-| `flutter_lints` | 4.0.0 | lihat berkas LICENSE paket |
+| `flutter_lints` | 4.0.0 | BSD-3-Clause |
 | `flutter_riverpod` | 2.6.1 | MIT |
 | `flutter_secure_storage` | 11.0.0 | BSD-3-Clause |
 | `flutter_secure_storage_darwin` | 0.4.0 | BSD-3-Clause |
@@ -199,14 +198,14 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `jni_flutter` | 1.0.2 | BSD-3-Clause |
 | `jni_util` | 1.0.0 | BSD-3-Clause |
 | `js` | 0.7.2 | BSD-3-Clause |
-| `leak_tracker` | 11.0.2 | lihat berkas LICENSE paket |
-| `leak_tracker_flutter_testing` | 3.0.10 | lihat berkas LICENSE paket |
-| `leak_tracker_testing` | 3.0.2 | lihat berkas LICENSE paket |
-| `lints` | 4.0.0 | lihat berkas LICENSE paket |
+| `leak_tracker` | 11.0.2 | BSD-3-Clause |
+| `leak_tracker_flutter_testing` | 3.0.10 | BSD-3-Clause |
+| `leak_tracker_testing` | 3.0.2 | BSD-3-Clause |
+| `lints` | 4.0.0 | BSD-3-Clause |
 | `logger` | 2.7.0 | MIT |
 | `logging` | 1.3.0 | BSD-3-Clause |
 | `lucide_icons_flutter` | 3.1.15 | MIT |
-| `matcher` | 0.12.19 | lihat berkas LICENSE paket |
+| `matcher` | 0.12.19 | BSD-3-Clause |
 | `material_color_utilities` | 0.13.0 | Apache-2.0 |
 | `meta` | 1.18.0 | BSD-3-Clause |
 | `mobile_scanner` | 7.4.0 | BSD-3-Clause |
@@ -243,7 +242,7 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `string_scanner` | 1.3.0 | BSD-3-Clause |
 | `synchronized` | 3.4.1+2 | MIT |
 | `term_glyph` | 1.2.1 | BSD-3-Clause |
-| `test_api` | 0.7.11 | lihat berkas LICENSE paket |
+| `test_api` | 0.7.11 | BSD-3-Clause |
 | `typed_data` | 1.4.0 | BSD-3-Clause |
 | `url_launcher` | 6.3.2 | BSD-3-Clause |
 | `url_launcher_android` | 6.3.17 | BSD-3-Clause |
@@ -257,7 +256,7 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `vector_graphics_codec` | 1.1.13 | BSD-3-Clause |
 | `vector_graphics_compiler` | 1.3.0 | BSD-3-Clause |
 | `vector_math` | 2.2.0 | BSD-3-Clause |
-| `vm_service` | 15.3.0 | lihat berkas LICENSE paket |
+| `vm_service` | 15.3.0 | BSD-3-Clause |
 | `web` | 1.1.1 | BSD-3-Clause |
 | `web_socket` | 1.0.1 | BSD-3-Clause |
 | `web_socket_channel` | 3.0.3 | BSD-3-Clause |
