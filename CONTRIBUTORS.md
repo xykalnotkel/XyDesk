@@ -10,3 +10,4 @@ baris milik orang lain. Format nama agent: `Nama - XySpace Team`
 | Xyckal (pemilik & pendiri) | Semua area | 2026 |
 | Sena - XySpace Team | Docs & Audit | 2026-09 |
 | Danu - XySpace Team | Web | 2026-09 |
+| Bara - XySpace Team | Desktop Shell | 2026-09 |

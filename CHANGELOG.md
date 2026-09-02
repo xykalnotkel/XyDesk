@@ -19,12 +19,12 @@ Kebijakan rilis:
 
 ### Ditambahkan
 
-- Web client kini merender gambar inline di badan berita: baris
+- Web dan desktop shell kini merender gambar inline di badan berita: baris
   `![keterangan](url)` menjadi gambar + keterangan. Hanya URL
   `app.xystudio.my.id` yang dirender (screenshot rilis dari
   `web/public/news/shots/`); baris lain tetap paragraf biasa. Ini bagian
-  pertama dari dukungan aturan screenshot `docs/NEWS_STYLE.md` — Android,
-  desktop, dan halaman berbagi worker menyusul.
+  dari dukungan aturan screenshot `docs/NEWS_STYLE.md` — Android dan
+  halaman berbagi worker menyusul.
 - Aturan kerja agent AI: `AGENT.md` (satu sesi satu role, identitas
   kontributor `Nama - XySpace Team`, kewajiban jujur soal apa yang sudah
   dan belum diuji) dan `CONTRIBUTORS.md` (daftar hanya-tambah).

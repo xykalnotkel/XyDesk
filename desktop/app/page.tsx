@@ -32,6 +32,12 @@ import {
 // Mode demo: dibuka sebagai halaman biasa (bukan lewat Electron) → data contoh.
 const DEMO = typeof window !== 'undefined' && !window.xydesk;
 
+// Blok gambar di badan berita: baris sendiri berbentuk
+// ![keterangan](https://app.xystudio.my.id/news/shots/....jpg).
+// Hanya gambar dari domain sendiri yang dirender — sesuai docs/NEWS_STYLE.md;
+// baris lain tetap tampil sebagai paragraf biasa. Pola sama dengan web client.
+const NEWS_IMAGE_BLOCK = /^!\[([^\]]*)\]\((https:\/\/app\.xystudio\.my\.id\/[^\s)]+)\)$/;
+
 const DEMO_STATUS: StatusPayload = {
   state: 'streaming',
   engine: true,
@@ -585,9 +591,19 @@ function NewsDetail({ post, onBack }: { post: NewsPost; onBack: () => void }) {
           </button>
         </div>
         <div className="post-body">
-          {p.content.split(/\n\n+/).map((para, i) => (
-            <p key={i}>{para}</p>
-          ))}
+          {p.content.split(/\n\n+/).map((para, i) => {
+            const img = NEWS_IMAGE_BLOCK.exec(para.trim());
+            if (img) {
+              return (
+                <figure key={i}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img[2]} alt={img[1]} loading="lazy" />
+                  {img[1] && <figcaption>{img[1]}</figcaption>}
+                </figure>
+              );
+            }
+            return <p key={i}>{para}</p>;
+          })}
         </div>
 
         <div className="comments">
