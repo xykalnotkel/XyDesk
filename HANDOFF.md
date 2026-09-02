@@ -25,20 +25,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `api.dicebear.com`) dimuat melalui jaringan; pastikan `flutter_svg`
   merender SVG di Android tanpa placeholder permanen saat offline. Belum
   diuji di perangkat.
-- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Verifikasi cuplikan layar
-  sesi di perangkat nyata**: `session_preview` menangkap frame lewat
-  `RepaintBoundary.toImage()`. Video remote dirender sebagai platform
-  texture (`flutter_webrtc`), jadi di sebagian perangkat tangkapan bisa
-  gelap/kosong. Kalau gelap, jalur kokohnya adalah endpoint screenshot
-  dari host (lihat "Untuk: Host Engine"). Uji di Android nyata.
-- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Verifikasi unggah foto
-  Cloudinary di perangkat nyata**: alur pilih-foto → upload → avatar terpasang
-  baru bisa dites penuh setelah operator membuat unsigned upload preset dan
-  mengisi `cloudinaryUploadPreset`. Kode sisi klien sudah selesai (lihat
-  "Untuk: Backend / Edge").
 
 ## Untuk: Desktop Shell
 
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — Host kini mengirim **dua**
+  stream audio: `audio` (loopback suara sistem) dan `mic` (mikrofon PC host,
+  hanya bila ada perangkat capture). Client yang menyajikan track audio
+  dengan `mid`/`stream_id` "mic" akan otomatis menerima suara mic. Bila mau
+  mute/volume mic terpisah, butuh aksi control API baru (belum ada —
+  `audio-volume` saat ini hanya menyentuh perangkat output default).
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — Control API kini punya aksi
   `video-bitrate` (field `bitrate_mbps`, 1–50) dan `/status` melaporkan
   `targetBitrateBps`, `video.latencyMs` (EMA pipeline host),
@@ -76,20 +71,16 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Web
 
-_(kosong)_
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — Push `0081742` (keyboard
+  virtual, panel gaming) membuat run `verify-push-auth.yml` MERAH: commit
+  tidak memuat penanda `Izin: <ID-SESI>` di body. Aturan baru (lihat
+  `AGENT.md` bagian 5): klaim sesi → minta persetujuan operator di
+  `AGENT_BOARD.md` → push dengan `Izin: ...` di body. Commit tetap masuk,
+  tapi audit mencatatnya sebagai pelanggaran.
 
 ## Untuk: Backend / Edge
 
-- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Preset upload Cloudinary
-  unsigned** untuk foto profil: kode sisi klien sudah selesai (unggah lewat
-  `lib/core/cloudinary_upload.dart`, opsinya ada di menu edit profil). Yang
-  kurang **hanya satu langkah operator**: buat **unsigned upload preset** di
-  dasbor Cloudinary lalu set `cloudinaryUploadPreset` (dan pastikan
-  `cloudinaryCloudName` benar). Tidak ada yang perlu diubah di kode lagi.
-  opsional untuk cuplikan "layar terakhir" yang kokoh: kalau tangkapan
-  klien (RepaintBoundary) ternyata gelap di perangkat nyata, jalur
-  terbaik adalah host mengirimkan satu frame terakhir saat sesi berakhir.
-  Protokolnya bisa ditambahkan tanpa mengubah kontrak yang ada.
+_(kosong)_
 
 ## Untuk: News & Konten
 
@@ -114,13 +105,11 @@ _(kosong)_
 
 ## Selesai
 
-- [x] (dari Cakra - XySpace Team, 2026-09-03) — Audit `verify-push-auth`
-  merah untuk push Web `0081742` (tanpa penanda `Izin:`): push terjadi
-  SEBELUM gerbang berlaku. Disahkan retroaktif oleh operator (chat,
-  2026-09-03) di `AGENT_BOARD.md` — SESI-20260903-DANU-WEB-AUDIT,
-  bersama d3522bb, 4785561, bff26bb. Sesi Web berikutnya sudah patuh
-  alur baru (SESI-20260903-DANU-WEB, Verifikasi hijau di f377316).
-
+- [x] (dari Galih - XySpace Team, 2026-09-03) — Host: mic input PC → client
+  (WASAPI `eCapture` → Opus mono → stream `mic`), otomatis bila ada
+  perangkat capture; `/status` + `meta` melaporkan `micAvailable`/
+  `micPipeline`. Uji 64 unit + loopback hijau; build Windows diverifikasi
+  CI.
 - [x] (dari Galih - XySpace Team, 2026-09-03) — Host: metrik latensi
   pipeline (capture→encode→write RTP) kini dilaporkan di `/status` sebagai
   `video.latencyMs` (EMA) + `video.latencyMaxMs` + `video.encoder`
@@ -162,15 +151,3 @@ _(kosong)_
 - [x] (dari Danu, 2026-09-02) — Nama komentator nama manusia deterministik
   (bukan `tamu-xxxx`), selaras `web/src/news.ts` — selesai di kode oleh
   Laras (2026-09-03).
-- [x] (dari operator, 2026-09-03) — Ilustrasi hero layar Billing (sewa PC):
-  dibuat AI (un)gu, latar putih) → dibersihkan rembg → PNG/WebP transparan
-  `assets/img/billing_hero.webp`; sumber di `design/billing-hero-source.png`.
-  Terpasang di `BillingPage` oleh Laras (2026-09-03). Verifikasi tampilan
-  di build nyata menyusul di item Client Flutter.
-- [x] (dari operator, 2026-09-03) — Foto profil di Pengaturan (preset/URL,
-  lokal) + tombol avatar di topbar dekat notifikasi → selesai di kode oleh
-  Laras (2026-09-03). Upload Cloudinary penuh masih terbuka (lihat "Untuk:
-  Backend / Edge").
-- [x] (dari operator, 2026-09-03) — Pratinjau detail PC menampilkan cuplikan
-  layar terakhir sesi (bukan ilustrasi) → selesai di kode oleh Laras
-  (2026-09-03); keandalan capture di perangkat nyata masih harus diuji.

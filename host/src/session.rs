@@ -55,6 +55,8 @@ pub struct MediaTracks {
     pub video: Arc<TrackLocalStaticSample>,
     /// Ada bila negosiasi meminta audio forward (host → client).
     pub audio: Option<Arc<TrackLocalStaticSample>>,
+    /// Ada bila negosiasi meminta mic host (mikrofon PC → client).
+    pub mic: Option<Arc<TrackLocalStaticSample>>,
 }
 
 impl Session {
@@ -134,17 +136,28 @@ impl Session {
     /// walau koneksi "berhasil". Bug ini pernah lolos karena tidak ada test
     /// loopback; lihat `tests/loopback.rs`.
     pub async fn answer(&self, offer_sdp: &str) -> Result<(String, Arc<TrackLocalStaticSample>)> {
-        let media = self.answer_media(offer_sdp, false).await?;
+        let media = self.answer_media(offer_sdp, false, false).await?;
         Ok((media.sdp, media.video))
     }
 
     /// Seperti [`Session::answer`], tetapi boleh menyertakan track audio
-    /// (forward host → client). Track audio harus terdaftar SEBELUM
-    /// `create_answer` — alasan yang sama dengan video di atas.
-    pub async fn answer_media(&self, offer_sdp: &str, with_audio: bool) -> Result<MediaTracks> {
+    /// (forward host → client) dan/atau track mic (mikrofon host → client).
+    /// Track harus terdaftar SEBELUM `create_answer` — alasan yang sama
+    /// dengan video di atas.
+    pub async fn answer_media(
+        &self,
+        offer_sdp: &str,
+        with_audio: bool,
+        with_mic: bool,
+    ) -> Result<MediaTracks> {
         let video = self.add_video_track().await?;
         let audio = if with_audio {
             Some(self.add_audio_track().await?)
+        } else {
+            None
+        };
+        let mic = if with_mic {
+            Some(self.add_mic_track().await?)
         } else {
             None
         };
@@ -176,7 +189,12 @@ impl Session {
             .map(|d| d.sdp)
             .unwrap_or_default();
 
-        Ok(MediaTracks { sdp, video, audio })
+        Ok(MediaTracks {
+            sdp,
+            video,
+            audio,
+            mic,
+        })
     }
 
     /// Menambah track audio Opus (48 kHz stereo) untuk forward host → client.
@@ -198,6 +216,29 @@ impl Session {
             )
             .await
             .context("gagal add track audio")?;
+        Ok(track)
+    }
+
+    /// Menambah track audio Opus (48 kHz mono) untuk mic host → client.
+    /// Stream id `mic` membedakannya dari loopback (`audio`) di sisi client.
+    pub async fn add_mic_track(&self) -> Result<Arc<TrackLocalStaticSample>> {
+        let track = Arc::new(TrackLocalStaticSample::new(
+            RTCRtpCodecCapability {
+                mime_type: "audio/opus".to_owned(),
+                clock_rate: 48000,
+                channels: 1,
+                sdp_fmtp_line: "minptime=10;useinbandfec=1".to_owned(),
+                rtcp_feedback: vec![],
+            },
+            "mic".to_owned(),
+            "xydesk".to_owned(),
+        ));
+        self.pc
+            .add_track(
+                Arc::clone(&track) as Arc<dyn webrtc::track::track_local::TrackLocal + Send + Sync>
+            )
+            .await
+            .context("gagal add track mic")?;
         Ok(track)
     }
 

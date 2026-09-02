@@ -14,6 +14,13 @@
 //! terdengar di speaker PC host. (Istilah "mic passthrough": suara dari
 //! aplikasi client diteruskan ke host.)
 //!
+//! ## Alur mic (host → client)
+//! Mikrofon PC host direkam via WASAPI `eCapture` (perangkat komunikasi
+//! default) — PCM 16-bit, 48 kHz, mono — lalu di-encode Opus 20 ms dan
+//! dikirim sebagai track audio kedua (stream `mic`). Aktif otomatis hanya
+//! bila ada perangkat capture; `AUDCLNT_BUFFERFLAGS_SILENT` ditangani agar
+//! mic yang dimute tetap menghasilkan hening yang sah.
+//!
 //! ## Non-Windows
 //! Kode nyata berada di bawah `cfg(target_os = "windows")`; platform lain
 //! mendapat stub yang melaporkan "belum didukung" — jalur Linux/CI test
@@ -36,6 +43,32 @@ pub fn capture_status() -> &'static str {
 /// Benar bila platform ini bisa menangkap audio loopback.
 pub fn capture_available() -> bool {
     cfg!(target_os = "windows")
+}
+
+/// Status implementasi mic host (mikrofon PC → client).
+pub fn mic_capture_status() -> &'static str {
+    #[cfg(target_os = "windows")]
+    {
+        "wasapi-capture (eCapture) → opus 48kHz mono"
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        "belum didukung di platform ini (butuh WASAPI Windows)"
+    }
+}
+
+/// Benar bila ada mikrofon aktif yang bisa direkam dan diteruskan ke client.
+/// Otomatis: jalur mic hanya menyala di Windows dan hanya bila perangkat
+/// capture terdeteksi — tidak ada toggle yang perlu diatur.
+pub fn mic_capture_available() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        windows::mic_available()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        false
+    }
 }
 
 /// Daftar perangkat output (ID endpoint WASAPI). Nama ramah butuh property
@@ -116,6 +149,26 @@ pub fn spawn_audio_sink() -> mpsc::SyncSender<Vec<u8>> {
     }
 }
 
+/// Mulai sumber audio mikrofon host (host → client); channel berisi paket
+/// Opus (20 ms, mono). Thread berhenti sendiri bila receiver di-drop.
+pub fn spawn_mic_source() -> mpsc::Receiver<Vec<u8>> {
+    #[cfg(target_os = "windows")]
+    {
+        let (tx, rx) = mpsc::sync_channel::<Vec<u8>>(4);
+        std::thread::spawn(move || {
+            if let Err(e) = windows::mic_capture_loop(tx) {
+                eprintln!("[xydesk-host] mic host gagal: {e}");
+            }
+        });
+        rx
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let (_tx, rx) = mpsc::sync_channel::<Vec<u8>>(4);
+        rx
+    }
+}
+
 // ── Implementasi Windows: WASAPI ─────────────────────────────────────────
 #[cfg(target_os = "windows")]
 mod windows {
@@ -123,8 +176,8 @@ mod windows {
 
     use windows::core::Interface;
     use windows::Win32::Media::Audio::{
-        eMultimedia, eRender, IAudioCaptureClient, IAudioClient, IAudioRenderClient,
-        IMMDeviceEnumerator, MMDeviceEnumerator, AUDCLNT_SHAREMODE_SHARED,
+        eCapture, eCommunications, eMultimedia, eRender, IAudioCaptureClient, IAudioClient,
+        IAudioRenderClient, IMMDeviceEnumerator, MMDeviceEnumerator, AUDCLNT_SHAREMODE_SHARED,
         AUDCLNT_STREAMFLAGS_LOOPBACK,
     };
     use windows::Win32::System::Com::{
@@ -133,8 +186,12 @@ mod windows {
 
     const SAMPLE_RATE: u32 = 48_000;
     const CHANNELS: u16 = 2;
+    const MIC_CHANNELS: u16 = 1;
     const FRAME_MS: usize = 20;
     const SAMPLES_PER_PACKET: usize = (SAMPLE_RATE as usize) * FRAME_MS / 1000;
+    /// `AUDCLNT_BUFFERFLAGS_SILENT` — buffer capture berisi hening (mis. mic
+    /// dimute) dan boleh diisi nol tanpa membaca memori perangkat.
+    const BUFFERFLAGS_SILENT: u32 = 0x2;
 
     fn init_com() -> anyhow::Result<()> {
         unsafe {
@@ -159,6 +216,42 @@ mod windows {
         Ok(device)
     }
 
+    /// Perangkat capture default (mikrofon) — jalur mic host → client.
+    fn capture_device() -> anyhow::Result<windows::Win32::Media::Audio::IMMDevice> {
+        init_com()?;
+        let enumerator: IMMDeviceEnumerator = unsafe {
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+                .map_err(|e| anyhow::anyhow!("MMDeviceEnumerator: {e:?}"))?
+        };
+        let device = unsafe {
+            enumerator
+                .GetDefaultAudioEndpoint(eCapture, eCommunications)
+                .map_err(|e| anyhow::anyhow!("GetDefaultAudioEndpoint (mic): {e:?}"))?
+        };
+        Ok(device)
+    }
+
+    /// Benar bila ada minimal satu perangkat capture aktif (mikrofon).
+    pub fn mic_available() -> bool {
+        use windows::Win32::Media::Audio::DEVICE_STATE_ACTIVE;
+        let _ = init_com();
+        let enumerator: IMMDeviceEnumerator =
+            match unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) } {
+                Ok(e) => e,
+                Err(_) => return false,
+            };
+        let collection =
+            match unsafe { enumerator.EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE) } {
+                Ok(c) => c,
+                Err(_) => return false,
+            };
+        let count = match unsafe { collection.GetCount() } {
+            Ok(c) => c,
+            Err(_) => return false,
+        };
+        count > 0
+    }
+
     fn client(device: &windows::Win32::Media::Audio::IMMDevice) -> anyhow::Result<IAudioClient> {
         let client: IAudioClient = unsafe {
             device
@@ -175,6 +268,20 @@ mod windows {
             nSamplesPerSec: SAMPLE_RATE,
             nAvgBytesPerSec: SAMPLE_RATE * u32::from(CHANNELS) * 2,
             nBlockAlign: CHANNELS * 2,
+            wBitsPerSample: 16,
+            cbSize: 0,
+        }
+    }
+
+    /// Format PCM mono 48 kHz untuk jalur mic (bandwidth lebih hemat dari
+    /// stereo; suara mic nyaris selalu mono).
+    fn mic_pcm_format() -> windows::Win32::Media::Audio::WAVEFORMATEX {
+        windows::Win32::Media::Audio::WAVEFORMATEX {
+            wFormatTag: 1, // WAVE_FORMAT_PCM
+            nChannels: MIC_CHANNELS,
+            nSamplesPerSec: SAMPLE_RATE,
+            nAvgBytesPerSec: SAMPLE_RATE * u32::from(MIC_CHANNELS) * 2,
+            nBlockAlign: MIC_CHANNELS * 2,
             wBitsPerSample: 16,
             cbSize: 0,
         }
@@ -297,8 +404,10 @@ mod windows {
             while pending.len() >= packet_bytes {
                 let chunk: Vec<u8> = pending.drain(..packet_bytes).collect();
                 let samples: Vec<i16> = chunk
-                    .chunks_exact(2)
-                    .map(|b| i16::from_le_bytes([b[0], b[1]]))
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|b| i16::from_le_bytes(*b))
                     .collect();
                 let mut out = vec![0u8; 4000];
                 match encoder.encode(&samples, &mut out) {
@@ -309,6 +418,101 @@ mod windows {
                     }
                     Err(e) => {
                         eprintln!("[xydesk-host] opus encode: {e}");
+                    }
+                }
+            }
+        }
+    }
+
+    /// Loop penangkap mikrofon: WASAPI eCapture → encode Opus (mono) → `tx`.
+    /// Mirip `capture_loop`, tetapi membaca perangkat capture (bukan
+    /// loopback) dan menangani `AUDCLNT_BUFFERFLAGS_SILENT` (mic dimute).
+    pub fn mic_capture_loop(tx: SyncSender<Vec<u8>>) -> anyhow::Result<()> {
+        init_com()?;
+        let device = capture_device()?;
+        let client = client(&device)?;
+        let format = mic_pcm_format();
+        unsafe {
+            client
+                .Initialize(
+                    AUDCLNT_SHAREMODE_SHARED,
+                    windows::Win32::Media::Audio::AUDCLNT_STREAMFLAGS_NOPERSIST,
+                    0, // durasi buffer default (engine menentukan)
+                    0,
+                    &format,
+                    None,
+                )
+                .map_err(|e| anyhow::anyhow!("mic Initialize: {e:?}"))?;
+        }
+        let capture: IAudioCaptureClient = unsafe {
+            client
+                .GetService::<IAudioCaptureClient>()
+                .map_err(|e| anyhow::anyhow!("mic GetService IAudioCaptureClient: {e:?}"))?
+        };
+
+        let mut encoder = crate::opus_ffi::Encoder::new(SAMPLE_RATE, usize::from(MIC_CHANNELS))
+            .map_err(|e| anyhow::anyhow!("opus encoder (mic): {e}"))?;
+
+        unsafe {
+            client
+                .Start()
+                .map_err(|e| anyhow::anyhow!("mic Start: {e:?}"))?;
+        }
+
+        let block = usize::from(format.nBlockAlign);
+        let mut pending = Vec::<u8>::with_capacity(block * SAMPLES_PER_PACKET * 4);
+
+        loop {
+            let packet_len = unsafe {
+                let len = capture.GetNextPacketSize()?;
+                if len == 0 {
+                    std::thread::sleep(std::time::Duration::from_millis(2));
+                    continue;
+                }
+                len
+            };
+            for _ in 0..packet_len {
+                let mut data: *mut u8 = std::ptr::null_mut();
+                let mut frames: u32 = 0;
+                let mut flags: u32 = 0;
+                unsafe {
+                    capture
+                        .GetBuffer(&mut data, &mut frames, &mut flags, None, None)
+                        .map_err(|e| anyhow::anyhow!("mic GetBuffer: {e:?}"))?;
+                    if frames > 0 {
+                        if flags & BUFFERFLAGS_SILENT != 0 || data.is_null() {
+                            // Mic senyap/dimute — isi hening yang sah, tanpa
+                            // membaca memori perangkat.
+                            pending.resize(pending.len() + frames as usize * block, 0);
+                        } else {
+                            let bytes = std::slice::from_raw_parts(data, frames as usize * block);
+                            pending.extend_from_slice(bytes);
+                        }
+                    }
+                    capture
+                        .ReleaseBuffer(frames)
+                        .map_err(|e| anyhow::anyhow!("mic ReleaseBuffer: {e:?}"))?;
+                }
+            }
+            // Encode per 20 ms (960 sampel mono = 1920 byte PCM16).
+            let packet_bytes = SAMPLES_PER_PACKET * block;
+            while pending.len() >= packet_bytes {
+                let chunk: Vec<u8> = pending.drain(..packet_bytes).collect();
+                let samples: Vec<i16> = chunk
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|b| i16::from_le_bytes(*b))
+                    .collect();
+                let mut out = vec![0u8; 4000];
+                match encoder.encode(&samples, &mut out) {
+                    Ok(n) => {
+                        if tx.send(out[..n].to_vec()).is_err() {
+                            return Ok(()); // receiver di-drop → sesi selesai
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("[xydesk-host] opus encode (mic): {e}");
                     }
                 }
             }
@@ -388,5 +592,22 @@ mod windows {
             }
             std::thread::sleep(std::time::Duration::from_millis(2));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn mic_tidak_tersedia_di_platform_non_windows() {
+        // Di luar Windows jalur mic tidak tersedia; sumber mic menghasilkan
+        // channel kosong (tidak pernah mengirim paket).
+        assert!(!crate::audio::mic_capture_available());
+        let rx = crate::audio::spawn_mic_source();
+        assert!(
+            rx.recv_timeout(std::time::Duration::from_millis(50))
+                .is_err(),
+            "channel mic non-Windows tidak boleh mengirim apa pun"
+        );
     }
 }

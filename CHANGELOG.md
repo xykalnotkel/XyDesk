@@ -18,17 +18,31 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Ditambahkan
-- Client Flutter: **unggah foto profil dari galeri ke Cloudinary** (unsigned
-  upload preset, tanpa menyimpan `api_secret` di klien) — pilih foto lewat
-  `image_picker`, diunggah ke folder `profile`, lalu URL-nya dipakai sebagai
-  avatar. Yang tersisa: operator membuat unsigned preset di dasbor dan mengisi
-  `cloudinaryUploadPreset` (lihat `lib/core/cloudinary_upload.dart`). Kalau
-  belum diisi, opsi upload menampilkan pesan yang jelas, bukan gagal senyap.
-- Client Flutter: dependensi baru `image_picker` (untuk memilih foto dari
-  galeri). Inventaris lisensi pihak ketiga diregenerasi: **499 → 514**
-  komponen (Dart/Flutter 105 → 120).
-- Client Flutter: kontrak konfigurasi unggah Cloudinary dikunci lewat uji
-  (`test/core/cloudinary_upload_test.dart`).
+- Host: **mic input PC → client** — mikrofon host direkam via WASAPI
+  `eCapture` (perangkat komunikasi default, PCM 16-bit 48 kHz mono) →
+  Opus 20 ms → track audio kedua (stream `mic`). Aktif otomatis hanya bila
+  ada perangkat capture, tanpa toggle apa pun; `AUDCLNT_BUFFERFLAGS_SILENT`
+  ditangani agar mic yang dimute tetap menghasilkan hening sah. Sebelumnya
+  host hanya meneruskan loopback (suara sistem) dan memutar mic *client* ke
+  speaker host — suara mic *PC host* tidak pernah sampai ke client.
+  `/status` dan `meta` data channel kini melaporkan `audio.micAvailable`
+  + `micPipeline`.
+- Host: `/status` kini melaporkan **latensi pipeline video** dan **label
+  encoder** — `video.latencyMs` (rata-rata EMA capture → tulis RTP),
+  `video.latencyMaxMs` (terburuk yang pernah terukur), dan
+  `video.encoder` (`nvenc`/`openh264`/`test-pattern`). Sebelumnya tidak ada
+  ukuran latensi host sama sekali: webrtc-rs 0.11 mengabaikan
+  `packet_timestamp` (timestamp RTP dibuat otomatis packetizer), jadi
+  penanda tidak bisa ditanam lewat bidang itu. Kini setiap frame membawa
+  `captured_at` sejak detik ditangkap di thread capture, dan latensi
+  dihitung sesaat sebelum `write_sample` — pemantauan target roadmap
+  < 40 ms glass-to-glass tanpa alat eksternal.
+
+### Diubah
+- Host: durasi sampel video (maju timestamp RTP per frame) diseragamkan ke
+  FPS nominal 60 (16,67 ms) lewat `NOMINAL_FPS`/`frame_duration()` —
+  sebelumnya angka 33 ms terpatri acak di `main.rs`, dan sumber pola uji
+  (non-Windows) kini berpacing 60 fps, bukan ~30 fps.
 
 ## [6.3.0] - 2026-09-03
 
@@ -147,15 +161,6 @@ Kebijakan rilis:
   URL avatar DiceBear dicek sesuai aturan `web/src/news.ts`, supaya aturan
   yang sama tidak bergeser tanpa terlihat nanti.
 
-
-- Host: `/status` kini melaporkan **latensi pipeline video** dan **label
-- Web: pemindai QR di halaman Connect — arahkan kamera ke QR XyDesk Host
-- Web: bagian "Cara main" di halaman Connect — panduan 4 langkah dengan
-- Web: blok "Dukung kami di" (Telegram, WhatsApp, TikTok) di halaman
-- Client Flutter: halaman **Billing** kini punya ilustrasi hero (sewa PC) —
-- Client Flutter: foto profil yang bisa diubah. Pengguna memilih avatar
-- Client Flutter: halaman detail PC menampilkan **cuplikan layar terakhir**
-- Client Flutter: kontrak penyimpanan cuplikan & parsing foto profil dikunci
 ### Diubah
 - Web: kata penting (cetak tebal) di badan artikel berita kini berwarna
   ungu brand agar penekanan langsung terlihat.
@@ -246,9 +251,6 @@ Kebijakan rilis:
   Kedua jalur encoder (openh264 & NVENC) membacanya saat encoder dibangun,
   dan perubahan di tengah sesi memicu respawn capture dengan encoder baru.
 
-
-- Host: durasi sampel video (maju timestamp RTP per frame) diseragamkan ke
-- Client Flutter: layar sesi sudah memakai **satu rail tipis di tepi kanan**
 ### Diperbaiki
 
 - Layar sesi web ditata ulang: tombol Audio/Mic/Clipboard/Keyboard/
@@ -290,7 +292,6 @@ Kebijakan rilis:
   mengirim gambar pembuka segar. Diverifikasi end-to-end: pola uji tampil
   di Chrome asli (707 frame ter-decode; sebelumnya 0). Regresi dikunci di
   test loopback: SPS/PPS WAJIB tiba di klien, bukan sekadar paket.
-
 
 - Inventaris lisensi pihak ketiga (`docs/THIRD-PARTY-LICENSES.md`,
   `lib/core/license_stats.dart`, `web/src/licenses.generated.ts`,

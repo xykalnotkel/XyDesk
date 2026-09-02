@@ -123,6 +123,10 @@ pub struct AudioStatus {
     pub capture_available: bool,
     /// Deskripsi pipeline audio (mis. "wasapi-loopback → opus 48kHz stereo").
     pub pipeline: String,
+    /// Benar bila ada mikrofon yang terdeteksi (jalur mic host → client).
+    pub mic_available: bool,
+    /// Deskripsi pipeline mic host.
+    pub mic_pipeline: String,
     /// Jumlah perangkat output yang terdeteksi.
     pub outputs: usize,
     /// Volume master perangkat output default (0.0–1.0), bila terbaca.
@@ -216,6 +220,8 @@ impl ControlState {
             audio: AudioStatus {
                 capture_available: crate::audio::capture_available(),
                 pipeline: crate::audio::capture_status().to_string(),
+                mic_available: crate::audio::mic_capture_available(),
+                mic_pipeline: crate::audio::mic_capture_status().to_string(),
                 outputs: crate::audio::list_outputs().len(),
                 volume: crate::audio::master_volume(),
             },
@@ -639,6 +645,10 @@ mod tests {
         // Bidang latensi & encoder (baru) wajib hadir juga.
         for key in ["latencyMs", "latencyMaxMs", "encoder"] {
             assert!(v["video"].get(key).is_some(), "video.{key} hilang: {body}");
+        }
+        // Status mic host (baru) wajib hadir.
+        for key in ["micAvailable", "micPipeline"] {
+            assert!(v["audio"].get(key).is_some(), "audio.{key} hilang: {body}");
         }
     }
 

@@ -125,6 +125,10 @@ fn meta_json() -> serde_json::Value {
         "audio": {
             "available": xydesk_host::audio::capture_available(),
             "pipeline": xydesk_host::audio::capture_status(),
+        },
+        "mic": {
+            "available": xydesk_host::audio::mic_capture_available(),
+            "pipeline": xydesk_host::audio::mic_capture_status(),
         }
     })
 }
@@ -418,9 +422,13 @@ async fn main() -> Result<()> {
                 // dan client tidak pernah mendapat gambar. Lihat session.rs.
                 // Audio forward aktif bila platform mendukung (WASAPI Windows).
                 let audio_on = xydesk_host::audio::capture_available();
-                let media = session.answer_media(&sdp.sdp, audio_on).await?;
+                // Mic host aktif otomatis bila ada mikrofon yang terdeteksi —
+                // tidak ada toggle (standar remote desktop).
+                let mic_on = xydesk_host::audio::mic_capture_available();
+                let media = session.answer_media(&sdp.sdp, audio_on, mic_on).await?;
                 let video_track = media.video;
                 let audio_track = media.audio;
+                let mic_track = media.mic;
                 let answer = media.sdp;
 
                 send_msg(
@@ -618,6 +626,38 @@ async fn main() -> Result<()> {
                             };
                             if let Err(e) = audio_track.write_sample(&sample).await {
                                 eprintln!("[xydesk-host] kirim paket audio gagal: {e}");
+                                break;
+                            }
+                        }
+                    });
+                }
+
+                // Mic host (host → client): WASAPI eCapture → Opus mono → track
+                // audio kedua (stream `mic`). Otomatis — hanya menyala bila ada
+                // mikrofon yang terdeteksi. Jalur mirror dari forward di atas.
+                if let Some(mic_track) = mic_track {
+                    tokio::spawn(async move {
+                        println!("[xydesk-host] mic host aktif (opus 48kHz mono)");
+                        let packets = xydesk_host::audio::spawn_mic_source();
+                        let (mtx, mut mrx) = tokio::sync::mpsc::channel::<Vec<u8>>(1);
+                        std::thread::spawn(move || {
+                            while let Ok(pkt) = packets.recv() {
+                                if mtx.blocking_send(pkt).is_err() {
+                                    break;
+                                }
+                            }
+                        });
+                        while let Some(pkt) = mrx.recv().await {
+                            let sample = webrtc::media::Sample {
+                                data: bytes::Bytes::from(pkt),
+                                timestamp: std::time::SystemTime::now(),
+                                duration: std::time::Duration::from_millis(20),
+                                packet_timestamp: 0,
+                                prev_dropped_packets: 0,
+                                prev_padding_packets: 0,
+                            };
+                            if let Err(e) = mic_track.write_sample(&sample).await {
+                                eprintln!("[xydesk-host] kirim paket mic gagal: {e}");
                                 break;
                             }
                         }
