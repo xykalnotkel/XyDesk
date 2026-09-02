@@ -77,6 +77,13 @@ Kebijakan rilis:
   tidak saling menunggu run. `pubspec.yaml` ikut memicu rantai host
   supaya bump versi rilis tetap menghasilkan semua artefak yang
   dibutuhkan `release.yml`.
+- **CI: build penuh kini manual** — push dan PR tidak lagi memicu build
+  penuh. Yang tersisa otomatis hanya bagian web (push menyentuh `web/**`
+  → Build terfilter → deploy Web). Build penuh, kemasan desktop, dan
+  deploy berita/signaling hanya lewat `workflow_dispatch` — satu run
+  utuh saat rilis benar-benar siap (bump versi → Build → Release →
+  deploy → berita), jadi tidak ada lagi "hijau palsu" dari push
+  perantara atau run terbuang.
 - **`AGENT_BOARD.md`**: papan koordinasi agent — kunci sesi (siapa lagi
   kerja apa), antrean izin push, riwayat sesi. `AGENT.md` diperbarui:
   satu area satu agent, izin push per sesi (bukan izin tetap), dan ritual
@@ -274,10 +281,24 @@ Kebijakan rilis:
   (`debug_assert!`). Sebelumnya kode memakai `.min()` defensif yang memberi
   kesan aman, padahal dimensi ganjil tetap menulis melewati batas plane Y —
   kontrak "dimensi genap" kini terdokumentasi, bukan tersirat.
+- **Host: layar sesi yang tampak "terhubung" tapi tetap hitam ditutup.**
+  Frame pembuka yang membawa parameter gambar (SPS/PPS + IDR) ditulis
+  sebelum jalur data WebRTC siap, sehingga dibuang jaringan; klien lalu
+  menerima banyak paket gambar tanpa pernah bisa mulai mendecode
+  (`framesDecoded` 0 selamanya). Kini host menunggu sambungan siap
+  (Connected) baru menulis video, dan saat sambungan siap meminta encoder
+  mengirim gambar pembuka segar. Diverifikasi end-to-end: pola uji tampil
+  di Chrome asli (707 frame ter-decode; sebelumnya 0). Regresi dikunci di
+  test loopback: SPS/PPS WAJIB tiba di klien, bukan sekadar paket.
 
 
 - Inventaris lisensi pihak ketiga (`docs/THIRD-PARTY-LICENSES.md`,
+  `lib/core/license_stats.dart`, `web/src/licenses.generated.ts`,
+  `web/src/license-total.ts`) kini konsisten dengan perhitungan CI:
+  dihitung ulang dengan SDK Flutter yang sama persis dengan CI, sehingga
+  gerbang "Inventaris lisensi usang" tidak lagi merah.
 - Rilis tidak lagi gagal merah saat Build pemicunya hanya build terfilter
+  (tanpa artefak lengkap) — dilewati dengan peringatan sebagai gantinya.
 
 ## [6.2.2] - 2026-09-01
 
