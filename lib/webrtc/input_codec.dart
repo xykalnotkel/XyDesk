@@ -7,6 +7,9 @@
 //   0x04 SCROLL          dx:i16 dy:i16  (WHEEL_DELTA = 120)
 //   0x05 KEY             vk:u16 down:u8 (Windows Virtual-Key code)
 //   0x06 TEXT            utf8 (sisa pesan)
+//   0x07 DISPLAY_SELECT  index:u8
+//   0x08 CLIPBOARD_SET   utf8 (sisa pesan) — isi papan klip, dua arah
+//   0x09 CLIPBOARD_REQ   (tanpa payload)   — minta lawan membalas 0x08
 //
 // Kenapa biner, bukan JSON? Mouse move bisa >100 event/detik; 8 byte vs
 // ~50 byte JSON + tanpa parse JSON di host = input path lebih hemat.
@@ -95,4 +98,75 @@ class InputCodec {
     b.setRange(1, b.length, utf8Bytes);
     return b;
   }
+
+  /// 0x08 CLIPBOARD_SET — isi papan klip, UTF-8 mulai byte 1, panjang
+  /// variabel. Dipakai dua arah: HP mengirim isi papan klipnya ke PC, dan
+  /// PC membalas 0x09 dengan pesan ini.
+  ///
+  /// Dipisah dari 0x06 TEXT dengan sengaja: TEXT berarti "ketikkan ini",
+  /// CLIPBOARD_SET berarti "jadikan ini isi papan klipmu". Mencampurnya
+  /// berarti setiap teks yang diketik pengguna akan menimpa papan klip PC
+  /// — dan sebaliknya.
+  ///
+  /// Teks yang lebih panjang dari [_clipboardMaxBytes] dipotong: papan klip
+  /// yang tersinkronisasi tidak boleh membanjiri data channel sampai
+  /// menggeser paket input mouse dan keyboard.
+  static Uint8List clipboardSet(String s) {
+    final utf8Bytes = utf8.encode(s);
+    var end = utf8Bytes.length;
+    // Pemotongan HANYA bila teksnya kepanjangan. Ekor karakter dibuang
+    // supaya yang terkirim selalu UTF-8 sah.
+    //
+    // Jangan jalankan pembersihan ini kalau tidak memotong: byte terakhir
+    // teks yang sah pun bisa berupa kelanjutan (emoji, tanda kutip cantik,
+    // aksara non-Latin). Memotongnya berarti menghapus karakter terakhir
+    // dan menyisakan byte lead yang menggantung — akibatnya penerima
+    // menolak SELURUH pesan, bukan sekadar kehilangan satu huruf.
+    if (end > clipboardMaxBytes) {
+      end = clipboardMaxBytes;
+      // Yang menentukan apakah potongan ini merusak karakter bukan byte
+      // terakhir yang ikut, melainkan byte pertama yang DIBUANG: kalau ia
+      // byte kelanjutan (10xxxxxx), berarti kita memotong di tengah
+      // karakter. Mundur sampai kita berdiri di awal karakter.
+      while (end > 0 && (utf8Bytes[end] & 0xC0) == 0x80) {
+        end--;
+      }
+    }
+    final b = Uint8List(1 + end);
+    b[0] = 0x08;
+    b.setRange(1, b.length, utf8Bytes.sublist(0, end));
+    return b;
+  }
+
+  /// 0x09 CLIPBOARD_REQ — minta lawan mengirim isi papan klipnya. Ia
+  /// membalas dengan 0x08.
+  ///
+  /// Kenapa model tarik (pull), bukan pantau terus-menerus: host tidak punya
+  /// pengamat papan klip Windows yang bisa berjalan tanpa jendela pesan,
+  /// jadi menjanjikan "PC → HP otomatis" akan berujung pada janji palsu.
+  /// Diminta eksplisit, hasilnya pasti.
+  static Uint8List clipboardRequest() => _msg8(0x09);
+
+  /// Mengurai pesan 0x08 yang datang dari lawan.
+  ///
+  /// Mengembalikan `null` bila pesannya bukan CLIPBOARD_SET atau isinya
+  /// bukan UTF-8 yang sah — jangan pernah menuliskan byte rusak ke papan
+  /// klip perangkat hanya karena paketnya berhasil lewat.
+  /// Papan klip kosong dinyatakan sebagai string kosong (bukan null).
+  static String? decodeClipboardSet(Uint8List b) {
+    if (b.isEmpty || b[0] != 0x08) return null;
+    if (b.length - 1 > clipboardMaxBytes) return null;
+    if (b.length == 1) return '';
+    try {
+      return const Utf8Decoder().convert(b.sublist(1));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Batas ukuran teks papan klip yang dikirim (64 KiB).
+  ///
+  /// Sengaja publik: uji perlu merujuk angka yang sama, dan kalau batasnya
+  /// berubah, uji ikut berubah — bukan diam-diam meleset.
+  static const int clipboardMaxBytes = 64 * 1024;
 }

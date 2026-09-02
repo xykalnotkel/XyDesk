@@ -21,6 +21,9 @@
 //! 0x05 KEY             vk:u16  down:u8         (Windows Virtual-Key code)
 //! 0x06 TEXT            utf8 bytes (sisa pesan) (dari keyboard virtual;
 //!                                               diinject sbg KEYEVENTF_UNICODE)
+//! 0x07 DISPLAY_SELECT  index:u8                (pilih monitor; bukan injeksi)
+//! 0x08 CLIPBOARD_SET   utf8 bytes (sisa pesan) (isi papan klip, dua arah)
+//! 0x09 CLIPBOARD_REQ   (tanpa payload)         (minta lawan membalas 0x08)
 //! ```
 //!
 //! Parser lintas platform; injeksi nyata hanya di Windows via `SendInput` —
@@ -45,6 +48,12 @@ pub enum InputEvent {
     /// Pilih monitor host untuk capture (0 = primer). Bukan injeksi —
     /// ditangani loop utama sesi (lihat `main.rs`).
     DisplaySelect(usize),
+    /// Isi papan klip — tulis teks ini ke papan klip sistem host.
+    /// BUKAN injeksi keyboard: kalau dikirim sebagai tombol, teks dengan
+    /// karakter non-ASCII akan rusak bergantung layout keyboard host.
+    ClipboardSet(String),
+    /// Minta host mengirim isi papan klipnya sebagai `ClipboardSet`.
+    ClipboardRequest,
 }
 
 /// Tipe pesan (byte pertama).
@@ -56,6 +65,8 @@ mod tag {
     pub const KEY: u8 = 0x05;
     pub const TEXT: u8 = 0x06;
     pub const DISPLAY_SELECT: u8 = 0x07;
+    pub const CLIPBOARD_SET: u8 = 0x08;
+    pub const CLIPBOARD_REQ: u8 = 0x09;
 }
 
 /// Dekode satu pesan biner. `None` bila tidak valid (pesan dibuang diam-diam
@@ -87,6 +98,10 @@ pub fn decode(data: &[u8]) -> Option<InputEvent> {
             .ok()
             .map(|s| InputEvent::Text(s.to_string())),
         (&tag::DISPLAY_SELECT, n) if n >= 2 => Some(InputEvent::DisplaySelect(data[1] as usize)),
+        (&tag::CLIPBOARD_SET, n) if n >= 1 => std::str::from_utf8(&data[1..])
+            .ok()
+            .map(|s| InputEvent::ClipboardSet(s.to_string())),
+        (&tag::CLIPBOARD_REQ, n) if n >= 1 => Some(InputEvent::ClipboardRequest),
         _ => None,
     }
 }
@@ -234,6 +249,145 @@ mod windows_inject {
             }
             // Bukan injeksi — ditangani loop utama sesi (pindah monitor).
             InputEvent::DisplaySelect(_) => true,
+            // Bukan injeksi juga. Papan klip butuh akses ke data channel
+            // untuk membalas permintaan, dan thread injeksi ini tidak
+            // memilikinya — keduanya ditangani di loop utama sesi. Nilai
+            // `true` = bukan kegagalan, jangan dicatat sebagai inject gagal.
+            InputEvent::ClipboardSet(_) | InputEvent::ClipboardRequest => true,
         }
+    }
+}
+
+/// Encode isi papan klip untuk dikirim ke lawan (0x08 CLIPBOARD_SET).
+///
+/// Sengaja hidup bersebelahan dengan `decode`: format kawat harus punya satu
+/// rumah. Kalau encoder dan decoder terpisah, salah satunya bisa berubah
+/// tanpa yang lain — dan gejalanya baru terasa di tangan pengguna, bukan di
+/// layar kompilator.
+///
+/// Batas 64 KiB dipotong di batas karakter, sama seperti klien, supaya ekor
+/// UTF-8 yang tak lengkap tidak membuat seluruh pesan ditolak penerima.
+pub fn encode_clipboard_set(text: &str) -> Vec<u8> {
+    const MAX: usize = 64 * 1024;
+    let bytes = text.as_bytes();
+    let mut end = bytes.len();
+    // Pembersihan ekor HANYA bila teksnya benar-benar dipotong. Byte
+    // terakhir teks yang sah pun bisa berupa kelanjutan UTF-8, jadi
+    // membersihkannya tanpa memotong berarti menghapus karakter terakhir
+    // dan menyisakan byte lead yang menggantung — penerima lalu menolak
+    // SELURUH pesan.
+    if end > MAX {
+        end = MAX;
+        while end > 0 && (bytes[end] & 0xC0) == 0x80 {
+            end -= 1;
+        }
+    }
+    let mut out = Vec::with_capacity(1 + end);
+    out.push(tag::CLIPBOARD_SET);
+    out.extend_from_slice(&bytes[..end]);
+    out
+}
+
+/// Encode permintaan isi papan klip (0x09 CLIPBOARD_REQ).
+pub fn encode_clipboard_request() -> Vec<u8> {
+    vec![tag::CLIPBOARD_REQ; 8]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clipboard_set_membawa_utf8_seluruh_sisa_pesan() {
+        let mut m = vec![tag::CLIPBOARD_SET];
+        m.extend_from_slice("Halo \u{1f525}".as_bytes());
+
+        assert_eq!(
+            decode(&m),
+            Some(InputEvent::ClipboardSet("Halo \u{1f525}".to_string()))
+        );
+    }
+
+    #[test]
+    fn clipboard_set_kosong_diterima_bukan_dibuang() {
+        // Papan klip yang dikosongkan itu keadaan sah. Kalau pesan 1 byte
+        // ini dibuang, pengguna tidak pernah bisa mengosongkan papan klip PC.
+        assert_eq!(
+            decode(&[tag::CLIPBOARD_SET]),
+            Some(InputEvent::ClipboardSet(String::new()))
+        );
+    }
+
+    #[test]
+    fn clipboard_set_utf8_rusak_ditolak() {
+        // Jangan pernah menulis byte rusak ke papan klip sistem hanya karena
+        // paketnya berhasil lewat.
+        assert_eq!(decode(&[tag::CLIPBOARD_SET, 0xC3, 0x28]), None);
+    }
+
+    #[test]
+    fn clipboard_req_tanpa_payload() {
+        assert_eq!(
+            decode(&[tag::CLIPBOARD_REQ; 8]),
+            Some(InputEvent::ClipboardRequest)
+        );
+    }
+
+    #[test]
+    fn encode_clipboard_set_dan_kembali_lagi() {
+        let m = encode_clipboard_set("Halo");
+        assert_eq!(m[0], tag::CLIPBOARD_SET);
+        assert_eq!(
+            decode(&m),
+            Some(InputEvent::ClipboardSet("Halo".to_string()))
+        );
+    }
+
+    #[test]
+    fn encode_clipboard_set_menjaga_karakter_non_ascii() {
+        // Pernah melenceng: pembersihan ekor UTF-8 dijalankan walau teks
+        // tidak dipotong, sehingga karakter terakhir yang sah ikut terbuang
+        // dan menyisakan byte lead yang menggantung. Gejalanya bukan satu
+        // huruf hilang, melainkan SELURUH pesan ditolak penerima.
+        let isi = "Gaskeun \u{1f525} — \"mantap\"";
+        let m = encode_clipboard_set(isi);
+        assert_eq!(decode(&m), Some(InputEvent::ClipboardSet(isi.to_string())));
+    }
+
+    #[test]
+    fn encode_clipboard_set_kosong_tetap_terbaca() {
+        // Papan klip yang dikosongkan itu keadaan sah.
+        let m = encode_clipboard_set("");
+        assert_eq!(m, vec![tag::CLIPBOARD_SET]);
+        assert_eq!(decode(&m), Some(InputEvent::ClipboardSet(String::new())));
+    }
+
+    #[test]
+    fn encode_clipboard_set_memotong_di_batas_karakter() {
+        // 'é' = 2 byte. Memotong di tengahnya membuat seluruh pesan ditolak.
+        let m = encode_clipboard_set(&"é".repeat(200 * 1024));
+        assert_eq!(m[0], tag::CLIPBOARD_SET);
+        match decode(&m) {
+            Some(InputEvent::ClipboardSet(s)) => assert!(s.ends_with('é')),
+            lain => panic!("seharusnya tetap terbaca, dapat {lain:?}"),
+        }
+    }
+
+    #[test]
+    fn encode_clipboard_request_delapan_byte() {
+        let m = encode_clipboard_request();
+        assert_eq!(m.len(), 8);
+        assert_eq!(decode(&m), Some(InputEvent::ClipboardRequest));
+    }
+
+    #[test]
+    fn clipboard_tidak_tertukar_dengan_text() {
+        // 0x06 = ketikkan teks ini. 0x08 = jadikan ini isi papan klip.
+        // Tertukar berarti setiap ketikan pengguna menimpa papan klip PC.
+        let mut m = vec![tag::TEXT];
+        m.extend_from_slice("a".as_bytes());
+
+        assert_eq!(decode(&m), Some(InputEvent::Text("a".to_string())));
+        assert_ne!(decode(&m), Some(InputEvent::ClipboardSet("a".to_string())));
     }
 }

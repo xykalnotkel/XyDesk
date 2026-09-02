@@ -500,6 +500,52 @@ async fn main() -> Result<()> {
                                     // Pesan rusak dibuang diam-diam (decode → None):
                                     // input korup tidak boleh mematikan sesi.
                                     if let Some(ev) = xydesk_host::input::decode(&data) {
+                                        // Papan klip = bukan injeksi SendInput.
+                                        // CLIPBOARD_SET menulis ke papan klip
+                                        // PC; CLIPBOARD_REQ meminta isinya
+                                        // dikirim balik ke klien (model tarik —
+                                        // lihat modul `clipboard`).
+                                        match ev {
+                                            xydesk_host::input::InputEvent::ClipboardSet(text) => {
+                                                match tokio::task::spawn_blocking(move || {
+                                                    xydesk_host::clipboard::set_text(&text)
+                                                })
+                                                .await
+                                                {
+                                                    Ok(Ok(())) => println!(
+                                                        "[xydesk-host] papan klip PC diisi dari client"
+                                                    ),
+                                                    Ok(Err(e)) => eprintln!(
+                                                        "[xydesk-host] papan klip gagal diisi: {e:#}"
+                                                    ),
+                                                    Err(e) => eprintln!(
+                                                        "[xydesk-host] task papan klip gagal: {e}"
+                                                    ),
+                                                }
+                                                continue;
+                                            }
+                                            xydesk_host::input::InputEvent::ClipboardRequest => {
+                                                match tokio::task::spawn_blocking(|| {
+                                                    xydesk_host::clipboard::get_text()
+                                                })
+                                                .await
+                                                {
+                                                    Ok(Ok(text)) => {
+                                                        let out = xydesk_host::input::encode_clipboard_set(&text);
+                                                        let _ = dc.send(&bytes::Bytes::from(out)).await;
+                                                    }
+                                                    Ok(Err(e)) => eprintln!(
+                                                        "[xydesk-host] papan klip PC gagal dibaca: {e:#}"
+                                                    ),
+                                                    Err(e) => eprintln!(
+                                                        "[xydesk-host] task papan klip gagal: {e}"
+                                                    ),
+                                                }
+                                                continue;
+                                            }
+                                            _ => {}
+                                        }
+
                                         // Pindah monitor = bukan injeksi: setel
                                         // pilihan + kirim meta terbaru.
                                         if let xydesk_host::input::InputEvent::DisplaySelect(i) = ev

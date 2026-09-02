@@ -192,6 +192,15 @@ class RtcService {
   Stream<HostMeta> get hostMetaStream => _metaCtrl.stream;
   final _metaCtrl = StreamController<HostMeta>.broadcast();
 
+  /// Isi papan klip PC, diterima sebagai balasan [requestClipboard].
+  ///
+  /// Alirannya sengaja terpisah dari [hostMetaStream]: meta mengalir tiap
+  /// kali layar berubah, sedangkan papan klip hanya boleh ditulis ke
+  /// perangkat saat pengguna memintanya — mencampurnya berarti papan klip
+  /// pengguna bisa tertimpa kapan saja tanpa diminta.
+  Stream<String> get clipboardStream => _clipboardCtrl.stream;
+  final _clipboardCtrl = StreamController<String>.broadcast();
+
   /// Statistik sesi, disegarkan tiap detik selama koneksi hidup.
   SessionStats get stats => _stats;
   SessionStats _stats = const SessionStats();
@@ -368,9 +377,16 @@ class RtcService {
     // Data channel input: reliable + ordered (kontrol, bukan media).
     _inputChannel = await pc.createDataChannel('input', RTCDataChannelInit());
     _inputChannel!.onMessage = (message) {
-      // Host mengirim PESAN TEKS meta (layar + audio) di channel ini —
-      // input biner tetap satu arah (perangkat → host).
-      if (!message.isBinary) _handleMeta(message.text);
+      // Dua balasan dari host di channel ini:
+      //   • teks  = meta (daftar layar + status audio)
+      //   • biner = 0x08 CLIPBOARD_SET, isi papan klip PC
+      // Selain itu, input biner perangkat → host tetap satu arah.
+      if (message.isBinary) {
+        final teks = InputCodec.decodeClipboardSet(message.binary);
+        if (teks != null && !_clipboardCtrl.isClosed) _clipboardCtrl.add(teks);
+        return;
+      }
+      _handleMeta(message.text);
     };
 
     pc.onIceCandidate = (candidate) {
@@ -534,6 +550,16 @@ class RtcService {
   /// Protokol 8-byte little-endian — lihat `input_codec.dart` &
   /// `host/src/input.rs`. Dipanggil sangat sering (mouse move >100/dtk):
   /// tanpa JSON, tanpa alokasi string.
+  /// Kirim isi papan klip perangkat ke PC (0x08 CLIPBOARD_SET).
+  void sendClipboard(String text) => sendInput(InputCodec.clipboardSet(text));
+
+  /// Minta PC mengirim isi papan klipnya (0x09 CLIPBOARD_REQ).
+  ///
+  /// Ia membalas lewat [clipboardStream]. Model tarik, bukan pantau: host
+  /// tidak punya pengamat papan klip Windows, jadi "PC → HP otomatis" tidak
+  /// bisa dijanjikan tanpa berbohong.
+  void requestClipboard() => sendInput(InputCodec.clipboardRequest());
+
   void sendInput(Uint8List event) {
     final ch = _inputChannel;
     if (ch?.state == RTCDataChannelState.RTCDataChannelOpen) {
@@ -663,6 +689,7 @@ class RtcService {
     _emit(RtcPhase.ended);
     await _phaseCtrl.close();
     await _metaCtrl.close();
+    await _clipboardCtrl.close();
     await _statsCtrl.close();
   }
 }

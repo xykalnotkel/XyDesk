@@ -287,7 +287,9 @@ class StreamingSettingsPage extends ConsumerWidget {
         ),
         _SwitchRow(
           title: 'Sinkronisasi papan klip',
-          subtitle: 'Salin teks di HP, tempel di PC — dan sebaliknya',
+          subtitle:
+              'Salin di HP, lalu tekan Ctrl+V di PC. Arah sebaliknya lewat '
+              'tombol ambil di layar sesi.',
           icon: LucideIcons.clipboard,
           value: s.clipboardSync,
           onChanged: notifier.setClipboardSync,

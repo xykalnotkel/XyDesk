@@ -34,6 +34,7 @@ class SessionPage extends ConsumerStatefulWidget {
   });
 
   final String deviceName;
+
   final String deviceId;
 
   /// Password pairing host. Kosong = coba pairing tanpa password (host
@@ -54,6 +55,9 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   Timer? _idleTimer;
   Timer? _connectTimer;
   late SessionSettings _settings;
+
+  /// Aliran isi papan klip PC (balasan permintaan 0x09).
+  StreamSubscription<String>? _clipboardSub;
   KbLayout _keyboardLayout = KbLayout.split;
   double _keyboardOpacity = 0.95;
   late final SessionTransport _transport;
@@ -110,6 +114,14 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       'Transport',
       '${s.status}${s.message == null ? '' : ' - ${s.message}'}',
     );
+    // Papan klip PC hanya bisa diterima setelah kanal datanya terbuka, yang
+    // terjadinya bersamaan dengan sesi menjadi live.
+    if (s.live && _clipboardSub == null) {
+      final rtc = _transport.rtc;
+      if (rtc != null) {
+        _clipboardSub = rtc.clipboardStream.listen(_onClipboardFromHost);
+      }
+    }
     // Begitu live, HUD disembunyikan supaya layar remote bersih; pengguna
     // memunculkannya lewat handle kecil di tepi kanan.
     if (s.live && _overlayVisible) {
@@ -131,6 +143,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     // dicabut di sini, ia akan tetap aktif di seluruh aplikasi setelah sesi
     // ditutup dan diam-diam menghabiskan baterai.
     unawaited(DisplayControl.setKeepScreenOn(false));
+    _clipboardSub?.cancel();
     DevLog.i('sesi', 'Menutup sesi');
     super.dispose();
   }
@@ -154,8 +167,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     }
   }
 
-  /// Kirim isi clipboard perangkat ini ke host — host mengetikkannya
-  /// sebagai unicode (protokol TEXT 0x06, bebas layout keyboard).
+  /// Kirim isi papan klip perangkat ini ke PC (0x08 CLIPBOARD_SET).
+  ///
+  /// Dulu ini memakai 0x06 TEXT, yang berarti host MENGETIKKAN teksnya ke
+  /// jendela yang sedang aktif. Itu berguna, tetapi bukan yang dijanjikan
+  /// pengaturan "Sinkronisasi papan klip" — dan berbahagia kalau jendela
+  /// yang aktif bukan yang pengguna maksud. Sekarang isinya betul-betul
+  /// menjadi papan klip PC, lalu pengguna menekan Ctrl+V sendiri.
   Future<void> _sendClipboard() async {
     if (!_transport.state.live) {
       _showUnavailable('Clipboard butuh sesi yang tersambung.');
@@ -167,10 +185,38 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       _showUnavailable('Clipboard kosong.');
       return;
     }
-    // Batasi 32 KB per kiriman agar data channel tidak tersedak.
-    final clipped = text.length > 32768 ? text.substring(0, 32768) : text;
-    _transport.sendInput(InputCodec.text(clipped));
-    _showUnavailable('Clipboard terkirim ke PC.');
+    // Batas ukuran diurus kodek (64 KiB, dipotong di batas karakter).
+    _transport.sendInput(InputCodec.clipboardSet(text));
+    _showUnavailable('Tersalin ke papan klip PC — tekan Ctrl+V di sana.');
+  }
+
+  /// Minta PC mengirim isi papan klipnya ke ponsel (0x09 CLIPBOARD_REQ).
+  ///
+  /// Sengaja model tarik: host tidak punya pengamat papan klip Windows,
+  /// jadi arah PC → HP tidak bisa dijanjikan otomatis tanpa berbohong.
+  /// Hasilnya datang ke [_onClipboardFromHost].
+  Future<void> _requestClipboard() async {
+    if (!_transport.state.live) {
+      _showUnavailable('Clipboard butuh sesi yang tersambung.');
+      return;
+    }
+    _transport.sendInput(InputCodec.clipboardRequest());
+    _showUnavailable('Meminta isi papan klip PC…');
+  }
+
+  /// Isi papan klip PC yang diminta — tulis ke papan klip perangkat ini.
+  Future<void> _onClipboardFromHost(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          text.isEmpty
+              ? 'Papan klip PC kosong, atau isinya bukan teks.'
+              : 'Isi papan klip PC sudah ada di ponsel kamu.',
+        ),
+      ),
+    );
   }
 
   void _leaveSession() {
@@ -347,6 +393,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                       onMicrophone: _toggleMic,
                       onKeyboard: _showKeyboard,
                       onClipboard: _sendClipboard,
+                      onClipboardPull: _requestClipboard,
                       onSettings: () => _openPanel(),
                       onDisconnect: _confirmDisconnect,
                     ),
@@ -847,6 +894,7 @@ class _SessionRail extends StatelessWidget {
     required this.onMicrophone,
     required this.onKeyboard,
     required this.onClipboard,
+    required this.onClipboardPull,
     required this.onSettings,
     required this.onDisconnect,
   });
@@ -861,6 +909,7 @@ class _SessionRail extends StatelessWidget {
   final VoidCallback onMicrophone;
   final VoidCallback onKeyboard;
   final VoidCallback onClipboard;
+  final VoidCallback onClipboardPull;
   final VoidCallback onSettings;
   final VoidCallback onDisconnect;
 
@@ -943,9 +992,16 @@ class _SessionRail extends StatelessWidget {
           if (showClipboard)
             _RailButton(
               icon: LucideIcons.clipboard,
-              tooltip: 'Kirim teks yang disalin',
+              tooltip: 'Kirim ke papan klip PC',
               size: size,
               onTap: onClipboard,
+            ),
+          if (showClipboard)
+            _RailButton(
+              icon: LucideIcons.clipboardPaste,
+              tooltip: 'Ambil dari papan klip PC',
+              size: size,
+              onTap: onClipboardPull,
             ),
           _RailButton(
             icon: LucideIcons.settings,

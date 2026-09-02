@@ -33,6 +33,71 @@ void main() {
       expect(InputCodec.key(0, down: true)[0], 0x05);
       expect(InputCodec.text('a')[0], 0x06);
       expect(InputCodec.displaySelect(0)[0], 0x07);
+      expect(InputCodec.clipboardSet('a')[0], 0x08);
+      expect(InputCodec.clipboardRequest()[0], 0x09);
+    });
+  });
+
+  group('papan klip', () {
+    test('CLIPBOARD_SET membawa UTF-8 mulai byte 1', () {
+      final msg = InputCodec.clipboardSet('Halo');
+
+      expect(msg[0], 0x08);
+      expect(msg.length, 1 + 4);
+      expect(utf8.decode(msg.sublist(1)), 'Halo');
+    });
+
+    test('CLIPBOARD_SET menjaga karakter non-ASCII bolak-balik', () {
+      // Papan klip orang Indonesia tidak selalu ASCII: emoji, tanda kutip
+      // cantik, dan aksara lain harus sampai utuh, tidak jadi '?'.
+      const isi = 'Gaskeun 🔥 — “mantap”';
+      final dipulihkan = InputCodec.decodeClipboardSet(InputCodec.clipboardSet(isi));
+
+      expect(dipulihkan, isi);
+    });
+
+    test('CLIPBOARD_REQ delapan byte tanpa payload', () {
+      final msg = InputCodec.clipboardRequest();
+
+      expect(msg.length, 8);
+      expect(msg.sublist(1).every((b) => b == 0), isTrue);
+    });
+
+    test('papan klip kosong dibaca sebagai string kosong, bukan null', () {
+      // Membingungkan keduanya membuat pemanggil menulis null ke Clipboard.
+      final dipulihkan = InputCodec.decodeClipboardSet(Uint8List.fromList([0x08]));
+
+      expect(dipulihkan, '');
+    });
+
+    test('bukan CLIPBOARD_SET ditolak', () {
+      expect(InputCodec.decodeClipboardSet(InputCodec.text('Halo')), isNull);
+      expect(InputCodec.decodeClipboardSet(InputCodec.clipboardRequest()), isNull);
+    });
+
+    test('UTF-8 rusak ditolak, tidak ditulis ke papan klip', () {
+      final rusak = Uint8List.fromList([0x08, 0xC3, 0x28]); // urutan salah
+
+      expect(InputCodec.decodeClipboardSet(rusak), isNull);
+    });
+
+    test('teks terlalu panjang dipotong, dan hasilnya masih UTF-8 sah', () {
+      final panjang = 'a' * (200 * 1024);
+      final msg = InputCodec.clipboardSet(panjang);
+
+      expect(msg.length, 1 + InputCodec.clipboardMaxBytes);
+      expect(InputCodec.decodeClipboardSet(msg), isNotNull);
+    });
+
+    test('pemotongan tidak memotong karakter non-Latin di tengah', () {
+      // 'é' = 2 byte. Kalau batas jatuh di tengahnya, seluruh pesan rusak
+      // dan papan klip PC tidak terisi sama sekali — bukan cuma kehilangan
+      // satu huruf di ujung.
+      final panjang = 'é' * (200 * 1024);
+      final dipulihkan = InputCodec.decodeClipboardSet(InputCodec.clipboardSet(panjang));
+
+      expect(dipulihkan, isNotNull);
+      expect(dipulihkan!.endsWith('é'), isTrue);
     });
   });
 
