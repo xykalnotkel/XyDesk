@@ -578,10 +578,11 @@ async fn main() -> Result<()> {
                         // frame ke channel tokio berkapasitas 1 (frame usang
                         // dibuang, latency menang).
                         let frames = xydesk_host::screen::spawn_frame_source();
-                        let (vtx, mut vrx) = tokio::sync::mpsc::channel::<Vec<u8>>(1);
+                        let (vtx, mut vrx) =
+                            tokio::sync::mpsc::channel::<xydesk_host::screen::EncodedFrame>(1);
                         std::thread::spawn(move || {
-                            while let Ok(data) = frames.recv() {
-                                if vtx.blocking_send(data).is_err() {
+                            while let Ok(frame) = frames.recv() {
+                                if vtx.blocking_send(frame).is_err() {
                                     break;
                                 }
                             }
@@ -589,16 +590,20 @@ async fn main() -> Result<()> {
 
                         // Statistik video untuk control API (shell desktop):
                         // frame terkirim + FPS rata-rata jendela 1 detik +
-                        // status encoder NVENC.
+                        // status encoder + latensi pipeline host.
                         let mut fps_window: u64 = 0;
                         let mut fps_start = std::time::Instant::now();
                         let mut fps_now = 0.0_f64;
 
-                        while let Some(data) = vrx.recv().await {
+                        while let Some(frame) = vrx.recv().await {
+                            // Latensi pipeline host: sejak frame ditangkap di
+                            // thread capture sampai saat ini (sesaat sebelum
+                            // ditulis ke track RTP).
+                            let latency_ms = frame.captured_at.elapsed().as_secs_f64() * 1000.0;
                             let sample = webrtc::media::Sample {
-                                data: bytes::Bytes::from(data),
+                                data: bytes::Bytes::from(frame.data),
                                 timestamp: std::time::SystemTime::now(),
-                                duration: std::time::Duration::from_millis(33),
+                                duration: xydesk_host::screen::frame_duration(),
                                 packet_timestamp: 0,
                                 prev_dropped_packets: 0,
                                 prev_padding_packets: 0,
@@ -616,9 +621,10 @@ async fn main() -> Result<()> {
                             }
                             {
                                 let mut st = control.lock().unwrap();
-                                st.video.frames_sent += 1;
+                                st.video.record_frame(latency_ms);
                                 st.video.fps = fps_now;
                                 st.video.nvenc = screen::nvenc_active();
+                                st.video.encoder = screen::encoder_label();
                             }
                         }
                     });

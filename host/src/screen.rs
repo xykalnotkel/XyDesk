@@ -59,6 +59,46 @@ pub fn set_target_bitrate_bps(bps: u32) -> bool {
     true
 }
 
+/// FPS nominal jalur produksi (target roadmap 1080p60). Dipakai sebagai
+/// durasi sampel video (RTP timestamp maju per frame) dan pacing sumber
+/// pola uji.
+pub const NOMINAL_FPS: u32 = 60;
+
+/// Durasi satu frame pada [`NOMINAL_FPS`] — dipakai sebagai `duration`
+/// sampel video saat menulis ke track RTP.
+pub fn frame_duration() -> std::time::Duration {
+    std::time::Duration::from_micros(1_000_000 / u64::from(NOMINAL_FPS))
+}
+
+/// Frame H264 ter-encode beserta metrik produksinya. Timestamp dibawa sejak
+/// lahir di thread capture supaya `main.rs` bisa mengukur latensi pipeline
+/// host (capture → encode → antre → tulis RTP) dan melaporkannya ke control
+/// API — bahan ukur target roadmap < 40 ms tanpa alat eksternal.
+pub struct EncodedFrame {
+    pub data: Vec<u8>,
+    /// Kapan frame ditangkap (jam monotonik) — awal pipeline.
+    pub captured_at: std::time::Instant,
+    /// Durasi encode frame ini (mikrodetik) — porsi dominan pipeline.
+    pub encode_us: u64,
+}
+
+/// Label encoder aktif, untuk control API (`video.encoder`). Dibaca tiap
+/// frame karena NVENC baru terpilih di frame pertama (deteksi GPU malas).
+pub fn encoder_label() -> &'static str {
+    #[cfg(target_os = "windows")]
+    {
+        if nvenc_active() {
+            "nvenc"
+        } else {
+            "openh264"
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        "test-pattern"
+    }
+}
+
 /// Keyframe (IDR) tiap ~2 detik @60fps: pemulihan cepat setelah packet loss
 /// tanpa membebani bitrate (IDR jauh lebih besar dari P-frame).
 pub const IDR_INTERVAL_FRAMES: u32 = 120;
@@ -147,10 +187,10 @@ impl TestPatternEncoder {
 /// Mulai sumber frame di thread terpisah; kembalikan receiver frame H264
 /// (Annex-B) ter-encode. Channel berukuran kecil agar frame usang dibuang
 /// (penting untuk latency — selalu kirim frame terbaru).
-pub fn spawn_frame_source() -> mpsc::Receiver<Vec<u8>> {
+pub fn spawn_frame_source() -> mpsc::Receiver<EncodedFrame> {
     #[cfg(target_os = "windows")]
     {
-        let (tx, rx) = mpsc::sync_channel::<Vec<u8>>(2);
+        let (tx, rx) = mpsc::sync_channel::<EncodedFrame>(2);
         std::thread::spawn(move || {
             let mut current = wanted_display();
             loop {
@@ -182,7 +222,7 @@ pub fn spawn_frame_source() -> mpsc::Receiver<Vec<u8>> {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        let (tx, rx) = mpsc::sync_channel::<Vec<u8>>(2);
+        let (tx, rx) = mpsc::sync_channel::<EncodedFrame>(2);
         std::thread::spawn(move || {
             let mut enc = match TestPatternEncoder::new() {
                 Ok(e) => e,
@@ -192,9 +232,15 @@ pub fn spawn_frame_source() -> mpsc::Receiver<Vec<u8>> {
                 }
             };
             loop {
+                let t0 = std::time::Instant::now();
                 match enc.encode_next(TEST_WIDTH, TEST_HEIGHT) {
                     Ok(data) => {
-                        if tx.send(data).is_err() {
+                        let frame = EncodedFrame {
+                            data,
+                            captured_at: t0,
+                            encode_us: t0.elapsed().as_micros() as u64,
+                        };
+                        if tx.send(frame).is_err() {
                             break;
                         }
                     }
@@ -203,7 +249,11 @@ pub fn spawn_frame_source() -> mpsc::Receiver<Vec<u8>> {
                         break;
                     }
                 }
-                std::thread::sleep(std::time::Duration::from_millis(33)); // ~30 fps
+                // Pacing ke NOMINAL_FPS: tunggu sisa jatah frame ini.
+                let elapsed = t0.elapsed();
+                if elapsed < frame_duration() {
+                    std::thread::sleep(frame_duration() - elapsed);
+                }
             }
         });
         rx
@@ -332,10 +382,11 @@ mod windows {
     /// (lintas platform, teruji — lihat `pixfmt.rs`).
 
     /// Penangkap layar primer: tiap frame → proper → encode H264 (NVENC
-    /// bila ada; fallback openh264) → kirim ke channel (mpsc::SyncSender<Vec<u8>>).
+    /// bila ada; fallback openh264) → kirim ke channel
+    /// (mpsc::SyncSender<EncodedFrame>).
     struct ScreenCapturer {
         encoder: EncoderKind,
-        sender: mpsc::SyncSender<Vec<u8>>,
+        sender: mpsc::SyncSender<super::EncodedFrame>,
         /// Buffer strip padding — dialokasi sekali, dipakai ulang tiap frame.
         packed: Vec<u8>,
         /// Buffer NV12 (jalur NVENC) — dipakai ulang.
@@ -349,7 +400,7 @@ mod windows {
     }
 
     impl GraphicsCaptureApiHandler for ScreenCapturer {
-        type Flags = mpsc::SyncSender<Vec<u8>>;
+        type Flags = mpsc::SyncSender<super::EncodedFrame>;
         type Error = Box<dyn std::error::Error + Send + Sync>;
 
         fn new(ctx: Context<Self::Flags>) -> Result<Self, Self::Error> {
@@ -377,6 +428,8 @@ mod windows {
             frame: &mut Frame,
             capture_control: InternalCaptureControl,
         ) -> Result<(), Self::Error> {
+            // Awal pipeline latensi: detik frame ditangkap (jam monotonik).
+            let captured_at = std::time::Instant::now();
             // Permintaan pindah monitor ATAU bitrate baru: hentikan handler
             // ini — thread capture di atasnya akan respawn (monitor baru,
             // atau monitor sama dengan encoder bitrate baru).
@@ -471,7 +524,11 @@ mod windows {
             }
             // Kirim; bila channel penuh, buang frame terbaru (try_send) —
             // frame usang tidak boleh mengantre (latency > kelengkapan).
-            let _ = self.sender.try_send(encoded);
+            let _ = self.sender.try_send(super::EncodedFrame {
+                data: encoded,
+                captured_at,
+                encode_us: encode_us as u64,
+            });
             Ok(())
         }
 
@@ -483,7 +540,7 @@ mod windows {
     /// Mulai capture layar primer. Fungsi memblok thread yang memanggilnya
     /// (dijalankan di thread terpisah oleh `spawn_frame_source`).
     pub fn start_monitor(
-        sender: mpsc::SyncSender<Vec<u8>>,
+        sender: mpsc::SyncSender<super::EncodedFrame>,
         index: usize,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // `from_index` gagal bila indeks di luar jangkauan — fallback ke
@@ -599,5 +656,32 @@ mod tests {
         assert_eq!(target_bitrate_bps(), MAX_TARGET_BPS);
         // Kembalikan bawaan agar test lain yang membaca nilai bawaan aman.
         set_target_bitrate_bps(DEFAULT_TARGET_BPS);
+    }
+
+    #[test]
+    fn durasi_frame_nominal_60fps() {
+        let d = frame_duration();
+        let us = d.as_micros();
+        assert!(
+            (16_000..=17_000).contains(&us),
+            "durasi frame harus ~16,667 ms, dapat {us} us"
+        );
+    }
+
+    #[test]
+    fn sumber_frame_membawa_timestamp_monoton_dan_payload() {
+        // Jalur non-Windows (pola uji) — ikut dijalankan CI Linux.
+        let rx = spawn_frame_source();
+        let mut last: Option<std::time::Instant> = None;
+        for _ in 0..3 {
+            let f = rx
+                .recv_timeout(std::time::Duration::from_secs(3))
+                .expect("frame pertama harus tiba");
+            assert!(!f.data.is_empty(), "payload H264 tidak boleh kosong");
+            if let Some(prev) = last {
+                assert!(f.captured_at >= prev, "timestamp harus monoton");
+            }
+            last = Some(f.captured_at);
+        }
     }
 }

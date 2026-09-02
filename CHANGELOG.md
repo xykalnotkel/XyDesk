@@ -102,6 +102,16 @@ Kebijakan rilis:
 - Host: bitrate video kini bisa diatur dari shell — control API dapat aksi
   baru `video-bitrate` (Mbps, 1–50) dan `/status` melaporkan
   `targetBitrateBps`. Sebelumnya target 8 Mbps terpatri konstan.
+- Host: `/status` kini melaporkan **latensi pipeline video** dan **label
+  encoder** — `video.latencyMs` (rata-rata EMA capture → tulis RTP),
+  `video.latencyMaxMs` (terburuk yang pernah terukur), dan
+  `video.encoder` (`nvenc`/`openh264`/`test-pattern`). Sebelumnya tidak ada
+  ukuran latensi host sama sekali: webrtc-rs 0.11 mengabaikan
+  `packet_timestamp` (timestamp RTP dibuat otomatis packetizer), jadi
+  penanda tidak bisa ditanam lewat bidang itu. Kini setiap frame membawa
+  `captured_at` sejak detik ditangkap di thread capture, dan latensi
+  dihitung sesaat sebelum `write_sample` — pemantauan target roadmap
+  < 40 ms glass-to-glass tanpa alat eksternal.
 - Uji unit Go untuk signaling self-host (`signaling/auth_test.go` +
   `router_test.go`): ikatan role pada token, middleware, arah relay, filter
   daftar host. `go vet` + `go test` kini ikut wajib hijau di job
@@ -216,6 +226,10 @@ Kebijakan rilis:
   (`screen::target_bitrate_bps`/`set_target_bitrate_bps`, bawaan 8 Mbps).
   Kedua jalur encoder (openh264 & NVENC) membacanya saat encoder dibangun,
   dan perubahan di tengah sesi memicu respawn capture dengan encoder baru.
+- Host: durasi sampel video (maju timestamp RTP per frame) diseragamkan ke
+  FPS nominal 60 (16,67 ms) lewat `NOMINAL_FPS`/`frame_duration()` —
+  sebelumnya angka 33 ms terpatri acak di `main.rs`, dan sumber pola uji
+  (non-Windows) kini berpacing 60 fps, bukan ~30 fps.
 
 ### Diperbaiki
 

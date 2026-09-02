@@ -83,6 +83,27 @@ pub struct VideoStats {
     /// Benar bila encoder NVENC hardware aktif (Windows). Dibaca dari
     /// `screen::nvenc_active()`.
     pub nvenc: bool,
+    /// Label encoder aktif: `nvenc`, `openh264`, atau `test-pattern`.
+    pub encoder: &'static str,
+    /// Latensi pipeline host (capture → tulis RTP) rata-rata dalam ms
+    /// (EMA, bobot 0.1 tiap frame baru).
+    pub latency_ms: f64,
+    /// Latensi pipeline host maksimum yang pernah terukur (ms).
+    pub latency_max_ms: f64,
+}
+
+impl VideoStats {
+    /// Catat satu frame terkirim: naikkan hitungan + perbarui latensi
+    /// rata-rata (EMA) dan maksimum.
+    pub fn record_frame(&mut self, latency_ms: f64) {
+        self.frames_sent += 1;
+        self.latency_ms = if self.frames_sent == 1 {
+            latency_ms
+        } else {
+            self.latency_ms * 0.9 + latency_ms * 0.1
+        };
+        self.latency_max_ms = self.latency_max_ms.max(latency_ms);
+    }
 }
 
 /// Info sesi streaming untuk ditampilkan (bukan handle media).
@@ -615,6 +636,10 @@ mod tests {
             assert!(v.get(key).is_some(), "bidang {key} hilang: {body}");
         }
         assert_eq!(v["video"]["framesSent"], 0);
+        // Bidang latensi & encoder (baru) wajib hadir juga.
+        for key in ["latencyMs", "latencyMaxMs", "encoder"] {
+            assert!(v["video"].get(key).is_some(), "video.{key} hilang: {body}");
+        }
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -772,5 +797,24 @@ mod tests {
         let s = snap.session.expect("ada sesi");
         assert_eq!(s.client_id, "klien-1");
         assert!(s.duration_ms >= 5_000, "durasi {}.", s.duration_ms);
+    }
+
+    #[test]
+    fn video_stats_record_frame_ema_dan_maks() {
+        let mut v = VideoStats::default();
+        // Frame pertama: rata-rata = nilai itu sendiri.
+        v.record_frame(10.0);
+        assert_eq!(v.frames_sent, 1);
+        assert_eq!(v.latency_ms, 10.0);
+        assert_eq!(v.latency_max_ms, 10.0);
+        // Frame kedua: EMA 0.9*10 + 0.1*30 = 12; maks naik ke 30.
+        v.record_frame(30.0);
+        assert_eq!(v.frames_sent, 2);
+        assert!((v.latency_ms - 12.0).abs() < 1e-9, "ema {}", v.latency_ms);
+        assert_eq!(v.latency_max_ms, 30.0);
+        // Frame ketiga kecil: maks tidak turun.
+        v.record_frame(5.0);
+        assert_eq!(v.latency_max_ms, 30.0);
+        assert_eq!(v.frames_sent, 3);
     }
 }

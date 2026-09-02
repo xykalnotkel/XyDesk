@@ -30,8 +30,11 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — Control API kini punya aksi
   `video-bitrate` (field `bitrate_mbps`, 1–50) dan `/status` melaporkan
-  `targetBitrateBps`. Tambahkan kontrol di panel (input Mbps + tampilkan
-  nilai aktif) — endpoint-nya sudah jadi & teruji, UI-nya belum.
+  `targetBitrateBps`, `video.latencyMs` (EMA pipeline host),
+  `video.latencyMaxMs`, dan `video.encoder` (`nvenc`/`openh264`/
+  `test-pattern`). Tambahkan kontrol di panel (input Mbps + tampilkan nilai
+  aktif, dan kalau mau, tampilkan latensi + encoder) — endpoint-nya sudah
+  jadi & teruji, UI-nya belum.
 - [ ] (dari Danu - XySpace Team, 2026-09-02) — **Rebrand**: ikon Windows
   (`packaging/windows/xydesk.ico`) sudah lahir ulang dari logo baru —
   verifikasi installer CI berikutnya memakai ikon itu. Selaraskan juga
