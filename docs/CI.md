@@ -7,10 +7,75 @@ perlu menjalankan Flutter, Android SDK, Rust, atau Visual Studio secara lokal.
 
 | Berkas | Pemicu | Hasil |
 |---|---|---|
-| `.github/workflows/build.yml` | push/PR ke `main`, manual | gerbang mutu host (fmt/clippy/test), APK Android, `XyDesk.exe` + `XyDesk-Host.exe`, bundle Web |
+| `.github/workflows/build.yml` | push/PR (semua branch PR, manual) | gerbang mutu per-area (difilter), APK Android, `XyDesk.exe` + `XyDesk-Host.exe`, bundle Web |
 | `.github/workflows/deploy-signaling.yml` | perubahan `cloudflare/**`, manual | deploy Cloudflare Worker API/signaling |
-| `.github/workflows/deploy-web.yml` | Build `main` sukses, manual recovery | deploy bundle Flutter Web terverifikasi ke Cloudflare Static Assets |
+| `.github/workflows/deploy-web.yml` | Build `main` sukses **yang menyentuh `web/`**, manual recovery | deploy bundle Flutter Web terverifikasi ke Cloudflare Static Assets |
 | `.github/workflows/release.yml` | Build `main` sukses + nilai `version` berubah, manual recovery | GitHub Release multi-platform + push OneSignal |
+| `.github/workflows/verify-push-auth.yml` | setiap push ke `main` | audit izin push: commit wajib memuat `Izin: <ID>` yang berstatus `DISETUJUI` di `AGENT_BOARD.md` |
+
+## Filter area di Build (sejak 3 Sep 2026)
+
+`build.yml` tidak lagi menjalankan seluruh rantai untuk setiap push/PR.
+Job `changes` (selalu berjalan, murah) mendeteksi area yang tersentuh lewat
+`dorny/paths-filter`; job lain hanya hidup bila areanya berubah. Peta
+filternya (ubah bersama `docs/CI.md` bila bergeser):
+
+| Perubahan | Job yang jalan |
+|---|---|
+| `lib/`, `test/`, `assets/`, `android/`, `design/`, `tool/`, `pubspec*`, `analysis_options.yaml` | `check-flutter` → `android` + `windows` |
+| `host/**` (dan `pubspec.yaml` — bump rilis) | `host-test` → `windows` |
+| `web/**` | `web` |
+| `news/**` | `check-news` |
+| `cloudflare/**`, `signaling/**` | `check-signaling` |
+| `packaging/**` | `installer-lint` |
+| `docs/`, `AGENT.md`, `AGENT_BOARD.md`, `HANDOFF.md`, `CHANGELOG.md`, `CONTRIBUTORS.md`, `README.md`, `ROADMAP.md`, `SETUP.md`, `.github/workflows/**`, manifest versi | `check-meta` (konsistensi versi) |
+| `workflow_dispatch` | **semua** job (build penuh untuk pemulihan) |
+
+Konsekuensi yang dijaga:
+
+- **Rilis tetap utuh.** `pubspec.yaml` masuk filter `flutter` AND `host`,
+  sehingga bump versi (satu-satunya pemicu rilis) membangun ulang rantai
+  client + host — `release.yml` selalu menemukan artefak
+  `XyDesk-Android-APK` dan `XyDesk-Windows-<arch>`.
+- **PR dokumen punya status check.** Job `changes` selalu hijau, plus
+  `check-meta` untuk perubahan dokumen — tidak ada lagi PR "tanpa check".
+- **Deploy tidak ikut salah jalan.** `deploy-web.yml` memeriksa keberadaan
+  artefak `XyDesk-Web` pada run Build yang memicunya; kalau tidak ada
+  (perubahan tidak menyentuh `web/`), deploy dilewati dengan peringatan,
+  bukan gagal.
+- **Job `skipped` = bukan areamu, bukan kegagalan.** Baca tabel *Ringkasan*
+  pada run untuk melihat area yang terdeteksi.
+- **Branch protection**: kalau ada, daftar required check nama-nama job
+  berubah (mis. `Analisis Statis (Flutter)` menggantikan `Analisis Statis`).
+
+Check yang lama (`Analisis Statis`, satu job raksasa) dipecah menjadi
+`check-flutter`, `check-news`, `check-signaling`, dan `check-meta` supaya
+filter per-area mungkin dilakukan tanpa kehilangan satu pun pengawal:
+analyze/format/test/lisensi/audit aset tetap jalan pada perubahan client,
+test Worker berita pada perubahan `news/`, test JWT/OTP/rate-limit + gofmt
+pada perubahan `cloudflare/` atau `signaling/`.
+
+## Verifikasi izin push (verify-push-auth.yml)
+
+Push langsung ke `main` diawasi. Setiap commit non-merge pada push WAJIB
+memuat penanda `Izin: <ID-SESI>` di body, dan ID-nya harus berstatus
+`DISETUJUI` pada `AGENT_BOARD.md`. Pengecualian: commit merge (tindakan
+operator) dan commit yang ditulis operator (`OPERATOR_LOGIN` di repository
+variables — set mis. `xykalnotkel` kalau operator ingin push bebas).
+
+Tanpa pengaturan tambahan, workflow ini berfungsi sebagai **audit**:
+pelanggaran tampil merah di tab Actions. Agar menjadi **gerbang keras**
+(push tanpa izin ditolak), perlu salah satu:
+
+1. branch protection `main` → *Require status checks* → wajibkan
+   `Periksa izin push`; atau
+2. wajibkan PR (tidak ada push langsung) — persetujuan adalah review
+   operator + merge-nya. Commit feature branch tetap diperiksa: tulis
+   `Izin: <ID>` di body commit (biasa) atau — untuk squash merge — di
+   deskripsi/isi PR, karena squash memakai isi PR sebagai body commit.
+   Merge commit sendiri (tindakan operator) dikecualikan.
+
+
 
 Sejak 1 Sep 2026 seluruh gerbang host berada di dalam `build.yml`. Sebelumnya
 fmt/clippy/`cargo test` host tinggal di `build-host.yml` yang berdiri sendiri

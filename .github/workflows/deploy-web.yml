@@ -33,6 +33,7 @@ jobs:
           node-version: '24'
 
       - name: Ambil bundle Web dari Build yang lulus
+        id: fetch
         env:
           GH_TOKEN: ${{ github.token }}
           WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
@@ -56,6 +57,22 @@ jobs:
             echo "::error::Build Web sukses untuk $RELEASE_SHA tidak ditemukan."
             exit 1
           fi
+          # Build kini difilter per area (`.github/workflows/build.yml`): run
+          # yang tidak menyentuh `web/**` tidak memuat artefak XyDesk-Web.
+          # Kalau begitu dan ini bukan pemicuan manual, deploy dilewati —
+          # memanggil `gh run download` untuk artefak yang tidak ada akan
+          # menggagalkan run yang sebenarnya tidak punya pekerjaan.
+          names="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts" \
+            --jq '.artifacts[].name')"
+          if ! echo "$names" | grep -qx 'XyDesk-Web'; then
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "::error::Artefak XyDesk-Web tidak ada di run $run_id; deploy manual dibatalkan."
+              exit 1
+            fi
+            echo "::warning::Run Build $run_id tidak memuat artefak XyDesk-Web — perubahan tidak menyentuh web/. Deploy dilewati."
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           rm -rf web_deploy/site
           mkdir -p web_deploy/site
           gh run download "$run_id" \
@@ -68,6 +85,7 @@ jobs:
           ls web_deploy/site/assets/*.js >/dev/null
 
       - name: Deploy ke Cloudflare
+        if: steps.fetch.outputs.skipped != 'true'
         working-directory: web_deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

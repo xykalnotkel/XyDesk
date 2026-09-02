@@ -27,7 +27,8 @@ Kebijakan rilis:
   halaman berbagi worker menyusul.
 - Aturan kerja agent AI: `AGENT.md` (satu sesi satu role, identitas
   kontributor `Nama - XySpace Team`, kewajiban jujur soal apa yang sudah
-  dan belum diuji, izin push langsung ke `main` saat CI hijau) dan
+  dan belum diuji, izin push per sesi — wajib disetujui operator di
+  `AGENT_BOARD.md` dan ditandai `Izin: <ID>` di body commit) dan
   `CONTRIBUTORS.md` (daftar hanya-tambah).
 - `docs/NEWS_STYLE.md` dirombak: berita rilis kini wajib detail lengkap —
   setiap perubahan dijelaskan apa dan kenapa, ada bagian "Semua perubahan
@@ -40,6 +41,25 @@ Kebijakan rilis:
 - Kontrol mutu CI untuk Worker signaling: 19 test auth/OTP/rate-limit kini
   jalan di setiap PR (sebelumnya hanya saat deploy ke `main`).
 - Pengawasan `gofmt` untuk signaling Go.
+- **CI Build difilter per area** (`.github/workflows/build.yml`): job
+  `changes` mendeteksi area yang tersentuh (Flutter, host, web, news,
+  backend, packaging, meta) dan hanya job area itu yang berjalan —
+  push agent Docs tidak lagi membayar build Flutter/Rust penuh, dan agent
+  tidak saling menunggu run. `pubspec.yaml` ikut memicu rantai host
+  supaya bump versi rilis tetap menghasilkan semua artefak yang
+  dibutuhkan `release.yml`.
+- **`AGENT_BOARD.md`**: papan koordinasi agent — kunci sesi (siapa lagi
+  kerja apa), antrean izin push, riwayat sesi. `AGENT.md` diperbarui:
+  satu area satu agent, izin push per sesi (bukan izin tetap), dan ritual
+  buka/tutup sesi di papan.
+- **`verify-push-auth.yml`**: setiap push ke `main` diperiksa — semua
+  commit non-merge wajib memuat `Izin: <ID-SESI>` dan ID-nya berstatus
+  `DISETUJUI` di `AGENT_BOARD.md`; commit merge dan commit operator
+  (`OPERATOR_LOGIN`) dikecualikan. Berfungsi sebagai audit, dan bisa
+  dijadikan gerbang keras lewat branch protection.
+- `deploy-web.yml` melewati deploy dengan peringatan (alih-alih gagal)
+  bila run Build pemicunya tidak memuat artefak `XyDesk-Web` — misalnya
+  karena perubahan tidak menyentuh `web/`.
 - Sitemap web kini memuat semua halaman (`/download`, `/news`, `/connect`,
   `/legal`) — sebelumnya hanya beranda, jadi mesin pencari tidak diberi
   tahu halaman lain ada.

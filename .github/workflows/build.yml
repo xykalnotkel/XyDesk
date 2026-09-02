@@ -1,5 +1,33 @@
 name: Build
 
+# Build multi-platform XyDesk, SEKARANG difilter per area.
+#
+# Sebelum 3 Sep 2026: satu job `check` raksasa + build penuh dijalankan untuk
+# SEMUA push/PR, sekecil apa pun perubahannya — agent Docs yang menyentuh satu
+# file markdown ikut membayar analisis Flutter + Rust + 4 build. Itu lambat dan
+# bikin run agent lain saling bertabrakan.
+#
+# Sekarang: job `changes` (murah, selalu jalan) mendeteksi area yang tersentuh
+# dengan dorny/paths-filter. Job lain hanya hidup bila areanya tersentuh:
+#
+#   lib/, android/, assets/, pubspec.yaml, tool/ → check-flutter (+ android)
+#   host/ atau pubspec.yaml                      → host-test (+ windows)
+#   web/                                         → web
+#   news/                                        → check-news
+#   cloudflare/, signaling/                      → check-signaling
+#   packaging/                                   → installer-lint
+#   docs/, AGENT.md, CHANGELOG, workflow, dll    → check-meta
+#
+# Aturan penting yang dijaga:
+# - `pubspec.yaml` masuk filter flutter DAN host: bump versi rilis (yang
+#   menyentuh pubspec) tetap membangun rantai penuh client + host, sehingga
+#   release.yml selalu menemukan artefak yang dibutuhkannya.
+# - `workflow_dispatch` selalu = build penuh (pemulihan manual).
+# - PR tetap diuji tanpa filter branch (pelajaran stacked-PR, lihat bawah) —
+#   tetapi job-nya tetap hanya yang areanya berubah.
+# - Job `changes` selalu berjalan dan selalu hijau, sehingga PR apa pun punya
+#   status check (termasuk PR dokumen) — tidak ada lagi "PR tampil tanpa check".
+
 on:
   push:
     branches: [main]
@@ -32,9 +60,93 @@ env:
   GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
 
 jobs:
-  # ── 1. Gerbang kompilasi: format dan analisis statis ──
-  check:
-    name: Analisis Statis
+  # ── 0. Deteksi area yang berubah ──
+  # Selalu berjalan (semua PR/push dapat status check), selalu hijau kecuali
+  # checkout gagal. Ini "saklar" untuk semua job di bawah.
+  changes:
+    name: Deteksi Area yang Berubah
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      flutter: ${{ steps.filter.outputs.flutter }}
+      host: ${{ steps.filter.outputs.host }}
+      web: ${{ steps.filter.outputs.web }}
+      news: ${{ steps.filter.outputs.news }}
+      backend: ${{ steps.filter.outputs.backend }}
+      packaging: ${{ steps.filter.outputs.packaging }}
+      meta: ${{ steps.filter.outputs.meta }}
+      full: ${{ steps.full.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # paths-filter butuh sejarah penuh untuk membandingkan base..head
+          # pada event push (base = commit sebelum push terakhir).
+          fetch-depth: 0
+
+      - id: full
+        name: Jalankan manual = build penuh
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # Kunci pemetaan: area → job. Ubah di sini, plus tabel di
+          # docs/CI.md, kalau struktur repo bergeser.
+          filters: |
+            flutter:
+              - 'lib/**'
+              - 'test/**'
+              - 'assets/**'
+              - 'android/**'
+              - 'design/**'
+              - 'tool/**'
+              - 'pubspec.yaml'
+              - 'pubspec.lock'
+              - 'analysis_options.yaml'
+            # `pubspec.yaml` ikut di sini: bump versi rilis menaikkan nomor
+            # di host juga, jadi rantai host/client harus dibangun ulang —
+            # kalau tidak, release.yml tidak menemukan artefak Windows.
+            host:
+              - 'host/**'
+              - 'pubspec.yaml'
+            web:
+              - 'web/**'
+            news:
+              - 'news/**'
+            backend:
+              - 'cloudflare/**'
+              - 'signaling/**'
+            packaging:
+              - 'packaging/**'
+            # Versi hidup di banyak manifest; perubahan apa pun di daftar
+            # ini diwajibkan lolos check-meta (konsistensi versi + dokumen).
+            meta:
+              - 'tool/**'
+              - 'docs/**'
+              - 'AGENT.md'
+              - 'AGENT_BOARD.md'
+              - 'HANDOFF.md'
+              - 'CHANGELOG.md'
+              - 'CONTRIBUTORS.md'
+              - 'README.md'
+              - 'ROADMAP.md'
+              - 'SETUP.md'
+              - '.github/workflows/**'
+              - 'pubspec.yaml'
+              - 'web/package.json'
+              - 'desktop/package.json'
+              - 'host/Cargo.toml'
+
+  # ── 1a. Gerbang kompilasi & mutu client Flutter ──
+  check-flutter:
+    name: Analisis Statis (Flutter)
+    needs: changes
+    if: needs.changes.outputs.flutter == 'true' || needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -92,15 +204,49 @@ jobs:
       - name: Verifikasi inventaris lisensi mutakhir
         run: node tool/gen-licenses.mjs --check
 
-      # Badge "Resmi" hanya berarti bila mustahil diminta klien.
+      - name: Audit ilustrasi transparan untuk semua tema
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 tool/audit_assets.py
+
+      # Aturan desain ditegakkan mesin, bukan sekadar ditulis di dokumen.
+      - name: Verifikasi aturan seamless
+        run: |
+          if grep -rn --include='*.dart' -E '\b(Divider|VerticalDivider)\(' lib/; then
+            echo "::error::Ditemukan Divider. Desain XyDesk melarang garis pemisah."
+            exit 1
+          fi
+          if grep -rn --include='*.dart' -E 'scrolledUnderElevation:\s*[1-9]' lib/; then
+            echo "::error::scrolledUnderElevation > 0 memunculkan garis di bawah AppBar."
+            exit 1
+          fi
+          echo "OK - tidak ada garis pemisah terlarang."
+
+  # ── 1b. Gerbang mutu Worker berita ──
+  check-news:
+    name: Uji Worker Berita
+    needs: changes
+    if: needs.changes.outputs.news == 'true' || needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
       - name: Uji gerbang badge resmi (news worker)
         run: node --test news/test/*.test.js
 
-      # Worker signaling memegang JWT, OTP, dan rate limit. Dulu 19 test ini
-      # HANYA jalan di deploy-signaling.yml — yaitu setelah push ke main,
-      # lewat filter path cloudflare/**. PR bisa mematikan verifikasi token
-      # dan tetap hijau; kabar buruknya baru muncul saat deploy produksi.
-      # Sekarang pengawalnya jalan di setiap PR, sama seperti news worker.
+  # ── 1c. Gerbang mutu backend (Worker signaling + Go) ──
+  check-signaling:
+    name: Uji Backend (Worker + Go)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Worker signaling memegang JWT, OTP, dan rate limit. Sekarang
+      # pengawalnya jalan di setiap perubahan cloudflare/**, bukan setelah
+      # push ke main lewat deploy-signaling.yml.
       - name: Uji Worker signaling (JWT, OTP, rate limit)
         run: |
           cd cloudflare
@@ -122,33 +268,29 @@ jobs:
           fi
           echo "OK - semua berkas Go rapi."
 
+  # ── 1d. Gerbang lintas-dokumen (versi, CI, status proyek) ──
+  # Menjadi status check bagi perubahan dokumen/koordinasi: push Docs &
+  # Audit, AGENT.md, CHANGELOG, atau papan koordinasi tetap punya check
+  # hijau tanpa membayar build Flutter/Rust.
+  check-meta:
+    name: Cek Lintas-Dokumen
+    needs: changes
+    if: needs.changes.outputs.meta == 'true' || needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
       # Nomor versi hidup di satu tempat. Kalau turunannya melenceng, footer
       # web pernah memajang v2.5.0 selama empat rilis.
       - name: Verifikasi versi konsisten di semua manifest
         run: python3 tool/check_version.py
 
-      - name: Audit ilustrasi transparan untuk semua tema
-        run: |
-          python3 -m pip install --quiet Pillow
-          python3 tool/audit_assets.py
-
-      # Aturan desain ditegakkan mesin, bukan sekadar ditulis di dokumen.
-      - name: Verifikasi aturan seamless
-        run: |
-          if grep -rn --include='*.dart' -E '\b(Divider|VerticalDivider)\(' lib/; then
-            echo "::error::Ditemukan Divider. Desain XyDesk melarang garis pemisah."
-            exit 1
-          fi
-          if grep -rn --include='*.dart' -E 'scrolledUnderElevation:\s*[1-9]' lib/; then
-            echo "::error::scrolledUnderElevation > 0 memunculkan garis di bawah AppBar."
-            exit 1
-          fi
-          echo "OK - tidak ada garis pemisah terlarang."
-
   # ── 2. APK per ABI: unduhan kecil, tanpa universal gemuk ──
   android:
     name: APK Android per ABI
-    needs: check
+    needs: [changes, check-flutter]
+    if: needs.changes.outputs.flutter == 'true' || needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -269,6 +411,8 @@ jobs:
   # `needs` job ini, tidak ada .exe maupun Release yang bisa lolos di atasnya.
   host-test:
     name: Uji Logika Host (Rust)
+    needs: changes
+    if: needs.changes.outputs.host == 'true' || needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -308,7 +452,11 @@ jobs:
     # fmt/clippy/cargo test tinggal di workflow terpisah (build-host.yml) yang
     # bukan syarat rilis apa pun — akibatnya v6.1.0 sempat terbit sementara
     # gerbang itu merah pada commit yang sama. Sekarang satu rantai.
-    needs: [check, host-test]
+    needs: [changes, check-flutter, host-test]
+    if: >-
+      needs.changes.outputs.flutter == 'true' ||
+      needs.changes.outputs.host == 'true' ||
+      needs.changes.outputs.full == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -358,7 +506,8 @@ jobs:
 
   web:
     name: Web Application
-    needs: check
+    needs: changes
+    if: needs.changes.outputs.web == 'true' || needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -389,7 +538,8 @@ jobs:
   # dengan /O- (tanpa menulis output) supaya kesalahan tertangkap lebih awal.
   installer-lint:
     name: Lint Installer Windows
-    needs: check
+    needs: changes
+    if: needs.changes.outputs.packaging == 'true' || needs.changes.outputs.full == 'true'
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -426,22 +576,56 @@ jobs:
 
   summary:
     name: Ringkasan
-    needs: [host-test, android, windows, web, installer-lint]
+    needs: [changes, check-flutter, check-news, check-signaling, check-meta,
+            host-test, android, windows, web, installer-lint]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Tulis ringkasan
+        env:
+          FULL: ${{ needs.changes.outputs.full }}
+          FLUTTER: ${{ needs.changes.outputs.flutter }}
+          HOST: ${{ needs.changes.outputs.host }}
+          WEB: ${{ needs.changes.outputs.web }}
+          NEWS: ${{ needs.changes.outputs.news }}
+          BACKEND: ${{ needs.changes.outputs.backend }}
+          PACKAGING: ${{ needs.changes.outputs.packaging }}
+          META: ${{ needs.changes.outputs.meta }}
         run: |
           {
-            echo "## Hasil Build Multi-Platform XyDesk"
+            echo "## Hasil Build Multi-Platform XyDesk (difilter per area)"
             echo ""
-            echo "| Target | Status | Artefak |"
+            echo "Area yang tersentuh pada run ini:"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$FULL" = "true" ]; then
+            echo "- build penuh (workflow_dispatch)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            for pair in "$FLUTTER:flutter" "$HOST:host" "$WEB:web" "$NEWS:news" \
+                        "$BACKEND:backend" "$PACKAGING:packaging" "$META:meta"; do
+              val="${pair%%:*}"
+              name="${pair##*:}"
+              if [ "$val" = "true" ]; then
+                echo "- \`$name\`" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            done
+          fi
+          {
+            echo ""
+            echo "| Job | Status | Artefak |"
             echo "|---|---|---|"
+            echo "| Analisis Statis (Flutter)    | ${{ needs['check-flutter'].result }} | gerbang mutu client |"
+            echo "| Uji Worker Berita            | ${{ needs['check-news'].result }} | — |"
+            echo "| Uji Backend (Worker + Go)    | ${{ needs['check-signaling'].result }} | — |"
+            echo "| Cek Lintas-Dokumen           | ${{ needs['check-meta'].result }} | — |"
             echo "| Uji Logika Host (Rust)      | ${{ needs['host-test'].result }} | gerbang mutu, tanpa artefak |"
             echo "| Android APK (ARM Universal) | ${{ needs.android.result }} | \`XyDesk-Android-APK\` |"
-            echo "| Windows Desktop (EXE)       | ${{ needs.windows.result }} | \`XyDesk-Windows-EXE\` |"
+            echo "| Windows Desktop (EXE)       | ${{ needs.windows.result }} | \`XyDesk-Windows-<arch>\` |"
             echo "| Web Application             | ${{ needs.web.result }}     | \`XyDesk-Web\`         |"
             echo "| Lint Installer Windows      | ${{ needs['installer-lint'].result }} | \`packaging/windows\` |"
             echo ""
+            echo "Job dengan status \`skipped\` berarti area itu TIDAK tersentuh pada"
+            echo "commit ini — itu perilaku filter CI, bukan kegagalan. Apabila branch"
+            echo "protection mewajibkan status check, daftar namanya ada di kolom Job."
+            echo ""
             echo "Unduh seluruh artefak dari bagian **Artifacts** di bawah halaman ini."
-          } >> $GITHUB_STEP_SUMMARY
+          } >> "$GITHUB_STEP_SUMMARY"

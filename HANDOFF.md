@@ -5,6 +5,10 @@ Papan serah-terima antar sesi agent. **Setiap sesi WAJIB**:
 2. Di akhir: tambahkan temuan baru untuk role lain, dan pindahkan item yang
    kamu selesaikan ke bagian "Selesai" (JANGAN dihapus — sejarah itu bukti).
 
+> File ini mencatat **temuan lintas role**. Untuk keadaan *real-time* —
+> siapa lagi mengunci area apa, push siapa yang sudah diizinkan — baca
+> `AGENT_BOARD.md`, bukan percakapan lama.
+
 Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>`
 
 ---
