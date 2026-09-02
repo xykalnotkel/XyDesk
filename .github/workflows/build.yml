@@ -254,7 +254,10 @@ jobs:
           npm test
 
       # Signaling Go adalah jalur cadangan self-host. Formatnya pernah
-      # dibiarkan menyimpang berbulan-bulan karena tidak ada yang mengecek.
+      # dibiarkan menyimpang berbulan-bulan karena tidak ada yang mengecek, dan
+      # aturan keamanannya (role di token, arah relay) pernah lebih lemah dari
+      # Worker produksi. Uji Go kini ikut di sini: `go vet` + `go test` di
+      # setiap perubahan backend.
       - name: Cek format Go
         uses: actions/setup-go@v5
         with:
@@ -267,6 +270,11 @@ jobs:
             exit 1
           fi
           echo "OK - semua berkas Go rapi."
+      - name: Uji unit Go (signaling)
+        run: |
+          cd signaling
+          go vet ./...
+          go test ./...
 
   # ── 1d. Gerbang lintas-dokumen (versi, CI, status proyek) ──
   # Menjadi status check bagi perubahan dokumen/koordinasi: push Docs &

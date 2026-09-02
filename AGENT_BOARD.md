@@ -31,6 +31,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
 | SESI-20260903-TARA-BACKEND | Tara - XySpace Team | Backend / Edge | LAGI KERJA | Paritas keamanan signaling Go (role di token, arah relay, privasi daftar) + email berita + pin Node ≥ 22 | 2026-09-03 |
+| SESI-20260903-CAKRA-GOTEST | Cakra - XySpace Team | CI / Release | LAGI KERJA | Integrasi `go vet` + `go test` ke check-signaling | 2026-09-03 |
 
 ## Antrean izin push
 
@@ -38,11 +39,9 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 |---|---|---|---|---|---|---|
 | SESI-20260903-CAKRA-CI | Cakra - XySpace Team | Filter area di `build.yml` (job `changes` + jobs terpisah), `check-meta`/`check-news`/`check-signaling` baru, skip gracful `deploy-web.yml`, workflow `verify-push-auth.yml`, `AGENT_BOARD.md`, pembaruan `AGENT.md`/`docs/CI.md`/`CHANGELOG.md`/`CONTRIBUTORS.md` | DISETUJUI | Xyckal | 2026-09-03 | Run 1: Build 33663421875 + Verifikasi 33663421843 · Run 2: Build 33663874463 + Verifikasi 33663874589 |
 | SESI-20260903-CAKRA-NOTIF | Cakra - XySpace Team | Notifikasi push tanpa izin ke ntfy/Telegram pada `verify-push-auth.yml` + dokumentasi `docs/CI.md` + `CHANGELOG.md` | DISETUJUI | Xyckal | 2026-09-03 | Build 33664638977 + Verifikasi 33664638941 |
-<<<<<<< HEAD
 | SESI-20260903-GALIH-HOST | Galih - XySpace Team | Host Engine: bitrate video live lewat control API (aksi `video-bitrate` 1–50 Mbps, `targetBitrateBps` di `/status`), perbaikan E0308 build Windows (satu sumber tipe NVENC), pindah konstanta/perakit NVENC ke `nvenc_config.rs` + uji | DISETUJUI | Xyckal (chat) | 2026-09-03 | Build 33665824839 + Verifikasi 33665824719 |
-=======
 | SESI-20260903-TARA-BACKEND | Tara - XySpace Team | Paritas keamanan signaling Go (token bind role, middleware tolak penyamar, relayAllowed, daftar host saja) + uji Go + email berita (badge 404) + engines Node ≥ 22 + dokumentasi protokol | DISETUJUI | Xyckal | 2026-09-03 | — |
->>>>>>> f4b9fe3 (signaling: samakan keamanan token & relay dengan Worker Cloudflare)
+| SESI-20260903-CAKRA-GOTEST | Cakra - XySpace Team | `go vet` + `go test` signaling ditambahkan ke `check-signaling` + docs/CI.md | DISETUJUI | Xyckal | 2026-09-03 | — |
 
 ## Riwayat sesi (hanya bertambah)
 

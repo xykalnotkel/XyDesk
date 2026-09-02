@@ -52,8 +52,10 @@ Check yang lama (`Analisis Statis`, satu job raksasa) dipecah menjadi
 `check-flutter`, `check-news`, `check-signaling`, dan `check-meta` supaya
 filter per-area mungkin dilakukan tanpa kehilangan satu pun pengawal:
 analyze/format/test/lisensi/audit aset tetap jalan pada perubahan client,
-test Worker berita pada perubahan `news/`, test JWT/OTP/rate-limit + gofmt
-pada perubahan `cloudflare/` atau `signaling/`.
+test Worker berita pada perubahan `news/`, test JWT/OTP/rate-limit + gofmt +
+**`go vet` + `go test`** pada perubahan `cloudflare/` atau `signaling/`
+(uji Go menjagai aturan token & arah relay server self-host agar tidak
+menyimpang dari Worker produksi).
 
 ## Verifikasi izin push (verify-push-auth.yml)
 
