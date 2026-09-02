@@ -16,6 +16,7 @@ import 'core/tokens.dart';
 import 'features/account/account_page.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/auth/auth_service.dart';
+import 'widgets/profile_avatar.dart';
 import 'features/connect/connect_page.dart';
 import 'features/devices/history_page.dart';
 import 'features/home/home_page.dart';
@@ -543,6 +544,22 @@ class _AppShellState extends ConsumerState<AppShell> {
         ),
       );
     }
+
+    // Tombol avatar di topbar (di samping notifikasi & pembaruan): menampilkan
+    // foto profil yang bisa diubah, dan membawa ke tab Akun saat diketuk.
+    final user = ref.watch(authProvider);
+    actions.add(
+      Padding(
+        padding: const EdgeInsets.only(left: 2),
+        child: TopbarAvatarButton(
+          name: user.isGuest
+              ? context.tr('account_guest')
+              : (user.name ?? context.tr('account_user')),
+          initial: user.initial,
+          onTap: () => _goTo(3),
+        ),
+      ),
+    );
     return actions;
   }
 }

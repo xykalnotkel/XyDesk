@@ -36,12 +36,33 @@ Kebijakan rilis:
   toggle sisi client/sisi host, teks dari GuidePage aplikasi Android.
 - Web: blok "Dukung kami di" (Telegram, WhatsApp, TikTok) di halaman
   Connect — tautan sama dengan aplikasi Android.
+- Client Flutter: halaman **Billing** kini punya ilustrasi hero (sewa PC) —
+  PNG/WebP transparan hasil AI (`design/billing-hero-source.png`) yang
+  dibersihkan latarnya (rembg), dipasang di atas gradien brand. Sebelumnya
+  halaman hanya teks "XyDesk Beta" tanpa gambar.
+- Client Flutter: foto profil yang bisa diubah. Pengguna memilih avatar
+  preset (DiceBear, tanpa backend/kunci) atau memasukkan URL gambar
+  sendiri; tersimpan lokal. Tap avatar di header Akun membuka menu
+  "ganti nama & foto". Tombol avatar juga muncul di **topbar** di samping
+  notifikasi, dan membawa ke tab Akun saat diketuk.
+- Client Flutter: halaman detail PC menampilkan **cuplikan layar terakhir**
+  dari sesi remote (disimpan per perangkat via `session_preview`) saat
+  tersedia — menggantikan ilustrasi statis. Belum ada cuplikan → keterangan
+  jujur "Belum ada cuplikan layar", bukan gambar khayalan.
+- Client Flutter: kontrak penyimpanan cuplikan & parsing foto profil dikunci
+  lewat uji otomatis (`test/core/session_preview_test.dart`,
+  `test/widgets/profile_avatar_parse_test.dart`).
 
 ### Diubah
 - Host: durasi sampel video (maju timestamp RTP per frame) diseragamkan ke
   FPS nominal 60 (16,67 ms) lewat `NOMINAL_FPS`/`frame_duration()` —
   sebelumnya angka 33 ms terpatri acak di `main.rs`, dan sumber pola uji
   (non-Windows) kini berpacing 60 fps, bukan ~30 fps.
+- Client Flutter: layar sesi sudah memakai **satu rail tipis di tepi kanan**
+  (bar melayang tengah-atas & tengah-bawah sudah dihapus pada rilis
+  sebelumnya), dan keyboard virtual sudah mengirim input pada saat
+  **tekan-turun** (`onTapDown`), bukan saat lepas — keduanya sudah optimal,
+  tidak diubah lagi di sesi ini.
 
 ### Diperbaiki
 

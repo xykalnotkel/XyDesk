@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/tokens.dart';
+import '../../widgets/brand.dart';
 import '../../widgets/seamless.dart';
 
 class BillingPage extends StatelessWidget {
@@ -29,6 +30,65 @@ class BillingPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(Gap.screen, 8, Gap.screen, 32),
         children: [
+          // Ilustrasi hero — dipakai untuk membuka layar Billing/penyewaan PC.
+          // PNG transparan dari `assets/img/billing_hero.png` (AI + rembg),
+          // sehingga menyatu dengan latar tanpa kotak putih.
+          SurfaceCard(
+            padding: EdgeInsets.zero,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(R.lg),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFF241042),
+                            c.accent.withValues(alpha: 0.75),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: Image.asset(
+                        Img.billingHero,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox(),
+                      ),
+                    ),
+                    Positioned(
+                      left: 14,
+                      bottom: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'XyDesk Beta',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: Gap.md),
           SurfaceCard(
             padding: EdgeInsets.zero,
             child: ClipRRect(
@@ -52,16 +112,16 @@ class BillingPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'XyDesk Beta',
+                            'Semua fitur inti terbuka',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 19,
+                              fontSize: 17,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           SizedBox(height: 5),
                           Text(
-                            'Semua fitur inti terbuka, tanpa batas, tanpa kartu kredit.',
+                            'Tanpa batas, tanpa kartu kredit, selama beta.',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 11.5,

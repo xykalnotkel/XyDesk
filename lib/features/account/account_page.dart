@@ -8,6 +8,7 @@ import '../../core/l10n_bridge.dart';
 import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
+import '../../widgets/profile_avatar.dart';
 import '../../widgets/seamless.dart';
 import '../auth/auth_service.dart';
 import '../auth/legal_page.dart';
@@ -37,18 +38,17 @@ class AccountPage extends ConsumerWidget {
       ),
       children: [
         InkWell(
-          onTap: user.isGuest ? null : () => _editName(context, ref, user),
+          onTap: user.isGuest ? null : () => _editProfile(context, ref, user),
           borderRadius: BorderRadius.circular(R.lg),
           child: _ProfileHero(
             initial: user.initial,
-            picture: user.picture,
             name: user.isGuest
                 ? context.tr('account_guest')
                 : (user.name ?? context.tr('account_user')),
             email: user.email ?? context.tr('account_local_data'),
             badge: user.isGuest
                 ? 'MODE TAMU'
-                : 'AKUN AKTIF · ketuk untuk ganti nama',
+                : 'AKUN AKTIF · ketuk untuk ganti nama & foto',
           ),
         ),
         const SectionLabel('Preferensi'),
@@ -558,6 +558,218 @@ Future<void> _editName(
   }
 }
 
+/// Menu edit profil: ganti nama (via [_editName]) dan ganti foto (via
+/// [_editAvatar]). Dipisah supaya tiap aksi jelas dan tidak berubah jadi
+/// satu dialog yang menumpuk.
+Future<void> _editProfile(
+  BuildContext context,
+  WidgetRef ref,
+  UserSession user,
+) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: context.c.overlay,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _EditorHeader(
+              title: 'Edit profil',
+              onClose: () => Navigator.pop(ctx),
+            ),
+            const SizedBox(height: Gap.md),
+            ListTile(
+              leading: Icon(LucideIcons.user, size: 18, color: ctx.c.textMid),
+              title: Text(
+                'Ganti nama',
+                style: TextStyle(fontSize: 14, color: ctx.c.textHi),
+              ),
+              trailing: const Icon(LucideIcons.chevronRight, size: 16),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _editName(context, ref, user);
+              },
+            ),
+            ListTile(
+              leading: Icon(LucideIcons.camera, size: 18, color: ctx.c.textMid),
+              title: Text(
+                'Ganti foto profil',
+                style: TextStyle(fontSize: 14, color: ctx.c.textHi),
+              ),
+              trailing: const Icon(LucideIcons.chevronRight, size: 16),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _editAvatar(context, ref);
+              },
+            ),
+            const SizedBox(height: Gap.sm),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Pilih foto profil: dari preset DiceBear atau masukkan URL gambar sendiri.
+Future<void> _editAvatar(BuildContext context, WidgetRef ref) async {
+  final store = ref.read(storeProvider);
+  final current = loadAvatar(store);
+
+  await showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: context.c.overlay,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _EditorHeader(
+              title: 'Ganti foto profil',
+              onClose: () => Navigator.pop(ctx),
+            ),
+            const SizedBox(height: Gap.md),
+            Text(
+              'Pilih dari preset',
+              style: TextStyle(fontSize: 12.5, color: ctx.c.textMid),
+            ),
+            const SizedBox(height: Gap.sm),
+            SizedBox(
+              height: 96,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (final seed in profileAvatarSeeds)
+                    Padding(
+                      padding: const EdgeInsets.only(right: Gap.md),
+                      child: GestureDetector(
+                        onTap: () async {
+                          await saveAvatar(store, 'preset:$seed');
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        },
+                        child: Column(
+                          children: [
+                            ProfileAvatar(
+                              name: seed,
+                              initial: seed[0],
+                              size: 62,
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              seed,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: ctx.c.textLow,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: Gap.lg),
+            ListTile(
+              leading: Icon(LucideIcons.link, size: 18, color: ctx.c.textMid),
+              title: Text(
+                'Pakai URL gambar sendiri',
+                style: TextStyle(fontSize: 14, color: ctx.c.textHi),
+              ),
+              trailing: const Icon(LucideIcons.chevronRight, size: 16),
+              onTap: () async {
+                final url = await _askUrl(ctx);
+                if (url != null && url.isNotEmpty) {
+                  await saveAvatar(store, 'url:${Uri.encodeComponent(url)}');
+                  if (ctx.mounted) Navigator.pop(ctx);
+                }
+              },
+            ),
+            if (current != null)
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: ctx.c.textLow,
+                  padding: EdgeInsets.zero,
+                ),
+                onPressed: () async {
+                  await saveAvatar(store, '');
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                child: const Text(
+                  'Kembalikan ke inisial',
+                  style: TextStyle(fontSize: 12.5),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Future<String?> _askUrl(BuildContext context) async {
+  final ctrl = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('URL gambar', style: TextStyle(fontSize: 16)),
+      content: TextField(
+        controller: ctrl,
+        autofocus: true,
+        keyboardType: TextInputType.url,
+        decoration: const InputDecoration(hintText: 'https://…'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Batal'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+          child: const Text('Simpan'),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Judul modal + tombol tutup, dipakai oleh lembar edit profil & avatar.
+class _EditorHeader extends StatelessWidget {
+  const _EditorHeader({required this.title, required this.onClose});
+
+  final String title;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(LucideIcons.x, size: 18),
+          onPressed: onClose,
+        ),
+      ],
+    );
+  }
+}
+
 Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
   final confirmed = await showDialog<bool>(
     context: context,
@@ -605,16 +817,12 @@ class _ProfileHero extends StatelessWidget {
     required this.name,
     required this.email,
     required this.badge,
-    this.picture,
   });
 
   final String initial;
   final String name;
   final String email;
   final String badge;
-
-  /// URL foto profil (Google); fallback ke inisial bila null/gagal dimuat.
-  final String? picture;
 
   @override
   Widget build(BuildContext context) {
@@ -623,49 +831,11 @@ class _ProfileHero extends StatelessWidget {
       padding: const EdgeInsets.all(Gap.lg),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            alignment: Alignment.center,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [c.accent, const Color(0xFF8A5CF6)],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: c.accent.withValues(alpha: 0.22),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: picture == null
-                ? Text(
-                    initial,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  )
-                : Image.network(
-                    picture!,
-                    width: 52,
-                    height: 52,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Text(
-                      initial,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+          ProfileAvatar(
+            name: name,
+            initial: initial,
+            size: 52,
+            bordered: false,
           ),
           const SizedBox(width: Gap.md),
           Expanded(

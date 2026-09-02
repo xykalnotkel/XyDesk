@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/l10n_bridge.dart';
+import '../../core/session_preview.dart';
+import '../../core/store.dart';
 import '../../core/tokens.dart';
-import '../../widgets/brand.dart';
 import '../../widgets/seamless.dart';
 import '../session/session_page.dart';
 import 'device_model.dart';
@@ -242,16 +243,23 @@ class DeviceDetailPage extends ConsumerWidget {
   }
 }
 
-/// Pratinjau layar PC. Saat online memakai gambar ilustrasi; saat offline
-/// ditampilkan gelap dengan keterangan.
-class _ScreenPreview extends StatelessWidget {
+/// Pratinjau layar PC.
+///
+/// Kalau perangkat pernah dipakai di sesi remote, tampilkan **cuplikan
+/// layar terakhir** yang ditangkap saat sesi (via [saveSessionPreview]),
+/// bukan ilustrasi. Kalau belum ada cuplikan, tampilkan keterangan jujur
+/// (bukan ilustrasi khayalan) agar pengguna tidak mengira layar ini asli.
+class _ScreenPreview extends ConsumerWidget {
   const _ScreenPreview({required this.device});
 
   final Device device;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
+    final store = ref.watch(storeProvider);
+    final preview = loadSessionPreview(store, device.id);
+
     return AspectRatio(
       aspectRatio: 16 / 10,
       child: Container(
@@ -263,35 +271,45 @@ class _ScreenPreview extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (device.isOnline)
-              Image.asset(
-                Img.screen,
+            if (preview != null)
+              Image.memory(
+                preview,
                 fit: BoxFit.contain,
+                gaplessPlayback: true,
                 errorBuilder: (_, __, ___) => const SizedBox(),
               )
             else
               Center(
-                child: Opacity(
-                  opacity: 0.5,
-                  child: Image.asset(
-                    Img.pcOffline,
-                    width: 110,
-                    errorBuilder: (_, __, ___) => Icon(
-                      LucideIcons.monitorOff,
-                      size: 40,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      device.isOnline
+                          ? LucideIcons.monitor
+                          : LucideIcons.monitorOff,
+                      size: 34,
                       color: c.textLow,
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Belum ada cuplikan layar',
+                      style: TextStyle(fontSize: 12, color: c.textLow),
+                    ),
+                  ],
                 ),
               ),
             Positioned(
               left: 12,
               top: 12,
               child: _Chip(
-                text: device.isOnline
-                    ? context.tr('device_preview')
-                    : context.tr('status_offline'),
-                color: device.isOnline ? c.accent : c.textLow,
+                text: preview != null
+                    ? 'Cuplikan terakhir'
+                    : (device.isOnline
+                          ? context.tr('device_preview')
+                          : context.tr('status_offline')),
+                color: preview != null
+                    ? c.accent
+                    : (device.isOnline ? AppColors.success : c.textLow),
               ),
             ),
           ],

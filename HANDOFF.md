@@ -25,6 +25,18 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `api.dicebear.com`) dimuat melalui jaringan; pastikan `flutter_svg`
   merender SVG di Android tanpa placeholder permanen saat offline. Belum
   diuji di perangkat.
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Verifikasi cuplikan layar
+  sesi di perangkat nyata**: `session_preview` menangkap frame lewat
+  `RepaintBoundary.toImage()`. Video remote dirender sebagai platform
+  texture (`flutter_webrtc`), jadi di sebagian perangkat tangkapan bisa
+  gelap/kosong. Kalau gelap, jalur kokohnya adalah endpoint screenshot
+  dari host (lihat "Untuk: Host Engine"). Uji di Android nyata.
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Foto profil upload
+  Cloudinary**: sesi ini memakai preset/URL DiceBear (tanpa dependensi
+  baru). Upload penuh butuh `image_picker` (menambah ~15 dependensi →
+  regenerasi `docs/THIRD-PARTY-LICENSES.md` + `web/src/licenses.generated.ts`
+  → lintas area Docs/Web/CI) dan keputusan preset upload unsigned di
+  Cloudinary. Perlu persetujuan operator untuk menambah dependensi.
 
 ## Untuk: Desktop Shell
 
@@ -74,7 +86,18 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Backend / Edge
 
-_(kosong)_
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Preset upload Cloudinary
+  unsigned** untuk foto profil: kalau foto profil mau diunggah ke
+  Cloudinary tanpa menyimpan API secret di klien (aturan "tanpa kartu
+  kredit / jangan commit rahasia"), operator perlu membuat **unsigned
+  upload preset** di dasbor Cloudinary dan menyerahkan `upload_preset` +
+  `cloud_name`. Klien saya sudah siap menerima nilai itu; yang kurang
+  hanya preset-nya.
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Endpoint screenshot host**
+  opsional untuk cuplikan "layar terakhir" yang kokoh: kalau tangkapan
+  klien (RepaintBoundary) ternyata gelap di perangkat nyata, jalur
+  terbaik adalah host mengirimkan satu frame terakhir saat sesi berakhir.
+  Protokolnya bisa ditambahkan tanpa mengubah kontrak yang ada.
 
 ## Untuk: News & Konten
 
@@ -140,3 +163,15 @@ _(kosong)_
 - [x] (dari Danu, 2026-09-02) — Nama komentator nama manusia deterministik
   (bukan `tamu-xxxx`), selaras `web/src/news.ts` — selesai di kode oleh
   Laras (2026-09-03).
+- [x] (dari operator, 2026-09-03) — Ilustrasi hero layar Billing (sewa PC):
+  dibuat AI (un)gu, latar putih) → dibersihkan rembg → PNG/WebP transparan
+  `assets/img/billing_hero.webp`; sumber di `design/billing-hero-source.png`.
+  Terpasang di `BillingPage` oleh Laras (2026-09-03). Verifikasi tampilan
+  di build nyata menyusul di item Client Flutter.
+- [x] (dari operator, 2026-09-03) — Foto profil di Pengaturan (preset/URL,
+  lokal) + tombol avatar di topbar dekat notifikasi → selesai di kode oleh
+  Laras (2026-09-03). Upload Cloudinary penuh masih terbuka (lihat "Untuk:
+  Backend / Edge").
+- [x] (dari operator, 2026-09-03) — Pratinjau detail PC menampilkan cuplikan
+  layar terakhir sesi (bukan ilustrasi) → selesai di kode oleh Laras
+  (2026-09-03); keandalan capture di perangkat nyata masih harus diuji.

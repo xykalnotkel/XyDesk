@@ -39,6 +39,9 @@ class Img {
   static const connect = 'assets/img/connect.webp';
   static const error = 'assets/img/error.webp';
   static const gaming = 'assets/img/gaming.webp';
+
+  /// Ilustrasi hero layar Billing (sewa PC) — PNG transparan hasil AI+rembg.
+  static const billingHero = 'assets/img/billing_hero.webp';
   static const secure = 'assets/img/secure.webp';
 }
 

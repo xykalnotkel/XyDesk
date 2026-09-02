@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -8,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/devlog.dart';
 import '../../core/l10n_bridge.dart';
+import '../../core/session_preview.dart';
 import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../webrtc/input_codec.dart';
@@ -54,7 +57,17 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   int _panelRevision = 0;
   Timer? _idleTimer;
   Timer? _connectTimer;
+  Timer? _captureTimer;
+
+  /// Dicatat ke `RepaintBoundary` membungkus permukaan video remote, dipakai
+  /// untuk menangkap cuplikan "layar terakhir" saat sesi berjalan/putus.
+  final GlobalKey _videoKey = GlobalKey();
+
+  /// Lebar piksel kartu pratinjau yang disimpan (dibatasi supaya muat).
+  static const _previewWidth = 720;
   late SessionSettings _settings;
+
+  Store get _store => ref.read(storeProvider);
 
   /// Aliran isi papan klip PC (balasan permintaan 0x09).
   StreamSubscription<String>? _clipboardSub;
@@ -104,6 +117,49 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       DevLog.i('sesi', 'Preview UI siap — transport belum aktif');
       _restartIdleTimer();
     });
+
+    // Tangkap cuplikan "layar terakhir" secara berkala selama sesi live,
+    // supaya halaman detail PC punya gambar terbaru meski sesi berakhir
+    // tanpa sempat menangkap satu kali pun di akhir.
+    _captureTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _captureFrame();
+    });
+  }
+
+  /// Tangkap satu frame permukaan video ke penyimpanan lokal (per perangkat).
+  Future<void> _captureFrame() async {
+    // Hanya saat transport benar-benar live; kalau belum, jangan buang waktu
+    // menangkap placeholder/teks.
+    if (!_transport.state.live) return;
+    final boundary =
+        _videoKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) return;
+    try {
+      // gambar sudah dibatasi lebar agar muat di SharedPreferences (base64).
+      final ratio = (_previewWidth / boundary.size.width).clamp(0.1, 1.0);
+      final image = await boundary.toImage(pixelRatio: ratio.toDouble());
+      try {
+        final data = await image.toByteData(format: ui.ImageByteFormat.png);
+        if (data != null) {
+          await saveSessionPreview(
+            _store,
+            widget.deviceId,
+            data.buffer.asUint8List(),
+          );
+        }
+      } finally {
+        image.dispose();
+      }
+    } catch (e) {
+      // Kalau platform texture tidak bisa ditangkap (lihat session_preview.dart),
+      // jangan sampai merusak sesi — cukup catat.
+      DevLog.w('sesi', 'Tangkapan pratinjau gagal', '$e');
+    }
+  }
+
+  /// Tangkapan terakhir yang pasti, dipanggil tepat sebelum sesi ditutup.
+  Future<void> _captureFinalFrame() async {
+    await _captureFrame();
   }
 
   void _onTransportChanged() {
@@ -137,6 +193,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     _transport.dispose();
     _idleTimer?.cancel();
     _connectTimer?.cancel();
+    _captureTimer?.cancel();
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     // Flag layar-tetap-menyala milik window, bukan halaman. Kalau tidak
@@ -220,6 +277,9 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   }
 
   void _leaveSession() {
+    // Tangkap cuplikan "layar terakhir" sekali lagi tepat sebelum sesi
+    // ditutup, lalu simpan untuk halaman detail PC.
+    unawaited(_captureFinalFrame());
     // Offline previews are deliberately not added to remote-session history.
     // History should begin only after a real negotiated transport is active.
     unawaited(_transport.shutdown());
@@ -311,26 +371,31 @@ class _SessionPageState extends ConsumerState<SessionPage> {
           return Stack(
             children: [
               Positioned.fill(
-                child: _transport.state.live
-                    ? _RemoteVideoSurface(
-                        transport: _transport,
-                        relativeMouse: _settings.pointerLock,
-                        // Saat live, tap adalah klik kiri murni — kontrol
-                        // dibuka lewat rail di tepi kanan, bukan tap layar.
-                        onWake: () {},
-                      )
-                    : GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _wake,
-                        child: _RemoteScreenPlaceholder(
-                          experience: _settings.experience,
-                          transport: _transport.state,
-                          onRetry: () => _transport.retry(
-                            hostId: widget.deviceId,
-                            password: widget.password,
+                // RepaintBoundary membungkus permukaan video supaya frame
+                // "layar terakhir" bisa ditangkap (lihat _captureFrame).
+                child: RepaintBoundary(
+                  key: _videoKey,
+                  child: _transport.state.live
+                      ? _RemoteVideoSurface(
+                          transport: _transport,
+                          relativeMouse: _settings.pointerLock,
+                          // Saat live, tap adalah klik kiri murni — kontrol
+                          // dibuka lewat rail di tepi kanan, bukan tap layar.
+                          onWake: () {},
+                        )
+                      : GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _wake,
+                          child: _RemoteScreenPlaceholder(
+                            experience: _settings.experience,
+                            transport: _transport.state,
+                            onRetry: () => _transport.retry(
+                              hostId: widget.deviceId,
+                              password: widget.password,
+                            ),
                           ),
                         ),
-                      ),
+                ),
               ),
               // Pemutar audio remote (suara sistem host) — 1×1 transparan.
               // Wajib berada di pohon widget agar track Opus diputar.
