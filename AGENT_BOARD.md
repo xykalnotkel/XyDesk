@@ -31,6 +31,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
 | SESI-20260903-CAKRA-RILIS | Cakra - XySpace Team | CI / Release | LAGI KERJA | Rilis 6.3.0: bump versi + changelog + artikel berita + verifikasi rilis | 2026-09-03 |
+| SESI-20260903-GALIH-HOST-MIC | Galih - XySpace Team | Host Engine | LAGI KERJA | Mic input PC → client (WASAPI eCapture → Opus mono, otomatis bila ada mic) | 2026-09-03 |
 
 ## Antrean izin push
 
@@ -46,6 +47,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | SESI-20260903-DANU-WEB | Danu - XySpace Team | Web Connect: pemindai QR (BarcodeDetector + fallback jsQR, dep baru jsqr@1.4.0 Apache-2.0), panduan "Cara main" client/host, blok sosmed Telegram/WhatsApp/TikTok, TikTokIcon, sembunyikan tombol QR tanpa API kamera; termasuk pengesahan retroaktif push a7b2863+e9f4fc2 (sebelum gerbang berlaku) | DISETUJUI | Xyckal (chat) | 2026-09-03 | Build 33681414047 + Verifikasi 33681414017 + Deploy 33681469908 |
 | SESI-20260903-DANU-WEB-AUDIT | Danu - XySpace Team | Pengesahan retroaktif 4 push Web pra-gerbang: d3522bb (overlay kontrol sesi + Connect responsif), 0081742 (keyboard virtual + panel gaming + trackpad), 4785561 (mandat logo + kata penting ungu), bff26bb (panel pengaturan sesi) — semua dipush sebelum verify-push-auth.yml berlaku, semua sudah live & hijau | DISETUJUI | Xyckal (chat) | 2026-09-03 | — |
+| SESI-20260903-GALIH-HOST-MIC | Galih - XySpace Team | Host: mic input PC → client — WASAPI `eCapture` (perangkat komunikasi default, 48 kHz mono) → Opus 20 ms → track audio kedua (stream `mic`), otomatis hanya bila ada perangkat capture; `/status` + `meta` melaporkan `micAvailable`/`micPipeline`; uji 64 unit + loopback + cross-check Windows | DISETUJUI | Xyckal (chat) | 2026-09-03 | _(menunggu run CI)_ |
 
 ## Riwayat sesi (hanya bertambah)
 
