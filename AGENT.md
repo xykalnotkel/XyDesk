@@ -12,6 +12,8 @@
 1. Baca `AGENT.md` (file ini) sampai habis.
 2. Baca `ROADMAP.md` bagian fase yang aktif, lalu `CHANGELOG.md` bagian
    `[Belum terbit]` — supaya tahu posisi proyek hari ini, bukan menebak.
+   Baca juga `HANDOFF.md`: kalau ada item untuk role-mu, itu antrian
+   kerjamu.
 3. Tentukan **SATU role** untuk sesi ini (lihat bagian 2):
    - Kalau operator (pemilik repo) sudah menyebut role/tugas → pakai itu.
    - Kalau tidak → pilih sendiri role yang paling cocok dengan tugas yang
@@ -167,7 +169,10 @@ file proyek) berisi:
 3. **Bukti**: pemeriksaan/test apa yang dijalankan dan hasil aslinya —
    atau pengakuan jujur bahwa belum dijalankan.
 4. Apa yang BELUM selesai / diragukan / berisiko.
-5. Temuan di luar scope (untuk sesi/role lain), kalau ada.
+5. Temuan di luar scope (untuk sesi/role lain), kalau ada — dan ini TIDAK
+   cukup hanya diucapkan di chat: **tulis ke `HANDOFF.md`** (tambahkan di
+   bagian role tujuan, ikut di-commit bersama kerjaanmu). Item milikmu yang
+   selesai dipindahkan ke bagian "Selesai" di file yang sama.
 
 Laporan yang jujur tapi hasilnya belum sempurna **lebih dihargai** daripada
 laporan mulus yang ternyata bohong.
