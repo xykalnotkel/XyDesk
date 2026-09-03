@@ -127,6 +127,16 @@ Kebijakan rilis:
 - Host: `host/Cargo.lock` kembali cocok dengan `Cargo.toml` — sejak bump 6.4.0
   lock masih mencatat 6.3.0.
 
+### Diperbaiki
+- Web: **tautan versi di footer tidak lagi berujung dead-end.** Artikel
+  changelog 6.4.0 diterbitkan tanpa field `slug`, jadi `changelog-v6-4-0`
+  mengembalikan 404 dan klik "XyDesk v6.4.0" menampilkan galat mentah.
+  Kini `news.ts` melempar `ApiError` (bukan `Error` polos) sehingga halaman
+  bisa membedakan 404 dari gangguan jaringan, dan halaman detail berita
+  menampilkan penjelasan ramah "Catatan rilis versi ini belum tersedia"
+  dengan tombol ke daftar semua berita bila slug changelog 404. Perbaikan
+  akar (slug wajib saat publish) tetap milik News/CI — dicatat di HANDOFF.
+
 ## [6.4.0] - 2026-09-03
 
 ### Ditambahkan

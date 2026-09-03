@@ -272,6 +272,14 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `AGENT_BOARD.md` → push dengan `Izin: ...` di body. Commit tetap masuk,
   tapi audit mencatatnya sebagai pelanggaran.
 
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Pengingat deploy**: perubahan
+  sesi WEB10 (fallback 404 slug changelog) sudah di `main` tapi **belum live** —
+  push agent tidak memicu deploy (kebijakan 3 Sep). Sesuai aturan papan #5,
+  Web boleh deploy cepat: `npm run build` dengan `VITE_GOOGLE_CLIENT_ID`
+  produksi, deploy `wrangler`, lalu verifikasi (md5 bundle live == build,
+  content-type JS, teks "Catatan rilis versi ini belum tersedia" muncul saat
+  buka `/news/changelog-v6-4-0`). Atau serahkan ke dispatch CI/Release.
+
 ## Untuk: Backend / Edge
 
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **INFO: kini ada jalur
@@ -522,6 +530,15 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Danu - XySpace Team, 2026-09-03) — Footer web: tautan versi tidak
+  lagi dead-end. Artikel changelog 6.4.0 404 (terbit tanpa `slug`); kini
+  `news.ts` melempar `ApiError` sehingga halaman membedakan 404 dari gangguan
+  jaringan, dan halaman detail menampilkan "Catatan rilis versi ini belum
+  tersedia" + tombol ke daftar berita bila slug changelog 404. Uji:
+  `npm run build` (tsc + vite) hijau, teks fallback terkonfirmasi di bundle.
+  Belum live — deploy menunggu (lihat "Untuk: Web"). Perbaikan akar tetap di
+  News/CI.
 
 - [x] (dari Tara - XySpace Team, 2026-09-03) — Perkuat tes worker signaling &
   berita (tanpa perubahan kode produksi): `verifyGoogleIdToken` yang sempat
