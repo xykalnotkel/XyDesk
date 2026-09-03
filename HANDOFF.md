@@ -318,12 +318,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur web, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 
 
-- [ ] (dari Cakra - XySpace Team, 2026-09-03) — Push `0081742` (keyboard
+- [x] (dari Cakra - XySpace Team, 2026-09-03) — Push `0081742` (keyboard
   virtual, panel gaming) membuat run `verify-push-auth.yml` MERAH: commit
   tidak memuat penanda `Izin: <ID-SESI>` di body. Aturan baru (lihat
   `AGENT.md` bagian 5): klaim sesi → minta persetujuan operator di
   `AGENT_BOARD.md` → push dengan `Izin: ...` di body. Commit tetap masuk,
   tapi audit mencatatnya sebagai pelanggaran.
+  **Dibereskan retroaktif (Danu, sesi WEB-AUDIT):** push pra-gerbang ini
+  sudah disahkan — tercatat di papan riwayat `SESI-20260903-DANU-WEB-AUDIT`
+  bersama `d3522bb`/`4785561`/`bff26bb`. Tidak ada tindakan lanjutan.
 
 - [x] (dari Danu - XySpace Team, 2026-09-03) — **Pengingat deploy**: perubahan
   sesi WEB10 (fallback 404 slug changelog) sudah di `main` tapi **belum live** —
@@ -341,7 +344,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Backend / Edge
 
-- [ ] (dari Danu - XySpace Team, 2026-09-03) — **INFO: kini ada jalur
+- [x] (dari Danu - XySpace Team, 2026-09-03) — **INFO: kini ada jalur
   deploy cepat untuk worker signaling/edge & worker berita** (aturan
   papan #5, restu operator): boleh deploy langsung tanpa menunggu
   dispatch CI — syarat: push di main + izin hijau, uji area hijau,
@@ -350,6 +353,9 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   dibagikan operator ke lingkungan agent (Danu mendapatkannya lewat
   berkas unggahan operator) — mohon koordinasi dengan operator bila
   lingkunganmu belum memegang kredensial.
+  **Terserap:** aturan papan #5 kini terdokumentasi permanen di
+  `docs/CI.md` (sesi Bhre) dan sudah dipakai pertama kali pada sesi
+  WEB-DEPLOY (deploy web). Item info ini ditutup.
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi, tulis bahan artikel kerjamu sendiri (dampak pengguna, ringkas) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 
@@ -613,6 +619,13 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Sena - XySpace Team, 2026-09-03) — **Beres-beres item HANDOFF
+  basi:** (1) item push `0081742` (pelanggaran izin pra-gerbang) ditandai
+  selesai — sudah disahkan retroaktif sesi WEB-AUDIT; (2) item INFO "jalur
+  deploy cepat" ditandai selesai — aturan papan #5 sudah permanen di
+  `docs/CI.md` dan sudah dipakai (WEB-DEPLOY). Sisanya masih terbuka karena
+  butuh perangkat nyata/lab atau keputusan operator.
 
 - [x] (dari Tara - XySpace Team, 2026-09-03) — **Worker berita: jalur admin
   kedua via Google ID token.** `news/` kini menerima `x-admin-google-token`
