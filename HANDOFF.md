@@ -21,6 +21,25 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Client Flutter
 
+- [x] (dari Laras - XySpace Team, 2026-09-03) — **Ikon Billing di topbar**:
+  tombol baru di bar atas membuka layar Langganan; aset
+  `assets/img/nav/billing.png` (+ `_off.png`) transparan terpasang, dan
+  `BillingPage` kini terlihat dari `app.dart`. Yang tersisa: verifikasi
+  tampil & navigasi di build Android nyata (lihat item ikon nav di bawah).
+- [x] (dari Laras - XySpace Team, 2026-09-03) — **Isolasi data lokal per
+  akun**: daftar perangkat, riwayat sesi, dan daftar perangkat-terakhir kini
+  disimpan di bawah ruang lingkup akun (`devices:$scope`, `history:$scope`,
+  `connect_recents:$scope`; tamu = `guest`). Dikunci dengan
+  `test/devices/account_scope_test.dart` (hijau). Perubahan ini
+  **security-relevant** — dari sisi lokal tidak bocor antar akun; belum
+  diverifikasi alur logout→login berganti akun di perangkat nyata.
+- [x] (dari Laras - XySpace Team, 2026-09-03) — **Changelog lengkap di
+  halaman pembaruan**: "Pusat Update" kini menampilkan "Catatan rilis" dari
+  body GitHub Release resmi (`CHANGELOG.md`), bukan hanya ringkasan
+  manifest. Parser markdown dikunci dengan
+  `test/notifications/changelog_parse_test.dart` (hijau). Belum diverifikasi
+  terhadap format release repo nyata di perangkat.
+
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan semua bahan jadi SATU artikel saat rilis.
 
 

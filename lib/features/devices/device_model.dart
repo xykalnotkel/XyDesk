@@ -127,13 +127,19 @@ class SessionRecord {
 }
 
 /// Daftar perangkat yang tersimpan di HP.
+///
+/// Kunci penyimpanan memuat [scope] (per akun) supaya daftar PC yang pernah
+/// disambungkan tidak bocor antar akun setelah pengguna keluar/masuk lagi.
 class DeviceRepo extends StateNotifier<List<Device>> {
-  DeviceRepo(this._s) : super(const []) {
+  DeviceRepo(this._s, this._scope) : super(const []) {
     _load();
   }
 
   final Store _s;
-  static const _key = 'devices';
+
+  /// Ruang lingkup akun (dari [accountScopeProvider]; 'guest' untuk tamu).
+  final String _scope;
+  String get _key => 'devices:$_scope';
 
   /// Muat ulang daftar dari penyimpanan — dipakai pull-to-refresh Beranda.
   void reloadFromStore() => _load();
@@ -233,17 +239,27 @@ class DeviceRepo extends StateNotifier<List<Device>> {
 final deviceRepoProvider = StateNotifierProvider<DeviceRepo, List<Device>>((
   ref,
 ) {
-  return DeviceRepo(ref.watch(storeProvider));
+  // Scope ikut sesi: ganti akun membuat repo dibangun ulang dengan kunci yang
+  // sesuai, sehingga daftar perangkat tidak bocor antar akun.
+  final store = ref.watch(storeProvider);
+  final scope = ref.watch(accountScopeProvider);
+  return DeviceRepo(store, scope);
 });
 
 /// Riwayat sesi.
+///
+/// Kunci penyimpanan memuat [scope] (per akun) — sama dengan daftar perangkat
+/// — sehingga riwayat sesi milik akun A tidak tampil pada akun B.
 class HistoryRepo extends StateNotifier<List<SessionRecord>> {
-  HistoryRepo(this._s) : super(const []) {
+  HistoryRepo(this._s, this._scope) : super(const []) {
     state = _s.getList(_key).map(SessionRecord.fromJson).toList();
   }
 
   final Store _s;
-  static const _key = 'history';
+
+  /// Ruang lingkup akun (dari [accountScopeProvider]; 'guest' untuk tamu).
+  final String _scope;
+  String get _key => 'history:$_scope';
 
   Future<void> add(SessionRecord r) async {
     state = [r, ...state].take(50).toList();
@@ -260,6 +276,8 @@ class HistoryRepo extends StateNotifier<List<SessionRecord>> {
 
 final historyProvider = StateNotifierProvider<HistoryRepo, List<SessionRecord>>(
   (ref) {
-    return HistoryRepo(ref.watch(storeProvider));
+    final store = ref.watch(storeProvider);
+    final scope = ref.watch(accountScopeProvider);
+    return HistoryRepo(store, scope);
   },
 );

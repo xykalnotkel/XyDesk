@@ -197,6 +197,36 @@ class OfficialUpdateRepository {
       updateAvailable: updateAvailable,
     );
   }
+
+  /// Ambil isi changelog lengkap dari body GitHub Release resmi.
+  ///
+  /// `release.yml` menulis body Release dari `CHANGELOG.md`, jadi inilah
+  /// catatan perubahan paling lengkap. Manifest `update.json` hanya membawa
+  /// beberapa catatan ringkas ("Yang disiapkan"), sehingga halaman pembaruan
+  /// tampil pincang tanpa bagian ini. Mengembalikan `null` bila gagal (mis.
+  /// offline) — halaman tetap jalan memakai catatan ringkas.
+  Future<String?> releaseBody(String tag) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://api.github.com/repos/$_repository/releases/tags/$tag',
+            ),
+            headers: const {
+              'Accept': 'application/vnd.github+json',
+              'User-Agent': 'XyDesk',
+            },
+          )
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) return null;
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      if (decoded is! Map<String, dynamic>) return null;
+      final body = decoded['body'];
+      return body is String && body.trim().isNotEmpty ? body : null;
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 class UpdateCheckException implements Exception {
@@ -206,6 +236,63 @@ class UpdateCheckException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// Ubah markdown changelog (body GitHub Release) menjadi daftar catatan
+/// yang bisa ditampilkan sebagai baris di halaman pembaruan.
+///
+/// - Baris heading versi (`## [6.3.0]`) dipertahankan sebagai judul bagian.
+/// - Sub-heading (`### Ditambahkan`, `### Diubah`, dst) disimpan.
+/// - Butir daftar (`- ...`) memakai teksnya; penanda daftar dibuang.
+/// - Baris kosong, gambar, tabel, dan blok `<...>` direnggangkan.
+///
+/// Mengembalikan daftar kosong bila `body` null / kosong.
+List<String> parseChangelogMarkdown(String? body) {
+  if (body == null || body.trim().isEmpty) return const [];
+  final lines = body.split('\n');
+  final out = <String>[];
+  var sawVersion = false;
+  for (final raw in lines) {
+    final line = raw.trimRight();
+    final trimmed = line.trim();
+    // Lewati tabel markdown, gambar, blok HTML, dan baris kosong.
+    if (trimmed.isEmpty ||
+        trimmed.startsWith('|') ||
+        RegExp(r'^!\[|^<').hasMatch(trimmed)) {
+      continue;
+    }
+    if (RegExp(r'^##\s').hasMatch(trimmed)) {
+      out.add(trimmed.replaceFirst(RegExp(r'^##\s+'), ''));
+      sawVersion = true;
+      continue;
+    }
+    if (RegExp(r'^###\s').hasMatch(trimmed)) {
+      out.add(trimmed.replaceFirst(RegExp(r'^###\s+'), ''));
+      continue;
+    }
+    // Butir daftar: buang penanda baris.
+    final bullet = RegExp(r'^\s*[-*+]\s+').firstMatch(line);
+    String text;
+    if (bullet != null) {
+      text = trimmed.replaceFirst(RegExp(r'^[-*+]\s+'), '');
+    } else {
+      // Baris non-daftar dalam changelog — simpan apa adanya, tetapi jangan
+      // mulai sebelum heading versi pertama.
+      if (!sawVersion) continue;
+      text = trimmed;
+    }
+    // Bersihkan inline markdown (tautan/gambar/tebal) agar teks terbaca.
+    // `replaceAllMapped` dipakai karena Dart tidak mengevaluasi `$1` pada
+    // `replaceAll` dengan String biasa.
+    text = text
+        .replaceAllMapped(RegExp(r'\[([^\]]*)\]\([^)]*\)'), (m) => m[1] ?? '')
+        .replaceAllMapped(RegExp(r'!\[([^\]]*)\]\([^)]*\)'), (m) => m[1] ?? '')
+        .replaceAll(RegExp(r'[*_`~]'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (text.isNotEmpty) out.add(text);
+  }
+  return out;
 }
 
 String _requiredText(

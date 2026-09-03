@@ -14,6 +14,7 @@ import 'core/store.dart';
 import 'core/theme.dart';
 import 'core/tokens.dart';
 import 'features/account/account_page.dart';
+import 'features/account/billing_page.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/auth/auth_service.dart';
 import 'widgets/profile_avatar.dart';
@@ -489,6 +490,13 @@ class _AppShellState extends ConsumerState<AppShell> {
     final update = ref.watch(updateAvailabilityProvider).asData?.value;
     final hasUpdate = update?.updateAvailable ?? false;
     final actions = <Widget>[
+      // Ikon AI 3D ungu glossy untuk Billing / Sewa PC — buka layar
+      // Langganan langsung dari topbar (bukan via menu Akun).
+      _BillingIconButton(
+        onPressed: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const BillingPage())),
+      ),
       _DotIconButton(
         icon: LucideIcons.bell,
         tooltip: 'Notifikasi',
@@ -584,6 +592,30 @@ class _NavIconImage extends StatelessWidget {
         LucideIcons.circle,
         size: 28,
         color: selected ? context.c.accent : context.c.textLow,
+      ),
+    );
+  }
+}
+
+/// Tombol Billing di topbar — memakai ikon AI 3D ungu glossy (mesin sewa PC)
+/// yang sudah dibersihkan latar putihnya, konsisten dengan ikon nav.
+class _BillingIconButton extends StatelessWidget {
+  const _BillingIconButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Langganan / Sewa PC',
+      onPressed: onPressed,
+      icon: Image.asset(
+        'assets/img/nav/billing.png',
+        width: 24,
+        height: 24,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) =>
+            const Icon(LucideIcons.creditCard, size: 19),
       ),
     );
   }

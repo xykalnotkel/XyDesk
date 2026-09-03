@@ -64,8 +64,14 @@ class ConnectPage extends ConsumerStatefulWidget {
 }
 
 class _ConnectPageState extends ConsumerState<ConnectPage> {
-  static const _recentsKey = 'connect_recents';
   static const _recentsMax = 5;
+
+  /// Kunci daftar "perangkat terakhir" — memuat ruang lingkup akun supaya
+  /// daftar ID/kata sandi perangkat tidak bocor antar akun (login berbeda).
+  String get _recentsKey {
+    final scope = ref.read(accountScopeProvider);
+    return 'connect_recents:$scope';
+  }
 
   final _id = TextEditingController();
   final _pw = TextEditingController();

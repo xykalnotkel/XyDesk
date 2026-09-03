@@ -57,6 +57,25 @@ Kebijakan rilis:
   `captured_at` sejak detik ditangkap di thread capture, dan latensi
   dihitung sesaat sebelum `write_sample` — pemantauan target roadmap
   < 40 ms glass-to-glass tanpa alat eksternal.
+- Client Flutter: **tombol Billing di topbar** — ikon AI 3D ungu glossy
+  (mesin + jam + koin sewa PC) yang membuka layar Langganan langsung dari
+  bar atas, tidak perlu lewat menu Akun. Aset di `assets/img/nav/billing.png`
+  (+ `_off.png`), latar putih dibuang (transparan); `BillingPage` kini
+  terlihat dari `app.dart` lewat `import features/account/billing_page.dart`.
+- Client Flutter: **data lokal diisolasi per akun** — daftar perangkat,
+  riwayat sesi, dan daftar "perangkat terakhir" di halaman Connect kini
+  memakai kunci penyimpanan yang memuat ruang lingkup akun
+  (`devices:$scope`, `history:$scope`, `connect_recents:$scope`; tamu
+  memakai `guest`). Sebelumnya semua akun memakai kunci global, sehingga
+  setelah keluar lalu masuk akun lain, daftar PC milik akun sebelumnya
+  masih tampil — kebocoran data antar akun. Dikunci lewat
+  `test/devices/account_scope_test.dart`.
+- Client Flutter: **changelog lengkap di halaman pembaruan** — selain catatan
+  ringkas dari manifest, "Pusat Update" kini mengambil body GitHub Release
+  resmi (isi `CHANGELOG.md`) dan menampilkannya sebagai "Catatan rilis".
+  Manifest hanya membawa tiga catatan umum, jadi sebelumnya halaman tampil
+  tanpa rincian. Parser markdown dikunci lewat
+  `test/notifications/changelog_parse_test.dart`.
 
 ### Diubah
 - Web: tombol hero beranda **"Status rilis" → "Ingatkan saya"** — klik

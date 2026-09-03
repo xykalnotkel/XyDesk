@@ -35,6 +35,8 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
   bool _refreshingDownload = false;
   String? _checkError;
   String? _actionError;
+  // Catatan perubahan lengkap dari body GitHub Release (null bila offline).
+  List<String> _fullNotes = const [];
 
   @override
   void initState() {
@@ -72,6 +74,12 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
         _checkResult = result;
         _checking = false;
       });
+      // Changelog lengkap dari body Release resmi (paling lengkap dari
+      // CHANGELOG.md). Kalau gagal/offline, biarkan catatan ringkas.
+      final body = await _repository.releaseBody(result.manifest.tag);
+      if (!mounted) return;
+      final notes = _parseChangelog(body);
+      if (notes.isNotEmpty) setState(() => _fullNotes = notes);
       await _refreshDownloadStatus();
     } on UpdateCheckException catch (error) {
       if (!mounted) return;
@@ -197,6 +205,9 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
     }
   }
 
+  /// Ubah markdown changelog (body GitHub Release) menjadi daftar catatan.
+  List<String> _parseChangelog(String? body) => parseChangelogMarkdown(body);
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -284,10 +295,10 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
                 color: context.c.warningText,
               ),
             ],
-            if (details.releaseNotes.isNotEmpty) ...[
+            if (_fullNotes.isNotEmpty || details.releaseNotes.isNotEmpty) ...[
               const SizedBox(height: 18),
               Text(
-                'Yang disiapkan',
+                _fullNotes.isEmpty ? 'Yang disiapkan' : 'Catatan rilis',
                 style: TextStyle(
                   color: context.c.textHi,
                   fontSize: 15,
@@ -295,12 +306,19 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
                 ),
               ),
               const SizedBox(height: 10),
-              ...details.releaseNotes.map(
-                (note) => Padding(
-                  padding: const EdgeInsets.only(bottom: 9),
-                  child: _NoteRow(note: note),
-                ),
-              ),
+              ...(_fullNotes.isNotEmpty
+                  ? _fullNotes.map<Widget>(
+                      (note) => Padding(
+                        padding: const EdgeInsets.only(bottom: 9),
+                        child: _NoteRow(note: note),
+                      ),
+                    )
+                  : details.releaseNotes.map<Widget>(
+                      (note) => Padding(
+                        padding: const EdgeInsets.only(bottom: 9),
+                        child: _NoteRow(note: note),
+                      ),
+                    )),
             ],
             if (_downloadStatus.phase != UpdateDownloadPhase.idle) ...[
               const SizedBox(height: 10),

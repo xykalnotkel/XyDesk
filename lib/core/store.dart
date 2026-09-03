@@ -432,3 +432,27 @@ final authProvider = StateNotifierProvider<AuthNotifier, UserSession>((ref) {
     vault: ref.watch(sessionVaultProvider),
   );
 });
+
+/// Ruang lingkup data lokal per akun.
+///
+/// Perangkat yang pernah disambungkan, riwayat sesi, dan daftar "perangkat
+/// terakhir" di halaman Connect disimpan di penyimpanan lokal DENGAN kunci
+/// yang memuat ruang lingkup akun. Ini mencegah daftar PC milik akun A bocor
+/// ke akun B setelah pengguna keluar lalu masuk lagi — yang sebelumnya terjadi
+/// karena semua perangkat memakai kunci global (`devices`, `history`,
+/// `connect_recents`).
+///
+/// - Pengguna login  -> ruang lingkup berbasis email (suatu hash agar aman
+///   dipakai sebagai nama kunci).
+/// - Tamu            -> satu ruang lingkup 'guest' (tanpa akun).
+final accountScopeProvider = Provider<String>((ref) {
+  final email = ref.watch(authProvider).email;
+  if (email == null || email.isEmpty) return 'guest';
+  // Hash FNV-1a agar email tidak disimpan polos sebagai nama kunci.
+  var h = 0x811C9DC5;
+  for (final c in email.codeUnits) {
+    h ^= c;
+    h = (h * 0x01000193) & 0xFFFFFFFF;
+  }
+  return 'acct-${h.toRadixString(16).padLeft(8, '0')}';
+});
