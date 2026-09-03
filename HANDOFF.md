@@ -156,14 +156,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
-- [x] (dari Tara - XySpace Team, 2026-09-03, sesi TARA-NEWS-GOOGLE) — **INFO
-  deploy worker berita menunggu:** worker berita (`news/`) kini menerima
+- [x] (dari Tara - XySpace Team, 2026-09-03, sesi TARA-NEWS-DEPLOY) — **INFO
+  deploy worker berita TUNTAS:** worker berita (`news/`) kini menerima
   `x-admin-google-token` (jalur admin kedua; `x-admin-token` tetap sah).
-  Kode sudah di `main`, tes 32/32 hijau, **belum live** — deploy `news/`
-  belum dijalankan (push tidak memicu deploy, kebijakan 3 Sep). Jalur Google
-  butuh dua secret sebelum deploy: `GOOGLE_CLIENT_ID` (audience OAuth web) +
-  `FOUNDER_EMAIL` (email Google founder). Silakan deploy (aturan #5 / dispatch
-  `deploy-news`) atau set secret-nya saat rilis berikutnya.
+  **Sudah LIVE** — deploy cepat aturan #5: secret `GOOGLE_CLIENT_ID` +
+  `FOUNDER_EMAIL` terpasang, `wrangler deploy` versi
+  `11253cf5-cd17-495f-8546-135019a843e1`, verifikasi pasca-deploy tercatat
+  (CORS `X-Admin-Google-Token` live, `GET /api/news` OK, publish dgn token
+  sampah/tanpa token → 401). Tidak ada rilis/bump versi — murni deploy
+  worker.
 
 - [x] (dari Danu - XySpace Team, 2026-09-03, sesi WEB-DEPLOY) — **INFO deploy
   cepat Web (aturan #5):** fix WEB10 (fallback 404 slug changelog) sudah LIVE
@@ -383,7 +384,11 @@ _(kosong)_
   via JWKS, audience + email == `FOUNDER_EMAIL`); `x-admin-token` lama tetap
   sah; gagal-tertutup bila secret tidak lengkap. Tes `news/` 32/32 hijau.
   **Belum live** — deploy worker berita belum dijalankan (lihat "Untuk: CI /
-  Release"). Sisi klien web (mengirim id_token saat founder masuk, tanpa
+  Release"). **UPDATE: sudah LIVE** (Tara, sesi TARA-NEWS-DEPLOY) — versi
+  `11253cf5-cd17-495f-8546-135019a843e1`, secret `GOOGLE_CLIENT_ID` +
+  `FOUNDER_EMAIL` terpasang, verifikasi pasca-deploy tercatat (CORS
+  `X-Admin-Google-Token` live, feed publik OK, jalur Google gagal-tertutup
+  401). Sisi klien web (mengirim id_token saat founder masuk, tanpa
   tempel token) menunggu sesi Web — lihat "Untuk: Web".
 
 - [x] (dari Laras - XySpace Team, 2026-09-03) — **SELESAI 3 Sep 2026 (sesi
@@ -620,6 +625,13 @@ _(kosong)_
 
 ## Selesai
 
+- [x] (dari Tara - XySpace Team, 2026-09-03) — **Deploy cepat worker berita
+  (aturan #5):** jalur admin Google (`x-admin-google-token`) LIVE di
+  `news.xystudio.my.id` — secret `GOOGLE_CLIENT_ID` + `FOUNDER_EMAIL`
+  terpasang, `wrangler deploy` versi `11253cf5-cd17-495f-8546-135019a843e1`,
+  verifikasi pasca-deploy: CORS `X-Admin-Google-Token` live, `GET /api/news`
+  OK, publish token sampah/tanpa token → 401 (gagal-tertutup).
+
 - [x] (dari Sena - XySpace Team, 2026-09-03) — **Beres-beres item HANDOFF
   basi:** (1) item push `0081742` (pelanggaran izin pra-gerbang) ditandai
   selesai — sudah disahkan retroaktif sesi WEB-AUDIT; (2) item INFO "jalur
@@ -662,8 +674,8 @@ _(kosong)_
   jaringan, dan halaman detail menampilkan "Catatan rilis versi ini belum
   tersedia" + tombol ke daftar berita bila slug changelog 404. Uji:
   `npm run build` (tsc + vite) hijau, teks fallback terkonfirmasi di bundle.
-  Belum live — deploy menunggu (lihat "Untuk: Web"). Perbaikan akar tetap di
-  News/CI.
+  **Sudah live** (deploy cepat WEB-DEPLOY, 3 Sep 2026) — bundle
+  `index-CCHcbcu7.js`. Perbaikan akar tetap di News/CI.
 
 - [x] (dari Tara - XySpace Team, 2026-09-03) — Perkuat tes worker signaling &
   berita (tanpa perubahan kode produksi): `verifyGoogleIdToken` yang sempat
