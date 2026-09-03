@@ -21,7 +21,7 @@ Yang penting: keputusan arsitektur tidak berubah. Capture DXGI dan encode tetap 
 Aksi yang tersedia dari panel: password acak baru, password kustom, dan akhiri sesi. Stop-session semantiknya sama dengan bye dari client — koneksi ditutup dan peer wajib pairing ulang.',
   'https://app.xystudio.my.id/news/covers/desktop-shell.jpg',
   'rilis',
-  'Tim XyDesk',
+  'Haekal Saputra',
   1
 ),
 (
@@ -35,7 +35,7 @@ Implementasi NVENC di host kini terkabel ke jalur capture: frame pertama menentu
 Panel host menampilkan status encoder langsung: badge NVENC menyala kalau hardware aktif. Yang belum berubah: angka glass-to-glass di jaringan nyata masih harus dibuktikan di lab. Targetnya tetap 40 ms di LAN, dan kami tidak akan klaim "cocok untuk game" sebelum fotonya ada.',
   'https://app.xystudio.my.id/news/covers/nvenc.jpg',
   'teknik',
-  'Tim XyDesk',
+  'Haekal Saputra',
   1
 ),
 (
@@ -49,7 +49,7 @@ Protokol kami (docs/LATENCY.md): host menampilkan jam milidetik di layar, client
 Status hari ini: loop capture-encode-RTP-terima sudah terbukti di test loopback otomatis, benchmark encode sudah punya angka (30 ms openh264 di 640x360), dan angka end-to-end masih kosong. Begitu lab Windows jalan, hasilnya akan dipublikasikan di sini — apapun hasilnya.',
   'https://app.xystudio.my.id/news/covers/latency.jpg',
   'teknik',
-  'Tim XyDesk',
+  'Haekal Saputra',
   1
 ),
 (
@@ -59,7 +59,7 @@ Status hari ini: loop capture-encode-RTP-terima sudah terbukti di test loopback 
   'Versi 2.5 adalah rilis "beres-beres": tampilan, konsistensi, dan keterbukaan.\n\nTampilan. Semua platform kini memakai bahasa visual yang sama — dominan hitam-putih dengan ungu hanya sebagai aksen kecil. Logo X yang selama ini dipakai di sampul berita menjadi logo resmi, tanpa glow dan tanpa bayangan. Splash Android mengikuti tema terang, ikon navigasi mengikuti warna tema.\n\nBerita. Satu umpan berita yang sama tampil di Android, Desktop, dan Web — lengkap dengan like, komentar, dan bagikan. Di web, setiap berita punya meta OpenGraph sendiri sehingga tautan yang dibagikan ke WhatsApp atau X tampil dengan judul, ringkasan, dan sampul yang benar. Perbaikan penting: sebelumnya berita di web gagal dimuat ("Failed to fetch") karena aturan Content-Security-Policy belum mengizinkan domain berita — sekarang sudah diizinkan dan diverifikasi live.\n\nLisensi. Kode sumber XyDesk kini berlisensi Apache 2.0. Daftar lisensi perangkat lunak pihak ketiga (Flutter, Electron, Lucide, Inter, dan lain-lain) bisa dibaca di halaman Legal di semua platform.\n\nVersi: Android 2.5.0 (build 19), Web 2.5.0, Desktop 2.5.0. Setiap rilis berikutnya akan selalu punya catatan seperti ini di Berita.',
   'https://app.xystudio.my.id/news/covers/v25.jpg',
   'rilis',
-  'Tim XyDesk',
+  'Haekal Saputra',
   1
 )
 ON CONFLICT(slug) DO UPDATE SET

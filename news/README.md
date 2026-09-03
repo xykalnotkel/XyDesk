@@ -44,7 +44,7 @@ curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
     "content": "Isi panjang — paragraf dipisah baris kosong.",
     "cover": "https://app.xystudio.my.id/news/covers/<file>.jpg",
     "category": "rilis|teknik|umum",
-    "author": "Tim XyDesk"
+    "author": "Haekal Saputra"
   }'
 ```
 

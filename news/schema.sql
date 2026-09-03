@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS posts (
   content TEXT NOT NULL,
   cover TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT 'umum',
-  author TEXT NOT NULL DEFAULT 'Tim XyDesk',
+  author TEXT NOT NULL DEFAULT 'Haekal Saputra',
   published INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

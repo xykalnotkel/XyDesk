@@ -48,7 +48,7 @@ class NewsPost {
     content: j['content'] as String? ?? '',
     cover: j['cover'] as String? ?? '',
     category: j['category'] as String? ?? 'umum',
-    author: j['author'] as String? ?? 'Tim XyDesk',
+    author: j['author'] as String? ?? 'Haekal Saputra',
     createdAt: j['createdAt'] as String? ?? '',
     likeCount: j['likeCount'] as int? ?? 0,
     commentCount: j['commentCount'] as int? ?? 0,
