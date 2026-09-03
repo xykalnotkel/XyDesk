@@ -183,49 +183,9 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
-  windows-host:
-    name: Host Rust Windows ${{ matrix.arch }}
-    needs: prepare
-    if: needs.prepare.outputs.should_release == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x64
-            runner: windows-latest
-          - arch: arm64
-            runner: windows-11-arm
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.prepare.outputs.release_sha }}
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            host/target
-          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-release-${{ hashFiles('host/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-${{ matrix.arch }}-cargo-release-
-      - name: Build host release
-        working-directory: host
-        run: cargo build --release
-      - uses: actions/upload-artifact@v4
-        with:
-          name: release-host-${{ matrix.arch }}
-          path: host/target/release/xydesk-host.exe
-          if-no-files-found: error
-          retention-days: 3
-
   windows-installer:
     name: Installer Windows ${{ matrix.arch }}
-    needs: [prepare, clients, windows-host]
+    needs: [prepare, clients]
     if: needs.prepare.outputs.should_release == 'true'
     strategy:
       fail-fast: false
@@ -241,24 +201,18 @@ jobs:
         with:
           name: release-client-assets
           path: incoming/clients
-      - uses: actions/download-artifact@v4
-        with:
-          name: release-host-${{ matrix.arch }}
-          path: incoming/host
       - name: Satukan aplikasi dan engine Host
         shell: pwsh
         run: |
           $bundle = Join-Path $env:RUNNER_TEMP "xydesk-${{ matrix.arch }}"
           New-Item -ItemType Directory -Force -Path $bundle | Out-Null
-          # Artefak Windows kini: XyDesk.exe (GUI native) + XyDesk-Host.exe
-          # dari satu crate host — tanpa runner Flutter/Tauri.
+          # Artefak Windows kini: shell Electron (XyDesk.exe) + engine Rust
+          # yang dibundel electron-builder ke resources/engine/xydesk-host.exe.
+          # GUI native Win32 tidak lagi dikemas.
           Expand-Archive "incoming/clients/app-windows-${{ matrix.arch }}.zip" $bundle
           if (-not (Test-Path "$bundle/XyDesk.exe")) { throw "XyDesk.exe tidak ada di bundle" }
-          New-Item -ItemType Directory -Force -Path "$bundle/Host" | Out-Null
-          if (Test-Path "$bundle/XyDesk-Host.exe") {
-            Move-Item "$bundle/XyDesk-Host.exe" "$bundle/Host/XyDesk-Host.exe" -Force
-          } else {
-            Copy-Item "incoming/host/xydesk-host.exe" "$bundle/Host/XyDesk-Host.exe"
+          if (-not (Test-Path "$bundle/resources/engine/xydesk-host.exe")) {
+            throw "engine tidak dibundel (resources/engine/xydesk-host.exe hilang)"
           }
           "BUNDLE_PATH=$bundle" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Bundle driver VDD untuk installer (opt-in)
@@ -367,7 +321,7 @@ jobs:
 
   publish:
     name: Terbitkan Release dan push update
-    needs: [prepare, clients, windows-host, windows-installer]
+    needs: [prepare, clients, windows-installer]
     if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     env:

@@ -124,8 +124,11 @@ jobs:
             # `pubspec.yaml` ikut di sini: bump versi rilis menaikkan nomor
             # di host juga, jadi rantai host/client harus dibangun ulang —
             # kalau tidak, release.yml tidak menemukan artefak Windows.
+            # `desktop/**` juga area host: produk Windows = shell Electron
+            # (desktop/) + engine Rust (host/), dibangun di job `windows`.
             host:
               - 'host/**'
+              - 'desktop/**'
               - 'pubspec.yaml'
             web:
               - 'web/**'
@@ -466,16 +469,20 @@ jobs:
         working-directory: host
         run: cargo test --all-targets
 
-  # ── 3. Windows Native Desktop: x64 dan Arm64 resmi Flutter ──
+  # ── 3. Produk Windows: shell Electron + engine Rust (x64 dan Arm64) ──
   windows:
-    name: Windows ${{ matrix.arch }} (native)
+    name: "Windows ${{ matrix.arch }} (host: shell Electron + engine)"
     # Gerbang mutu host WAJIB hijau sebelum ada .exe yang lahir. Sebelumnya
     # fmt/clippy/cargo test tinggal di workflow terpisah (build-host.yml) yang
     # bukan syarat rilis apa pun — akibatnya v6.1.0 sempat terbit sementara
     # gerbang itu merah pada commit yang sama. Sekarang satu rantai.
-    needs: [changes, check-flutter, host-test]
+    #
+    # Sejak 3 Sep 2026, produk Windows = shell Electron/Next.js (desktop/)
+    # yang mensupervisi engine Rust xydesk-host.exe — GUI native Win32
+    # (host/src/bin/gui.rs) tidak lagi dikemas. `desktop/**` masuk filter
+    # area `host`, jadi perubahan shell ikut memicu job ini.
+    needs: [changes, host-test]
     if: >-
-      needs.changes.outputs.flutter == 'true' ||
       needs.changes.outputs.host == 'true' ||
       needs.changes.outputs.full == 'true'
     strategy:
@@ -489,12 +496,17 @@ jobs:
             runner: windows-11-arm
             target: aarch64-pc-windows-msvc
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
       - name: Cache Cargo (host)
         uses: actions/cache@v4
         with:
@@ -504,24 +516,37 @@ jobs:
             host/target
           key: native-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('host/Cargo.lock') }}
           restore-keys: native-${{ runner.os }}-${{ matrix.arch }}-
-      - name: Build GUI native + engine (satu crate)
+      - name: Build engine Rust (release)
         working-directory: host
-        run: cargo build --release --target ${{ matrix.target }} --bins
+        run: cargo build --release --target ${{ matrix.target }} --bin xydesk-host
+      - name: Salin engine ke lokasi extraResources electron-builder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "host/target/release" | Out-Null
+          Copy-Item "host/target/${{ matrix.target }}/release/xydesk-host.exe" `
+            "host/target/release/xydesk-host.exe" -Force
+          Write-Host "engine: $((Get-Item host/target/release/xydesk-host.exe).Length) byte"
+      - name: Build shell Electron (Next.js + unpacked)
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          npm ci
+          npm run build
+          npx electron-builder --win --dir --${{ matrix.arch }}
       - name: Kumpulkan output
         shell: pwsh
         run: |
-          $dir = "host/target/${{ matrix.target }}/release"
-          foreach ($f in @("xydesk.exe","xydesk-host.exe")) {
-            if (-not (Test-Path "$dir/$f")) { throw "$f tidak ditemukan" }
+          $dir = "desktop/dist/win-unpacked"
+          if (-not (Test-Path "$dir/XyDesk.exe")) { throw "XyDesk.exe tidak ditemukan di $dir" }
+          if (-not (Test-Path "$dir/resources/engine/xydesk-host.exe")) {
+            throw "engine tidak dibundel (resources/engine/xydesk-host.exe hilang)"
           }
-          New-Item -ItemType Directory -Force -Path out-desktop | Out-Null
-          Copy-Item "$dir/xydesk.exe" out-desktop/XyDesk.exe
-          Copy-Item "$dir/xydesk-host.exe" out-desktop/XyDesk-Host.exe
-          Get-ChildItem out-desktop | ForEach-Object { Write-Host "OUT: $($_.Name) ($([math]::Round($_.Length/1MB,2)) MB)" }
+          Get-ChildItem $dir | ForEach-Object { Write-Host "OUT: $($_.Name)" }
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Windows-${{ matrix.arch }}
-          path: out-desktop/*
+          path: desktop/dist/win-unpacked/*
           retention-days: 30
           if-no-files-found: error
 

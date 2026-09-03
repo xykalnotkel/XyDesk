@@ -18,6 +18,18 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Ditambahkan
+- Desktop (host Windows): GUI host kembali ke **shell Electron + Next.js**
+  (`desktop/`), menggantikan jendela native Win32 5 MB yang selama ini
+  dikemas installer. Installer kini memaketkan `XyDesk.exe` (Electron) +
+  `resources/engine/xydesk-host.exe` (engine Rust, dibundel
+  electron-builder). Jendela native `host/src/bin/gui.rs` tetap ada di
+  sumber sebagai cadangan, tidak lagi dikemas.
+- Desktop (host Windows): **host selalu aktif** — menutup jendela kini
+  menyembunyikan ke **system tray** (ikon XyDesk), engine tetap hidup di
+  latar belakang; notifikasi balloon muncul sekali saat pertama kali
+  diminimize ke tray. Keluar beneran hanya lewat menu tray "Keluar
+  (hentikan host)". Sebelumnya menutup jendela mematikan engine — host
+  mati begitu jendela ditutup, bertentangan dengan standar remote desktop.
 - Host: **mic input PC → client** — mikrofon host direkam via WASAPI
   `eCapture` (perangkat komunikasi default, PCM 16-bit 48 kHz mono) →
   Opus 20 ms → track audio kedua (stream `mic`). Aktif otomatis hanya bila

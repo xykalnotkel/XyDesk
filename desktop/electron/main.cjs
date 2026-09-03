@@ -15,7 +15,7 @@
 // hasil /status (bukan masalah: renderer adalah UI kita sendiri dan butuh
 // menampilkan password pairing).
 
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } = require('electron');
 const { spawn, execFile } = require('node:child_process');
 const http = require('node:http');
 const fs = require('node:fs');
@@ -39,6 +39,9 @@ let control = null; // { port, token } — dari baris "[control]" stdout engine
 let identity = null; // { deviceId, password }
 let restartAttempt = 0;
 let watchdogTimer = null;
+let tray = null; // ikon tray — host selalu aktif walau jendela ditutup
+let isQuitting = false; // pembeda tutup-jendela (sembunyi) vs keluar beneran
+let trayNoticeShown = false;
 
 const logs = [];
 
@@ -334,6 +337,26 @@ function createWindow() {
     if (/^https?:\/\//.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
+  // Host selalu aktif: menutup jendela TIDAK mematikan app/engine — jendela
+  // disembunyikan ke tray (standar remote desktop). Keluar beneran hanya
+  // lewat menu tray "Keluar" (atau app.quit()) yang menyetel isQuitting.
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+      if (!trayNoticeShown && tray) {
+        trayNoticeShown = true;
+        try {
+          tray.displayBalloon({
+            title: 'XyDesk tetap aktif',
+            content: 'Host berjalan di latar belakang. Buka lagi lewat ikon XyDesk di tray.',
+          });
+        } catch {
+          /* balloon tidak tersedia — abaikan */
+        }
+      }
+    }
+  });
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -345,17 +368,59 @@ function createWindow() {
   }
 }
 
+// ── Tray + siklus always-on ──────────────────────────────────────────────
+// Ikon tray: file .ico di sebelah main.cjs (ikut dibundel via build.files
+// "electron/**"). Ukuran multi (16–256) — Windows memilih yang pas.
+function trayIcon() {
+  try {
+    const icon = nativeImage.createFromPath(path.join(__dirname, 'tray.ico'));
+    if (!icon.isEmpty()) return icon;
+  } catch {
+    /* fallback ke ikon kosong */
+  }
+  return nativeImage.createEmpty();
+}
+
+function showWindow() {
+  if (!mainWindow) {
+    createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function createTray() {
+  tray = new Tray(trayIcon());
+  tray.setToolTip('XyDesk — host selalu aktif');
+  const menu = Menu.buildFromTemplate([
+    { label: 'Buka XyDesk', click: () => showWindow() },
+    { type: 'separator' },
+    { label: 'Keluar (hentikan host)', click: () => quitApp() },
+  ]);
+  tray.setContextMenu(menu);
+  tray.on('click', () => showWindow());
+}
+
+function quitApp() {
+  isQuitting = true;
+  if (engine && engine.exitCode === null) {
+    try {
+      engine.kill();
+    } catch {
+      /* proses sudah mati */
+    }
+  }
+  app.quit();
+}
+
 // ── Siklus hidup app ────────────────────────────────────────────────────
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
-    }
-  });
+  app.on('second-instance', () => showWindow());
 
   app.whenReady().then(async () => {
     registerIpc();
@@ -363,17 +428,36 @@ if (!gotLock) {
       rendererPort = await startRendererServer();
     }
     createWindow();
+    createTray();
     // Mulai supervisor tanpa memblokir tampilan UI.
     startEngine().catch(() => {});
     startWatchdog();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      else showWindow();
     });
   });
 
+  // Keluar beneran (menu tray / app.quit): tandai supaya handler close
+  // jendela tidak mencegat, lalu pastikan engine ikut mati.
+  app.on('before-quit', () => {
+    isQuitting = true;
+  });
+  app.on('quit', () => {
+    if (engine && engine.exitCode === null) {
+      try {
+        engine.kill();
+      } catch {
+        /* proses sudah mati */
+      }
+    }
+  });
+
+  // Host harus selalu aktif: jendela tertutup hanya disembunyikan (close
+  // dicegat di atas), jadi ini praktis tidak pernah terpicu pada mode tray.
+  // Tetap dijaga supaya app tidak menggantung bila jendela benar-benar tutup.
   app.on('window-all-closed', () => {
-    if (engine && engine.exitCode === null) engine.kill();
-    app.quit();
+    if (isQuitting) app.quit();
   });
 }

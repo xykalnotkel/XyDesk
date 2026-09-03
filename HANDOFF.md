@@ -41,6 +41,14 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Desktop Shell
 
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — Host Windows kini kembali
+  memakai **shell Electron + Next.js** (`desktop/`) sebagai UI utama, dan
+  installer mengemasnya (bukan lagi jendela native `host/src/bin/gui.rs`).
+  `desktop/electron/main.cjs` sudah diberi **tray + always-on**: tutup
+  jendela = sembunyi ke tray, engine tetap hidup; keluar lewat menu tray.
+  Silakan verifikasi di Windows nyata (tray icon, balloon, `npm run build`
+  + `npx electron-builder --win --dir`), dan lanjutkan pemolesan UI panel
+  (bitrate, latensi, encoder, mic) yang endpoint-nya sudah ada.
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — Host kini mengirim **dua**
   stream audio: `audio` (loopback suara sistem) dan `mic` (mikrofon PC host,
   hanya bila ada perangkat capture). Client yang menyajikan track audio
@@ -72,6 +80,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: CI / Release
 
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — Produk Windows pindah dari
+  "GUI native Win32 + engine" menjadi "shell Electron (`desktop/`) + engine
+  Rust". Yang berubah: `build.yml` job `windows` kini build engine +
+  `electron-builder --win --dir` (unggah `desktop/dist/win-unpacked/*`),
+  filter area `host` kini menyertakan `desktop/**`; `release.yml` job
+  `windows-host` DIHAPUS (engine sudah dibundel electron-builder) dan
+  installer tinggal memverifikasi `resources/engine/xydesk-host.exe`.
+  **Belum terverifikasi**: `electron-builder --arm64` di runner
+  `windows-11-arm` dan jalur rilis penuh — tolong dipantau saat run pertama.
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — Push host-only ke `main`
   (tanpa perubahan area client) saat rilis belum selesai memicu ulang
   `release.yml`: job `Ambil build client yang sudah lulus` MERAH karena
