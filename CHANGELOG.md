@@ -31,6 +31,15 @@ Kebijakan rilis:
 - Web: **tombol lompat di detail berita** — panah bawah melayang di pojok
 
 ### Diperbaiki
+- Web: **foto profil ganda di komentar resmi berita** — kepala komentar
+  sudah menggambar avatar (foto founder), tapi komponen nama penulis
+  menggambarnya sekali lagi dari dalam, sehingga komentar akun resmi
+  tampil dengan dua foto identik bersebelahan. Kini komponen itu punya
+  prop `avatar` dan komentar/reply mematikannya; byline artikel tetap
+  menampilkan foto founder.
+- Berita/D1: byline sisa di tabel posts — 5 artikel lama masih bernama
+  `Tim …` (mis. `Tim XyDesk`, luput dari normalisasi sebelumnya yang
+  hanya menangkap `Tim XySpace`) kini semua `Haekal Saputra`.
 - Web: **deep link `/billing` jatuh ke beranda** — `currentRoute()` tidak
 - Web: **race deploy-web.yml** — dua Build sukses berdekatan bisa mencampur payload sehingga deploy checkout SHA lama dan menimpa bundle baru (kejadian 6c5ba06/d90e12a, ditebus manual). Kini SHA & run Build diambil dari API, checkout memakai SHA itu, artefak dicocokkan dengan run-nya, deploy berjalan serial (tidak dibatalkan di tengah), dan hanya Build web terbaru yang boleh deploy.
 - Web: **overflow horizontal di detail berita (layar ≤ 390 px)** — baris

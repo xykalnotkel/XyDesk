@@ -148,6 +148,12 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: CI / Release
 
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Permintaan dispatch WEB8**:
+  push fix avatar ganda komentar berita (lihat CHANGELOG) menunggu
+  Build + Deploy Web App via dispatch (kebijakan 2dbd186). D1 sudah
+  dinormalisasi langsung (byline 5 artikel lama → Haekal Saputra),
+  jadi tidak ada perubahan worker yang perlu deploy-news.
+
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **Permintaan dispatch WEB7**:
   push `5207989` (sewa PC durasi custom + stok, chip total & sisa waktu
   sesi, fix deep link /billing) sudah di main dengan Verifikasi Izin

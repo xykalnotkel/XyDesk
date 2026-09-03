@@ -956,15 +956,20 @@ function AuthorName({
   name,
   official,
   size = 'sm',
+  avatar = true,
 }: {
   name: string;
   official?: boolean;
   size?: 'sm' | 'md';
+  /// Foto founder menempel di byline artikel, tapi JANGAN di komentar —
+  /// kepala komentar sudah punya avatar sendiri; kalau keduanya jalan,
+  /// komentar resmi tampil dengan foto yang sama dua kali.
+  avatar?: boolean;
 }) {
   if (!official) return <span className="author-name">{name}</span>;
   return (
     <span className={`author-name official ${size}`}>
-      <img className="author-badge" src="/team/founder.jpg" alt="" aria-hidden="true" />
+      {avatar && <img className="author-badge" src="/team/founder.jpg" alt="" aria-hidden="true" />}
       <strong>{name}</strong>
       <span className="official-tag" title="Akun resmi XySpace — Haekal Saputra">
         XySpace
@@ -1389,7 +1394,7 @@ function NewsDetailPage({
                         alt=""
                         loading="lazy"
                       />
-                      <AuthorName name={c.author} official={c.official} />
+                      <AuthorName name={c.author} official={c.official} avatar={false} />
                       <span>{formatRelativeTime(c.createdAt)}</span>
                     </div>
                     <p>{c.content}</p>
@@ -1407,7 +1412,7 @@ function NewsDetailPage({
                                 alt=""
                                 loading="lazy"
                               />
-                              <AuthorName name={r.author} official={r.official} />
+                              <AuthorName name={r.author} official={r.official} avatar={false} />
                               <span>{formatRelativeTime(r.createdAt)}</span>
                             </div>
                             <p>{r.content}</p>
