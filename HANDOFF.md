@@ -97,6 +97,13 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   nama belakang = 1984 kombinasi. Nama tersimpan selama sesi tamu berlangsung.
   File: `guest_identity.dart`, `store.dart` (signInGuest & restore).
 
+- [x] (dari Laras - XySpace Team, 2026-09-03) — **Bahan artikel rilis Client**:
+  Bahan artikel untuk semua fitur yang sudah dikerjakan di sesi ini (8 fitur)
+  sudah ditulis dengan gaya NEWS_STYLE.md. File: `BAHAN_ARTIKEL_CLIENT.md`.
+  Tinggal disatukan dengan bahan dari agent lain (Desktop Shell, Web, Backend)
+  saat rilis. Screenshot masih placeholder — perlu verifikasi di perangkat
+  Android nyata untuk ambil screenshot asli dari build rilis.
+
 - [x] (dari Laras - XySpace Team, 2026-09-03) — **Ikon Billing di topbar**:
   tombol baru di bar atas membuka layar Langganan; aset
   `assets/img/nav/billing.png` (+ `_off.png`) transparan terpasang, dan
