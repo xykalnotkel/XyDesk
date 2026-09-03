@@ -59,6 +59,13 @@ Kebijakan rilis:
   < 40 ms glass-to-glass tanpa alat eksternal.
 
 ### Diubah
+- Web: halaman **Connect** dirapikan — blok "Dukung kami di" naik ke atas
+  "Cara main", input ID perangkat kini rata kiri dengan gaya sama seperti
+  field password (dulu angka besar terpusat berspasi lebar, tampak berbeda
+  sendiri), dan password pairing punya tombol tampil/sembunyi (ikon mata).
+  Password host memang huruf besar semua by design (charset tanpa I/O/0/1,
+  10 karakter ≈ 50 bit) — tombol mata membuat pencocokan dengan layar PC
+  cepat tanpa menebak ketikan.
 - Web: **layar sesi didesain ulang ke arah paritas aplikasi** — baris tombol
   teks diganti rail ikon vertikal di tepi kanan (Suara PC, Mik ke PC,
   Keyboard, Gamepad, Trackpad, papan klip kirim/ambil, layar penuh,

@@ -1724,6 +1724,25 @@ function QrIcon() {
   );
 }
 
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M17.94 17.94A10.5 10.5 0 0 1 12 19c-6.5 0-10-7-10-7a19.8 19.8 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a19.8 19.8 0 0 1-3.22 4.31" />
+      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+      <path d="M2 2l20 20" />
+    </svg>
+  );
+}
+
 function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) {
   const [hostId, setHostId] = useState(() => localStorage.getItem(LAST_HOST_KEY) ?? '');
   const [pin, setPin] = useState('');
@@ -1740,6 +1759,10 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const [padOpen, setPadOpen] = useState(false);
   const [trackpad, setTrackpad] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  // Password pairing bisa diperlihatkan — sengaja huruf besar semua di sisi
+  // host (tanpa I/O/0/1 yang mudah tertukar), jadi lihat-langsung adalah
+  // cara tercepat memastikan ketikan sama dengan layar PC.
+  const [showPw, setShowPw] = useState(false);
   // Rail kontrol bisa disembunyikan agar tidak menutupi game — pilihan
   // pengguna disimpan supaya konsisten antar sesi (ala aplikasi).
   const [railHidden, setRailHidden] = useState(() => localStorage.getItem('xydesk.session.railHidden') === '1');
@@ -2100,7 +2123,29 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
             if (value.replace(/\s/g, '').length === 9) pinRef.current?.focus();
           }} />
           <span className="field-label">Password pairing</span>
-          <input ref={pinRef} type="password" placeholder="Password pairing" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && canConnect && connect()} />
+          <div className="pw-field">
+            <input
+              ref={pinRef}
+              type={showPw ? 'text' : 'password'}
+              placeholder="Password pairing"
+              value={pin}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              onChange={(e) => setPin(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && canConnect && connect()}
+            />
+            <button
+              type="button"
+              className="pw-toggle"
+              onClick={() => setShowPw((v) => !v)}
+              title={showPw ? 'Sembunyikan password' : 'Tampilkan password'}
+              aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'}
+              aria-pressed={showPw}
+            >
+              {showPw ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          </div>
           {phase && <p className="status-text">{labels[phase] ?? phase}</p>}
           {retryInfo && <p className="status-text">{retryInfo}</p>}
           <button className="connect-cta" disabled={!canConnect} onClick={() => void connect()}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
@@ -2214,8 +2259,8 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     )}
     {!connected && (
       <>
-        <ConnectGuide />
         <SupportLinks />
+        <ConnectGuide />
       </>
     )}
     </>

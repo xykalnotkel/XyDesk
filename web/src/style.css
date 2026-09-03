@@ -916,13 +916,39 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 .recent-id { font-weight: 700; letter-spacing: 0.06em; }
 .recent-pw { color: var(--text-low); font-size: 12.5px; }
 
-/* ID host: angka besar terpusat — elemen utama halaman ini */
+/* ID host: gaya sama dengan field lain, rata kiri. Dulu angka besar terpusat
+   dengan spasi lebar — terlihat beda sendiri dari field password di bawahnya
+   dan menyulitkan pencocokan digit demi digit. */
 .connect-form input.host-id {
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 6px;
-  text-align: center;
-  padding: 14px;
+  letter-spacing: 2px;
+  text-align: left;
+  padding: 12px 14px;
+}
+
+/* Field password + tombol mata di dalamnya. */
+.pw-field { position: relative; }
+.pw-field input { width: 100%; padding-right: 48px; }
+.pw-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-low);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--speed) ease, background var(--speed) ease;
+}
+.pw-toggle:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 /* Tombol konek: tombol utama sungguhan.
@@ -1849,7 +1875,7 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
     border-radius: var(--radius);
   }
   .connect-form h1 { font-size: 21px; }
-  .connect-form input.host-id { font-size: 20px; letter-spacing: 4px; }
+  .connect-form input.host-id { font-size: 17px; letter-spacing: 2px; }
   .connect-cta { width: 100%; }
   .field-head { flex-wrap: wrap; row-gap: 6px; }
   .recents-list { max-height: 40vh; overflow-y: auto; }
