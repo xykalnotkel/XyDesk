@@ -93,7 +93,7 @@ pub async fn pump_video(
             fps_start = Instant::now();
         }
         {
-            let mut st = control.lock().unwrap();
+            let mut st = crate::recover_lock(&control);
             st.video.record_frame(latency_ms);
             st.video.fps = fps_now;
             st.video.nvenc = screen::nvenc_active();

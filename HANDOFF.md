@@ -260,6 +260,15 @@ _(kosong)_
   nyata, pastikan host dibiarkan idle > 5 menit tanpa sesi dan tetap
   "siap" (tidak restart). Bila masih restart, lihat log shell (`[engine]`,
   `[shell] engine keluar (kode ...)`) — itu kunci diagnosis berikutnya.
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Verifikasi lab Windows
+  untuk hardening stabilitas**: (1) tutup sesi client, lalu cek Task Manager
+  — penggunaan GPU/CPU harus turun (capture DXGI berhenti; sebelumnya
+  capture+encode terus jalan tanpa penonton); (2) lepas/tukar monitor atau
+  picu UAC saat sesi — gambar harus pulih otomatis (capture di-retry), bukan
+  membeku; (3) putuskan koneksi ke signaling (matikan Wi-Fi) lalu nyalakan
+  lagi — engine menyambung ulang dalam proses; (4) biarkan server signaling
+  tidak responsif (mis. blokir DNS) — supervisor harus mencoba ulang token
+  dengan timeout, tidak menggantung di `engineStarting`.
 - [ ] (dari Laras - XySpace Team, 2026-09-03) — Kontrak perilaku keyboard saat
   sesi: sisi klien kini bisa mengirim **teks bebas (0x06 TEXT)** lewat papan
   ketik sistem selain keycode (0x05 KEY). Pastikan host (`host/src/input.rs`)

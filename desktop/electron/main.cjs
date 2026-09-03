@@ -80,7 +80,7 @@ function loadIdentity() {
       reject(new Error('xydesk-host.exe tidak ditemukan. Build host/ dulu (cargo build --release).'));
       return;
     }
-    execFile(exe, ['--identity-json'], { windowsHide: true }, (err, stdout) => {
+    execFile(exe, ['--identity-json'], { windowsHide: true, timeout: 15000 }, (err, stdout) => {
       if (err) {
         reject(new Error(`Identitas host tidak terbaca: ${err.message}`));
         return;
@@ -102,10 +102,13 @@ function loadIdentity() {
 // Tukar id+password → token signaling host berumur pendek. Dari proses utama
 // (Node), tanpa CORS — sama seperti GUI native dulu (ureq di Rust).
 async function fetchHostToken(id, claim) {
+  // Timeout 10 dtk: server signaling yang hang tidak boleh membekukan
+  // supervisor (engine tak kunjung lahir dan watchdog ikut diam).
   const res = await fetch(`${SIGNALING_HTTP}/host-token`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ id, claim }),
+    signal: AbortSignal.timeout(10000),
   });
   if (!res.ok) {
     throw new Error(`Server menolak token (HTTP ${res.status}).`);
@@ -213,6 +216,7 @@ async function controlFetch(pathname, init = {}) {
   const res = await fetch(`http://127.0.0.1:${control.port}${pathname}`, {
     ...init,
     headers,
+    signal: AbortSignal.timeout(5000),
   });
   const body = await res.text();
   let json = null;

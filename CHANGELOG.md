@@ -179,6 +179,28 @@ Kebijakan rilis:
   supervisor meminta token baru. Supervisor Electron juga dijaga agar tidak
   men-spawn dua engine sekaligus (guard `engineStarting`), menghormati
   backoff restart, dan mencatat kode keluar + sinyal engine di log.
+- Host: **capture layar berhenti saat sesi berakhir** — sebelumnya setelah
+  client menutup sesi, thread capture DXGI + encoder terus berjalan tanpa
+  penonton (frame dikirim ke channel yang sudah tertutup, diabaikan
+  diam-diam), menyedot GPU/CPU sia-sia dan bisa mengganggu sesi berikut.
+  Kini `on_frame_arrived` menghentikan capture begitu konsumen frame hilang
+  (`try_send` → `Disconnected`), dan `spawn_frame_source` membawa sinyal
+  hidup (`FrameSource`) supaya thread capture tahu kapan harus keluar.
+- Host: **capture layar pulih dari penutupan OS** — bila Graphics Capture
+  ditutup OS (secure desktop/UAC, monitor lepas, reset driver), thread
+  capture kini mencoba ulang dengan jeda singkat alih-alih keluar dan
+  membekukan gambar selamanya (sesi tetap "terhubung" tapi layar beku).
+  Sesi yang benar-benar berakhir tetap menghentikan capture bersih.
+- Host: **mutex ter-poison tidak lagi merobohkan proses** — semua kunci
+  `control`/`paired` di jalur produksi memakai `recover_lock`, sehingga
+  panic satu task media (video/audio/input) tidak menular jadi panic
+  berantai di `main()` yang dulu memicu restart supervisor.
+- Desktop (host Windows): **supervisor kebal server hang** — permintaan
+  token signaling dan panggilan control API kini punya timeout
+  (`AbortSignal.timeout` 10 dtk / 5 dtk, `execFile --identity-json` 15 dtk).
+  Sebelumnya server signaling yang hang membekukan `startEngine` selamanya
+  (guard `engineStarting` terus menyala), sehingga engine tak pernah lahir
+  dan watchdog ikut diam.
 
 ## [6.3.0] - 2026-09-03
 

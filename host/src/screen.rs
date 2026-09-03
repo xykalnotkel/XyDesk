@@ -7,7 +7,8 @@
 //!   - **Non-Windows / fallback**: [TestPatternEncoder] — pola visual untuk
 //!     menjalankan jalur `capture → encode → RTP` tanpa GPU.
 
-use std::sync::mpsc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc};
 
 use openh264::encoder::{
     BitRate, Complexity, Encoder, EncoderConfig, FrameRate, IntraFramePeriod, Profile,
@@ -202,21 +203,63 @@ impl TestPatternEncoder {
     }
 }
 
+/// Sumber frame yang membawa sinyal hidup konsumennya.
+///
+/// Saat receiver di-drop (loop video berhenti karena sesi berakhir), bendera
+/// internal menjadi `false` — dipakai thread capture untuk berhenti
+/// men-capture monitor tanpa penonton. Tanpa ini, capture+encode berjalan
+/// terus setelah sesi tutup (memboroskan GPU/CPU), dan thread capture tidak
+/// tahu kapan boleh keluar saat memutuskan retry.
+pub struct FrameSource {
+    rx: mpsc::Receiver<EncodedFrame>,
+    alive: Arc<AtomicBool>,
+}
+
+impl FrameSource {
+    /// Ambil frame berikutnya (memblokir) — sama seperti
+    /// [`mpsc::Receiver::recv`].
+    pub fn recv(&self) -> Result<EncodedFrame, mpsc::RecvError> {
+        self.rx.recv()
+    }
+
+    /// Ambil frame dengan batas waktu — sama seperti
+    /// [`mpsc::Receiver::recv_timeout`].
+    pub fn recv_timeout(
+        &self,
+        timeout: std::time::Duration,
+    ) -> Result<EncodedFrame, mpsc::RecvTimeoutError> {
+        self.rx.recv_timeout(timeout)
+    }
+}
+
+impl Drop for FrameSource {
+    fn drop(&mut self) {
+        self.alive.store(false, Ordering::Release);
+    }
+}
+
 /// Mulai sumber frame di thread terpisah; kembalikan receiver frame H264
 /// (Annex-B) ter-encode. Channel berukuran kecil agar frame usang dibuang
 /// (penting untuk latency — selalu kirim frame terbaru).
-pub fn spawn_frame_source() -> mpsc::Receiver<EncodedFrame> {
+pub fn spawn_frame_source() -> FrameSource {
     #[cfg(target_os = "windows")]
     {
         let (tx, rx) = mpsc::sync_channel::<EncodedFrame>(2);
+        let alive = Arc::new(AtomicBool::new(true));
+        let alive_thr = alive.clone();
         std::thread::spawn(move || {
             let mut current = wanted_display();
             loop {
+                // Konsumen (loop video) sudah berhenti — sesi selesai. Jangan
+                // capture lagi; thread ini keluar dengan bersih.
+                if !alive_thr.load(Ordering::Relaxed) {
+                    break;
+                }
                 if let Err(e) = windows::start_monitor(tx.clone(), current) {
                     eprintln!("[xydesk-host] capture layar (monitor {current}) gagal: {e}");
                 }
                 // Ada permintaan pindah monitor? Respawn dengan indeks baru.
-                let next = SWITCH_TO.swap(usize::MAX, std::sync::atomic::Ordering::Relaxed);
+                let next = SWITCH_TO.swap(usize::MAX, Ordering::Relaxed);
                 if next != usize::MAX {
                     current = next;
                     println!("[xydesk-host] pindah capture ke monitor {current}");
@@ -224,7 +267,7 @@ pub fn spawn_frame_source() -> mpsc::Receiver<EncodedFrame> {
                 }
                 // Bitrate berubah di tengah sesi? Respawn dengan monitor yang
                 // sama — encoder dibangun ulang dengan target bitrate baru.
-                if BITRATE_DIRTY.swap(false, std::sync::atomic::Ordering::Relaxed) {
+                if BITRATE_DIRTY.swap(false, Ordering::Relaxed) {
                     println!(
                         "[xydesk-host] capture di-respawn: bitrate target {} kbps",
                         target_bitrate_bps() / 1000
@@ -238,16 +281,25 @@ pub fn spawn_frame_source() -> mpsc::Receiver<EncodedFrame> {
                     println!("[xydesk-host] capture di-respawn: keyframe diminta");
                     continue;
                 }
-                // Tanpa permintaan apa pun, capture berakhir karena sesi
-                // selesai (handler berhenti) — thread ini pun keluar.
-                break;
+                // Tanpa permintaan apa pun, capture berakhir karena dua sebab:
+                // (1) konsumen berhenti (sesi selesai) — berhenti bersih;
+                // (2) capture ditutup OS (secure desktop, monitor lepas,
+                //     driver reset) — coba lagi dengan jeda singkat supaya
+                //     sesi tidak membeku permanen. Jeda juga mencegah spin
+                //     penuh bila capture gagal seketika berulang kali.
+                if !alive_thr.load(Ordering::Relaxed) {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(500));
             }
         });
-        rx
+        FrameSource { rx, alive }
     }
     #[cfg(not(target_os = "windows"))]
     {
         let (tx, rx) = mpsc::sync_channel::<EncodedFrame>(2);
+        let alive = Arc::new(AtomicBool::new(true));
+        let alive_thr = alive.clone();
         std::thread::spawn(move || {
             let mut enc = match TestPatternEncoder::new() {
                 Ok(e) => e,
@@ -257,6 +309,10 @@ pub fn spawn_frame_source() -> mpsc::Receiver<EncodedFrame> {
                 }
             };
             loop {
+                // Konsumen berhenti — sesi selesai; keluar bersih.
+                if !alive_thr.load(Ordering::Relaxed) {
+                    break;
+                }
                 // Keyframe diminta (mis. koneksi baru Connected): bangun
                 // encoder baru supaya frame berikutnya IDR + SPS/PPS.
                 if take_keyframe_request() {
@@ -293,7 +349,7 @@ pub fn spawn_frame_source() -> mpsc::Receiver<EncodedFrame> {
                 }
             }
         });
-        rx
+        FrameSource { rx, alive }
     }
 }
 
@@ -561,11 +617,22 @@ mod windows {
             }
             // Kirim; bila channel penuh, buang frame terbaru (try_send) —
             // frame usang tidak boleh mengantre (latency > kelengkapan).
-            let _ = self.sender.try_send(super::EncodedFrame {
+            match self.sender.try_send(super::EncodedFrame {
                 data: encoded,
                 captured_at,
                 encode_us: encode_us as u64,
-            });
+            }) {
+                // Konsumen (loop video) sudah berhenti — sesi selesai.
+                // Hentikan capture SEKARANG: tanpa ini, capture+encode
+                // berjalan terus tanpa penonton setelah sesi tutup
+                // (memboroskan GPU/CPU, dan bisa mengganggu sesi berikut).
+                Err(mpsc::TrySendError::Disconnected(_)) => {
+                    capture_control.stop();
+                    return Ok(());
+                }
+                // Channel penuh — buang frame usang (latency > kelengkapan).
+                Ok(()) | Err(mpsc::TrySendError::Full(_)) => {}
+            }
             Ok(())
         }
 
@@ -703,6 +770,23 @@ mod tests {
             (16_000..=17_000).contains(&us),
             "durasi frame harus ~16,667 ms, dapat {us} us"
         );
+    }
+
+    #[test]
+    fn frame_source_drop_mematikan_bendera_hidup() {
+        // Kontrak Drop: begitu konsumen melepas FrameSource, bendera hidup
+        // menjadi false — dipakai thread capture untuk berhenti men-capture
+        // monitor tanpa penonton.
+        let (tx, rx) = mpsc::sync_channel::<EncodedFrame>(1);
+        let alive = Arc::new(AtomicBool::new(true));
+        let fs = FrameSource {
+            rx,
+            alive: alive.clone(),
+        };
+        assert!(alive.load(Ordering::Relaxed));
+        drop(fs);
+        assert!(!alive.load(Ordering::Relaxed));
+        drop(tx);
     }
 
     #[test]

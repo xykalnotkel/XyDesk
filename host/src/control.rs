@@ -50,6 +50,7 @@ use sha2::{Digest, Sha256};
 
 use crate::identity;
 use crate::pairedpeers::PairedPeers;
+use crate::recover_lock;
 use crate::session::Session;
 
 /// Nama header pembawa token control. Sengaja pakai nama netral (bukan
@@ -388,7 +389,7 @@ async fn status(
     if !token_ok(&headers, &s.token_hash) {
         return Err(unauthorized());
     }
-    Ok(Json(s.control.lock().unwrap().snapshot()))
+    Ok(Json(recover_lock(&s.control).snapshot()))
 }
 
 async fn action(
@@ -403,7 +404,7 @@ async fn action(
     match req.action.as_str() {
         // Generate ulang password acak (persisten) — kembalikan nilai baru.
         "new-password" => {
-            let mut control = s.control.lock().unwrap();
+            let mut control = recover_lock(&s.control);
             let pw = identity::generate_password();
             if let Err(e) = identity::set_password(&pw) {
                 return Ok(Json(ActionResponse::err(format!(
@@ -420,7 +421,7 @@ async fn action(
         }
         // Set password kustom (persisten, min 6 karakter).
         "set-password" => {
-            let mut control = s.control.lock().unwrap();
+            let mut control = recover_lock(&s.control);
             let Some(pw) = req.password.as_deref() else {
                 return Ok(Json(ActionResponse::err("password tidak disertakan")));
             };
@@ -449,7 +450,7 @@ async fn action(
             // Guard mutex dibatasi block INI agar tidak hidup melintasi
             // await di bawah (MutexGuard tidak Send — handler wajib Send).
             let (client_id, session) = {
-                let mut control = s.control.lock().unwrap();
+                let mut control = recover_lock(&s.control);
                 let client_id = control.session.as_ref().map(|s| s.client_id.clone());
                 let session = control.active_session.take();
                 control.mark_stopped();
@@ -463,8 +464,8 @@ async fn action(
                 None => false,
             };
             if let Some(client) = client_id {
-                if let Some(paired) = s.control.lock().unwrap().paired.clone() {
-                    paired.lock().unwrap().revoke(&client);
+                if let Some(paired) = recover_lock(&s.control).paired.clone() {
+                    recover_lock(&paired).revoke(&client);
                 }
             }
             Ok(Json(ActionResponse {
