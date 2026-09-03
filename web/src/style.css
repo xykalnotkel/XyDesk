@@ -807,6 +807,97 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 }
 .subscribe-row input:focus { border-color: var(--accent); }
 
+/* ── Popup "Ingatkan saya" (tombol hero saat unduhan ditutup) ── */
+.remind-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(10, 6, 18, 0.72);
+  backdrop-filter: blur(4px);
+}
+.remind-box {
+  width: min(400px, 100%);
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+  text-align: left;
+}
+.remind-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.remind-head strong { font-size: 16px; }
+.remind-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--raised);
+  color: var(--text-mid);
+  font-size: 12px;
+}
+.remind-close:hover { color: var(--ink); border-color: var(--accent); }
+.remind-sub { margin: 0; font-size: 13.5px; color: var(--text-mid); line-height: 1.55; }
+.remind-form { display: flex; flex-wrap: wrap; gap: 8px; }
+.remind-form input {
+  flex: 1 1 180px;
+  min-width: 0;
+  font: inherit;
+  font-size: 14px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  outline: none;
+  background: var(--input);
+}
+.remind-form input:focus { border-color: var(--accent); }
+.remind-form.invalid input { border-color: var(--danger); }
+.remind-form .btn { flex: 0 0 auto; }
+.remind-note { margin: 0; font-size: 12.5px; color: var(--text-low); }
+.remind-note.error { color: var(--danger); }
+.remind-done p { margin: 0; font-size: 14px; line-height: 1.55; }
+.remind-sep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-low);
+  font-size: 12px;
+}
+.remind-sep::before,
+.remind-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.remind-channels { display: grid; gap: 8px; }
+.remind-channels a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color var(--speed) ease, background var(--speed) ease;
+}
+.remind-channels a:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.remind-foot { margin: 0; font-size: 12px; color: var(--text-low); }
+
 /* ── Tombol lompat di detail berita ───────────────────────────
    Panah bawah → gulir ke komentar paling bawah; sampai di dasar ia
    berubah jadi panah atas untuk kembali ke judul. */

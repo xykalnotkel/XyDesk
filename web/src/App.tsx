@@ -314,6 +314,9 @@ function SiteHeader({
 }
 
 function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
+  // Tombol hero saat unduhan ditutup membuka popup "Ingatkan saya"
+  // (email / saluran resmi), bukan sekadar membawa ke halaman unduhan.
+  const [remindOpen, setRemindOpen] = useState(false);
   const [latest, setLatest] = useState<NewsPost[]>([]);
 
   useEffect(() => {
@@ -340,8 +343,11 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
             perangkatmu, tanpa server perantara yang ikut melihat sesimu.
           </p>
           <div className="hero-cta">
-            <button className="btn primary big" onClick={() => navigate('/download')}>
-              {DOWNLOAD_ENABLED ? 'Unduh sekarang' : 'Status rilis'}
+            <button
+              className="btn primary big"
+              onClick={() => (DOWNLOAD_ENABLED ? navigate('/download') : setRemindOpen(true))}
+            >
+              {DOWNLOAD_ENABLED ? 'Unduh sekarang' : 'Ingatkan saya'}
             </button>
             <button className="btn ghost big" onClick={() => navigate('/connect')}>
               Coba dari browser
@@ -435,6 +441,7 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           <NotifyMeForm />
         )}
       </section>
+      {remindOpen && <RemindMeModal onClose={() => setRemindOpen(false)} />}
     </main>
   );
 }
@@ -603,6 +610,107 @@ function NotifyMeForm() {
         Atau pantau lewat saluran WhatsApp kami
       </a>
     </form>
+  );
+}
+
+/// Popup "Ingatkan saya" dari tombol hero beranda — menangkap niat
+/// pengunjung sebelum mereka pergi: kabar rilis ke email (disimpan
+/// berlabel 'unduhan', sama dengan form di halaman unduhan) atau ikut
+/// saluran resmi. Status rilis dijelaskan terbuka, bukan disembunyikan.
+function RemindMeModal({ onClose }: { onClose: () => void }) {
+  const inputId = useId();
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  const [note, setNote] = useState('');
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (status === 'sending') return;
+    const value = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) {
+      setStatus('error');
+      setNote('Alamat emailnya belum benar. Periksa lagi ya.');
+      return;
+    }
+    setStatus('sending');
+    setNote('');
+    try {
+      const r = await subscribeNews(value, 'unduhan');
+      if (!r.ok) throw new Error('ditolak server');
+      setStatus('done');
+      if (r.subscribed === false) setNote('Email kamu sudah pernah terdaftar — kami tetap ingat.');
+    } catch {
+      setStatus('error');
+      setNote('Gagal menyimpan email kamu. Coba lagi sebentar.');
+    }
+  };
+
+  return (
+    <div
+      className="remind-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Ingatkan saya saat rilis"
+      onClick={onClose}
+    >
+      <div className="remind-box" onClick={(e) => e.stopPropagation()}>
+        <header className="remind-head">
+          <strong>Ingatkan saya saat rilis</strong>
+          <button type="button" className="remind-close" onClick={onClose} aria-label="Tutup">
+            ✕
+          </button>
+        </header>
+        <p className="remind-sub">
+          Unduhan belum dibuka — {STAGE_LABEL[RELEASE_STAGE]}. Mau kabar rilisnya dikirim ke mana?
+        </p>
+        {status === 'done' ? (
+          <div className="remind-done">
+            <p>
+              <strong>Siap.</strong> Kami kabari {email} begitu unduhan dibuka.
+            </p>
+            {note && <p className="remind-note">{note}</p>}
+          </div>
+        ) : (
+          <form className={`remind-form${status === 'error' ? ' invalid' : ''}`} onSubmit={submit} noValidate>
+            <input
+              id={inputId}
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="nama@email.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (status === 'error') {
+                  setStatus('idle');
+                  setNote('');
+                }
+              }}
+              aria-invalid={status === 'error'}
+              aria-describedby={note ? `${inputId}-note` : undefined}
+            />
+            <button className="btn primary" type="submit" disabled={status === 'sending'}>
+              {status === 'sending' ? 'Menyimpan…' : 'Kirim ke email'}
+            </button>
+            {note && (
+              <p className="remind-note error" id={`${inputId}-note`} role="alert">
+                {note}
+              </p>
+            )}
+          </form>
+        )}
+        <div className="remind-sep"><span>atau ikuti saluran resmi</span></div>
+        <div className="remind-channels">
+          <a href={WHATSAPP_CHANNEL} target="_blank" rel="noreferrer">
+            <WhatsAppIcon size={18} /> Saluran WhatsApp
+          </a>
+          <a href="https://t.me/xydesk" target="_blank" rel="noreferrer">
+            <TelegramIcon size={18} /> Telegram
+          </a>
+        </div>
+        <p className="remind-foot">Email hanya dipakai untuk kabar rilis — tidak untuk yang lain.</p>
+      </div>
+    </div>
   );
 }
 

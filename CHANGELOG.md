@@ -59,6 +59,12 @@ Kebijakan rilis:
   < 40 ms glass-to-glass tanpa alat eksternal.
 
 ### Diubah
+- Web: tombol hero beranda **"Status rilis" → "Ingatkan saya"** — klik
+  membuka popup pilihan kanal kabar rilis: email (tersimpan berlabel
+  `unduhan`, jalur sama dengan form halaman unduhan), saluran WhatsApp,
+  atau Telegram. Sebelumnya tombol ini hanya membawa ke halaman unduhan
+  yang memang belum bisa mengunduh (pra-beta) — niat pengunjung hilang
+  begitu saja.
 - Proses: **atur rilis diperketat (3 Sep 2026)** — versi & berita adalah
   keputusan operator; sebelum build/rilis agent wajib memastikan kerjaan
   sesi lain yang menyentuh area rilis sudah `SELESAI`; push yang
