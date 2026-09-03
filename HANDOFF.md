@@ -104,6 +104,12 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   saat rilis. Screenshot masih placeholder — perlu verifikasi di perangkat
   Android nyata untuk ambil screenshot asli dari build rilis.
 
+- [x] (dari Laras - XySpace Team, 2026-09-03) — **Workflow build APK only**:
+  Workflow baru `.github/workflows/build-apk-only.yml` untuk build APK Android
+  saja tanpa release/tag. Bisa di-trigger manual via workflow_dispatch dengan
+  pilihan build type (release/debug). APK di-upload sebagai artifact (retensi 7 hari).
+  Tidak mengubah workflow build/release yang sudah ada. File: `build-apk-only.yml`.
+
 - [x] (dari Laras - XySpace Team, 2026-09-03) — **Ikon Billing di topbar**:
   tombol baru di bar atas membuka layar Langganan; aset
   `assets/img/nav/billing.png` (+ `_off.png`) transparan terpasang, dan

@@ -1,0 +1,105 @@
+name: Build APK Android Only
+
+# Workflow khusus untuk build APK Android saja — tanpa release, tag, atau publish.
+# Digunakan untuk testing cepat perubahan client Flutter tanpa menunggu full release cycle.
+#
+# Perbedaan dengan build.yml:
+# - Hanya build APK Android (tidak ada Windows, Web, atau platform lain)
+# - Tidak perlu approval dari semua area
+# - Tidak membuat release tag
+# - Tidak publish ke mana-mana
+# - Hanya upload APK sebagai artifact
+#
+# Trigger: workflow_dispatch manual saja (tidak otomatis dari push)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Tipe build'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+      note:
+        description: 'Catatan untuk build ini (opsional)'
+        required: false
+        type: string
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.44.9'
+  GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+  GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+
+jobs:
+  build-apk:
+    name: Build APK Android (${{ inputs.build_type }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      
+      - name: Download dependencies
+        run: flutter pub get
+      
+      - name: Generate license file
+        run: |
+          dart run tool/gen_licenses.dart || echo "License generation skipped"
+      
+      - name: Build APK (${{ inputs.build_type }})
+        run: |
+          if [ "${{ inputs.build_type }}" = "release" ]; then
+            flutter build apk --release --split-per-abi
+          else
+            flutter build apk --debug
+          fi
+      
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ inputs.build_type }}-${{ github.sha }}
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+          retention-days: 7
+          if-no-files-found: error
+      
+      - name: Display build info
+        run: |
+          echo "╔════════════════════════════════════════════════════════╗"
+          echo "║  BUILD APK ANDROID SELESAI                            ║"
+          echo "╚════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Build type: ${{ inputs.build_type }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo ""
+          echo "APK files:"
+          ls -lh build/app/outputs/flutter-apk/*.apk 2>/dev/null || echo "No APK found"
+          echo ""
+          echo "Note: ${{ inputs.note || 'No note provided' }}"
+          echo ""
+          echo "Download APK from Actions → Artifacts"
