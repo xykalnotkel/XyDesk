@@ -9,11 +9,20 @@ Papan serah-terima antar sesi agent. **Setiap sesi WAJIB**:
 > siapa lagi mengunci area apa, push siapa yang sudah diizinkan — baca
 > `AGENT_BOARD.md`, bukan percakapan lama.
 
+> ⚠️ **Aturan operator (3 Sep 2026) — berlaku SEMUA role.** Versi & berita adalah
+> keputusan operator (bukan agent). Tiap agent menulis bahan artikel untuk
+> kerjanya sendiri saat sesi ditutup; role CI/Release menyatukannya menjadi
+> SATU artikel saat rilis. Rilis hanya diajukan bila semua sesi area rilis
+> sudah `SELESAI` (detail: `AGENT_BOARD.md` → "Aturan operator").
+
 Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>`
 
 ---
 
 ## Untuk: Client Flutter
+
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan semua bahan jadi SATU artikel saat rilis.
+
 
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **Screenshot layar sesi
   Android untuk artikel berita** (permintaan operator: artikel harus punya
@@ -55,6 +64,9 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   dan tamu memakai nama deterministik; keduanya menampilkan avatar. Belum diuji.
 
 ## Untuk: Desktop Shell
+
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur shell/desktop, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
+
 
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — Host Windows kini kembali
   memakai **shell Electron + Next.js** (`desktop/`) sebagai UI utama, dan
@@ -100,6 +112,9 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `newsAvatarUrl`). Flutter sudah; shell desktop menyusul.
 
 ## Untuk: CI / Release
+
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Tugas rilis kini:** menyatukan bahan artikel dari tiap agent menjadi SATU artikel rilis (bukan mengarang semuanya); versi & terbitnya berita = keputusan operator; jangan build/rilis sebelum semua sesi area rilis `SELESAI`.
+
 
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **Bug race di deploy-web.yml**:
   push `6c5ba06` (web) dan `d90e12a` (ci) nyaris bersamaan → dua event
@@ -157,6 +172,9 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Web
 
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur web, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
+
+
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — Push `0081742` (keyboard
   virtual, panel gaming) membuat run `verify-push-auth.yml` MERAH: commit
   tidak memuat penanda `Izin: <ID-SESI>` di body. Aturan baru (lihat
@@ -165,6 +183,9 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   tapi audit mencatatnya sebagai pelanggaran.
 
 ## Untuk: Backend / Edge
+
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi, tulis bahan artikel kerjamu sendiri (dampak pengguna, ringkas) — role CI/Release menyatukan jadi SATU artikel saat rilis.
+
 
 _(kosong)_
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **Billing sewa PC otomatis**:
@@ -198,6 +219,9 @@ _(kosong)_
 
 ## Untuk: News & Konten
 
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** artikel per rilis = SATU artikel gabungan dari bahan tiap agent (role CI/Release menyatukan) — jangan menerbitkan artikel rilis yang isinya dikarang sendiri; versi & terbitnya berita = keputusan operator.
+
+
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **PENGINGAT MANDAT OPERATOR
   (Xyckal, chat 3 Sep 2026): artikel berita HARUS lengkap** — detail apa +
   kenapa, changelog versi pengguna, dan **screenshot setiap perubahan
@@ -225,6 +249,9 @@ _(kosong)_
 
 ## Untuk: Host Engine
 
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi host, tulis bahan artikel kerjamu sendiri (dampak pengguna, ringkas) — role CI/Release menyatukan jadi SATU artikel saat rilis.
+
+
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **PENTING untuk verifikasi lab
   Windows**: host dulu "hidup-mati-hidup-mati" karena server signaling
   menendang koneksi yang tidak balas ping dalam 90 dtk. Sudah diperbaiki
@@ -245,6 +272,9 @@ _(kosong)_
   `Izin: ...` di body commit.
 
 ## Untuk: Docs & Audit
+
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; tiap agent menulis bahan artikel kerjanya sendiri, CI/Release menyatukannya — pastikan aturan ini tersinkron di `docs/CI.md`, `docs/NEWS_STYLE.md`, `news/README.md`.
+
 
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — Byline berita diubah dari
   `Tim XySpace` ke `Haekal Saputra` (mandat operator) di `AGENT.md`,
