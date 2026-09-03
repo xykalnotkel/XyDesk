@@ -1173,6 +1173,13 @@ function NewsDetailPage({
 
   const post = data?.post;
 
+  // Tautan versi di footer menuju `CHANGELOG_SLUG` (mis. changelog-v6-4-0).
+  // Kalau rilis lupa menerbitkan artikel dengan slug itu, artikelnya jatuh ke
+  // hash acak `p-…` dan halaman ini kena 404. Alih-alih menampilkan pesan
+  // galat mentah, tampilkan penjelasan + jalan keluar ke daftar berita.
+  const isChangelogMissing =
+    slug === CHANGELOG_SLUG && online && error instanceof ApiError && error.status === 404;
+
   // Like OPTIMISTIK: UI berubah seketika, server menyusul — kalau gagal,
   // kembalikan ke keadaan sebelumnya. Ini membuat like terasa instan.
   const like = () => {
@@ -1292,14 +1299,25 @@ function NewsDetailPage({
       </button>
 
       {error !== null && (
-        <StateNotice
-          tone={online ? 'error' : 'offline'}
-          glyph={online ? 'alert' : 'cloud'}
-          title={online ? 'Berita ini belum bisa dibuka' : 'Kamu sedang offline'}
-          message={explainError(error, 'Berita tidak ditemukan.', online)}
-          actionLabel="Coba lagi"
-          onAction={reload}
-        />
+        isChangelogMissing ? (
+          <StateNotice
+            tone="empty"
+            glyph="news"
+            title="Catatan rilis versi ini belum tersedia"
+            message="Artikel changelog untuk versi ini belum diterbitkan di XyDesk News. Kamu tetap bisa membaca berita terbaru dari daftar semua berita."
+            actionLabel="Semua berita"
+            onAction={() => navigate('/news')}
+          />
+        ) : (
+          <StateNotice
+            tone={online ? 'error' : 'offline'}
+            glyph={online ? 'alert' : 'cloud'}
+            title={online ? 'Berita ini belum bisa dibuka' : 'Kamu sedang offline'}
+            message={explainError(error, 'Berita tidak ditemukan.', online)}
+            actionLabel="Coba lagi"
+            onAction={reload}
+          />
+        )
       )}
 
       {!post && !error && (

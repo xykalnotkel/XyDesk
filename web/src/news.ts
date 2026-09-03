@@ -8,6 +8,8 @@
 // Rilis 6.0: balasan komentar (parentId), username acak per perangkat
 // (tanpa kolom nama), langganan email berita.
 
+import { ApiError } from './api';
+
 export const NEWS_BASE = 'https://news.xystudio.my.id';
 export const NEWS_SHARE_BASE = 'https://news.xystudio.my.id/n';
 
@@ -96,7 +98,12 @@ export function newsAvatarUrl(author: string): string {
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  // ApiError (bukan Error polos) supaya `explainError` bisa membedakan 404
+  // dari gangguan jaringan dan menampilkan pesan manusiawi — bukan kode galat
+  // mentah seperti "post-not-found".
+  if (!res.ok) {
+    throw new ApiError(res.status, data.error ?? 'unknown', data.error ?? `HTTP ${res.status}`);
+  }
   return data;
 }
 
