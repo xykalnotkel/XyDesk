@@ -39,6 +39,7 @@ mod raw {
         pub fn GlobalLock(mem: *mut core::ffi::c_void) -> *mut core::ffi::c_void;
         pub fn GlobalUnlock(mem: *mut core::ffi::c_void) -> i32;
         pub fn GlobalSize(mem: *mut core::ffi::c_void) -> usize;
+        pub fn GlobalFree(mem: *mut core::ffi::c_void) -> *mut core::ffi::c_void;
     }
 }
 
@@ -94,8 +95,13 @@ pub fn set_text(text: &str) -> anyhow::Result<()> {
         if mem.is_null() {
             anyhow::bail!("kehabisan memori untuk papan klip");
         }
+        // Sampai `SetClipboardData` sukses, memori ini masih milik kita.
+        // Setiap jalan keluar sebelum itu harus membebaskannya sendiri —
+        // kalau tidak, ia bocor di heap global dan tidak bisa dipulihkan
+        // proses mana pun selain ini, yang seharusnya hidup berhari-hari.
         let ptr = raw::GlobalLock(mem) as *mut u16;
         if ptr.is_null() {
+            raw::GlobalFree(mem);
             anyhow::bail!("gagal mengunci memori papan klip");
         }
         std::ptr::copy_nonoverlapping(wide.as_ptr(), ptr, wide.len());
@@ -103,6 +109,7 @@ pub fn set_text(text: &str) -> anyhow::Result<()> {
 
         // Sukses = kepemilikan memori pindah ke sistem; jangan dibebaskan.
         if raw::SetClipboardData(CF_UNICODETEXT, mem).is_null() {
+            raw::GlobalFree(mem);
             anyhow::bail!("gagal menulis papan klip");
         }
     }

@@ -26,6 +26,13 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Client Flutter
 
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **0x06 TEXT belum dibatasi
+  panjangnya di client.** `InputCodec.text()` (lib/webrtc/input_codec.dart)
+  mengirim seluruh tempel sebagai SATU pesan, berbeda dari `clipboardSet()`
+  yang memotong di 64 KiB. Host sekarang memotong di 4.096 unit UTF-16 per
+  pesan — sisanya DIBUANG, tidak dipecah otomatis. Kalau mau menempel teks
+  panjang bisa diketik, pecah di sisi client menjadi beberapa pesan TEXT
+  (±2.000 karakter sudah aman), atau kirim sebagai CLIPBOARD_SET lalu Ctrl+V.
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **Parity APK: total & sisa
   waktu sesi** (permintaan operator, "yang request kemarin"). Web kini
   menampilkan chip durasi berjalan + sisa waktu sesi tamu (token tamu
@@ -148,6 +155,16 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
+
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — Dua hal kebersihan tooling yang
+  muncul saat audit host: (1) **`host/Cargo.lock` tertinggal** — masih mencatat
+  `xydesk-host 6.3.0` sejak bump versi 4cbbc22 menaikkan `Cargo.toml` ke 6.4.0;
+  kalau ada langkah rilis memakai `cargo build --locked`/`--frozen`, ia akan
+  gagal. Sudah kusinkronkan di sesi ini (hanya baris versi itu). (2)
+  **`tool/check-host-windows.sh` di-commit tanpa bit executable** (`git
+  ls-files -s` → 100644), jadi perintah yang didokumentasikan `docs/CI.md`
+  gagal `Permission denied` di mesin baru — perlu
+  `git update-index --chmod=+x tool/check-host-windows.sh`.
 
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **INFO: aturan papan #5 —
   jalur deploy cepat** (restu operator di chat, kini tertulis di
@@ -341,19 +358,68 @@ _(kosong)_
   lagi — engine menyambung ulang dalam proses; (4) biarkan server signaling
   tidak responsif (mis. blokir DNS) — supervisor harus mencoba ulang token
   dengan timeout, tidak menggantung di `engineStarting`.
-- [ ] (dari Laras - XySpace Team, 2026-09-03) — Kontrak perilaku keyboard saat
+- [x] (dari Laras - XySpace Team, 2026-09-03) — Kontrak perilaku keyboard saat
   sesi: sisi klien kini bisa mengirim **teks bebas (0x06 TEXT)** lewat papan
-  ketik sistem selain keycode (0x05 KEY). Pastikan host (`host/src/input.rs`)
-  mengetik 0x06 TEXT apa adanya (tidak tergantung tata letak keyboard host)
-  dan berperilaku wajar bila karakter banyak/rapat. Keycode 0x05 (termasuk
-  Backspace 0x08, Enter 0x0D, F1–F12) tetap tidak berubah.
+  ketik sistem selain keycode (0x05 KEY). **Diperiksa & dilengkapi di sesi
+  SESI-20260903-GALIH-HOST-AUDIT:** host sudah mengetik 0x06 apa adanya lewat
+  `KEYEVENTF_UNICODE` (tidak bergantung layout keyboard host) dan keycode 0x05
+  tidak disentuh. Yang BELUM wajar adalah bagian "karakter banyak/rapat": satu
+  pesan TEXT panjang dulu diubah jadi satu `SendInput` berisi ribuan `INPUT`
+  tanpa mengikuti nilai kembali sistem (sebagian bisa hilang tanpa jejak). Kini
+  dipecah per 32 karakter, sisanya dikirim ulang, dan di atas 4.096 unit UTF-16
+  dipotong di batas karakter (bukan di tengah pasangan surrogate). Dikunci 5 uji
+  unit lintas platform. Sisi client belum dibatasi panjangnya — lihat item
+  "Untuk: Client Flutter".
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — Push `f12dace` (bitrate
   live via control API) membuat run `verify-push-auth.yml` MERAH: commit
   tidak memuat penanda `Izin: <ID-SESI>` di body. Aturan baru: klaim
   sesi → persetujuan operator di `AGENT_BOARD.md` → push dengan penanda
   `Izin: ...` di body commit.
 
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Verifikasi lab Windows untuk
+  SESI-20260903-GALIH-HOST-AUDIT** (semuanya lolos di unit test Linux, tapi
+  perilaku nyata hanya terbukti di Windows): (1) saat sesi aktif, putuskan Wi-Fi
+  ±5 detik lalu nyalakan — sesi HARUS lanjut tanpa pairing ulang dan log
+  menampilkan "pulih sendiri — sesi lanjut"; (2) putuskan > 15 detik — slot
+  dilepas DAN capture berhenti (cek Task Manager: GPU/CPU turun); (3) tempel 3–5
+  baris + emoji dari HP ke Notepad — semua karakter masuk, tanpa karakter rusak;
+  (4) reload client di tengah sesi (renegosiasi) — sesi lama harus ditutup,
+  tidak ada dua engine capture berjalan.
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Butuh keputusan operator, jadi
+  tidak kukerjakan:** kalau WebSocket signaling putus-nyambung, sesi media yang
+  sedang berjalan TIDAK ditutup (kode menuliskan "Sesi media mati bersama
+  koneksi signaling", padahal Arc-nya masih dipegang task video/input). Sisi
+  baiknya: video kebal terhadap deploy signaling. Sisi buruknya: host tidak lagi
+  mengenalinya sebagai sesi aktif, jadi `bye` dari client tidak menutupnya —
+  hanya control API `stop-session` yang bisa. Pilih: biarkan (dan perbaiki
+  komentar) atau tutup setelah masa tenggang.
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — Task input (arm "offer" di
+  `main.rs`) keluar saat `rx.recv()` berakhir, tapi menutup data channel dari
+  lawan TIDAK menutup channel mpsc di sisinya — thread injeksi
+  (`std::thread::spawn`) bisa bertahan satu per sesi. Belum diukur (butuh sesi
+  Windows nyata). Kandidat perbaikan: `dc.on_close` → drop `inj_tx`.
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Bahan artikel** (aturan papan
+  #3; untuk disatukan CI/Release saat rilis berikutnya): "Sesi XyDesk tidak lagi
+  putus karena jaringan sebentar. Dulu koneksi yang terlepas dua detik dianggap
+  mati total — perangkat harus memasukkan password ulang, dan proses di PC
+  kadang terus merekam layar tanpa penonton. Sekarang host memberi masa
+  tenggang 15 detik untuk pulih sendiri, dan kalau memang tidak pulih,
+  peralatannya dibebaskan dengan benar. Ketikan panjang dari HP juga tidak lagi
+  hilang sebagian di tengah jalan." **Tanpa screenshot** — tidak ada perubahan
+  visual di sisi host, dan screenshot sesi Windows masih jadi utang Desktop Shell.
+
 ## Untuk: Docs & Audit
+
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Catat batas gerbang host di
+  `docs/CI.md`.** `host-test` menjalankan `cargo fmt/clippy/test` di ubuntu, jadi
+  SEMUA kode di balik `cfg(target_os = "windows")` (DXGI, WASAPI, SendInput,
+  papan klip) tidak pernah di-lint sebelum rilis. Buktinya nyata: `main` hari ini
+  MERAH pada `tool/check-host-windows.sh --clippy` karena dua lint Windows-only —
+  `screen.rs` (doc comment menggantung, `empty_line_after_doc_comments`) dan
+  `gui.rs` (manual `Iterator::find`) — keduanya lolos CI. Sudah kuperbaiki, tapi
+  strukturnya tetap: usulkan step `clippy --target x86_64-pc-windows-gnu` di
+  `host-test` (mingw-w64 tersedia di runner ubuntu) ATAU tulis terang-terangan
+  bahwa "CI host hijau" tidak berarti kode Windows bersih.
 
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; tiap agent menulis bahan artikel kerjanya sendiri, CI/Release menyatukannya — pastikan aturan ini tersinkron di `docs/CI.md`, `docs/NEWS_STYLE.md`, `news/README.md`. **Dikerjakan Sena (audit 3 Sep 2026):** `docs/CI.md` sudah memuatnya (§"Sebelum build/rilis"), `news/README.md` sudah memuatnya; yang kurang hanya `docs/NEWS_STYLE.md` — kini ditambah blok "Siapa yang menulis" di §1.
 

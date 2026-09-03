@@ -18,11 +18,12 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::Message;
 
+use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use xydesk_host::control::{ControlState, EngineState};
 use xydesk_host::pairedpeers::PairedPeers;
 use xydesk_host::pairguard::{self, PairGuard};
 use xydesk_host::recover_lock;
-use xydesk_host::session::{IceCandidate, Session};
+use xydesk_host::session::{slot_action, IceCandidate, Session, SlotAction, DISCONNECT_GRACE};
 
 /// SDP ter-serialisasi (objek `{type, sdp}` — identik dgn sisi client).
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -83,6 +84,40 @@ const RECONNECT_MAX_ATTEMPTS: u32 = 10;
 fn reconnect_delay(attempt: u32) -> std::time::Duration {
     let shift = attempt.saturating_sub(1).min(5);
     std::time::Duration::from_secs((1u64 << shift).min(30))
+}
+
+/// Cabut slot sesi: izin pairing dicabut, status shell kembali "siap", dan
+/// peer connection-nya DITUTUP.
+///
+/// Menutup peer connection adalah bagian yang dulu hilang. Tanpa itu, sesi
+/// yang slotnya sudah dicabut terus memegang capture + encoder: loop video
+/// hanya berhenti saat pc `Closed`/`Failed`, dan tidak ada yang pernah menutup
+/// pc-nya. Di Windows efeknya berlipat — duplikasi DXGI yang menggantung bisa
+/// membuat sesi berikutnya mendapat layar hitam.
+///
+/// `Handle` dibawa dari pemanggil (bukan `Handle::current()` di dalam) karena
+/// handler status WebRTC dipanggil dari dalam kita: menaruh tugas di antrean
+/// runtime lebih aman daripada memanggil ulang API runtime di tempat yang tidak
+/// kita kendalikan.
+fn release_slot(
+    handle: &tokio::runtime::Handle,
+    paired: &Arc<Mutex<PairedPeers>>,
+    control: &Arc<Mutex<ControlState>>,
+    client: &str,
+    session: &Arc<Session>,
+) {
+    // Hanya kalau sesi yang tercatat di control API masih sesi ini. Tanpa
+    // syarat ini, teardown sesi lama menghapus keadaan (dan izin) sesi baru
+    // yang sudah streaming — shell lalu bilang "siap" padahal ada orang yang
+    // sedang melihat layar.
+    if !recover_lock(control).stop_session_if_current(session) {
+        return;
+    }
+    recover_lock(paired).revoke(client);
+    let sess = session.clone();
+    handle.spawn(async move {
+        let _ = sess.close().await;
+    });
 }
 
 #[derive(Parser, Debug)]
@@ -526,25 +561,53 @@ async fn main() -> Result<()> {
                     // kereta masuk terowongan, proses di-kill). Tanpa handler ini
                     // slot sesi tetap dianggap terisi dan host menolak SEMUA koneksi
                     // berikutnya dengan "host-sibuk" sampai di-restart manual.
+                    //
+                    // `Disconnected` TIDAK diperlakukan sama dengan `Failed`: ia
+                    // keadaan sementara yang biasa pulih sendiri, dan keputusan
+                    // itu diambil di satu tempat (`session::slot_action`) supaya
+                    // bisa diuji. Pelepasan slot selalu disertai menutup peer
+                    // connection — kalau tidak, capture + encoder sesi yang sudah
+                    // ditinggalkan terus hidup tanpa penonton.
                     {
                         let paired = paired.clone();
                         let client = client.clone();
                         let control = control.clone();
-                        session.on_state_change(move |state| {
-                        use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
-                        if matches!(
-                            state,
-                            RTCPeerConnectionState::Failed
-                                | RTCPeerConnectionState::Disconnected
-                                | RTCPeerConnectionState::Closed
-                        ) {
-                            println!("[xydesk-host] koneksi {client} {state} — slot dilepas");
-                            recover_lock(&paired).revoke(&client);
-                            // Cerminkan juga ke control API agar shell desktop
-                            // langsung kembali menampilkan "siap".
-                            recover_lock(&control).mark_stopped();
-                        }
-                    });
+                        let sess = session.clone();
+                        let handle = tokio::runtime::Handle::current();
+                        session.on_state_change(move |state| match slot_action(state) {
+                            SlotAction::Keep => {}
+                            SlotAction::ReleaseNow => {
+                                println!("[xydesk-host] koneksi {client} {state} — slot dilepas");
+                                release_slot(&handle, &paired, &control, &client, &sess);
+                            }
+                            SlotAction::ReleaseAfterGrace => {
+                                // Beri masa tenggang sebelum mencabut. Kandidat
+                                // ICE dari peer ini masih diterima selama izin
+                                // pairnya utuh, jadi koneksi yang pulih sendiri
+                                // benar-benar bisa lanjut tanpa pairing ulang.
+                                let paired = paired.clone();
+                                let control = control.clone();
+                                let client = client.clone();
+                                let sess = sess.clone();
+                                // `Handle` dipakai dua kali: untuk menaruh tugas
+                                // dan untuk menaruh teardown-nya nanti — jangan
+                                // dipindah ke dalam block async.
+                                let timer = handle.clone();
+                                handle.spawn(async move {
+                                    tokio::time::sleep(DISCONNECT_GRACE).await;
+                                    let kini = sess.peer().connection_state();
+                                    if kini == RTCPeerConnectionState::Connected {
+                                        println!("[xydesk-host] {client} pulih sendiri — sesi lanjut");
+                                        return;
+                                    }
+                                    println!(
+                                        "[xydesk-host] {client} tidak pulih dalam {} detik (keadaan {kini}) — slot dilepas",
+                                        DISCONNECT_GRACE.as_secs()
+                                    );
+                                    release_slot(&timer, &paired, &control, &client, &sess);
+                                });
+                            }
+                        });
                     }
 
                     // Terima input (data channel) di task terpisah.
@@ -767,11 +830,18 @@ async fn main() -> Result<()> {
                         });
                     }
 
-                    control
-                        .lock()
-                        .unwrap()
-                        .set_streaming(client.clone(), session.clone());
-                    active = Some(session);
+                    // Satu sesi media pada satu waktu. `offer` dari peer yang sama
+                    // adalah renegosiasi: sesi LAMA wajib ditutup, bukan sekadar
+                    // ditimpa — kalau tidak, capture + encoder-nya hidup terus
+                    // tanpa penonton (di Windows, duplikasi DXGI yang menggantung
+                    // juga bisa membuat sesi baru dapat layar hitam).
+                    let prev = active.replace(session.clone());
+                    // Status dicatat SEBELUM sesi lama ditutup, supaya teardown
+                    // sesi lama melihat "sesi yang tercatat bukan aku" dan diam.
+                    recover_lock(&control).set_streaming(client.clone(), session.clone());
+                    if let Some(prev) = prev {
+                        let _ = prev.close().await;
+                    }
                 }
 
                 "ice" => {

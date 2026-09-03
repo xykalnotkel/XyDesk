@@ -27,6 +27,55 @@ use webrtc::track::track_remote::TrackRemote;
 /// Nama data channel untuk input kontrol (sama di sisi client Flutter).
 pub const INPUT_CHANNEL: &str = "input";
 
+/// Lama yang diberikan kepada sesi untuk pulih sendiri setelah koneksi
+/// terlepas sebentar, sebelum host mencabut slotnya.
+///
+/// Agent ICE webrtc-rs memasukkan sesi ke `Disconnected` pada setiap blip
+/// jaringan biasa — Wi-Fi berpindah kanal, sinyal hilang dua detik, laptop
+/// dibuka setelah ditutup — dan pada umumnya pulih sendiri dalam hitungan
+/// detik. Batas ini cukup panjang untuk blip semacam itu dan cukup pendek
+/// untuk tidak membiarkan capture + encoder bekerja untuk penonton yang sudah
+/// pergi.
+pub const DISCONNECT_GRACE: std::time::Duration = std::time::Duration::from_secs(15);
+
+/// Yang harus dilakukan host terhadap slot sesi (izin pairing + status shell)
+/// saat peer connection berpindah keadaan.
+///
+/// Kebijakannya ditaruh ke satu fungsi murni ([`slot_action`]) supaya bisa
+/// diuji tanpa jaringan. Sebelumnya keputusan ini tersebar di `matches!` di
+/// dalam handler `main.rs`, dan `Disconnected` disamakan dengan `Failed` —
+/// gejalanya lihat komentar [`slot_action`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SlotAction {
+    /// Sesi masih hidup (atau sedang dibangun) — jangan sentuh apa pun.
+    Keep,
+    /// Cabut slot sekarang: koneksi mati dan tidak akan pulih sendiri.
+    ReleaseNow,
+    /// Cabut slot hanya bila sesi belum `Connected` lagi setelah
+    /// [`DISCONNECT_GRACE`] berlalu.
+    ReleaseAfterGrace,
+}
+
+/// Klasifikasi satu transisi keadaan menjadi tindakan pada slot sesi.
+///
+/// Kenapa `Disconnected` TIDAK boleh diperlakukan seperti `Failed`:
+/// mencabutnya seketika berarti izin pairing peer itu dicabut, sementara
+/// kandidat ICE berikutnya dari peer yang sama ditolak ("bukan sesi aktif") —
+/// jadi sesi yang sebenarnya masih bisa hidup menjadi mustahil pulih. Pada
+/// saat yang sama task video tetap jalan (ia hanya berhenti pada
+/// `Closed`/`Failed`), sehingga capture + encoder tidak pernah dilepas. Di
+/// Windows itu dua kali lipat mahal: duplikasi DXGI yang menggantung bisa
+/// membuat sesi berikutnya mendapat layar hitam.
+pub fn slot_action(state: RTCPeerConnectionState) -> SlotAction {
+    match state {
+        RTCPeerConnectionState::Failed | RTCPeerConnectionState::Closed => SlotAction::ReleaseNow,
+        RTCPeerConnectionState::Disconnected => SlotAction::ReleaseAfterGrace,
+        // `Unspecified` / `New` / `Connecting` / `Connected`: sesi hidup atau
+        // sedang dibangun ulang — jangan sentuh slot-nya.
+        _ => SlotAction::Keep,
+    }
+}
+
 /// Kandidat ICE yang diterima dari signaling.
 #[derive(Clone, Debug)]
 pub struct IceCandidate {
@@ -346,5 +395,46 @@ impl Session {
     pub async fn close(&self) -> Result<()> {
         self.pc.close().await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn koneksi_blip_jaringan_tidak_langsung_mencabut_slot() {
+        // Inilah regresi yang dulunya ada: `Disconnected` diperlakukan sama
+        // dengan `Failed`, padahal ia keadaan sementara yang biasa pulih
+        // sendiri. Kalau dicabut seketika, kandidat ICE dari peer yang sama
+        // ditolak dan sesi tidak bisa hidup lagi.
+        assert_eq!(
+            slot_action(RTCPeerConnectionState::Disconnected),
+            SlotAction::ReleaseAfterGrace
+        );
+        assert!(DISCONNECT_GRACE >= std::time::Duration::from_secs(10));
+        assert!(DISCONNECT_GRACE <= std::time::Duration::from_secs(30));
+    }
+
+    #[test]
+    fn koneksi_mati_permanen_mencabut_slot_sekarang() {
+        for s in [
+            RTCPeerConnectionState::Failed,
+            RTCPeerConnectionState::Closed,
+        ] {
+            assert_eq!(slot_action(s), SlotAction::ReleaseNow, "keadaan {s:?}");
+        }
+    }
+
+    #[test]
+    fn sesi_hidup_atau_menuju_connected_tidak_disentuh() {
+        for s in [
+            RTCPeerConnectionState::New,
+            RTCPeerConnectionState::Connecting,
+            RTCPeerConnectionState::Connected,
+            RTCPeerConnectionState::Unspecified,
+        ] {
+            assert_eq!(slot_action(s), SlotAction::Keep, "keadaan {s:?}");
+        }
     }
 }

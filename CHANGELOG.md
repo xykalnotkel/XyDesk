@@ -57,6 +57,54 @@ Kebijakan rilis:
   dan fallback `news_service.dart` di Flutter) diselaraskan ke
   `Haekal Saputra` sesuai mandat operator, supaya nama lama tidak muncul
   lagi saat seed ulang atau saat author kosong.
+- Host: **ketikan panjang dari client diinject per batch.** Satu pesan teks
+  (0x06) kini dipecah ≤ 32 karakter per panggilan `SendInput`, dan sisa yang
+  belum disisipkan dikirim ulang mengikuti nilai kembali sistem (dokumentasi
+  Win32 menyatakan batas per panggilan berbeda antar versi Windows — batch
+  besar sebelumnya bisa hilang sebagian tanpa jejak). Teks di atas 4.096 unit
+  UTF-16 dibuang pada batas karakter, bukan dipotong di tengah pasangan
+  surrogate, supaya satu tempel raksasa tidak membebani host yang harus selalu
+  aktif.
+- Host: keputusan "kapan sebuah sesi dianggap berakhir" pindah ke satu fungsi
+  (`session::slot_action`) dan dikunci uji unit, sehingga kebijakannya tidak lagi
+  tersebar di `matches!` dalam handler.
+
+### Diperbaiki
+- Host: **koneksi yang terlepas sebentar tidak lagi mematikan sesi.** Blip Wi-Fi
+  (berpindah kanal, sinyal drop dua detik) membuat ICE agent melaporkan
+  `Disconnected`, dan host memperlakukannya sama seperti koneksi mati
+  permanen: izin pairing langsung dicabut sehingga kandidat ICE berikutnya dari
+  klien yang sama ditolak ("bukan sesi aktif") — sesi yang sebenarnya masih
+  bisa hidup menjadi tidak mungkin pulih. Sekarang ada masa tenggang 15 detik;
+  kalau sesi belum tersambung lagi, slot dicabut DAN peer connection-nya
+  ditutup.
+- Host: **capture dan encoder tidak lagi hidup tanpa penonton.** Pelepasan slot
+  sesi sebelumnya hanya mencabut catatan izin, tanpa menutup peer connection —
+  loop video berhenti hanya pada `Closed`/`Failed`. Sesi yang ditinggalkan bisa
+  terus memakan CPU/GPU, dan di Windows duplikasi DXGI yang menggantung turut
+  membuat sesi berikutnya mendapat layar hitam.
+- Host: **status shell tidak bisa lagi ditimpa teardown sesi lama.** Sesi lama
+  yang akhirnya tertutup setelah sesi baru berjalan sebelumnya ikut menghapus
+  catatan "sedang streaming" (panel menampilkan "siap" padahal ada orang yang
+  sedang melihat layar) dan mencabut izin pairing klien yang benar. Pelepasan
+  slot kini memeriksa apakah sesi yang tercatat memang sesi milik teardown itu.
+- Host: **satu sesi media pada satu waktu.** `offer` ulang (renegosiasi ICE) dari
+  klien yang sama membuat sesi baru sementara sesi lamanya dibiarkan berjalan;
+  sesi lama kini ditutup saat sesi baru dicatat.
+- Host: **password pairing tidak lagi bisa hilang karena panic task media.**
+  `set_streaming` memakai `recover_lock` seperti semua jalur produksi lain — itu
+  satu-satunya `.lock().unwrap()` yang tersisa di loop utama, dan mutex
+  ter-poison di situ merobohkan proses.
+- Host (Windows): **papan klip tidak lagi membocorkan memori bila penulisannya
+  ditolak sistem** — blok global yang sudah dialokasi kini dibebaskan saat
+  `GlobalLock` atau `SetClipboardData` gagal; sebelumnya bocor permanen di heap
+  global pada proses yang ditargetkan hidup berhari-hari.
+- Host: **pemeriksaan lint Windows hijau lagi.** Dua lint hanya terlihat di
+  target Windows (`doc` comment menggantung di `screen.rs`, implementasi manual
+  `Iterator::find` di `gui.rs`) dan lolos dari CI karena job `host-test`
+  mengompilasi cfg non-Windows.
+- Host: `host/Cargo.lock` kembali cocok dengan `Cargo.toml` — sejak bump 6.4.0
+  lock masih mencatat 6.3.0.
 
 ## [6.4.0] - 2026-09-03
 

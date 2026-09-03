@@ -64,15 +64,14 @@ mod win {
     fn engine_exe() -> Option<std::path::PathBuf> {
         let me = std::env::current_exe().ok()?;
         let dir = me.parent()?;
-        for c in [
+        // Urutan = prioritas: layout installer lebih dulu, kemudian engine
+        // yang ditaruh di sebelah GUI (build lokal).
+        [
             dir.join("Host").join("XyDesk-Host.exe"),
             dir.join("xydesk-host.exe"),
-        ] {
-            if c.exists() {
-                return Some(c);
-            }
-        }
-        None
+        ]
+        .into_iter()
+        .find(|c| c.exists())
     }
 
     fn no_window(cmd: &mut Command) {

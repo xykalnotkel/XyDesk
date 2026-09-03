@@ -255,6 +255,25 @@ impl ControlState {
         self.state = EngineState::Ready;
         self.video = VideoStats::default();
     }
+
+    /// Tandai streaming berakhir HANYA bila sesi yang tercatat memang `session`.
+    ///
+    /// Dipakai jalur teardown yang bisa terlambat (masa tenggang koneksi putus,
+    /// peer connection lama yang akhirnya Closed). Tanpa pemeriksaan ini,
+    /// teardown sesi lama menghapus keadaan sesi BARU yang sedang berjalan:
+    /// shell menampilkan "siap" padahal ada orang yang sedang melihat layar,
+    /// dan pencabutan izinnya ikut mengenai peer yang benar.
+    pub fn stop_session_if_current(&mut self, session: &Arc<Session>) -> bool {
+        if !self
+            .active_session
+            .as_ref()
+            .is_some_and(|s| Arc::ptr_eq(s, session))
+        {
+            return false;
+        }
+        self.mark_stopped();
+        true
+    }
 }
 
 fn now_ms() -> u64 {
@@ -794,6 +813,42 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&body).expect("JSON valid");
         assert_eq!(v["ok"], false);
         assert!(v["error"].as_str().unwrap_or("").contains("tidak dikenal"));
+    }
+
+    /// Teardown sesi lama tidak boleh menghapus keadaan sesi baru.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn stop_session_if_current_hanya_menyentuh_sesi_miliknya() {
+        use crate::session::Session;
+
+        let state = test_state();
+        let lama = Arc::new(Session::new(vec![], vec![]).await.expect("pc baru"));
+        let baru = Arc::new(Session::new(vec![], vec![]).await.expect("pc baru"));
+
+        // Sesi BARU yang tercatat di control API.
+        {
+            let mut st = recover_lock(&state);
+            st.set_streaming("klien-1".into(), baru.clone());
+        }
+        assert!(
+            !recover_lock(&state).stop_session_if_current(&lama),
+            "teardown sesi lama tidak boleh menghapus sesi baru"
+        );
+        {
+            let st = recover_lock(&state);
+            assert_eq!(st.state, EngineState::Streaming);
+            assert!(
+                st.active_session.is_some(),
+                "sesi baru harus tetap tercatat"
+            );
+        }
+
+        // Baru setelah pencatatnya sesi itu sendiri, slot boleh dilepas.
+        assert!(recover_lock(&state).stop_session_if_current(&baru));
+        {
+            let st = recover_lock(&state);
+            assert_eq!(st.state, EngineState::Ready);
+            assert!(st.active_session.is_none());
+        }
     }
 
     #[tokio::test]

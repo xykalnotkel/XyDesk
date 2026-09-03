@@ -471,8 +471,11 @@ mod windows {
         }
     }
 
-    /// RGBA8 (baris rapat) → NV12 dikerjakan `crate::pixfmt::rgba_to_nv12`
-    /// (lintas platform, teruji — lihat `pixfmt.rs`).
+    // RGBA8 (baris rapat) → NV12 dikerjakan `crate::pixfmt::rgba_to_nv12`
+    // (lintas platform, teruji — lihat `pixfmt.rs`). Catatan ini sengaja
+    // komentar biasa: sebagai `///` ia menggantung di atas baris kosong dan
+    // tidak mendokumentasikan apa pun (clippy `empty_line_after_doc_comments`,
+    // yang hanya terlihat di cross-check Windows karena modul ini `cfg(windows)`).
 
     /// Penangkap layar primer: tiap frame → proper → encode H264 (NVENC
     /// bila ada; fallback openh264) → kirim ke channel

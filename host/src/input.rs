@@ -20,7 +20,10 @@
 //! 0x04 SCROLL          dx:i16  dy:i16          (satuan WHEEL_DELTA=120)
 //! 0x05 KEY             vk:u16  down:u8         (Windows Virtual-Key code)
 //! 0x06 TEXT            utf8 bytes (sisa pesan) (dari keyboard virtual;
-//!                                               diinject sbg KEYEVENTF_UNICODE)
+//!                                               diinject sbg KEYEVENTF_UNICODE,
+//!                                               per 32 karakter — lihat
+//!                                               [`text_batches`] — dan dibuang
+//!                                               di atas 4.096 unit UTF-16)
 //! 0x07 DISPLAY_SELECT  index:u8                (pilih monitor; bukan injeksi)
 //! 0x08 CLIPBOARD_SET   utf8 bytes (sisa pesan) (isi papan klip, dua arah)
 //! 0x09 CLIPBOARD_REQ   (tanpa payload)         (minta lawan membalas 0x08)
@@ -106,6 +109,60 @@ pub fn decode(data: &[u8]) -> Option<InputEvent> {
     }
 }
 
+/// Batas jumlah unit UTF-16 yang diketik dari SATU pesan `0x06 TEXT`.
+///
+/// Papan ketik sistem di client mengirim satu pesan per rentetan ketikan, jadi
+/// menempel paragraf panjang berarti satu pesan berisi ribuan karakter. Host
+/// yang harus **SELALU AKTIF** tidak boleh kehabisan napas karena satu pesan:
+/// yang lewat batas ini dibuang, ketikan berikutnya tetap dilayani. Nilainya
+/// jauh di atas panjang tempel biasa.
+pub const MAX_TEXT_UNITS: usize = 4_096;
+
+/// Unit UTF-16 per panggilan `SendInput`. Satu unit = dua event (turun + naik),
+/// jadi 32 unit hanya 64 `INPUT` — di bawah `MAXINPUTS` (100) pada winuser.h.
+const TEXT_BATCH_UNITS: usize = 32;
+
+/// Rencana ketik untuk [`InputEvent::Text`]: unit UTF-16 yang diinject, dipecah
+/// per [`TEXT_BATCH_UNITS`].
+///
+/// Sengaja fungsi murni (tanpa Win32) supaya bisa diuji lintas platform. Yang
+/// diuji di sini bukan "ada panggilan SendInput", melainkan apa yang benar-
+/// benar sampai ke jendela target: teks utuh dan berurutan, pasangan surrogate
+/// tidak terbelah antar batch, dan pemotongan yang jatuh di batas karakter.
+pub fn text_batches(s: &str) -> Vec<Vec<u16>> {
+    let mut units: Vec<u16> = Vec::with_capacity(s.len());
+    for ch in s.chars() {
+        let mut buf = [0u16; 2];
+        let enc = ch.encode_utf16(&mut buf);
+        // Karakter yang tidak muat dibuang SELURUHNYA. Memotong di tengah
+        // pasangan surrogate meninggalkan high surrogate menggantung, dan yang
+        // muncul di jendela target bukan huruf berikutnya, melainkan karakter
+        // rusak — gejalanya persis seperti "teks jadi aneh setelah spasi".
+        if units.len() + enc.len() > MAX_TEXT_UNITS {
+            break;
+        }
+        units.extend_from_slice(enc);
+    }
+
+    let mut out: Vec<Vec<u16>> = Vec::new();
+    let mut i = 0;
+    while i < units.len() {
+        let mut end = (i + TEXT_BATCH_UNITS).min(units.len());
+        if end < units.len() && is_high_surrogate(units[end - 1]) {
+            // High surrogate di ujung batch: tarik pasangan di bawahnya ke
+            // batch yang sama (lihat komentar di atas).
+            end += 1;
+        }
+        out.push(units[i..end].to_vec());
+        i = end;
+    }
+    out
+}
+
+fn is_high_surrogate(u: u16) -> bool {
+    (0xD800..=0xDBFF).contains(&u)
+}
+
 /// Injector input — state ringan (tidak ada); satu fungsi murni per event.
 pub struct Injector;
 
@@ -157,6 +214,39 @@ mod windows_inject {
         // SAFETY: struct INPUT diisi lengkap; SendInput menyalin, tidak
         // menyimpan pointer.
         unsafe { SendInput(inputs, std::mem::size_of::<INPUT>() as i32) as usize == inputs.len() }
+    }
+
+    /// Sisipkan seluruh batch, melanjutkan sisa yang belum masuk.
+    ///
+    /// `SendInput` mengembalikan JUMLAH event yang benar-benar disisipkan —
+    /// bukan sukses/gagal semuanya. Dokumentasi Win32 menyatakan batas
+    /// berapa banyak yang bisa diproses sekali panggilan berbeda-beda antar
+    /// versi Windows dan pemanggil wajib mengandalkan nilai kembali itu.
+    /// Memakai `send()` untuk batch besar berarti paragraf panjang hilang
+    /// sebagian TANPA jejak: fungsi menganggapnya berhasil hanya kalau semua
+    /// masuk, dan sisanya tidak pernah dikirim ulang.
+    fn send_all(inputs: &[INPUT]) -> bool {
+        let size = std::mem::size_of::<INPUT>() as i32;
+        let mut done = 0usize;
+        // Percobaan terbatas: antrean input bisa macet bila ada jendela yang
+        // berhenti mengambil pesannya. Thread injeksi tidak boleh menggantung
+        // di situ — ia bertetangga dengan video dan koneksi sesi.
+        for _ in 0..8 {
+            let left = &inputs[done..];
+            if left.is_empty() {
+                return true;
+            }
+            // SAFETY: struct INPUT diisi lengkap; SendInput menyalin, tidak
+            // menyimpan pointer.
+            let sent = unsafe { SendInput(left, size) } as usize;
+            if sent == 0 {
+                // Nol = ditolak (UIPI, layar terkunci, secure desktop). Bukan
+                // keadaan yang bisa dipaksa; callers sudah mencatat kegagalannya.
+                return false;
+            }
+            done += sent;
+        }
+        false
     }
 
     fn mouse(flags: MOUSE_EVENT_FLAGS, dx: i32, dy: i32, data: i32) -> INPUT {
@@ -239,13 +329,19 @@ mod windows_inject {
             }
             InputEvent::Text(ref s) => {
                 // KEYEVENTF_UNICODE: ketik karakter apa pun tanpa peduli
-                // layout keyboard host. Surrogate pair utk emoji dll.
-                let mut inputs = Vec::new();
-                for unit in s.encode_utf16() {
-                    inputs.push(key(0, unit, KEYEVENTF_UNICODE));
-                    inputs.push(key(0, unit, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP));
+                // layout keyboard host. Batch dipecah + sisa yang tidak masuk
+                // dikirim ulang — lihat `text_batches` dan `send_all`.
+                for batch in super::text_batches(s) {
+                    let mut inputs = Vec::with_capacity(batch.len() * 2);
+                    for unit in batch {
+                        inputs.push(key(0, unit, KEYEVENTF_UNICODE));
+                        inputs.push(key(0, unit, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP));
+                    }
+                    if !send_all(&inputs) {
+                        return false;
+                    }
                 }
-                inputs.is_empty() || send(&inputs)
+                true
             }
             // Bukan injeksi — ditangani loop utama sesi (pindah monitor).
             InputEvent::DisplaySelect(_) => true,
@@ -378,6 +474,76 @@ mod tests {
         let m = encode_clipboard_request();
         assert_eq!(m.len(), 8);
         assert_eq!(decode(&m), Some(InputEvent::ClipboardRequest));
+    }
+
+    #[test]
+    fn teks_pendek_satu_batch_dan_utuh() {
+        assert_eq!(
+            text_batches("halo"),
+            vec![vec![b'h' as u16, b'a' as u16, b'l' as u16, b'o' as u16]]
+        );
+        assert!(
+            text_batches("").is_empty(),
+            "ketikan kosong = tidak ada apa pun untuk diketik"
+        );
+    }
+
+    #[test]
+    fn teks_panjang_dipecah_tanpa_menghilangkan_apa_pun() {
+        // 500 karakter campuran ('e' aksen = 1 unit, emoji = 2 unit) = 2000
+        // unit: jauh di atas satu batch, masih di bawah batas buang.
+        let isi = "a\u{00e9}\u{1f525}".repeat(500);
+        let batch = text_batches(&isi);
+        assert!(
+            batch.len() > 1,
+            "seharusnya dipecah, dapat {} batch",
+            batch.len()
+        );
+        assert!(
+            batch.iter().all(|b| b.len() <= TEXT_BATCH_UNITS + 1),
+            "batch terlalu besar untuk satu panggilan SendInput: {:?}",
+            batch.iter().map(|b| b.len()).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            String::from_utf16(&batch.concat()).expect("urutan utuh"),
+            isi
+        );
+    }
+
+    #[test]
+    fn pasangan_surrogate_tidak_terbelah_antar_batch() {
+        // Emoji sengaja dijatuhkan TEPAT di batas batch. Kalau high surrogate
+        // menutup satu batch dan low surrogate membuka batch berikutnya,
+        // banyak aplikasi tidak menggabungkannya lagi: yang tampil karakter
+        // rusak, bukan emoji.
+        let isi = "a".repeat(TEXT_BATCH_UNITS - 1) + "\u{1f600}" + "z";
+        let batch = text_batches(&isi);
+        assert_eq!(batch[0].len(), TEXT_BATCH_UNITS + 1);
+        assert_eq!(batch[1], vec!['z' as u16]);
+        assert_eq!(String::from_utf16(&batch.concat()).unwrap(), isi);
+    }
+
+    #[test]
+    fn teks_melebihi_batas_dibuang_di_batas_karakter() {
+        // Pas di batas: karakter terakhir boleh membawa dua unit.
+        let pas = "a".repeat(MAX_TEXT_UNITS - 2) + "\u{1f600}";
+        assert_eq!(text_batches(&pas).concat().len(), MAX_TEXT_UNITS);
+
+        // Satu unit lebih: emoji itu hilang SELURUHNYA, tidak ditinggal
+        // setengah (setengah pasangan = karakter rusak di jendela target).
+        let lebih = "a".repeat(MAX_TEXT_UNITS - 1) + "\u{1f600}";
+        assert_eq!(text_batches(&lebih).concat().len(), MAX_TEXT_UNITS - 1);
+    }
+
+    #[test]
+    fn text_pesan_besar_tetap_terbaca_oleh_host() {
+        // Batas panjang ada di jalur inject, BUKAN di parser: pesan TEXT besar
+        // harus tetap didekode (lalu dipotong atau dibuang rapi), bukan membuat
+        // seluruh pesan dianggap rusak.
+        let isi = "x".repeat(9000);
+        let mut m = vec![tag::TEXT];
+        m.extend_from_slice(isi.as_bytes());
+        assert_eq!(decode(&m), Some(InputEvent::Text(isi)));
     }
 
     #[test]
