@@ -26,6 +26,26 @@ lengkap) dan run yang terbuang; hasil akhir yang dianggap bukti hanya run
 yang disetujui. `release.yml`/`deploy-web.yml` menyala HANYA setelah Build
 sukses — pemicu sebenarnya tetap satu.
 
+### Sebelum build/rilis: cek papan, lalu izin operator (sejak 3 Sep 2026)
+
+Aturan operator — bukan saran, bukan kebiasaan:
+
+1. **Versi & berita = keputusan operator.** Role build/rilis TIDAK
+   menetapkan nomor versi, tidak memilih isi berita, dan tidak menaikkan
+   `pubspec.yaml` atas inisiatif sendiri. Semua lewat arahan operator.
+2. **Cek kerjaan agent lain dulu.** Sebelum mengajukan build penuh/rilis:
+   baca `AGENT_BOARD.md` (sesi aktif) + `HANDOFF.md` dan pastikan sesi
+   yang menyentuh area rilis (client, host, desktop, web) sudah `SELESAI`.
+   Kalau masih ada yang berjalan: TAHAN, laporkan ke operator — jangan
+   memaksakan rilis.
+3. **Push wajib izin operator.** Termasuk bump versi dan push yang
+   menyentuh `pubspec.yaml`/`release.yml`/`build.yml` — antre di
+   `AGENT_BOARD.md`, tunggu `DISETUJUI`, baru push. Build terfilter (web)
+   tetap satu-satunya jalur otomatis seperti di atas.
+4. **Satu gerakan saat siap.** Rilis penuh dikerjakan SEKALIGUS ketika
+   operator menyatakan siap: bump → Build → Release → deploy → berita
+   (artikel = bahan yang disatukan dari tiap agent).
+
 Untuk memicu Build penuh:
 
 ```bash

@@ -14,6 +14,18 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 > 3. Agent push dengan setiap commit memuat `Izin: <ID-SESI>` di body.
 >    Workflow `verify-push-auth.yml` memeriksa ini di setiap push.
 
+## Aturan operator (sejak 3 Sep 2026)
+
+1. **Versi & berita ditentukan operator** — agent tidak menetapkan nomor
+   versi, isi/terbitnya berita, atau bump `pubspec.yaml` sendiri.
+2. **Cek sesi lain sebelum rilis** — build penuh/rilis hanya diajukan bila
+   semua sesi yang menyentuh area rilis sudah `SELESAI`; kalau belum →
+   tahan, lapor operator, jangan memaksakan.
+3. **Tiap agent menulis bahan artikel kerjanya** — blok dampak pengguna +
+   screenshot asli (gaya `docs/NEWS_STYLE.md`), ditulis saat sesi
+   ditutup; role CI/Release menyatukan bahan semua agent menjadi SATU
+   artikel saat rilis.
+
 ## Alur sesi (3 langkah)
 
 1. **Kunci sesi** — tambah baris di tabel *Sesi aktif*, status `LAGI KERJA`.

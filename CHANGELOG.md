@@ -59,6 +59,13 @@ Kebijakan rilis:
   < 40 ms glass-to-glass tanpa alat eksternal.
 
 ### Diubah
+- Proses: **atur rilis diperketat (3 Sep 2026)** — versi & berita adalah
+  keputusan operator; sebelum build/rilis agent wajib memastikan kerjaan
+  sesi lain yang menyentuh area rilis sudah `SELESAI`; push yang
+  menyentuh versi/rilis wajib izin operator dulu; tiap agent menulis
+  bahan artikel untuk kerjanya sendiri dan role CI/Release menyatukannya
+  menjadi satu artikel rilis. Dituangkan di `AGENT_BOARD.md`,
+  `docs/CI.md`, `docs/NEWS_STYLE.md`, `news/README.md`.
 - Web: **tombol lompat di detail berita** — panah bawah melayang di pojok
   kanan bawah menggulir halus ke komentar paling bawah; sampai di dasar ia
   berubah jadi panah atas untuk kembali ke judul. Artikel changelog

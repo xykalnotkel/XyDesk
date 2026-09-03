@@ -262,6 +262,15 @@ ada.
 Kalau ragu, terbitkan yang pendek. Umpan berita yang sepi jauh lebih
 merusak kepercayaan daripada berita yang singkat.
 
+### Siapa yang menulis — tiap agent, lalu disatukan saat rilis
+
+Tiap agent menulis **bahan berita untuk kerjanya sendiri** (bukan role
+berita yang mengarang semua): blok "apa yang berubah + kenapa" dalam
+bahasa pengguna + screenshot asli sesuai §3–§6, ditulis saat sesinya
+ditutup (bukan menyusul). Saat rilis, role yang menangani rilis
+**menyatukan bahan semua agent menjadi SATU artikel rilis** — satu
+artikel per rilis, bukan banyak artikel kecil.
+
 ### Saat ada gangguan
 
 Singkat, jujur, tanpa menyalahkan siapa pun:

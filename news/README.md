@@ -24,6 +24,12 @@ pekerjaan. Tidak ada nama berkas, nama modul, atau nomor versi di judul.
 Penulis artikel selalu `Haekal Saputra` (identitas resmi; label `XySpace`
 tampil otomatis sebagai badge di klien).
 
+**Pembagian penulisan (sejak 3 Sep 2026):** tiap agent menulis bahan
+artikel untuk kerjanya sendiri — blok dampak pengguna + screenshot asli,
+gaya NEWS_STYLE — saat sesinya ditutup. Saat rilis, role CI/Release
+menyatukan bahan semua agent menjadi **SATU artikel rilis**; tidak
+menerbitkan banyak artikel per rilis.
+
 Terbitkan lewat endpoint admin —
 **slug dibuat otomatis sebagai HASH acak** (mis. `p-d5b4512f7d17`), tidak
 menebak urutan dan tidak membocorkan judul di URL:
