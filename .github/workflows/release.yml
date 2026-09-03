@@ -9,6 +9,11 @@ on:
     branches: [main]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'SHA commit yang akan dirilis (kosongkan = HEAD main saat dispatch). Wajib diisi SHA yang sudah punya Build penuh sukses — kalau diisi HEAD yang maju setelah Build, release gagal "Build sukses tidak ditemukan".'
+        required: false
+        type: string
 
 permissions:
   actions: read
@@ -45,9 +50,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
           WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          RELEASE_SHA_INPUT: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
-          release_sha="${WORKFLOW_SHA:-$GITHUB_SHA}"
+          # Dispatch manual: HEAD main bisa maju setelah Build penuh selesai
+          # (papan/commit sesi lain masuk). SHA eksplisit lewat input
+          # menghindari rilis yang salah menunjuk SHA tanpa Build.
+          release_sha="${RELEASE_SHA_INPUT:-${WORKFLOW_SHA:-$GITHUB_SHA}}"
 
           version_full="$(awk '/^version:[[:space:]]*/ { print $2; exit }' pubspec.yaml)"
           if ! [[ "$version_full" =~ ^([0-9]+\.[0-9]+\.[0-9]+)\+([1-9][0-9]*)$ ]]; then
