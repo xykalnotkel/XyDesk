@@ -503,8 +503,10 @@ _(kosong)_
   `11253cf5-cd17-495f-8546-135019a843e1`, secret `GOOGLE_CLIENT_ID` +
   `FOUNDER_EMAIL` terpasang, verifikasi pasca-deploy tercatat (CORS
   `X-Admin-Google-Token` live, feed publik OK, jalur Google gagal-tertutup
-  401). Sisi klien web (mengirim id_token saat founder masuk, tanpa
-  tempel token) menunggu sesi Web — lihat "Untuk: Web".
+  401). Sisi klien web juga selesai (sesi WEB-ADMIN) — id_token dikirim saat
+  founder masuk Google; dan sesi WEB-ADMINFIX menambah tombol "Lanjutkan
+  dengan Google" sekali-klik bila id_token kosong/kedaluwarsa (kembali
+  otomatis ke artikel).
 
 - [x] (dari Laras - XySpace Team, 2026-09-03) — **SELESAI 3 Sep 2026 (sesi
   `SESI-20260903-LARAS-CLOUDINARY`, operator menyerahkan kunci Cloudinary di
@@ -765,6 +767,14 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Danu - XySpace Team, 2026-09-03, sesi WEB-ADMINFIX) — **Mode
+  founder tidak lagi menyuruh tempel token saat id_token kosong:** founder
+  yang sudah login (OTP/sesi lama, atau id_token kedaluwarsa) kini diberi
+  tombol "Lanjutkan dengan Google" sekali-klik di halaman berita — ambil
+  id_token segar lalu kembali otomatis ke artikel; decode id_token diberi
+  padding base64. Build tsc+vite hijau; **live** (deploy cepat versi
+  `cd92afb3…`, 6.5.0 + fix). Tempel ADMIN_TOKEN tetap jadi cara lama.
 
 - [x] (dari Danu - XySpace Team, 2026-09-03) — **Mode founder web tanpa
   tempel ADMIN_TOKEN:** klien web menyimpan Google id_token saat login dan

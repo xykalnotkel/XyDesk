@@ -18,6 +18,13 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Diperbaiki
+- Web: **mode founder tidak lagi jatuh ke "tempel ADMIN_TOKEN" saat id_token
+  Google sudah lewat.** Founder yang sudah login (OTP atau sesi lama) tetapi
+  tidak punya id_token segar sebelumnya disuruh menempel token manual; kini
+  halaman berita menawarkan tombol "Lanjutkan dengan Google" sekali-klik —
+  mengambil id_token segar lalu kembali otomatis ke artikel. Decode payload
+  id_token diberi padding base64 (atob butuh kelipatan 4). Tempel ADMIN_TOKEN
+  tetap tersedia sebagai cara lama.
 - CI: **Publikasi Release ditolak 403 oleh token bawaan.** `GITHUB_TOKEN`
   menjawab "Resource not accessible by integration" saat membuat GitHub
   Release, walau job sudah menyatakan `contents: write` dan izin default
