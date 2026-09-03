@@ -86,3 +86,60 @@ test('perbandingan aman menangani panjang berbeda tanpa salah positif', () => {
   assert.equal(timingSafeEqual('abc', 'abcd'), false);
   assert.equal(timingSafeEqual('abc', 'abd'), false);
 });
+
+// ── Kasus tepi verifyJwt — setiap baris kode di verifyJwt adalah kontrak. ──
+
+async function signRawStr(h, p) {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${h}.${p}`));
+  return `${h}.${p}.${Buffer.from(sig).toString('base64url')}`;
+}
+
+test('JWT menolak typ selain JWT walau tanda tangan sah', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const token = await signRaw(
+    { alg: 'HS256', typ: 'JWE' },
+    { sub: 'user-1', iat: now, exp: now + 60 },
+  );
+  assert.equal(await verifyJwt(token, SECRET), null);
+});
+
+test('JWT menolak nbf di masa depan', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const token = await signRaw(
+    { alg: 'HS256', typ: 'JWT' },
+    { sub: 'user-1', iat: now, exp: now + 3600, nbf: now + 120 },
+  );
+  assert.equal(await verifyJwt(token, SECRET), null);
+});
+
+test('JWT menolak iat lebih dari satu menit di masa depan', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const token = await signRaw(
+    { alg: 'HS256', typ: 'JWT' },
+    { sub: 'user-1', iat: now + 120, exp: now + 3600 },
+  );
+  assert.equal(await verifyJwt(token, SECRET), null);
+});
+
+test('JWT dengan payload korup (tanda tangan sah) ditolak', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const h = encodeJson({ alg: 'HS256', typ: 'JWT' });
+  const p = Buffer.from('{ini bukan json').toString('base64url');
+  const token = await signRawStr(h, p);
+  assert.equal(await verifyJwt(token, SECRET), null);
+});
+
+test('verifyJwt menolak token kosong, bagian kurang, dan secret kosong', async () => {
+  const token = await signJwt({ sub: 'user-1' }, SECRET, 60);
+  assert.equal(await verifyJwt('', SECRET), null);
+  assert.equal(await verifyJwt('satu.bagian', SECRET), null);
+  assert.equal(await verifyJwt(token, ''), null);
+});
+
+test('verifyJwt menolak tanda tangan dari secret yang berbeda', async () => {
+  const token = await signJwt({ sub: 'user-1' }, SECRET, 60);
+  assert.equal(await verifyJwt(token, 'secret-yang-lain'), null);
+});

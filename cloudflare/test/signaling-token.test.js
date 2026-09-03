@@ -21,3 +21,20 @@ test('token signaling menolak timestamp lewat batas dan role asing', async () =>
   assert.equal(await verifyToken(token, 'client-123', 'client', SECRET), false);
   assert.equal(await verifyToken(token, 'client-123', 'admin', SECRET), false);
 });
+
+test('token signaling menolak bentuk rusak, tamper, dan secret kosong', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const token = await signSignalToken('client-123', 'client', SECRET, now);
+  const parts = token.split('.');
+
+  // Bukan tiga bagian / timestamp bukan angka / timestamp rusak.
+  assert.equal(await verifyToken('a.b', 'client-123', 'client', SECRET), false);
+  assert.equal(await verifyToken('abc.def.ghi', 'client-123', 'client', SECRET), false);
+
+  // Tanda tangan diubah di salah satu byte.
+  const tampered = `${parts[0]}.${parts[1]}.${'0'.repeat(parts[2].length)}`;
+  assert.equal(await verifyToken(tampered, 'client-123', 'client', SECRET), false);
+
+  // Tanpa secret, tidak ada token yang sah.
+  assert.equal(await verifyToken(token, 'client-123', 'client', ''), false);
+});

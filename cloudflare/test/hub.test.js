@@ -15,3 +15,17 @@ test('arah relay hanya mengizinkan alur client-host yang sah', () => {
   assert.equal(hub.relayAllowed('ice', 'host', 'client'), true);
   assert.equal(hub.relayAllowed('ice', 'client', 'client'), false);
 });
+
+test('bye dan ice sah dua arah, tetapi tidak pernah sesama role', () => {
+  const hub = new Hub({ getWebSockets: () => [] }, {});
+
+  assert.equal(hub.relayAllowed('bye', 'host', 'client'), true);
+  assert.equal(hub.relayAllowed('bye', 'client', 'host'), true);
+  assert.equal(hub.relayAllowed('bye', 'host', 'host'), false);
+  assert.equal(hub.relayAllowed('bye', 'client', 'client'), false);
+
+  assert.equal(hub.relayAllowed('ice', 'client', 'host'), true);
+  assert.equal(hub.relayAllowed('ice', 'host', 'client'), true);
+  assert.equal(hub.relayAllowed('ice', 'host', 'host'), false);
+  assert.equal(hub.relayAllowed('ice', 'client', 'client'), false);
+});
