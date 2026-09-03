@@ -15,6 +15,20 @@ Kebijakan rilis:
   commit. Panduan lengkap nadanya ada di [`docs/NEWS_STYLE.md`](docs/NEWS_STYLE.md).
 - File ini otomatis dilampirkan ke GitHub Release oleh `release.yml`.
 
+## [Belum terbit]
+
+### Diubah
+- Proses: **papan koordinasi dirapikan** — semua baris sesi berstatus
+  `SELESAI` yang masih menumpuk di tabel *Sesi aktif* dan *Antrean izin
+  push* dipindahkan ke *Riwayat sesi* (sejarah tidak dihapus), dan rilis
+  6.4.0 yang sebelumnya tidak tercatat kini tercantum sebagai
+  `SESI-20260903-CAKRA-RILIS64`.
+- Berita: **byline sisa dinormalkan** — default/seed/fallback yang masih
+  memakai `Tim XyDesk` (`news/schema.sql`, `news/seed.sql`, `news/README.md`,
+  dan fallback `news_service.dart` di Flutter) diselaraskan ke
+  `Haekal Saputra` sesuai mandat operator, supaya nama lama tidak muncul
+  lagi saat seed ulang atau saat author kosong.
+
 ## [6.4.0] - 2026-09-03
 
 ### Ditambahkan

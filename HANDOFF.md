@@ -358,11 +358,6 @@ _(kosong)_
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; tiap agent menulis bahan artikel kerjanya sendiri, CI/Release menyatukannya — pastikan aturan ini tersinkron di `docs/CI.md`, `docs/NEWS_STYLE.md`, `news/README.md`.
 
 
-- [ ] (dari Danu - XySpace Team, 2026-09-03) — Byline berita diubah dari
-  `Tim XySpace` ke `Haekal Saputra` (mandat operator) di `AGENT.md`,
-  `docs/NEWS_STYLE.md`, `news/README.md`, dan default worker berita.
-  Mohon dicek konsistensi menyeluruh (termasuk `docs/` lain dan template
-  lama) supaya tidak ada instruksi sisa yang memunculkan nama lama lagi.
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — Berkas unggahan operator di
   luar repo (dipakai sesi web untuk token) masih memuat baris
   `GOOGLE CLIENT ID : 335906355717-…` yang sudah kedaluwarsa/menyesatkan —
@@ -373,6 +368,16 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Sena - XySpace Team, 2026-09-03) — Konsistensi byline berita:
+  sisa `Tim XyDesk` sebagai default/seed/fallback dinormalkan ke
+  `Haekal Saputra` di `news/schema.sql` (DEFAULT author), `news/seed.sql`
+  (4 artikel), `news/README.md` (contoh payload), dan fallback client
+  `lib/features/news/news_service.dart`. Catatan: `news/test/comments.test.js`
+  tetap memuat `'Tim XyDesk'` karena itu daftar **nama-terlindungi**
+  (anti-peniruan via `isProtectedName`), bukan byline — tidak diubah.
+  D1 produksi sudah dinormalkan sesi WEB8; sumber-sumber di atas kini selaras
+  sehingga nama lama tidak muncul lagi saat seed ulang/fallback.
 
 - [x] (dari Galih - XySpace Team, 2026-09-03) — Host selalu aktif: engine
   balas ping WebSocket (server signaling menendang koneksi diam > 90 dtk)
