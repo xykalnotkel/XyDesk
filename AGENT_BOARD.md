@@ -46,6 +46,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260903-DANU-WEB8 | Danu - XySpace Team | Web | LAGI KERJA | Fix avatar ganda di komentar resmi berita (AuthorName vs comment-avatar) + normalisasi byline sisa 'Tim XyDesk' di D1 | 2026-09-03 |
 | SESI-20260903-DANU-WEB7 | Danu - XySpace Team | Web | SELESAI | Sewa PC: durasi custom + stok per paket; layar sesi: total & sisa waktu (chip + panel); HANDOFF parity APK | 2026-09-03 |
 | SESI-20260903-DANU-WEB6 | Danu - XySpace Team | Web | SELESAI | Tombol hero "Status rilis" → "Ingatkan saya" + popup pilih kanal kabar rilis (email / saluran WhatsApp / Telegram) | 2026-09-03 |
 | SESI-20260903-DANU-WEB5 | Danu - XySpace Team | Web | SELESAI | Audit responsivitas semua halaman (desktop/tablet/HP) + perbaikan, tombol panah-bawah lompat ke akhir artikel di detail berita, pengingat mandar operator ke News (artikel wajib lengkap + screenshot perubahan) via HANDOFF | 2026-09-03 |
@@ -59,6 +60,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Ringkasan perubahan | Status izin | Disetujui oleh | Kapan | Run CI |
 |---|---|---|---|---|---|---|
+| SESI-20260903-DANU-WEB8 | Danu - XySpace Team | Web: fix foto profil ganda pada komentar resmi berita (avatar di comment-head + author-badge di AuthorName tampil dua kali; tambah prop avatar, komentar/reply tanpa avatar kedua) + normalisasi byline artikel lama 'Tim XyDesk' → 'Haekal Saputra' di D1 (sisa yang terlewat sesi WEB3); CHANGELOG | DISETUJUI | Xyckal (chat) | 2026-09-03 | — |
 | SESI-20260903-GALIH-HOST-STABIL | Galih - XySpace Team | Host: hardening stabilitas — capture layar berhenti saat sesi tutup (tak ada capture/encode yatim), retry saat capture ditutup OS (secure desktop/monitor lepas), mutex poison-safe (`recover_lock` di jalur produksi), supervisor timeout token/control API; uji 66 unit + loopback + cross-check Windows-gnu | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi izin push 33726247202 (push host tidak memicu build otomatis — kebijakan 7ddb594) |
 | SESI-20260903-LARAS-CLIENT2 | Laras - XySpace Team | Client Flutter: tombol Billing di topbar (buka Langganan), isolasi data lokal per akun (daftar perangkat/riwayat/perangkat-terakhir di-scope `acct-`/`guest`, fix kebocoran data antar akun — security-relevant), changelog lengkap di Pusat Update (body GitHub Release); analyze bersih, 53/53 test hijau | DISETUJUI | Xyckal (chat) | 2026-09-03 | — |
 | SESI-20260903-DANU-WEB7 | Danu - XySpace Team | Web: /billing durasi custom (input jam + chip cepat) + ketersediaan stok per paket (config + status habis), layar sesi web chip total & sisa waktu sesi tamu (2 jam) + baris Total/Sisa di tab Sesi; fix deep link /billing (currentRoute tanpa case); HANDOFF parity APK (Client Flutter); CHANGELOG | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi Izin hijau 5207989; E2E lokal hijau (billing + sesi via host pola uji); build/deploy menunggu dispatch CI sesuai kebijakan baru 2dbd186 (permintaan dispatch dikirim via HANDOFF) |
