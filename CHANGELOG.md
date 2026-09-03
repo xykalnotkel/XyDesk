@@ -39,6 +39,15 @@ Kebijakan rilis:
   Hasil: `cloudflare/` 51/51 hijau, `news/` 20/20 hijau (`node --test`).
 
 ### Diubah
+- Client Flutter: **unggah foto profil kini aktif.** Kodenya sudah selesai
+  sejak 2 Sep, tetapi menunggu satu langkah yang hanya bisa dilakukan pemilik
+  akun Cloudinary — membuat *unsigned upload preset*. Preset
+  `xydesk_profile_unsigned` kini dibuat dan diverifikasi dengan upload
+  sungguhan, jadi tombol "ganti foto" di halaman akun tidak lagi menjawab
+  "belum aktif". Unggahan dibatasi gambar `jpg/jpeg/png/webp`, diperkecil ke
+  maksimum 512×512, dan diberi nama unik supaya foto satu pengguna tidak bisa
+  menimpa milik pengguna lain. Kunci rahasia Cloudinary tetap tidak pernah
+  masuk ke aplikasi — klien hanya membawa nama cloud dan nama preset.
 - CI: **`release.yml` menolak merilis SHA yang tertinggal dari `main`.**
   Sebelumnya `prepare` hanya memeriksa "tag belum ada", sehingga ketika
   `pubspec.yaml` ikut berubah di sebuah commit fitur, Release bisa menandai

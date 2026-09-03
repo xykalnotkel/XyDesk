@@ -22,10 +22,25 @@ import 'package:http/http.dart' as http;
 /// Nama cloud Cloudinary — bukan rahasia (muncul di URL publik hasil upload).
 const cloudinaryCloudName = 'jxjvz3qi';
 
-/// Nama unsigned upload preset. KOSONG sampai operator membuatnya di
-/// dasbor Cloudinary. Kalau masih kosong, [uploadProfileImage] melempar
-/// [CloudinaryUploadException] dengan pesan yang jelas, bukan gagal senyap.
-const cloudinaryUploadPreset = '';
+/// Nama unsigned upload preset.
+///
+/// Dibuat 3 Sep 2026 lewat Admin API atas perintah operator, dan **diuji
+/// dengan upload sungguhan** dari luar (tanpa `api_key`/`api_secret`, persis
+/// jalur yang dipakai APK) — berhasil, `secure_url` yang dikembalikan bisa
+/// diakses publik `HTTP 200 image/png`. Gambar uji langsung dihapus lagi.
+///
+/// Setelan preset di sisi Cloudinary:
+/// - `unsigned: true`, folder `profile/`
+/// - hanya `jpg,jpeg,png,webp` (upload `.txt` ditolak — sudah diuji)
+/// - dibatasi `c_limit,w_512,h_512,q_auto:good` supaya foto raksasa dari
+///   kamera HP tidak menghabiskan kuota
+/// - `unique_filename: true`, `overwrite: false` — unggahan satu pengguna
+///   tidak bisa menimpa milik pengguna lain
+///
+/// Bukan rahasia: nama preset ikut terkirim dari klien di setiap upload dan
+/// memang dirancang untuk terlihat. Yang rahasia (`api_secret`) tetap tidak
+/// pernah menyentuh repo ini.
+const cloudinaryUploadPreset = 'xydesk_profile_unsigned';
 
 class CloudinaryUploadException implements Exception {
   CloudinaryUploadException(this.message);

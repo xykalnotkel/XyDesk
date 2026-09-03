@@ -16,6 +16,14 @@ void main() {
     expect(cloudinaryCloudName, isNotEmpty);
   });
 
+  test('preset unsigned sudah dikonfigurasi operator', () {
+    // Dibuat 3 Sep 2026 (`xydesk_profile_unsigned`) dan diuji dengan upload
+    // sungguhan tanpa api_secret. Selama konstanta ini kosong, tombol unggah
+    // foto di halaman akun sengaja tidak membuka galeri — jadi test ini
+    // menjaga agar nilainya tidak terhapus tanpa sengaja.
+    expect(cloudinaryUploadPreset, isNotEmpty);
+  });
+
   test(
     'upload melempar pesan jelas ketika preset belum dikonfigurasi',
     () async {

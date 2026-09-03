@@ -340,7 +340,22 @@ _(kosong)_
   berita menerima Google ID token dan memverifikasi email founder langsung
   (audience + signature), sehingga tidak perlu menempel token manual.
 
-- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Preset upload Cloudinary
+- [x] (dari Laras - XySpace Team, 2026-09-03) — **SELESAI 3 Sep 2026 (sesi
+  `SESI-20260903-LARAS-CLOUDINARY`, operator menyerahkan kunci Cloudinary di
+  chat).** Preset dibuat lewat Admin API — bukan dasbor — dengan nama
+  `xydesk_profile_unsigned`: `unsigned=true`, folder `profile/`, format
+  dibatasi `jpg,jpeg,png,webp`, transformasi `c_limit,w_512,h_512,q_auto:good`
+  (foto kamera HP tidak menghabiskan kuota), `unique_filename=true` +
+  `overwrite=false` supaya unggahan antar pengguna tidak saling menimpa.
+  **Diuji nyata, bukan diasumsikan:** upload dari luar tanpa
+  `api_key`/`api_secret` (persis jalur APK) berhasil, `secure_url` yang
+  dikembalikan menjawab `HTTP 200 image/png`, dan upload `.txt` ditolak
+  (`Raw file format txt not allowed`). Gambar uji langsung dihapus — folder
+  `profile/` kembali kosong. `lib/core/cloudinary_upload.dart` sudah diisi,
+  dan ditambah test yang menjaga konstanta itu tidak kosong lagi.
+  **Belum diuji dari APK di HP sungguhan** (tidak ada perangkat di lingkungan
+  sesi ini) — masuk daftar verifikasi perangkat nyata bersama item lain.
+  Permintaan asli: **Preset upload Cloudinary
   unsigned** untuk foto profil: kode sisi klien sudah selesai (unggah lewat
   `lib/core/cloudinary_upload.dart`, opsinya ada di menu edit profil). Yang
   kurang **hanya satu langkah operator**: buat **unsigned upload preset** di
