@@ -17,6 +17,15 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+## [6.5.0] - 2026-09-03
+
+> **Build 28.** Rilis ini mengumpulkan kerja sepanjang 3 Sep 2026 dari
+> seluruh area: host engine, shell desktop Windows, web, worker berita,
+> aplikasi Android, dan perkakas rilis. Nomor MINOR dipilih karena ada
+> kemampuan baru yang kompatibel ke belakang (unggah foto profil, login
+> Google untuk admin, Pengaturan lengkap di shell host) tanpa satu pun
+> perubahan yang mematahkan protokol atau format data tersimpan.
+
 ### Ditambahkan
 - Host + Web + Client Flutter: **client sekarang lapor diri saat pairing**
   (`name` + `platform` di pesan `pair`), jadi panel host menampilkan "siapa yang
