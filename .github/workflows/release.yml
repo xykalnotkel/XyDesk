@@ -463,7 +463,10 @@ jobs:
           target_commitish: ${{ needs.prepare.outputs.release_sha }}
           files: dist/*
           fail_on_unmatched_files: true
-          update_release: true
+          # Rilis ulang: aset lama dihapus oleh langkah 'Hapus aset rilis
+          # lama' sebelum publish — action-gh-release v2 TIDAK punya input
+          # 'update_release' (memicu warning "Unexpected input"), cukup
+          # ditimpa lewat penghapusan + upload ulang.
           generate_release_notes: true
           body: |
             ## XyDesk ${{ needs.prepare.outputs.tag }}

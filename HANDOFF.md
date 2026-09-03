@@ -116,24 +116,44 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   (fetch satu nama asset dari artifact, pastikan `content-type` JS),
   (3) pertimbangkan `cancel-in-progress: false` + antrean.
 
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — Produk Windows pindah dari
-  "GUI native Win32 + engine" menjadi "shell Electron (`desktop/`) + engine
-  Rust". Yang berubah: `build.yml` job `windows` kini build engine +
-  `electron-builder --win --dir` (unggah `desktop/dist/win-unpacked/*`),
-  filter area `host` kini menyertakan `desktop/**`; `release.yml` job
-  `windows-host` DIHAPUS (engine sudah dibundel electron-builder) dan
-  installer tinggal memverifikasi `resources/engine/xydesk-host.exe`.
-  **Belum terverifikasi**: `electron-builder --arm64` di runner
-  `windows-11-arm` dan jalur rilis penuh — tolong dipantau saat run pertama.
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — Push host-only ke `main`
-  (tanpa perubahan area client) saat rilis belum selesai memicu ulang
-  `release.yml`: job `Ambil build client yang sudah lulus` MERAH karena
-  artefak client tidak ada (job Flutter di-skip oleh filter area), padahal
-  `prepare` menilai `should_release=true` selama tag `v6.3.0` belum dibuat.
-  Tidak terjadi rilis duplikat (`Terbitkan Release` ikut skip), tapi
-  run-nya merah. Pertimbangkan penjagaan: `clients` soft-fail / lewati
-  bila artefak client tidak ada, atau `prepare` hanya rilis bila area
-  client berubah.
+- [x] (dari Galih - XySpace Team, 2026-09-03) — Verifikasi
+  `electron-builder --arm64` di runner `windows-11-arm`: **SELESAI 3 Sep
+  2026** (Build 33720587772 + Release 33721267756 hijau, installer arm64
+  terbit). Ada bug di jalur itu: output arm64 keluar di
+  `dist/win-arm64-unpacked` sementara verifikasi & upload hardcode
+  `win-unpacked` — sudah diperbaiki di `build.yml` (path dihitung per
+  arsitektur).
+- [x] (dari Galih - XySpace Team, 2026-09-03) — Release merah saat push
+  host-only tanpa artefak client: `prepare` melewati rilis dengan
+  peringatan (bukan merah) sejak gerbang artefak, dan `release.yml` kini
+  menerima input `release_sha` untuk dispatch manual.
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **JANGAN terbitkan rilis
+  ulang dengan build number yang sama.** 6.3.0 build 25 sempat terbit
+  belum lengkap lalu ditarik; diterbitkan ulang dengan build 25 juga →
+  perangkat yang sempat memasangnya menolak pembaruan selamanya ("Anda
+  memakai versi terbaru") karena aplikasi membandingkan
+  `manifest.build > installed`. Rilis ulang resmi kini **build 26**
+  (tag `v6.3.0` sama, aset ditimpa, idempotency OneSignal menyertakan
+  build). Build number = satu-satunya sumber kebenaran naik-rilis.
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis otomatis bisa
+  menunjuk SHA yang belum lengkap**: `release.yml` lama menilai
+  `should_release` hanya dari "tag belum ada". Saat `pubspec.yaml`
+  berubah di commit fitur (mis. aced623 foto profil), Build jalan dan
+  Release langsung membuat `v6.3.0` di SHA itu — tanpa fix layar hitam
+  yang baru masuk 4 commit kemudian (sekali terlanjur rilis salah isi,
+  dianulir paksa). Pertimbangkan: `prepare` wajib cek `host/**` ikut
+  berubah, atau rilis hanya via `workflow_dispatch` + `release_sha`.
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Inventaris lisensi
+  wajib digenerate ulang dengan SDK Flutter** saat pubspec/deps berubah
+  (dua kejadian: regenerasi tanpa SDK → 499/105 komponen; lockfile
+  desktop menambah playwright). Urutan: `flutter pub get` → `node
+  tool/gen-licenses.mjs` → `--check` hijau sebelum push.
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Screenshot artikel
+  6.3.0 diambil dari stack lokal** (web dev + host pola uji): UI = commit
+  rilis yang sama, tapi bukan build yang diunduh pengguna dan video =
+  test pattern, bukan desktop asli. Sesuai NEWS_STYLE §3 idealnya dari
+  build rilis di perangkat nyata — item Danu "screenshot Android" adalah
+  langkah serupa untuk Android.
 
 ## Untuk: Web
 
