@@ -29,6 +29,18 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
    (Cakra)** — semua lewat `workflow_dispatch` setelah izin operator;
    push agent lain **tidak boleh memicu actions** (kecuali gerbang audit
    izin `verify-push-auth.yml`). Agent push kode + dokumen saja.
+5. **Jalur deploy cepat (restu operator di chat, 3 Sep 2026)** — untuk
+   layanan yang butuh cepat live: **Web app** (Danu) serta **worker
+   Backend/Edge dan worker berita** boleh deploy langsung tanpa menunggu
+   dispatch CI/Release. Syarat kumulatif: (a) push sudah di `main` dan
+   `verify-push-auth` hijau; (b) build memakai env produksi yang benar
+   (mis. `VITE_GOOGLE_CLIENT_ID` untuk web); (c) verifikasi pasca-deploy
+   wajib dan tercatat (contoh web: md5 bundle live == build, content-type
+   JS benar); (d) dicatat terbuka di baris sesi papan + item HANDOFF ke
+   CI/Release pada sesi yang sama. Build/rilis penuh (APK, Windows,
+   installer, tag rilis) TETAP kewenangan CI/Release. Kredensial deploy
+   adalah milik operator — pembagiannya ke lingkungan agent lain adalah
+   keputusan operator, bukan agent.
 
 ## Alur sesi (3 langkah)
 
@@ -46,6 +58,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260903-DANU-WEB9 | Danu - XySpace Team | Web | SELESAI | Aturan papan #5: jalur deploy cepat (restu operator di chat) untuk Web + worker Backend/berita, dengan syarat verifikasi & pencatatan; info HANDOFF ke CI & Backend | 2026-09-03 |
 | SESI-20260903-DANU-WEB8 | Danu - XySpace Team | Web | SELESAI | Fix avatar ganda di komentar resmi berita (AuthorName vs comment-avatar) + normalisasi byline sisa 'Tim XyDesk' di D1 | 2026-09-03 |
 | SESI-20260903-DANU-WEB7 | Danu - XySpace Team | Web | SELESAI | Sewa PC: durasi custom + stok per paket; layar sesi: total & sisa waktu (chip + panel); HANDOFF parity APK | 2026-09-03 |
 | SESI-20260903-DANU-WEB6 | Danu - XySpace Team | Web | SELESAI | Tombol hero "Status rilis" → "Ingatkan saya" + popup pilih kanal kabar rilis (email / saluran WhatsApp / Telegram) | 2026-09-03 |
@@ -60,6 +73,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Ringkasan perubahan | Status izin | Disetujui oleh | Kapan | Run CI |
 |---|---|---|---|---|---|---|
+| SESI-20260903-DANU-WEB9 | Danu - XySpace Team | Aturan papan #5 (jalur deploy cepat, restu operator chat 3 Sep 2026) + HANDOFF info ke CI/Release & Backend/Edge; tanpa perubahan kode | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi izin hijau (lihat push sesi ini) |
 | SESI-20260903-DANU-WEB8 | Danu - XySpace Team | Web: fix foto profil ganda pada komentar resmi berita (avatar di comment-head + author-badge di AuthorName tampil dua kali; tambah prop avatar, komentar/reply tanpa avatar kedua) + normalisasi byline artikel lama 'Tim XyDesk' → 'Haekal Saputra' di D1 (sisa yang terlewat sesi WEB3); CHANGELOG | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi izin hijau; E2E visual: byline 1 foto, komentar resmi 1 avatar; D1 terverifikasi (10/10 posts Haekal Saputra); DEPLOY DIJALANKAN DANU atas perintah operator di chat (menimpa kebijakan dispatch 2dbd186 untuk kasus ini): wrangler 728f6c21 dari build lokal main b161df7, md5 bundle live == build (24f72e50), content-type JS + fix avatar terverifikasi live |
 | SESI-20260903-GALIH-HOST-STABIL | Galih - XySpace Team | Host: hardening stabilitas — capture layar berhenti saat sesi tutup (tak ada capture/encode yatim), retry saat capture ditutup OS (secure desktop/monitor lepas), mutex poison-safe (`recover_lock` di jalur produksi), supervisor timeout token/control API; uji 66 unit + loopback + cross-check Windows-gnu | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi izin push 33726247202 (push host tidak memicu build otomatis — kebijakan 7ddb594) |
 | SESI-20260903-LARAS-CLIENT2 | Laras - XySpace Team | Client Flutter: tombol Billing di topbar (buka Langganan), isolasi data lokal per akun (daftar perangkat/riwayat/perangkat-terakhir di-scope `acct-`/`guest`, fix kebocoran data antar akun — security-relevant), changelog lengkap di Pusat Update (body GitHub Release); analyze bersih, 53/53 test hijau | DISETUJUI | Xyckal (chat) | 2026-09-03 | — |
@@ -88,6 +102,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260903-DANU-WEB9 | Danu - XySpace Team | Web | SELESAI | Aturan papan #5: jalur deploy cepat Web + worker Backend/berita (syarat: main + izin hijau, env produksi, verifikasi pasca-deploy tercatat, info ke CI); tanpa perubahan kode | 2026-09-03 |
 | SESI-20260903-DANU-WEB8 | Danu - XySpace Team | Web | SELESAI | Fix avatar ganda komentar resmi (prop avatar=false di komentar/reply) + byline 5 artikel lama 'Tim …' dinormalisasi di D1; verifikasi visual + D1 hijau | 2026-09-03 |
 | SESI-20260903-DANU-WEB7 | Danu - XySpace Team | Web | SELESAI | Sewa PC: durasi custom 1–24 jam + stok per paket (angka operator) + fix deep link /billing; layar sesi: chip durasi & sisa waktu tamu 2 jam + Total/Sisa di tab Sesi; parity APK di-HANDOFF; verifikasi izin hijau, dispatch CI menunggu (kebijakan baru) | 2026-09-03 |
 | SESI-20260903-GALIH-HOST-STABIL | Galih - XySpace Team | Host Engine | SELESAI | Hardening stabilitas: capture berhenti saat sesi tutup (FrameSource + stop saat Disconnected), retry capture saat ditutup OS, mutex poison-safe (recover_lock), timeout supervisor (token/control API); uji 66 unit + loopback + cross-check Windows-gnu; verifikasi runtime di lab Windows (HANDOFF) | 2026-09-03 |

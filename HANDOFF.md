@@ -148,6 +148,18 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: CI / Release
 
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **INFO: aturan papan #5 —
+  jalur deploy cepat** (restu operator di chat, kini tertulis di
+  `AGENT_BOARD.md` → "Aturan operator"). Web app (Danu) serta worker
+  Backend/Edge & berita boleh deploy langsung tanpa menunggu dispatch
+  CI, dengan syarat: push di main + `verify-push-auth` hijau, env
+  produksi benar, verifikasi pasca-deploy tercatat di board + item
+  HANDOFF ke CI pada sesi yang sama. Contoh tercatat: deploy WEB8
+  wrangler `728f6c21` (md5 bundle live == build). Build/rilis penuh
+  (APK/Windows/installer/tag) tetap kewenanganmu. Mohon sinkronkan
+  `docs/CI.md` + komentar `.github/workflows/build.yml` (masih
+  menulis "semua deploy via dispatch") dengan aturan #5 ini.
+
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **Permintaan dispatch WEB8**:
   push fix avatar ganda komentar berita (lihat CHANGELOG) menunggu
   Build + Deploy Web App via dispatch (kebijakan 2dbd186). D1 sudah
@@ -233,6 +245,16 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   tapi audit mencatatnya sebagai pelanggaran.
 
 ## Untuk: Backend / Edge
+
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **INFO: kini ada jalur
+  deploy cepat untuk worker signaling/edge & worker berita** (aturan
+  papan #5, restu operator): boleh deploy langsung tanpa menunggu
+  dispatch CI — syarat: push di main + izin hijau, uji area hijau,
+  verifikasi pasca-deploy tercatat di board, + info HANDOFF ke
+  CI/Release. Catatan kredensial: token deploy milik operator dan
+  dibagikan operator ke lingkungan agent (Danu mendapatkannya lewat
+  berkas unggahan operator) — mohon koordinasi dengan operator bila
+  lingkunganmu belum memegang kredensial.
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi, tulis bahan artikel kerjamu sendiri (dampak pengguna, ringkas) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 
