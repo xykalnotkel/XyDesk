@@ -112,6 +112,13 @@ impl VideoStats {
 #[serde(rename_all = "camelCase")]
 pub struct SessionStatus {
     pub client_id: String,
+    /// Nama perangkat pengendali, dilaporkan sendiri lewat pesan `pair`
+    /// (mis. "Redmi Note 12"). `None` bila client tidak mengirimnya —
+    /// shell host menampilkan ID pairing sebagai gantinya.
+    pub client_name: Option<String>,
+    /// Platform pengendali ("android", "windows", "linux", "web", ...).
+    /// Juga dilaporkan sendiri; dipakai untuk menampilkan "HP" vs "PC".
+    pub client_platform: Option<String>,
     pub started_at_ms: u64,
     pub duration_ms: u64,
 }
@@ -214,6 +221,8 @@ impl ControlState {
             uptime_ms: now.saturating_sub(self.started_at_ms),
             session: self.session.as_ref().map(|s| SessionStatus {
                 client_id: s.client_id.clone(),
+                client_name: s.client_name.clone(),
+                client_platform: s.client_platform.clone(),
                 started_at_ms: s.started_at_ms,
                 duration_ms: now.saturating_sub(s.started_at_ms),
             }),
@@ -236,9 +245,21 @@ impl ControlState {
     }
 
     /// Tandai streaming dimulai: simpan info sesi + handle media.
-    pub fn set_streaming(&mut self, client_id: String, session: Arc<Session>) {
+    ///
+    /// `label` (nama perangkat + platform, dari pesan `pair`) menempel pada
+    /// status supaya panel host bisa menampilkan SIAPA yang sedang menonton
+    /// layarnya, bukan sekadar ID acak. Nilainya dilaporkan sendiri oleh peer
+    /// dan tidak pernah dipakai untuk membuat keputusan keamanan.
+    pub fn set_streaming(
+        &mut self,
+        client_id: String,
+        session: Arc<Session>,
+        label: Option<crate::pairedpeers::PeerLabel>,
+    ) {
         self.session = Some(SessionStatus {
             client_id,
+            client_name: label.as_ref().and_then(|l| l.name.clone()),
+            client_platform: label.as_ref().and_then(|l| l.platform.clone()),
             started_at_ms: now_ms(),
             duration_ms: 0,
         });
@@ -444,12 +465,9 @@ async fn action(
             let Some(pw) = req.password.as_deref() else {
                 return Ok(Json(ActionResponse::err("password tidak disertakan")));
             };
-            if pw.len() < identity::PW_MIN_LEN {
-                return Ok(Json(ActionResponse::err(format!(
-                    "password minimal {} karakter",
-                    identity::PW_MIN_LEN
-                ))));
-            }
+            // Aturan panjang/karakter TIDAK diulang di sini: semuanya milik
+            // `identity::set_password`, supaya CLI dan control API tidak bisa
+            // berbeda pendirian soal password yang sama.
             if let Err(e) = identity::set_password(pw) {
                 return Ok(Json(ActionResponse::err(format!(
                     "gagal menyimpan password: {e}"
@@ -694,7 +712,10 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn aksi_new_password_mengganti_nilai_di_status() {
         // Arahkan penyimpanan identitas ke direktori sementara agar test tidak
-        // menyentuh ~/.xydesk pengembang/CI.
+        // menyentuh ~/.xydesk pengembang/CI. Env var dipakai bersama satu
+        // proses, jadi dipegang lewat gembok identity sampai selesai (guard ini
+        // `Send`: sengaja boleh hidup melintasi await di bawah).
+        let _home_guard = crate::identity::lock_home_env_async().await;
         let home = std::env::temp_dir().join(format!("xydesk-test-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&home);
         std::env::set_var("XYDESK_HOME", &home);
@@ -732,6 +753,7 @@ mod tests {
         assert_eq!(tersimpan.trim(), baru);
         assert!(state.lock().unwrap().password == baru);
         std::env::remove_var("XYDESK_HOME");
+        drop(_home_guard);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -827,7 +849,7 @@ mod tests {
         // Sesi BARU yang tercatat di control API.
         {
             let mut st = recover_lock(&state);
-            st.set_streaming("klien-1".into(), baru.clone());
+            st.set_streaming("klien-1".into(), baru.clone(), None);
         }
         assert!(
             !recover_lock(&state).stop_session_if_current(&lama),
@@ -856,6 +878,8 @@ mod tests {
         let state = test_state();
         state.lock().unwrap().session = Some(SessionStatus {
             client_id: "klien-1".into(),
+            client_name: Some("Redmi Note 12".into()),
+            client_platform: Some("android".into()),
             started_at_ms: now_ms() - 5_000,
             duration_ms: 0,
         });
@@ -863,6 +887,40 @@ mod tests {
         let s = snap.session.expect("ada sesi");
         assert_eq!(s.client_id, "klien-1");
         assert!(s.duration_ms >= 5_000, "durasi {}.", s.duration_ms);
+        // Label perangkat harus ikut tersalin ke snapshot, bukan hilang di
+        // tengah jalan (snapshot membangun ulang struct-nya).
+        assert_eq!(s.client_name.as_deref(), Some("Redmi Note 12"));
+        assert_eq!(s.client_platform.as_deref(), Some("android"));
+    }
+
+    #[tokio::test]
+    async fn client_lama_tanpa_label_tidak_memalsukan_nama_kosong() {
+        let state = test_state();
+        let sesi = Arc::new(Session::new(vec![], vec![]).await.expect("pc uji"));
+        // Peer tanpa `name`/`platform` di pesan pair -> label None.
+        // (Session dibuat SEBELUM lock dipegang: guard std tidak boleh hidup
+        // melintasi await.)
+        recover_lock(&state).set_streaming("pc-lama".into(), sesi, None);
+        let snap = recover_lock(&state).snapshot();
+        let s = snap.session.expect("sesi tercatat");
+        assert!(
+            s.client_name.is_none() && s.client_platform.is_none(),
+            "tidak ada label, bukan string kosong"
+        );
+    }
+
+    #[tokio::test]
+    async fn label_peer_yang_dicabut_berhenti_ditampilkan() {
+        // Sesi berhenti = tidak ada yang menonton, titik. Label tidak boleh
+        // tersisa di payload /status (UI akan menampilkan "masih terhubung").
+        let state = test_state();
+        let sesi = Arc::new(Session::new(vec![], vec![]).await.expect("pc uji"));
+        let label =
+            crate::pairedpeers::PeerLabel::new(Some("HP Tetangga".into()), Some("android".into()));
+        recover_lock(&state).set_streaming("hp-x".into(), sesi, label);
+        assert!(recover_lock(&state).snapshot().session.is_some());
+        recover_lock(&state).mark_stopped();
+        assert!(recover_lock(&state).snapshot().session.is_none());
     }
 
     #[test]

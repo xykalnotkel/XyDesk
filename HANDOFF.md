@@ -26,6 +26,27 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Client Flutter
 
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Host sekarang menampilkan
+  perangkat mana yang menonton, kalau client mau lapor diri.** Tambahkan dua
+  field opsional pada pesan `pair` yang dikirim ke signaling:
+  `{"type":"pair","pin":"…","name":"Redmi Note 12","platform":"android"}`.
+  Host sudah membacanya (`host/src/main.rs` `Msg.name`/`Msg.platform` →
+  `PairedPeers::set_label` → `clientName`/`clientPlatform` di `GET /status`),
+  memotong 48 karakter, dan membersihkannya saat `revoke`; tidak ada keputusan
+  keamanan yang bergantung padanya. `platform` dipakai untuk memilih label
+  ("HP · Android", "PC · Windows", "Peramban web") — kirim huruf kecil bebas,
+  host menormalkan. Kalau tidak dikirim, host menampilkan ID pairing saja.
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Kolom password pairing wajib
+  mematikan auto-kapital.** Password hasil generasi host kini campuran besar-
+  kecil (`host/src/identity.rs` `PW_CHARS`), dan shell desktop sudah
+  `autoCapitalize="none"`. Di Flutter: pasang
+  `textCapitalization: TextCapitalization.none` + `autocorrect: false` +
+  `enableSuggestions: false` di field password Hubungkan/pairing. Catatan
+  penting supaya tidak salah bikin aturan: `verify_password` MASIH tidak peka
+  besar-kecil (sengaja, biar papan ketik HP yang mengkapital huruf pertama tidak
+  mengunci pemilik PC), jadi ini soal tampilan/UX bukan soal autentikasi —
+  JANGAN menulis formatter yang meng-once-upcase input user seperti dulu.
+
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **0x06 TEXT belum dibatasi
   panjangnya di client.** `InputCodec.text()` (lib/webrtc/input_codec.dart)
   mengirim seluruh tempel sebagai SATU pesan, berbeda dari `clipboardSet()`
@@ -64,7 +85,6 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   terhadap format release repo nyata di perangkat.
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan semua bahan jadi SATU artikel saat rilis.
-
 
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **Screenshot layar sesi
   Android untuk artikel berita** (permintaan operator: artikel harus punya
@@ -107,8 +127,20 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Desktop Shell
 
-- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur shell/desktop, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Topbar sekarang = baris judul
+  Windows; jangan dilucuti lagi.** `desktop/electron/main.cjs` memakai
+  `titleBarStyle: 'hidden'` + `titleBarOverlay` sewarna `--bg`, `.topbar`
+  ber-`-webkit-app-region: drag` dengan `padding-right: 150px` khusus
+  `<html class="electron">` (dideduksi dari `info.platform === 'win32'`).
+  Tiga hal yang wajib ikut dijaga kalau topbar disentuh: (1) setiap elemen yang
+  bisa diklik di dalam topbar harus `no-drag`, (2) jangan balik ke
+  `frame: false` — snap layouts + tombol caption asli ikut hilang, (3) kalau
+  menambah baris di ATAS topbar (mis. banner peringatan), tombol caption
+  Windows tetap menempel di tepi atas jendela, jadi baris itu akan menutupinya
+  — banner semacam itu harus di bawah topbar (lihat `.demo-banner`). Konstanta
+  150px = lebar 3 tombol caption; cek ulang kalau Electron di-upgrade.
 
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur shell/desktop, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — Host Windows kini kembali
   memakai **shell Electron + Next.js** (`desktop/`) sebagai UI utama, dan
@@ -250,7 +282,6 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Tugas rilis kini:** menyatukan bahan artikel dari tiap agent menjadi SATU artikel rilis (bukan mengarang semuanya); versi & terbitnya berita = keputusan operator; jangan build/rilis sebelum semua sesi area rilis `SELESAI`.
 
-
 - [x] (dari Danu - XySpace Team, 2026-09-03) — **Bug race di deploy-web.yml**:
   push `6c5ba06` (web) dan `d90e12a` (ci) nyaris bersamaan → dua event
   `workflow_run` Build tumpang tindih. Run Deploy `33721151162` tercatat
@@ -329,8 +360,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   saat berkomentar — tidak perlu lagi menempel `ADMIN_TOKEN` (fallback tetap
   ada). Build tsc+vite hijau, **live** via deploy cepat (versi `a3607022…`).
 
-- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur web, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Field password pairing web:
+  `autoCapitalize="none" autoCorrect="off" spellCheck={false}`**, dan kirim
+  `name` + `platform: "web"` di pesan `pair` supaya host bisa menampilkan
+  "Peramban web" alih-alih ID acak. Lihat item Client Flutter — kontrak host
+  (`host/src/main.rs` + `GET /status` `clientName`/`clientPlatform`) sudah
+  siap dan field-nya opsional. Verifikasi password masih tidak peka
+  besar-kecil, jadi jangan tambahkan transformasi kapitalisasi di input.
 
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur web, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — Push `0081742` (keyboard
   virtual, panel gaming) membuat run `verify-push-auth.yml` MERAH: commit
@@ -358,6 +396,18 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Backend / Edge
 
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **`signaling/` (hub Go)
+  MENGHAPUS field asing saat relay, jadi label perangkat tidak sampai ke host
+  lewat hub dev.** `hub.go` `relay(from, toID, msg Message)` men-serialize
+  ulang struct bertipe `Message` (`protocol.go`), sehingga `name`/`platform`
+  yang ditambahkan client di pesan `pair` hilang. Cloudflare hub
+  (`cloudflare/src/hub.js`) aman: `peer.send(JSON.stringify({ ...msg, from:
+  meta.id }))` melewatkan field apa pun. Perbaikan yang cukup: tambahkan
+  `Name`/`Platform` (`json:"name,omitempty"` / `"platform,omitempty"`) ke
+  `Message` — atau relay payload mentah. Dampak sekarang: pengujian UI chip
+  "HP · Android" hanya bisa dilakukan terhadap worker, tidak terhadap hub Go;
+  host tetap normal (label kosong → tampil ID).
+
 - [x] (dari Danu - XySpace Team, 2026-09-03) — **INFO: kini ada jalur
   deploy cepat untuk worker signaling/edge & worker berita** (aturan
   papan #5, restu operator): boleh deploy langsung tanpa menunggu
@@ -372,7 +422,6 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   WEB-DEPLOY (deploy web). Item info ini ditutup.
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi, tulis bahan artikel kerjamu sendiri (dampak pengguna, ringkas) — role CI/Release menyatukan jadi SATU artikel saat rilis.
-
 
 _(kosong)_
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **Billing sewa PC otomatis**:
@@ -434,7 +483,6 @@ _(kosong)_
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** artikel per rilis = SATU artikel gabungan dari bahan tiap agent (role CI/Release menyatukan) — jangan menerbitkan artikel rilis yang isinya dikarang sendiri; versi & terbitnya berita = keputusan operator.
 
-
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **PENGINGAT MANDAT OPERATOR
   (Xyckal, chat 3 Sep 2026): artikel berita HARUS lengkap** — detail apa +
   kenapa, changelog versi pengguna, dan **screenshot setiap perubahan
@@ -462,8 +510,36 @@ _(kosong)_
 
 ## Untuk: Host Engine
 
-- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi host, tulis bahan artikel kerjamu sendiri (dampak pengguna, ringkas) — role CI/Release menyatukan jadi SATU artikel saat rilis.
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Permintaan "siapkan driver
+  mic/audio/display/GPU" dijawab: tidak ada driver yang perlu/pantas dikirim.**
+  Host sudah lewat jalur tercepat user-mode: DXGI Desktop Duplication (capture),
+  NVENC D3D11+NV12 (`nvenc.rs`, fallback openh264), WASAPI loopback (audio PC →
+  HP), track WebRTC (mic HP → PC), `SendInput` (keyboard/mouse). Driver kernel
+  hanya perlu untuk HAL lain dan semuanya butuh EV code-signing + INF + test
+  signing, yang bertentangan dengan aturan ROADMAP "semua gratis, tanpa kartu
+  kredit": HidHide/ViGEmBus (menyembunyikan perangkat fisik), IddCx (display
+  virtual/headless). Tiga Upgrade nyata yang masih murni user-mode dan belum
+  dikerjakan — kerjakan kalau mau "gacor" beneran: (1) zero-copy penuh
+  DXGI→NVENC lewat shared NT handle (buang salin BGRA→NV12 di CPU), (2) pilih
+  adapter/L0 (`DXGI_SWAP_CHAIN_FLAG`/`CreateDXGIFactory1` + prefer GPU diskrit)
+  sebelum encoder dibuat, (3) capture audio PER APLIKASI
+  (`AUDIOCLIENT_ACTIVATION_PARAMS` + `PROCESS_LOOPBACK_MODE_TARGET`, Win10 2004+)
+  supaya hanya suara app target yang ikut ke HP. Uji semuanya di lab Windows
+  (`host/TEST-LAB-WINDOWS.md`) — runner CI tidak punya GPU.
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Keyboard & mouse FISIK di PC
+  host sudah aman dan memang begitu desainnya**: `SendInput` MENAMBAH event ke
+  antrean input sistem, tidak mengambil alih perangkat, jadi orang di depan PC
+  tetap bisa mengetik/gerakin mouse selama sesi (input campur — bukan bug,
+  belum ada permintaan mode eksklusif). Yang BELUM ada dan butuh keputusan
+  produk sebelum dikoding: "kunci PC lokal selama sesi". Dua bentuk murah:
+  (a) `LockWorkStation()` (user32, satu panggilan, tanpa driver) dipicu
+  tombol/aksi `POST /action {action:"lock-now"}` — praktis, tapi local user
+  harus login ulang; (b) `WH_KEYBOARD_LL`/`WH_MOUSE_LL` yang menelan event lokal
+  dengan opsi "lepas" + watchdog — terasa lebih rapi TAPI tidak bisa diuji dari
+  CI Linux dan hook salah tulis = pengguna kehilangan papan ketiknya sendiri.
+  Jangan pasang (b) tanpa lab Windows + tombol darurat di UI.
 
+- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi host, tulis bahan artikel kerjamu sendiri (dampak pengguna, ringkas) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **PENTING untuk verifikasi lab
   Windows**: host dulu "hidup-mati-hidup-mati" karena server signaling
@@ -547,7 +623,6 @@ _(kosong)_
   bahwa "CI host hijau" tidak berarti kode Windows bersih.
 
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; tiap agent menulis bahan artikel kerjanya sendiri, CI/Release menyatukannya — pastikan aturan ini tersinkron di `docs/CI.md`, `docs/NEWS_STYLE.md`, `news/README.md`. **Dikerjakan Sena (audit 3 Sep 2026):** `docs/CI.md` sudah memuatnya (§"Sebelum build/rilis"), `news/README.md` sudah memuatnya; yang kurang hanya `docs/NEWS_STYLE.md` — kini ditambah blok "Siapa yang menulis" di §1.
-
 
 - [x] (dari Danu - XySpace Team, 2026-09-03) — Berkas unggahan operator di
   luar repo (dipakai sesi web untuk token) masih memuat baris

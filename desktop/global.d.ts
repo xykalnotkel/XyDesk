@@ -6,6 +6,11 @@ export {};
 declare global {
   interface SessionPayload {
     clientId: string;
+    /** Nama perangkat pengendali, dilaporkan sendiri lewat pesan `pair`.
+     *  `null`/`undefined` untuk client yang belum mengirimnya. */
+    clientName?: string | null;
+    /** "android" | "ios" | "windows" | "linux" | "macos" | "web" | ... */
+    clientPlatform?: string | null;
     startedAtMs: number;
     durationMs: number;
   }
@@ -57,6 +62,8 @@ declare global {
       getAutostart(): Promise<boolean>;
       setAutostart(enable: boolean): Promise<{ ok: boolean; enabled?: boolean; error?: string }>;
       restartEngine(): Promise<{ ok: boolean; restarted?: boolean }>;
+      /** Tulis baris pendek ke tooltip tray + judul jendela. */
+      setHint?(hint: string): Promise<{ ok: boolean }>;
     };
   }
 }

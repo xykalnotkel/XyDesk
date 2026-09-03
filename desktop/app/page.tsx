@@ -8,11 +8,14 @@ import {
   EyeOff,
   Heart,
   Home,
+  Laptop,
+  Monitor,
   Newspaper,
   Power,
   RefreshCw,
   Settings,
   Share2,
+  Smartphone,
   User,
   ExternalLink,
 } from 'lucide-react';
@@ -42,10 +45,16 @@ const DEMO_STATUS: StatusPayload = {
   state: 'streaming',
   engine: true,
   deviceId: '123456789',
-  password: 'AB2CD3EF4G',
+  password: 'KopiPagi2026',
   signalingUrl: 'wss://signal.xystudio.my.id/ws',
   uptimeMs: 1800000,
-  session: { clientId: 'klien-demo', startedAtMs: Date.now() - 60000, durationMs: 60000 },
+  session: {
+    clientId: 'klien-demo',
+    clientName: 'Redmi Note 12',
+    clientPlatform: 'android',
+    startedAtMs: Date.now() - 60000,
+    durationMs: 60000,
+  },
   video: { framesSent: 214400, fps: 60, nvenc: true },
   lastError: null,
 };
@@ -92,6 +101,14 @@ const NAV_BOTTOM: { id: Page; label: string; icon: typeof Home }[] = [
   { id: 'settings', label: 'Pengaturan', icon: Settings },
 ];
 
+const PAGE_TITLE: Record<Page, string> = {
+  home: 'Beranda',
+  connect: 'Hubungkan',
+  news: 'Berita',
+  profile: 'Profil',
+  settings: 'Pengaturan',
+};
+
 const STATE_LABEL: Record<string, { label: string; cls: string }> = {
   starting: { label: 'Memulai…', cls: 'connecting' },
   connecting: { label: 'Menghubungkan…', cls: 'connecting' },
@@ -105,6 +122,44 @@ function formatId(id: string): string {
   return digits.length === 9 ? `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)}` : id;
 }
 
+/// Nama platform yang siap dibaca manusia. Client mengirim nilai mentah
+/// ("android", "windows", "web"); kalau tidak dikenal, tampilkan apa adanya.
+const PLATFORM_LABEL: Record<string, string> = {
+  android: 'HP · Android',
+  ios: 'HP · iOS',
+  windows: 'PC · Windows',
+  linux: 'PC · Linux',
+  macos: 'Mac',
+  web: 'Peramban web',
+};
+
+function platformLabel(platform?: string | null): string | null {
+  if (!platform) return null;
+  const key = platform.trim().toLowerCase();
+  return PLATFORM_LABEL[key] ?? platform.trim();
+}
+
+/// "Siapa yang sedang menonton" untuk topbar/kartu: nama perangkat + platform,
+/// jatuh ke ID pairing bila client lama tidak mengirim label (ask: tampilkan
+/// device hp atau pc di host).
+function peerLabel(session?: { clientId: string; clientName?: string | null; clientPlatform?: string | null } | null): string {
+  if (!session) return '—';
+  const who = session.clientName?.trim() || session.clientId;
+  const plat = platformLabel(session.clientPlatform);
+  // Dipagu kurung, bukan "·": label platform sendiri sudah memuat "·"
+  // ("HP · Android"), dan "Redmi Note 12 · HP · Android" terbaca seperti tiga
+  // perangkat berbeda.
+  return plat ? `${who} (${plat})` : `${who} (tanpa label)`;
+}
+
+/// Ikon kecil untuk membedakan HP vs PC di baris status.
+function peerIcon(platform?: string | null) {
+  const p = (platform || '').trim().toLowerCase();
+  if (p === 'android' || p === 'ios') return Smartphone;
+  if (p === 'windows' || p === 'macos' || p === 'linux') return Monitor;
+  return Laptop;
+}
+
 function formatDuration(ms: number): string {
   const s = Math.floor(ms / 1000);
   const m = Math.floor(s / 60);
@@ -116,14 +171,28 @@ function formatDuration(ms: number): string {
 
 export default function Page() {
   const [page, setPage] = useState<Page>('home');
-  const [status, setStatus] = useState<StatusPayload | null>(DEMO ? DEMO_STATUS : null);
-  const [logs, setLogs] = useState<LogEntry[]>(DEMO ? DEMO_LOGS : []);
-  const [info, setInfo] = useState<InfoPayload | null>(null);
+  const [status, setStatus] = useState<StatusPayload | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [flash, setFlash] = useState<string | null>(null);
+  const [info, setInfo] = useState<InfoPayload | null>(null);
+  const [demoReady, setDemoReady] = useState(false);
 
   const flashMsg = useCallback((msg: string) => {
     setFlash(msg);
     setTimeout(() => setFlash(null), 2600);
+  }, []);
+
+  // Data contoh (dan banner pratinjau) baru dipasang SETELAH mount, bukan dari
+  // nilai awal `useState`. `window.xydesk` memang tidak ada saat SSR, jadi
+  // kalau render pertama client langsung berbeda dari HTML server, React
+  // mengamuk dengan #418 (hydration mismatch) dan seluruh subtree dibangun
+  // ulang. Di dalam aplikasi Electron `DEMO` false di kedua sisi: tidak ada
+  // yang berubah, hanya jeda satu frame lebih bersih.
+  useEffect(() => {
+    if (!DEMO) return;
+    setStatus(DEMO_STATUS);
+    setLogs(DEMO_LOGS);
+    setDemoReady(true);
   }, []);
 
   useEffect(() => {
@@ -146,6 +215,29 @@ export default function Page() {
     const timer = setInterval(tick, 1500);
     return () => clearInterval(timer);
   }, []);
+
+  // Baris judul jendela + tooltip tray ikut melaporkan siapa yang menonton:
+  // saat jendela ditutup ke tray, itulah satu-satunya tempat pemilik PC bisa
+  // melihat bahwa layarnya sedang dilihat orang lain.
+  useEffect(() => {
+    if (DEMO) return;
+    const sesi = status?.session;
+    const hint = sesi
+      ? `Dikendalikan ${peerLabel(sesi)}`
+      : status?.state === 'ready'
+        ? 'Menunggu pairing'
+        : '';
+    window.xydesk?.setHint?.(hint).catch(() => {});
+  }, [status]);
+
+  // Baris judul kita lebur jadi milik aplikasi (titleBarOverlay Electron),
+  // jadi tombol caption Windows butuh tempat kosong di ujung kanan topbar.
+  useEffect(() => {
+    const root = document.documentElement;
+    const cls = 'electron';
+    if (info && info.packaged !== undefined && info.platform === 'win32') root.classList.add(cls);
+    else if (info && info.platform !== 'win32') root.classList.remove(cls);
+  }, [info]);
 
   const runAction = async (action: string, password?: string) => {
     if (DEMO) {
@@ -183,13 +275,6 @@ export default function Page() {
 
   return (
     <div className="shell">
-      {DEMO && (
-        <div className="demo-banner">
-          <b>Mode pratinjau.</b> Data di bawah contoh — jalankan lewat aplikasi desktop XyDesk
-          untuk melihat status engine sesungguhnya.
-        </div>
-      )}
-
       <aside className="sidebar">
         <div className="brand">
           <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
@@ -233,30 +318,51 @@ export default function Page() {
           ))}
         </nav>
 
-        <div className="side-status">
-          <span className={`dot ${pill.cls}`} />
-          {engineUp ? pill.label : 'Engine belum siap'}
-        </div>
       </aside>
 
       <main className="main">
+        {DEMO && demoReady && (
+          <div className="demo-banner">
+            <b>Mode pratinjau.</b> Data di bawah contoh — jalankan lewat aplikasi desktop XyDesk
+            untuk melihat status engine sesungguhnya.
+          </div>
+        )}
+
         <header className="topbar">
-          <h2>
-            {page === 'home'
-              ? 'Beranda'
-              : page === 'connect'
-                ? 'Hubungkan'
-                : page === 'news'
-                  ? 'Berita'
-                  : page === 'profile'
-                    ? 'Profil'
-                    : 'Pengaturan'}
-          </h2>
-          {flash && <span className="flash">{flash}</span>}
-          <span className={`pill ${pill.cls}`}>
-            <span className="dot" />
-            {engineUp ? pill.label : 'Engine belum siap'}
-          </span>
+          <h2>{PAGE_TITLE[page]}</h2>
+          <div className="quick">
+            {flash && <span className="flash">{flash}</span>}
+            {/* "ada yang sedang menonton" harus terlihat dari halaman mana pun,
+                termasuk saat jendela dikecilkan — klik = buka Beranda. */}
+            {st?.session && (
+              <button
+                className="chip live"
+                onClick={() => setPage('home')}
+                title="Sesi sedang berjalan — buka Beranda"
+              >
+                {(() => {
+                  const Icon = peerIcon(st.session.clientPlatform);
+                  return <Icon size={13} aria-hidden="true" />;
+                })()}
+                <span className="who">{peerLabel(st.session)}</span>
+                <span className="dur">{formatDuration(st.session.durationMs)}</span>
+              </button>
+            )}
+            {st?.deviceId && (
+              <button
+                className="chip"
+                onClick={() => copy(st.deviceId as string, 'ID')}
+                title="Salin ID perangkat untuk pairing"
+              >
+                {formatId(st.deviceId)}
+                <ClipboardCopy size={12} aria-hidden="true" />
+              </button>
+            )}
+            <span className={`pill ${pill.cls}`}>
+              <span className="dot" />
+              {engineUp ? pill.label : 'Engine belum siap'}
+            </span>
+          </div>
         </header>
 
         <div className="page-body">
@@ -313,8 +419,12 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
         {s ? (
           <>
             <div className="kv-grid">
+              <div className="kv wide">
+                <span>Perangkat pengendali</span>
+                <strong title={peerLabel(s)}>{peerLabel(s)}</strong>
+              </div>
               <div className="kv">
-                <span>Client</span>
+                <span>ID pairing</span>
                 <strong>{s.clientId}</strong>
               </div>
               <div className="kv">
@@ -322,6 +432,11 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
                 <strong>{formatDuration(s.durationMs)}</strong>
               </div>
             </div>
+            <p className="hint">
+              Nama dan jenis perangkat dilaporkan sendiri oleh HP/PC yang terhubung — host hanya
+              menampilkannya, tidak memakainya untuk memutuskan akses. Kalau kosong, client-nya
+              versi lama yang belum mengirim label.
+            </p>
             <div className="stat-row">
               <div className="stat">
                 <span className="k">FPS kirim</span>
@@ -409,16 +524,28 @@ function ConnectPage({
         <div className="set-row">
           <input
             type="text"
-            placeholder="Password kustom (min. 6 karakter)"
+            placeholder="Password kustom, bebas huruf besar/kecil (min. 6 karakter)"
             value={customPw}
             onChange={(e) => setCustomPw(e.target.value)}
-            autoCapitalize="characters"
+            autoCapitalize="none"
+            autoCorrect="off"
             spellCheck={false}
+            autoComplete="off"
           />
           <button className="primary" disabled={customPw.length < 6} onClick={() => onAction('set-password', customPw)}>
             Simpan
           </button>
         </div>
+        <p className="hint">
+          Boleh huruf besar, kecil, angka, bahkan spasi — yang penting minimal 6 karakter.
+          Yang tidak boleh hanya karakter kontrol (Enter/Tab), karena tidak bisa diketik dari
+          papan ketik ponsel. Password acak baru memakai campuran huruf besar-kecil tanpa
+          karakter yang mudah tertukar (tanpa I/l/1 dan O/o/0).
+          <br />
+          Saat mengetik di HP, besar-kecil TIDAK membedakan: <code>KopiPagi2026</code> dan{' '}
+          <code>kopipagi2026</code> sama-sama diterima. Ini disengaja supaya papan ketik ponsel
+          yang suka mengkapital huruf pertama tidak mengunci pemilik PC-nya sendiri.
+        </p>
         <p className="hint">
           Password pendek hanya aman karena engine membatasi laju percobaan pairing (pairguard).
           Mengganti password tidak memutus sesi yang sedang berjalan.

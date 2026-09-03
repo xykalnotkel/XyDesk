@@ -18,6 +18,14 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Ditambahkan
+- Host + shell desktop: **panel host menampilkan perangkat mana yang menonton.**
+  Client boleh mengirim `name` + `platform` di pesan `pair`; host menyimpannya
+  (`PairedPeers::set_label`, ikut terhapus saat `revoke`) dan menampilkannya di
+  chip topbar, kartu "Sesi aktif", baris log pairing, tooltip tray, dan judul
+  jendela — lewat `clientName`/`clientPlatform` di `GET /status`. Client lama
+  yang tidak mengirim field itu tetap bisa pairing: UI jatuh ke ID pairing,
+  bukan menampilkan nama kosong. Nilainya dilaporkan sendiri oleh peer, jadi
+  tidak pernah dipakai untuk memutuskan akses.
 - Host: `host/TEST-LAB-WINDOWS.md` — langkah uji lab Windows siap jalan (resep
   menukar ID+password jadi token signaling, membaca `/status` lewat control
   API, lima blok pengujian: blip jaringan, capture berhenti, ketikan panjang,
@@ -62,6 +70,43 @@ Kebijakan rilis:
   maksimum 512×512, dan diberi nama unik supaya foto satu pengguna tidak bisa
   menimpa milik pengguna lain. Kunci rahasia Cloudinary tetap tidak pernah
   masuk ke aplikasi — klien hanya membawa nama cloud dan nama preset.
+- Shell desktop: **mode pratinjau tidak lagi memicu galat hidrasi React
+  (#418).** `DEMO` dihitung dari `window.xydesk`, yang tentu saja tidak ada saat
+  SSR — dulu nilai itu dipakai langsung sebagai initial state (`DEMO ?
+  DEMO_STATUS : null`) dan untuk merender banner, jadi render pertama client
+  berbeda dari HTML server dan React membangun ulang seluruh subtree. Data contoh
+  sekarang masuk lewat effect setelah mount; di dalam aplikasi Electron tidak ada
+  yang berubah (di sana `DEMO` false di kedua sisi). Console bersih di kedua
+  jalur (pratinjau dan shell sungguhan, diuji dengan `window.xydesk` tiruan).
+- Host: **password hasil generasi tidak lagi huruf besar semua.** `PW_CHARS`
+  sekarang 23 huruf besar + 23 huruf kecil + 8 angka, tetap tanpa karakter yang
+  mudah tertukar (di kedua kasus: `I`/`l`/`1`, `O`/`o`/`0`). Perlu dibilang
+  jujur: ini perbaikan keterbacaan, BUKAN kekuatan — `verify_password` sengaja
+  masih tidak peka besar-kecil, jadi ruang tebakan efektifnya tetap 31 simbol
+  per karakter (≈ 4,95 bit, 10 karakter ≈ 49,5 bit). Syarat kalau mau
+  besar-kecil jadi ruang tebakan sungguhan (verifikasi peka-kasus + semua
+  client mematikan auto-kapital dulu) ditulis di `host/README.md`.
+- Host: **satu sumber aturan untuk password kustom.** `identity::set_password`
+  yang memotong spasi ujung, menghitung minimum 6 KARAKTER (bukan byte), dan
+  menolak karakter kontrol (Enter/Tab tidak bisa diketik dari papan ketik HP);
+  control API `set-password` memanggilnya alih-alih punya salinan aturannya
+  sendiri — dulu keduanya bisa berbeda pendirian soal password yang sama.
+- Shell desktop: **topbar menyatu dengan baris judul Windows.** `main.cjs`
+  memakai `titleBarStyle: 'hidden'` + `titleBarOverlay` sewarna UI, topbar jadi
+  daerah seret berisi info yang selalu dibutuhkan (status engine, perangkat +
+  durasi sesi, ID pairing yang bisa diklik untuk menyalin), `backgroundColor`
+  jendela disamakan dengan `--bg` (#fafaf9; dulu #131315 sehingga ada kilat
+  gelap sebelum Next.js menggambar). Pill status yang dulu dobel di bawah
+  sidebar dihapus, banner "mode pratinjau" pindah dari `position: absolute`
+  (dia menutupi judul halaman) ke baris sendiri di atas topbar.
+- Shell desktop: item navigasi di sidebar tidak lagi tampil sebagai pil putih.
+  Aturan global `button { background: var(--overlay) }` menimpa seluruh
+  `<button>`; `.sidebar .nav button` dulu hanya menimpa `:hover`-nya, jadi
+  keadaan diamnya tetap putih di atas sidebar hitam.
+- Shell desktop: teks di daerah isi bisa diseleksi lagi. `body { user-select:
+  none }` dipakai agar terasa seperti aplikasi native, tapi ikut membekukan
+  log engine, artikel berita, dan kode pairing di halaman Hubungkan; sekarang
+  `.page-body` mengembalikan `user-select: text` dan tombolnya tetap none.
 - CI: **`release.yml` menolak merilis SHA yang tertinggal dari `main`.**
   Sebelumnya `prepare` hanya memeriksa "tag belum ada", sehingga ketika
   `pubspec.yaml` ikut berubah di sebuah commit fitur, Release bisa menandai
@@ -129,6 +174,24 @@ Kebijakan rilis:
   tersebar di `matches!` dalam handler.
 
 ### Diperbaiki
+- Pengujian: **flake lama di tes identitas ditutup.** Beberapa tes mengarahkan
+  penyimpanan identitas lewat env `XYDESK_HOME` lalu menulis ke direktori
+  sementara masing-masing, sementara `cargo test` menjalankan tes paralel dalam
+  satu proses — jadi hasil kadang bergantung urutan thread. Sekarang semua tes
+  yang menyentuh env itu berebut satu gembok RAII (`identity::lock_home_env`
+  untuk tes sinkron, `lock_home_env_async` untuk tes `tokio::test` yang harus
+  memegangnya sambil menunggu I/O; guard-nya `Send` karena itu, bukan `Mutex`
+  std). Diulang 12× tanpa kegagalan.
+- Shell desktop: **konten yang lebih tinggi dari jendela akhirnya bisa
+  digulung.** `.shell` adalah grid dengan satu baris `auto`, jadi dia MEMANJANG
+  mengikuti isinya dan `body { overflow: hidden }` menutup sisanya: di viewport
+  1100×480 halaman Pengaturan terpotong 776px tanpa satu pun scrollbar, dan
+  `.page-body { overflow-y: auto }` tidak pernah aktif. Baris grid kini
+  `minmax(0, 100%)` + `min-height: 0` di `.main` dan `.page-body`, sidebar
+  mendapat scroll sendiri, dan scrollbar daerah isi diberi thumb supaya jelas
+  ada yang bisa digulung. Diukur pakai Playwright di 5 halaman × 3 viewport
+  (1280×720, 900×560, 1100×480): 0 baris terkunci, topbar tetap di tempatnya
+  setelah isi digulung.
 - Host: **koneksi yang terlepas sebentar tidak lagi mematikan sesi.** Blip Wi-Fi
   (berpindah kanal, sinyal drop dua detik) membuat ICE agent melaporkan
   `Disconnected`, dan host memperlakukannya sama seperti koneksi mati

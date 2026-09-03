@@ -46,25 +46,32 @@ body {
 
 img { display: block; max-width: 100%; }
 
-/* ── Kerangka: sidebar + main ─────────────────────────────────── */
+/* ── Kerangka: sidebar + main ─────────────────────────────────────
+   Aturan main: jendela tidak pernah yang menggulung, hanya daerah isi.
+   `height: 100dvh` pada .shell saja tidak cukup — grid dengan satu baris
+   `auto` akan MEMANJANG mengikuti isinya, sehingga `overflow-y: auto` di
+   .page-body tidak pernah punya tinggi untuk dipatuhi (kontennya
+   terpotong diam-diam di jendela pendek). Karena itu baris grid dipaksa
+   `100%` + `minmax(0, auto)` dan setiap tingkat di dalamnya diberi
+   `min-height: 0`. */
 .shell {
   display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 100%);
   height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
+/* Baris demo/pratinjau: mengalir di atas topbar, tidak menutupi judul. */
 .demo-banner {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 60;
   background: rgba(201, 150, 63, 0.16);
   color: var(--warning);
-  font-size: 12.5px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  max-width: 90%;
+  font-size: 12px;
+  padding: 7px 16px;
+  text-align: center;
+  border-bottom: 1px solid rgba(201, 150, 63, 0.28);
+  -webkit-app-region: drag;
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────── */
@@ -75,14 +82,21 @@ img { display: block; max-width: 100%; }
   gap: 20px;
   background: #0a0a0a;
   border-right: 1px solid #27272a;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .sidebar .brand h1 { color: #ffffff; }
 .sidebar .brand .sub { color: #71717a; }
-.sidebar .nav button { color: #a1a1aa; }
+/* `button` global memakai latar terang (var(--overlay) = putih) untuk tombol
+   di kartu. Di atas sidebar hitam itu jadi pil putih, dan dulu hanya `:hover`
+   yang ditimpa — keadaan diamnya tidak. */
+.sidebar .nav button { color: #a1a1aa; background: transparent; }
 .sidebar .nav button:hover { background: #1f1f23; color: #ffffff; }
 .sidebar .nav button.active { background: rgba(97, 66, 214, 0.28); color: #ffffff; }
 .sidebar .nav button.active svg { color: #a78bfa; }
-.sidebar .side-status { background: #18181b; color: #a1a1aa; }
+.sidebar::-webkit-scrollbar { width: 8px; }
+.sidebar::-webkit-scrollbar-thumb { background: #2a2a2e; border-radius: 999px; }
 
 .brand {
   display: flex;
@@ -116,25 +130,6 @@ img { display: block; max-width: 100%; }
 }
 .nav button.active svg { color: var(--accent); }
 
-.side-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  font-size: 12.5px;
-  color: var(--text-mid);
-  background: var(--raised);
-  border-radius: 10px;
-}
-.side-status .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--text-low); }
-.side-status .dot.ready { background: var(--success); }
-.side-status .dot.streaming {
-  background: var(--success);
-  box-shadow: 0 0 8px rgba(79, 169, 122, 0.8);
-}
-.side-status .dot.connecting { background: var(--warning); animation: pulse 1.2s ease-in-out infinite; }
-.side-status .dot.error { background: var(--danger); }
-
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
@@ -145,23 +140,89 @@ img { display: block; max-width: 100%; }
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* Tanpa ini, flex item anak tidak pernah lebih kecil dari isinya:
+     .page-body jadi setinggi kontennya dan tidak pernah menggulung. */
+  min-height: 0;
 }
 
+/* ── Topbar = quick surface = baris judul Windows ───────────────────
+   Semua info yang layak dilihat "tanpa pindah halaman" ada di satu baris
+   ini: nama halaman, status engine, perangkat yang sedang menonton, ID
+   untuk pairing. Baris ini sekaligus daerah seret jendela (drag) sehingga
+   tidak ada lagi "garis judul asing" di atas UI. Tombol caption Windows
+   (min/maks/tutup) digambar Electron di ujung kanan lewat titleBarOverlay
+   — karena itu ada `padding-right` ekstra hanya saat shell berjalan di
+   dalam Electron. */
 .topbar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px 26px;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  background: var(--bg);
   border-bottom: 1px solid var(--line);
+  -webkit-app-region: drag;
+  flex: 0 0 auto;
 }
-.topbar h2 { font-size: 17px; font-weight: 600; flex: 1; }
+.topbar h2 {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.topbar .quick {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 .topbar .flash {
   font-size: 12.5px;
   color: var(--text-hi);
-  background: var(--overlay);
-  padding: 7px 14px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  padding: 5px 12px;
   border-radius: 999px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
 }
+.electron .topbar { padding-right: 150px; }
+
+/* Chip cepat di topbar: ID perangkat, penanda sesi, tombol aksi kecil. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--raised);
+  color: var(--text-mid);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  white-space: nowrap;
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+button.chip { cursor: pointer; }
+button.chip:hover { background: var(--input); color: var(--text-hi); }
+.chip.live { border-color: rgba(22, 115, 71, 0.35); color: var(--success); }
+.chip .who {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: var(--text-hi);
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip .dur { color: var(--text-low); }
+
+.topbar .pill { padding: 5px 11px; font-size: 12px; }
+.topbar button, .topbar .pill { -webkit-app-region: no-drag; }
 
 .pill {
   display: inline-flex;
@@ -183,10 +244,26 @@ img { display: block; max-width: 100%; }
 .pill.error .dot { background: var(--danger); }
 
 .page-body {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 22px 26px 30px;
+  /* Teks konten boleh diseleksi (copy error, kode pairing dari log) meski
+     shell menyetel `user-select: none` di body untuk rasa aplikasi native. */
+  user-select: text;
+  -webkit-user-select: text;
 }
+.page-body button { user-select: none; -webkit-user-select: none; }
+.page-body::-webkit-scrollbar { width: 11px; }
+.page-body::-webkit-scrollbar-track { background: transparent; }
+.page-body::-webkit-scrollbar-thumb {
+  background: #d9d8d4;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.page-body::-webkit-scrollbar-thumb:hover { background: #c5c4bf; background-clip: content-box; }
 
 .pg {
   display: flex;
@@ -217,6 +294,10 @@ img { display: block; max-width: 100%; }
   gap: 12px;
 }
 .kv { background: var(--overlay); border-radius: var(--radius-sm); padding: 12px 14px; min-width: 0; }
+/* Satu kartu melebar penuh: nama perangkat bisa panjang dan tidak layak
+   dipotong jadi setengah kolom. */
+.kv.wide { grid-column: 1 / -1; }
+.kv.wide strong { font-size: 15px; }
 .kv span { display: block; font-size: 11px; color: var(--text-low); text-transform: uppercase; letter-spacing: 0.5px; }
 .kv strong {
   display: block;

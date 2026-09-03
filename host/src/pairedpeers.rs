@@ -100,6 +100,33 @@ impl RejectReason {
     }
 }
 
+/// Label yang dilaporkan sendiri oleh satu peer, dari pesan `pair`
+/// (`name` + `platform`). Hanya untuk tampilan: host memakai ini untuk
+/// menunjukkan SIAPA yang sedang menonton layarnya (mis. "Redmi Note 12 ·
+/// Android" di panel host dan di tooltip tray), bukan untuk membuat keputusan
+/// keamanan apa pun. Nilainya boleh dikarang peer — karena itu ia tidak pernah
+/// masuk log keputusan pairing.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PeerLabel {
+    pub name: Option<String>,
+    pub platform: Option<String>,
+}
+
+impl PeerLabel {
+    /// `None` bila peer tidak mengirim apa yang layak ditampilkan.
+    pub fn new(name: Option<String>, platform: Option<String>) -> Option<Self> {
+        let clean = |v: Option<String>| {
+            v.map(|s| s.trim().chars().take(48).collect::<String>())
+                .filter(|s| !s.is_empty())
+        };
+        let (name, platform) = (clean(name), clean(platform));
+        if name.is_none() && platform.is_none() {
+            return None;
+        }
+        Some(Self { name, platform })
+    }
+}
+
 /// Registri peer yang berhak membuka sesi media. Satu instance per proses host.
 ///
 /// Seperti [`crate::pairguard::PairGuard`], semua metode menerima `now` secara
@@ -107,12 +134,15 @@ impl RejectReason {
 #[derive(Debug, Default)]
 pub struct PairedPeers {
     peers: HashMap<String, PeerPhase>,
+    /// Label per peer, hidup sepanjang izin peer itu (dibuang bersama `revoke`).
+    labels: HashMap<String, PeerLabel>,
 }
 
 impl PairedPeers {
     pub fn new() -> Self {
         Self {
             peers: HashMap::new(),
+            labels: HashMap::new(),
         }
     }
 
@@ -181,12 +211,34 @@ impl PairedPeers {
             .map(|(peer, _)| peer.as_str())
     }
 
+    /// Catat label peer (nama perangkat + platform) untuk ditampilkan host.
+    pub fn set_label(&mut self, peer: &str, label: Option<PeerLabel>) {
+        match label {
+            Some(l) => {
+                // Label hanya untuk peer yang dikenal; kalau daftarnya sudah
+                // penuh, tampilan boleh kalah dibanding memorinya.
+                if self.peers.contains_key(peer) || self.labels.len() < MAX_TRACKED_PEERS {
+                    self.labels.insert(peer.to_string(), l);
+                }
+            }
+            None => {
+                self.labels.remove(peer);
+            }
+        }
+    }
+
+    /// Label peer, bila ada.
+    pub fn label_of(&self, peer: &str) -> Option<&PeerLabel> {
+        self.labels.get(peer)
+    }
+
     /// Cabut seluruh hak `peer` (dipanggil saat `bye` atau sesi ditutup).
     ///
     /// Setelah ini, peer harus memasukkan password lagi untuk menyambung ulang.
     /// Sesi yang sudah berakhir bukan alasan untuk mempercayai peer selamanya.
     pub fn revoke(&mut self, peer: &str) {
         self.peers.remove(peer);
+        self.labels.remove(peer);
     }
 
     /// Buang izin `Granted` yang sudah kedaluwarsa. Aman dipanggil kapan saja;
@@ -196,6 +248,12 @@ impl PairedPeers {
             PeerPhase::Granted { expires_at } => now < *expires_at,
             PeerPhase::Active => true,
         });
+        self.drop_orphan_labels();
+    }
+
+    /// Label tanpa izin adalah sampah: peer-nya sudah revoker/kedaluwarsa.
+    fn drop_orphan_labels(&mut self) {
+        self.labels.retain(|peer, _| self.peers.contains_key(peer));
     }
 
     /// Jumlah peer yang sedang dilacak (dipakai test dan diagnostik).
@@ -224,6 +282,7 @@ impl PairedPeers {
             .map(|(peer, _)| peer);
         if let Some(peer) = oldest {
             self.peers.remove(&peer);
+            self.labels.remove(&peer);
         }
     }
 }
@@ -389,5 +448,65 @@ mod tests {
             p.is_active("aktif"),
             "sesi berjalan tidak boleh tergusur oleh banjir pairing"
         );
+    }
+}
+
+#[cfg(test)]
+mod label_tests {
+    use super::*;
+
+    #[test]
+    fn label_hidup_bersama_izin_dan_mati_bersama_revoke() {
+        let now = Instant::now();
+        let mut p = PairedPeers::new();
+        p.grant("hp-1", now);
+        p.set_label(
+            "hp-1",
+            PeerLabel::new(Some("Redmi Note 12".into()), Some("android".into())),
+        );
+        assert!(p.authorize_offer("hp-1", now).is_ok());
+        let l = p.label_of("hp-1").expect("label tercatat");
+        assert_eq!(l.name.as_deref(), Some("Redmi Note 12"));
+        assert_eq!(l.platform.as_deref(), Some("android"));
+
+        p.revoke("hp-1");
+        assert!(p.label_of("hp-1").is_none(), "label tidak boleh bertahan");
+    }
+
+    #[test]
+    fn label_kosong_dianggap_tidak_ada() {
+        // Client lama tidak mengirim name/platform sama sekali; host harus
+        // jatuh ke tampilan ID, bukan "• " dengan nama kosong.
+        assert!(PeerLabel::new(None, None).is_none());
+        assert!(PeerLabel::new(Some("   ".into()), Some("".into())).is_none());
+    }
+
+    #[test]
+    fn label_dipangkas_dan_tidak_membesar_sesuka_peer() {
+        let l = PeerLabel::new(Some("x".repeat(400)), Some("y".repeat(900))).expect("ada");
+        assert_eq!(l.name.unwrap().chars().count(), 48);
+        assert_eq!(l.platform.unwrap().chars().count(), 48);
+
+        let now = Instant::now();
+        let mut p = PairedPeers::new();
+        for i in 0..(MAX_TRACKED_PEERS * 2) {
+            p.grant(&format!("peer-{i}"), now);
+            p.set_label(
+                &format!("peer-{i}"),
+                PeerLabel::new(Some("hp".into()), None),
+            );
+        }
+        assert!(p.labels.len() <= MAX_TRACKED_PEERS);
+        assert!(p.tracked() <= MAX_TRACKED_PEERS);
+    }
+
+    #[test]
+    fn izin_basi_membawa_labelnya_pergi() {
+        let now = Instant::now();
+        let mut p = PairedPeers::new();
+        p.grant("lambat", now);
+        p.set_label("lambat", PeerLabel::new(Some("HP lama".into()), None));
+        p.sweep_expired(now + OFFER_WINDOW + Duration::from_secs(1));
+        assert!(p.label_of("lambat").is_none());
     }
 }

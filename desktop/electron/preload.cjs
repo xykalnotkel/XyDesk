@@ -11,4 +11,5 @@ contextBridge.exposeInMainWorld('xydesk', {
   getAutostart: () => ipcRenderer.invoke('autostart:get'),
   setAutostart: (enable) => ipcRenderer.invoke('autostart:set', enable),
   restartEngine: () => ipcRenderer.invoke('engine:restart'),
+  setHint: (hint) => ipcRenderer.invoke('window:hint', hint),
 });

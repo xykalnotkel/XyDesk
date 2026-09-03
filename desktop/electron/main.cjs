@@ -275,6 +275,22 @@ function registerIpc() {
   });
 
   ipcMain.handle('logs', () => logs.slice(-LOG_LIMIT));
+  // Shell mengirim baris pendek ("Dikendalikan Redmi Note 12 · android") untuk
+  // tooltip tray + judul jendela. Jendela sering ditutup ke tray saat sesi
+  // berjalan, dan di situlah pemilik PC ingin melihat apakah layarnya sedang
+  // ditonton — tanpa harus membuka aplikasi.
+  ipcMain.handle('window:hint', (_event, hint) => {
+    const text = typeof hint === 'string' ? hint.slice(0, 120) : '';
+    if (tray) {
+      try {
+        tray.setToolTip(text ? `XyDesk — ${text}` : 'XyDesk — host selalu aktif');
+      } catch {
+        /* tooltip tidak bisa diganti (tray sedang sibuk) */
+      }
+    }
+    if (mainWindow) mainWindow.setTitle(text ? `XyDesk — ${text}` : 'XyDesk');
+    return { ok: true };
+  });
 
   ipcMain.handle('info', () => ({
     appVersion: app.getVersion(),
@@ -353,10 +369,24 @@ function createWindow() {
     height: 680,
     minWidth: 760,
     minHeight: 560,
-    backgroundColor: '#131315',
+    // Warna latar = warna UI. Kalau beda, satu frame pertama sesudah
+    // `show` menampilkan kilatan gelap sebelum Next.js sempat menggambar.
+    backgroundColor: '#fafaf9',
     autoHideMenuBar: true,
     title: 'XyDesk',
     show: false,
+    // Baris judul Windows dilebur ke dalam UI: topbar aplikasi (lihat
+    // `.topbar` di globals.css) menjadi daerah seret, dan tombol minimum /
+    // maksimum / tutup digambar Windows di ujung kanan baris itu sendiri.
+    // Sengaja TIDAK pakai frameless (`frame:false`) — dengan cara ini snap
+    // layouts, tombol caption asli, dan estetika Windows tetap utuh, tanpa
+    // harus reimplementasi tombol tutup + drag + resize di HTML.
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: '#fafaf9', symbolColor: '#18181b', height: 46 },
+    // Linux/konfigurasi lama: overlay tidak didukung; pakai titelbar biasa.
+    ...(process.platform === 'win32' || process.platform === 'darwin'
+      ? {}
+      : { titleBarStyle: 'default', titleBarOverlay: undefined }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

@@ -20,7 +20,7 @@ use tokio_tungstenite::tungstenite::Message;
 
 use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use xydesk_host::control::{ControlState, EngineState};
-use xydesk_host::pairedpeers::PairedPeers;
+use xydesk_host::pairedpeers::{PairedPeers, PeerLabel};
 use xydesk_host::pairguard::{self, PairGuard};
 use xydesk_host::recover_lock;
 use xydesk_host::session::{slot_action, IceCandidate, Session, SlotAction, DISCONNECT_GRACE};
@@ -64,6 +64,15 @@ struct Msg {
     error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     reason: Option<String>,
+    /// Nama perangkat pengirim (mis. "Redmi Note 12"), dikirim client pada
+    /// pesan `pair`. Untuk label di panel host saja — tidak pernah dipakai
+    /// untuk memutuskan penerimaan pairing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    /// Platform pengirim: "android" | "ios" | "windows" | "linux" | "macos" |
+    /// "web". Sama seperti `name`, hanya untuk tampilan.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    platform: Option<String>,
 }
 
 type Ws =
@@ -186,7 +195,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     // ── Kelola password: --set-password / --new-password (keluar setelahnya) ──
-    if let Some(pw) = &args.set_password {
+    if let Some(pw) = args.set_password.as_deref().map(str::trim) {
         match xydesk_host::identity::set_password(pw) {
             Ok(()) => {
                 println!("[OK] Password pairing diubah menjadi: {pw}");
@@ -459,7 +468,16 @@ async fn main() -> Result<()> {
                         // Berumur pendek: kalau client tidak melanjutkan ke offer,
                         // password harus dimasukkan ulang.
                         recover_lock(&paired).grant(&from, now);
-                        println!("[xydesk-host] pairing DITERIMA dari {from}");
+                        // Label perangkat ("HP apa yang barusan masuk?") dicatat
+                        // untuk panel host. Client lama tidak mengirimnya: label
+                        // kosong, host menampilkan ID saja, tidak ada yang gagal.
+                        let label = PeerLabel::new(msg.name.clone(), msg.platform.clone());
+                        recover_lock(&paired).set_label(&from, label.clone());
+                        println!(
+                            "[xydesk-host] pairing DITERIMA dari {}{}",
+                            from,
+                            label_suffix(label.as_ref())
+                        );
                     } else {
                         let baru_terkunci = guard.record_failure(&from, now);
                         if baru_terkunci {
@@ -838,7 +856,8 @@ async fn main() -> Result<()> {
                     let prev = active.replace(session.clone());
                     // Status dicatat SEBELUM sesi lama ditutup, supaya teardown
                     // sesi lama melihat "sesi yang tercatat bukan aku" dan diam.
-                    recover_lock(&control).set_streaming(client.clone(), session.clone());
+                    let label = recover_lock(&paired).label_of(&client).cloned();
+                    recover_lock(&control).set_streaming(client.clone(), session.clone(), label);
                     if let Some(prev) = prev {
                         let _ = prev.close().await;
                     }
@@ -894,6 +913,23 @@ async fn main() -> Result<()> {
     } // loop — host hanya keluar lewat error fatal (token ditolak / tak terjangkau)
 }
 
+/// Sufiks " — Redmi Note 12 · android" untuk log pairing; kosong bila peer
+/// tidak lapor diri (client lama).
+fn label_suffix(label: Option<&PeerLabel>) -> String {
+    let Some(label) = label else {
+        return String::new();
+    };
+    let bits: Vec<&str> = [label.name.as_deref(), label.platform.as_deref()]
+        .into_iter()
+        .flatten()
+        .collect();
+    if bits.is_empty() {
+        String::new()
+    } else {
+        format!(" — {}", bits.join(" · "))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::reconnect_delay;
@@ -910,5 +946,43 @@ mod tests {
         // Defensif: attempt 0 tidak pernah dipakai (selalu di-increment dulu),
         // tapi harus tetap aman (tidak panic / tidak nol).
         assert_eq!(reconnect_delay(0).as_secs(), 1);
+    }
+}
+
+#[cfg(test)]
+mod pair_label_tests {
+    use super::{label_suffix, Msg};
+    use xydesk_host::pairedpeers::PeerLabel;
+
+    #[test]
+    fn pair_dari_client_baru_membawa_nama_dan_platform() {
+        let m: Msg = serde_json::from_str(
+            r#"{"type":"pair","from":"hp-1","pin":"abcd12","name":"Redmi Note 12","platform":"android"}"#,
+        )
+        .expect("harus bisa dibaca tanpa field yang tidak dikenal pun jadi");
+        assert_eq!(m.name.as_deref(), Some("Redmi Note 12"));
+        assert_eq!(m.platform.as_deref(), Some("android"));
+    }
+
+    #[test]
+    fn pair_dari_client_lama_tetap_dibaca() {
+        // Pesan tanpa name/platform adalah hal biasa: client lama. Host tidak
+        // boleh menolaknya hanya karena tidak ada label.
+        let m: Msg =
+            serde_json::from_str(r#"{"type":"pair","from":"pc-1","pin":"abcd12"}"#).unwrap();
+        assert!(m.name.is_none() && m.platform.is_none());
+        assert_eq!(label_suffix(None), "");
+    }
+
+    #[test]
+    fn label_log_hanya_tampil_kala_ada_isinya() {
+        let penuh = PeerLabel::new(Some("Redmi Note 12".into()), Some("android".into()));
+        assert_eq!(
+            label_suffix(penuh.as_ref()),
+            " — Redmi Note 12 · android".to_string()
+        );
+        let separuh = PeerLabel::new(Some("ThinkPad X1".into()), None);
+        assert_eq!(label_suffix(separuh.as_ref()), " — ThinkPad X1".to_string());
+        assert_eq!(label_suffix(PeerLabel::new(None, None).as_ref()), "");
     }
 }
