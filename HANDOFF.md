@@ -101,6 +101,21 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: CI / Release
 
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Bug race di deploy-web.yml**:
+  push `6c5ba06` (web) dan `d90e12a` (ci) nyaris bersamaan → dua event
+  `workflow_run` Build tumpang tindih. Run Deploy `33721151162` tercatat
+  `head_sha=6c5ba06` di API, tapi log checkout-nya meng-fetch `d90e12a`
+  (commit LAMA) — deploy lapor "success" padahal bundle `6c5ba06` tidak
+  pernah masuk ke worker (terbukti: `/assets/index-w_YYZNwL.js` dijawab
+  fallback SPA `text/html` sebelum saya deploy manual). Kemungkinan akar:
+  payload `workflow_run` tertukar + `concurrency cancel-in-progress`
+  membiarkan run ber-payload lama menang. Sudah ditebus manual (wrangler
+  `66bca5d8` dari artifact Build resmi `33721068628`, diverifikasi live).
+  Saran: (1) deploy memvalidasi artifact berasal dari commit yang sama
+  dengan `workflow_run.head_sha`, (2) langkah verifikasi pasca-deploy
+  (fetch satu nama asset dari artifact, pastikan `content-type` JS),
+  (3) pertimbangkan `cancel-in-progress: false` + antrean.
+
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — Produk Windows pindah dari
   "GUI native Win32 + engine" menjadi "shell Electron (`desktop/`) + engine
   Rust". Yang berubah: `build.yml` job `windows` kini build engine +
