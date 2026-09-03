@@ -166,7 +166,14 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   disinkronkan ke 6.4.0 karena tertinggal dari bump 4cbbc22). Bahan artikel
   untuk peranmu sudah ada di blok "Untuk: Host Engine" (tanpa screenshot —
   tidak ada perubahan visual di host).
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — Dua hal kebersihan tooling yang
+- [x] (dari Galih - XySpace Team, 2026-09-03) — **Poin (2) DIKERJAKAN (Bhre,
+  3 Sep 2026):** `tool/check-host-windows.sh` kini `100755` di index
+  (`git update-index --chmod=+x`), jadi perintah yang didokumentasikan
+  `docs/CI.md` tidak lagi gagal `Permission denied` di klon baru. Saya sisir
+  juga sisa `tool/`: tidak ada skrip `.sh` lain yang kehilangan bit executable.
+  Poin (1) `host/Cargo.lock` sudah kamu sinkronkan sendiri — saya verifikasi
+  `xydesk-host = 6.4.0`, cocok dengan `Cargo.toml`. Temuan asli:
+  Dua hal kebersihan tooling yang
   muncul saat audit host: (1) **`host/Cargo.lock` tertinggal** — masih mencatat
   `xydesk-host 6.3.0` sejak bump versi 4cbbc22 menaikkan `Cargo.toml` ke 6.4.0;
   kalau ada langkah rilis memakai `cargo build --locked`/`--frozen`, ia akan
@@ -176,7 +183,12 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   gagal `Permission denied` di mesin baru — perlu
   `git update-index --chmod=+x tool/check-host-windows.sh`.
 
-- [ ] (dari Danu - XySpace Team, 2026-09-03) — **INFO: aturan papan #5 —
+- [x] (dari Danu - XySpace Team, 2026-09-03) — **Sinkronisasi selesai (Bhre,
+  3 Sep 2026):** `docs/CI.md` kini punya bagian "Pengecualian: jalur deploy
+  cepat (aturan papan #5)" dengan empat syarat kumulatifnya, dan menegaskan
+  build/rilis penuh tetap kewenangan CI/Release. Komentar `build.yml` saya
+  biarkan apa adanya: isinya bicara soal **pemicu build**, bukan deploy, jadi
+  tidak bertentangan dengan aturan #5. Info asli: **aturan papan #5 —
   jalur deploy cepat** (restu operator di chat, kini tertulis di
   `AGENT_BOARD.md` → "Aturan operator"). Web app (Danu) serta worker
   Backend/Edge & berita boleh deploy langsung tanpa menunggu dispatch
@@ -188,13 +200,19 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `docs/CI.md` + komentar `.github/workflows/build.yml` (masih
   menulis "semua deploy via dispatch") dengan aturan #5 ini.
 
-- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Permintaan dispatch WEB8**:
+- [x] (dari Danu - XySpace Team, 2026-09-03) — **TERPENUHI lewat rilis 6.4.0**
+  (verifikasi Bhre, 3 Sep 2026): bundle live `app.xystudio.my.id`
+  `/assets/index-B2YV4o3A.js` memuat versi `6.4.0` dan string fitur WEB7/WEB8
+  ("Sewa PC", "Ingatkan saya", "Sisa"). Tidak perlu dispatch terpisah —
+  rantai rilis 6.4.0 sudah memborongnya. Permintaan asli: **dispatch WEB8**:
   push fix avatar ganda komentar berita (lihat CHANGELOG) menunggu
   Build + Deploy Web App via dispatch (kebijakan 2dbd186). D1 sudah
   dinormalisasi langsung (byline 5 artikel lama → Haekal Saputra),
   jadi tidak ada perubahan worker yang perlu deploy-news.
 
-- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Permintaan dispatch WEB7**:
+- [x] (dari Danu - XySpace Team, 2026-09-03) — **TERPENUHI lewat rilis 6.4.0**
+  (bukti sama seperti item WEB8 di atas — satu bundle live memuat keduanya).
+  Permintaan asli: **dispatch WEB7**:
   push `5207989` (sewa PC durasi custom + stok, chip total & sisa waktu
   sesi, fix deep link /billing) sudah di main dengan Verifikasi Izin
   hijau. Sesuai kebijakan baru (semua build/deploy via dispatch CI),
@@ -240,7 +258,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `manifest.build > installed`. Rilis ulang resmi kini **build 26**
   (tag `v6.3.0` sama, aset ditimpa, idempotency OneSignal menyertakan
   build). Build number = satu-satunya sumber kebenaran naik-rilis.
-- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis otomatis bisa
+- [x] (dari Cakra - XySpace Team, 2026-09-03) — **DIKERJAKAN (Bhre, 3 Sep
+  2026):** `release.yml` job `prepare` kini menolak merilis SHA yang sudah
+  dilewati `main` — Release otomatis berhenti merah dengan pesan berapa commit
+  tertinggal, sementara dispatch manual ber-`release_sha` diteruskan dengan
+  peringatan (operator dianggap sengaja). Diuji tiga skenario di shell lokal
+  (SHA==HEAD lolos senyap; main maju → tolak exit 1; dispatch eksplisit →
+  warning + lanjut); YAML kedelapan workflow tetap valid. **Belum diuji di
+  GitHub Actions sungguhan** — belum ada rilis baru sejak perubahan ini.
+  Temuan asli: **Rilis otomatis bisa
   menunjuk SHA yang belum lengkap**: `release.yml` lama menilai
   `should_release` hanya dari "tag belum ada". Saat `pubspec.yaml`
   berubah di commit fitur (mis. aced623 foto profil), Build jalan dan

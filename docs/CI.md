@@ -10,7 +10,7 @@ perlu menjalankan Flutter, Android SDK, Rust, atau Visual Studio secara lokal.
 | `.github/workflows/build.yml` | **manual** (`workflow_dispatch`) saja — tidak otomatis oleh push | gerbang mutu per-area, APK Android, `XyDesk.exe` + `XyDesk-Host.exe`, bundle Web |
 | `.github/workflows/deploy-signaling.yml` | **manual** (`workflow_dispatch`) | deploy Cloudflare Worker API/signaling |
 | `.github/workflows/deploy-web.yml` | Build `main` sukses, manual recovery | deploy bundle Flutter Web terverifikasi ke Cloudflare Static Assets |
-| `.github/workflows/release.yml` | Build `main` sukses + nilai `version` berubah, manual recovery | GitHub Release multi-platform + push OneSignal |
+| `.github/workflows/release.yml` | Build `main` sukses + nilai `version` berubah (menolak SHA yang tertinggal dari `main`), manual recovery via `release_sha` | GitHub Release multi-platform + push OneSignal |
 | `.github/workflows/build-desktop.yml` | **manual** (`workflow_dispatch`) | kemasan shell desktop Electron + Next.js |
 | `.github/workflows/deploy-news.yml` | **manual** (`workflow_dispatch`) | deploy Worker berita + migrasi D1 |
 | `.github/workflows/test-lab.yml` | **manual** (`workflow_dispatch`) | uji lab perangkat |
@@ -29,6 +29,25 @@ palsu" (run terfilter, artefak tak lengkap), run yang terbuang, dan
 tumpang tindih dengan jadwal rilis; hasil akhir yang dianggap bukti hanya
 run penuh yang disetujui. `release.yml`/`deploy-web.yml` menyala HANYA
 setelah Build sukses — pemicu sebenarnya tetap satu (dispatch oleh Cakra).
+
+### Pengecualian: jalur deploy cepat (aturan papan #5, 3 Sep 2026)
+
+Restu operator di chat membuka satu pengecualian dari "semua lewat dispatch":
+**Web app** serta **worker Backend/Edge dan worker berita** boleh di-deploy
+langsung oleh role pemiliknya, tanpa menunggu dispatch CI/Release. Syaratnya
+kumulatif — semuanya, bukan pilih salah satu:
+
+1. push sudah di `main` dan `verify-push-auth` hijau;
+2. build memakai env produksi yang benar (mis. `VITE_GOOGLE_CLIENT_ID`);
+3. verifikasi pasca-deploy dijalankan **dan dicatat** (contoh Web: md5 bundle
+   live == artefak build, `content-type` JS benar);
+4. dicatat terbuka di baris sesi papan + item `HANDOFF.md` ke CI/Release pada
+   sesi yang sama.
+
+Yang TIDAK ikut pengecualian ini: **build/rilis penuh** — APK, Windows,
+installer, tag rilis — tetap kewenangan CI/Release lewat `workflow_dispatch`.
+Kredensial deploy milik operator; pembagiannya ke lingkungan agent lain adalah
+keputusan operator, bukan agent.
 
 ### Sebelum build/rilis: cek papan, lalu izin operator (sejak 3 Sep 2026)
 
@@ -236,6 +255,19 @@ dari Build, bukan dari push) dan:
 
 Build yang sukses tanpa perubahan nilai versi tidak membuat Release. Trigger
 manual (`workflow_dispatch` + `release_sha`) disediakan untuk pemulihan.
+
+**Pengawal SHA tertinggal (sejak 3 Sep 2026).** `prepare` menolak merilis SHA
+yang sudah dilewati `main`. Alasannya kejadian nyata: `pubspec.yaml` ikut
+berubah di sebuah commit fitur, Build jalan, dan Release langsung menandai
+`v6.3.0` di SHA itu — padahal perbaikan layar hitam baru masuk empat commit
+setelahnya, sehingga tag menunjuk isi setengah jadi dan rilisnya harus
+dianulir paksa. Kini:
+
+- SHA rilis == HEAD `main` → lanjut seperti biasa;
+- `main` sudah maju dan Release terpicu otomatis → **berhenti merah**, dengan
+  pesan berapa commit tertinggal;
+- `main` sudah maju tetapi operator mengisi `release_sha` sendiri → lanjut
+  dengan peringatan, karena SHA itu memang disengaja.
 
 Aset Release:
 

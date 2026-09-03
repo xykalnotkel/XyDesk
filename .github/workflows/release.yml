@@ -135,6 +135,30 @@ jobs:
               exit 0
             fi
           done
+          # Pengawal SHA tertinggal (pelajaran 3 Sep 2026, rilis 6.3.0):
+          # `pubspec.yaml` ikut berubah di commit fitur, Build jalan, dan
+          # Release langsung menandai versi itu di SHA tersebut — padahal
+          # perbaikan penting baru masuk beberapa commit setelahnya. Sekali
+          # tag terlanjur menunjuk isi setengah jadi, satu-satunya jalan
+          # keluar adalah menganulir rilis secara paksa.
+          #
+          # Karena itu: kalau `main` sudah maju melewati SHA yang mau
+          # dirilis, JANGAN diam-diam merilis yang lama. Untuk dispatch
+          # manual dengan `release_sha` eksplisit, operator dianggap tahu
+          # apa yang dimintanya — cukup peringatan. Selain itu, berhenti.
+          head_sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')"
+          if [ -n "$head_sha" ] && [ "$head_sha" != "$release_sha" ]; then
+            behind="$(gh api \
+              "repos/$GITHUB_REPOSITORY/compare/$release_sha...$head_sha" \
+              --jq '.ahead_by // 0')"
+            if [ -n "$RELEASE_SHA_INPUT" ]; then
+              echo "::warning::release_sha $release_sha tertinggal $behind commit dari main ($head_sha). Diteruskan karena SHA diminta operator secara eksplisit."
+            else
+              echo "::error::Menolak merilis $release_sha — main sudah maju $behind commit ($head_sha). Tag akan menunjuk isi yang belum lengkap. Jalankan Build penuh di HEAD main, atau dispatch Release dengan release_sha yang disengaja."
+              exit 1
+            fi
+          fi
+
           conclusion="$(
             gh api "repos/$GITHUB_REPOSITORY/actions/runs/$build_run_id" \
               --jq '.conclusion'

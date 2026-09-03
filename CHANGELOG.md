@@ -39,6 +39,21 @@ Kebijakan rilis:
   Hasil: `cloudflare/` 51/51 hijau, `news/` 20/20 hijau (`node --test`).
 
 ### Diubah
+- CI: **`release.yml` menolak merilis SHA yang tertinggal dari `main`.**
+  Sebelumnya `prepare` hanya memeriksa "tag belum ada", sehingga ketika
+  `pubspec.yaml` ikut berubah di sebuah commit fitur, Release bisa menandai
+  versi di SHA itu — persis yang membuat `v6.3.0` sempat menunjuk isi tanpa
+  perbaikan layar hitam dan harus dianulir paksa. Kini rilis otomatis berhenti
+  merah bila `main` sudah maju (menyebut berapa commit tertinggal), sedangkan
+  dispatch manual dengan `release_sha` diteruskan dengan peringatan karena SHA
+  itu memang disengaja operator.
+- CI: **`tool/check-host-windows.sh` dapat bit executable** (`100644` →
+  `100755`). Perintah cross-check yang didokumentasikan di `docs/CI.md` gagal
+  `Permission denied` di setiap klon baru.
+- Dokumentasi: **`docs/CI.md` memuat aturan papan #5 (jalur deploy cepat)** —
+  Web app serta worker Backend/Edge dan berita boleh deploy langsung dengan
+  empat syarat kumulatif, sementara build/rilis penuh tetap kewenangan
+  CI/Release. Aturan ini sebelumnya hanya hidup di `AGENT_BOARD.md`.
 - Dokumentasi: **README dan `docs/CI.md` disamakan dengan kebijakan pemicu
   3 Sep 2026.** README masih berjudul "Build dan Release Otomatis" dan
   membuka dengan "Push ke `main` menjalankan analisis statis serta build
