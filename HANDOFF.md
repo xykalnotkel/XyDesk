@@ -37,16 +37,12 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   lingkungan Galih, jadi kode itu belum diperiksa kompilator sama sekali —
   anggap belum terverifikasi) dan uji pairing nyata: host harus menampilkan
   "Laras (HP · Android)" di chip topbar dan kartu Sesi aktif.
-
-  perangkat mana yang menonton, kalau client mau lapor diri.** Tambahkan dua
-  field opsional pada pesan `pair` yang dikirim ke signaling:
-  `{"type":"pair","pin":"…","name":"Redmi Note 12","platform":"android"}`.
-  Host sudah membacanya (`host/src/main.rs` `Msg.name`/`Msg.platform` →
-  `PairedPeers::set_label` → `clientName`/`clientPlatform` di `GET /status`),
-  memotong 48 karakter, dan membersihkannya saat `revoke`; tidak ada keputusan
-  keamanan yang bergantung padanya. `platform` dipakai untuk memilih label
-  ("HP · Android", "PC · Windows", "Peramban web") — kirim huruf kecil bebas,
-  host menormalkan. Kalau tidak dikirim, host menampilkan ID pairing saja.
+  Bentuk pesan yang dikirim: `{"type":"pair","pin":"…","name":"Redmi Note 12",
+  "platform":"android"}`. Sisi host sudah menanganinya (`Msg.name`/`Msg.platform`
+  → `PairedPeers::set_label` → `clientName`/`clientPlatform` di `GET /status`),
+  memotong 48 karakter, dan membersihkannya bersama `revoke`; tidak ada keputusan
+  keamanan yang bergantung padanya. `platform` bebas besar-kecil (host
+  menormalkan); kalau tidak dikirim, host menampilkan ID pairing saja.
 
 - [x] (dari Galih - XySpace Team, 2026-09-03) — **PEMBERITAHUAN PENTING (status:
   sudah dipasang di kode, butuh verifikasi alat).** `verify_password` host kini
@@ -60,16 +56,6 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   LAMA + password baru yang campuran bisa DITOLAK pairingnya. Host melonggarkan
   verifikasinya hanya untuk password yang tidak punya satu pun huruf kecil, dan
   pemulihannya `--new-password` di PC lalu pairing ulang.
-
-  mematikan auto-kapital.** Password hasil generasi host kini campuran besar-
-  kecil (`host/src/identity.rs` `PW_CHARS`), dan shell desktop sudah
-  `autoCapitalize="none"`. Di Flutter: pasang
-  `textCapitalization: TextCapitalization.none` + `autocorrect: false` +
-  `enableSuggestions: false` di field password Hubungkan/pairing. Catatan
-  penting supaya tidak salah bikin aturan: `verify_password` MASIH tidak peka
-  besar-kecil (sengaja, biar papan ketik HP yang mengkapital huruf pertama tidak
-  mengunci pemilik PC), jadi ini soal tampilan/UX bukan soal autentikasi —
-  JANGAN menulis formatter yang meng-once-upcase input user seperti dulu.
 
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **0x06 TEXT belum dibatasi
   panjangnya di client.** `InputCodec.text()` (lib/webrtc/input_codec.dart)
@@ -151,7 +137,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Desktop Shell
 
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Topbar sekarang = baris judul
+- [x] (dari Galih - XySpace Team, 2026-09-03) — **Topbar sekarang = baris judul
   Windows; jangan dilucuti lagi.** `desktop/electron/main.cjs` memakai
   `titleBarStyle: 'hidden'` + `titleBarOverlay` sewarna `--bg`, `.topbar`
   ber-`-webkit-app-region: drag` dengan `padding-right: 150px` khusus
@@ -163,6 +149,9 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   Windows tetap menempel di tepi atas jendela, jadi baris itu akan menutupinya
   — banner semacam itu harus di bawah topbar (lihat `.demo-banner`). Konstanta
   150px = lebar 3 tombol caption; cek ulang kalau Electron di-upgrade.
+  **Status: dokumentasi aktif, bukan antrean kerja.** Aturan yang sama sudah
+  dipindah ke `docs/DESKTOP_SHELL.md` (§Aturan tata letak) supaya tidak hidup di
+  dua tempat.
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur shell/desktop, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 
@@ -180,24 +169,51 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   terlihat) dan shell desktop saat sesi berjalan. Simpan ke
   `web/public/news/shots/` dengan nama `<versi>-desktop-*.jpg` /
   `<versi>-host-*.jpg` (lihat README folder itu).
+
+  **Catatan Galih:** di lingkungan agent TIDAK ada Windows, jadi screenshot
+  yang bisa dibuat di sini adalah render Chromium (Linux) dari `desktop/out`
+  — cocok untuk dokumentasi teknis, BUKAN pengganti "screenshot asli semua
+  platform" untuk artikel. Yang perlu diambil di lab Windows nanti: jendela
+  host dengan ID+password terlihat, shell saat sesi berjalan (chip perangkat
+  "… (HP · Android)" di topbar), dan kartu Pengaturan baru. Simpan sebagai
+  `<versi>-desktop-*.jpg` di `web/public/news/shots/`.
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — Host kini mengirim **dua**
   stream audio: `audio` (loopback suara sistem) dan `mic` (mikrofon PC host,
   hanya bila ada perangkat capture). Client yang menyajikan track audio
   dengan `mid`/`stream_id` "mic" akan otomatis menerima suara mic. Bila mau
   mute/volume mic terpisah, butuh aksi control API baru (belum ada —
   `audio-volume` saat ini hanya menyentuh perangkat output default).
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — Control API kini punya aksi
+- [x] (dari Galih - XySpace Team, 2026-09-03) — Control API kini punya aksi
   `video-bitrate` (field `bitrate_mbps`, 1–50) dan `/status` melaporkan
   `targetBitrateBps`, `video.latencyMs` (EMA pipeline host),
   `video.latencyMaxMs`, dan `video.encoder` (`nvenc`/`openh264`/
   `test-pattern`). Tambahkan kontrol di panel (input Mbps + tampilkan nilai
   aktif, dan kalau mau, tampilkan latensi + encoder) — endpoint-nya sudah
   jadi & teruji, UI-nya belum.
+  **SELESAI (sesi SESI-20260903-GALIH-HOST-UIUX):** kartu "Tampilan & kualitas" di
+  Pengaturan kini punya chip 4/8/16/24 Mbps + input kustom 1–60 + nilai aktif dari
+  `targetBitrateBps`, plus perkiraan MB/jam; Home menampilkan `video.encoder`,
+  `latencyMs`, `latencyMaxMs`. `ActionRequest` ikut diberi `alias =
+  "bitrateMbps"` (body /action snake_case, /status camelCase) + 1 test.
 - [ ] (dari Danu - XySpace Team, 2026-09-02) — **Rebrand**: ikon Windows
   (`packaging/windows/xydesk.ico`) sudah lahir ulang dari logo baru —
   verifikasi installer CI berikutnya memakai ikon itu. Selaraskan juga
   warna aksen shell dan avatar penulis resmi berita (foto founder, lihat
   catatan Client Flutter).
+
+  **Catatan Galih (2026-09-03, sesi SESI-20260903-GALIH-HOST-UIUX):** bagian
+  shell sudah diselaraskan — `desktop/public/logo.png` (merek sidebar, dulu SVG
+  gambar tangan) dan `desktop/electron/tray.ico` (tray + taskbar + `build.win.icon`)
+  kini jadi target `tool/gen_logo.py` dan `docs/BRAND_ASSETS.md` mencatat barisnya.
+  `packaging/windows/xydesk.ico` memang sudah hasil generator, jadi installer CI
+  berikutnya otomatis memakai ikon itu. YANG BELUM disentuh dan bukan
+  keputusan teknis sepihak: (a) **warna aksen shell** — `--accent: #6142d6` di
+  `desktop/app/globals.css` bukan tebak-tebakan, itu token bersama yang
+  identik dengan palet terang `lib/core/tokens.dart` (sumber kebenaran desain),
+  sedangkan ungu #7C3AED→#A78BFA di logo adalah warna ASET brand; menyamakan
+  keduanya = memutuskan ulang token lintas platform, butuh keputusan desain,
+  bukan commit shell; (b) avatar penulis resmi berita di halaman Berita shell.
+
 - [ ] (dari Danu - XySpace Team, 2026-09-02) — Waktu komentar berita di web
   kini relatif ("5 menit lalu"); samakan di Flutter dan Desktop
   (`formatRelativeTime` di `web/src/news.ts` sebagai acuan). Avatar

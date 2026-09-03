@@ -122,12 +122,11 @@ Kebijakan rilis:
   jalur (pratinjau dan shell sungguhan, diuji dengan `window.xydesk` tiruan).
 - Host: **password hasil generasi tidak lagi huruf besar semua.** `PW_CHARS`
   sekarang 23 huruf besar + 23 huruf kecil + 8 angka, tetap tanpa karakter yang
-  mudah tertukar (di kedua kasus: `I`/`l`/`1`, `O`/`o`/`0`). Perlu dibilang
-  jujur: ini perbaikan keterbacaan, BUKAN kekuatan — `verify_password` sengaja
-  masih tidak peka besar-kecil, jadi ruang tebakan efektifnya tetap 31 simbol
-  per karakter (≈ 4,95 bit, 10 karakter ≈ 49,5 bit). Syarat kalau mau
-  besar-kecil jadi ruang tebakan sungguhan (verifikasi peka-kasus + semua
-  client mematikan auto-kapital dulu) ditulis di `host/README.md`.
+  mudah tertukar (di kedua kasus: `I`/`l`/`1`, `O`/`o`/`0`). Dulu ini hanya
+  perbaikan keterbacaan karena `verify_password` sengaja dibuat tidak peka
+  besar-kecil; sejak sesi ini verifikasi itu peka-kasus (lihat butir di atas),
+  jadi besar/kecil ikut dihitung sebagai ruang tebakan: ≈ 5,75 bit per
+  karakter, 10 karakter ≈ 57,5 bit.
 - Host: **satu sumber aturan untuk password kustom.** `identity::set_password`
   yang memotong spasi ujung, menghitung minimum 6 KARAKTER (bukan byte), dan
   menolak karakter kontrol (Enter/Tab tidak bisa diketik dari papan ketik HP);
