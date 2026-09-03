@@ -17,8 +17,6 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
-## [Belum terbit]
-
 ### Diperbaiki
 - CI: **Publikasi Release ditolak 403 oleh token bawaan.** `GITHUB_TOKEN`
   menjawab "Resource not accessible by integration" saat membuat GitHub
