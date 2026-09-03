@@ -51,3 +51,49 @@ export function consumeGoogleRedirect(): string | null {
   if (!idToken || !state || state !== saved) return null;
   return idToken;
 }
+
+// ── id_token untuk mode founder berita ──────────────────────────────────
+//
+// id_token Google juga dipakai sebagai bukti admin di worker berita
+// (header `x-admin-google-token`, email == FOUNDER_EMAIL). Token ini
+// berumur pendek (±1 jam) dan hanya tersimpan di perangkat pendirinya —
+// jauh lebih aman daripada menyimpan ADMIN_TOKEN permanen. Bila kedaluwarsa,
+// dibuang otomatis dan founder cukup masuk lagi dengan Google.
+
+const ID_TOKEN_KEY = 'xydesk.web.googleIdToken';
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const body = token.split('.')[1] ?? '';
+    const json = atob(body.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/// Simpan id_token bila masih berlaku (dari `exp` di payload).
+export function storeGoogleIdToken(idToken: string): void {
+  const payload = decodeJwtPayload(idToken);
+  const exp = Number(payload?.exp) || 0;
+  if (exp * 1000 > Date.now()) {
+    localStorage.setItem(ID_TOKEN_KEY, idToken);
+  } else {
+    localStorage.removeItem(ID_TOKEN_KEY);
+  }
+}
+
+/// Ambil id_token yang masih berlaku; kedaluwarsa → buang dan kembalikan null.
+export function getStoredGoogleIdToken(): string | null {
+  const token = localStorage.getItem(ID_TOKEN_KEY);
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  const exp = Number(payload?.exp) || 0;
+  if (exp * 1000 > Date.now()) return token;
+  localStorage.removeItem(ID_TOKEN_KEY);
+  return null;
+}
+
+export function clearStoredGoogleIdToken(): void {
+  localStorage.removeItem(ID_TOKEN_KEY);
+}

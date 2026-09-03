@@ -140,15 +140,21 @@ export function postComment(
   slug: string,
   content: string,
   parentId?: number | null,
-  admin?: { token: string },
+  admin?: { token?: string; googleToken?: string },
 ): Promise<{ comment: NewsComment }> {
   return getJson(`${NEWS_BASE}/api/news/${encodeURIComponent(slug)}/comments`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       // Badge resmi tetap keputusan SERVER: header ini cuma bukti, worker
-      // yang memvalidasi token terhadap ADMIN_TOKEN miliknya.
-      ...(admin ? { 'x-admin-token': admin.token } : {}),
+      // yang memvalidasi. Dua bukti yang diterima: token ADMIN_TOKEN lama,
+      // atau Google ID token (diprioritaskan bila tersedia — founder tidak
+      // perlu lagi menempel token manual).
+      ...(admin?.googleToken
+        ? { 'x-admin-google-token': admin.googleToken }
+        : admin?.token
+          ? { 'x-admin-token': admin.token }
+          : {}),
     },
     body: JSON.stringify({
       fp: newsFingerprint(),

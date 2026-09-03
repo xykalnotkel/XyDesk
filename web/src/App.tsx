@@ -22,6 +22,9 @@ import {
 import {
   beginGoogleLogin,
   consumeGoogleRedirect,
+  storeGoogleIdToken,
+  getStoredGoogleIdToken,
+  clearStoredGoogleIdToken,
   GOOGLE_CLIENT_ID,
 } from './google';
 import {
@@ -1116,6 +1119,7 @@ function NewsDetailPage({
   // keabsahan badge tetap diputuskan worker dari ADMIN_TOKEN.
   const [adminEligible, setAdminEligible] = useState(false);
   const [adminToken, setAdminTokenState] = useState(getAdminToken);
+  const [googleToken, setGoogleToken] = useState<string | null>(getStoredGoogleIdToken);
   // Tombol lompat: panah bawah menuju komentar di dasar artikel; setelah
   // sampai, berubah jadi panah atas untuk kembali ke judul. Artikel
   // changelog bisa panjang — tanpa ini pembaca HP harus menggulir jauh.
@@ -1137,7 +1141,9 @@ function NewsDetailPage({
       .then((r) => setAdminEligible(r.user?.email?.toLowerCase() === ADMIN_EMAIL))
       .catch(() => {});
   }, []);
-  const adminActive = adminEligible && adminToken !== '';
+  // Admin aktif bila founder dan (Google id_token masih berlaku ATAU sudah
+  // menempel ADMIN_TOKEN). Google id_token diutamakan saat kirim komentar.
+  const adminActive = adminEligible && (googleToken !== null || adminToken !== '');
   // Form komentar ada di BAWAH daftar; saat "Balas" ditekan dari komentar
   // paling atas, gulirkan ke form supaya pengguna tidak mencarinya.
   const commentFormRef = useRef<HTMLDivElement | null>(null);
@@ -1207,11 +1213,22 @@ function NewsDetailPage({
     try {
       // Username acak per perangkat — kecuali mode founder yang terverifikasi
       // server: tampil sebagai Haekal Saputra + badge XySpace.
+      // Cek ulang id_token saat kirim (bisa saja kedaluwarsa sejak halaman
+      // dibuka); bila masih ada, pakai jalur Google — bila tidak, fallback
+      // ke ADMIN_TOKEN yang ditempel. Kalau keduanya kosong, komentar jatuh
+      // ke mode publik biasa (nama acak), bukan kredensial kosong.
+      const gt = getStoredGoogleIdToken();
+      if (gt !== googleToken) setGoogleToken(gt);
+      const adminCredential = gt
+        ? { googleToken: gt }
+        : adminToken
+          ? { token: adminToken }
+          : undefined;
       const r = await postComment(
         post.slug,
         commentText.trim(),
         replyTo?.id ?? null,
-        adminActive ? { token: adminToken } : undefined,
+        adminCredential,
       );
       setData((d) =>
         d
@@ -1456,6 +1473,8 @@ function NewsDetailPage({
                     onClick={() => {
                       setAdminToken('');
                       setAdminTokenState('');
+                      clearStoredGoogleIdToken();
+                      setGoogleToken(null);
                     }}
                   >
                     ×
@@ -1586,10 +1605,14 @@ function RemoteApp() {
   }, [jwt]);
 
   // Kembali dari halaman login Google (redirect flow): tukar id_token
-  // menjadi sesi XyDesk lalu bersihkan URL.
+  // menjadi sesi XyDesk lalu bersihkan URL. id_token ikut disimpan agar
+  // mode founder berita bisa dipakai tanpa menempel ADMIN_TOKEN.
   useEffect(() => {
     const idToken = consumeGoogleRedirect();
-    if (idToken) void doGoogle(idToken);
+    if (idToken) {
+      storeGoogleIdToken(idToken);
+      void doGoogle(idToken);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
