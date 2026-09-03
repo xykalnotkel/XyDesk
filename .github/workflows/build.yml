@@ -536,8 +536,14 @@ jobs:
           npx electron-builder --win --dir --${{ matrix.arch }}
       - name: Kumpulkan output
         shell: pwsh
+        env:
+          # electron-builder menamai folder output `win-<arch>-unpacked`
+          # (x64 → win-unpacked, arm64 → win-arm64-unpacked). Jangan
+          # hardcode: step ini dulu hanya memeriksa win-unpacked sehingga
+          # job arm64 selalu merah padahal XyDesk.exe sudah jadi.
+          OUT_DIR: ${{ format('desktop/dist/{0}', matrix.arch == 'x64' && 'win-unpacked' || format('win-{0}-unpacked', matrix.arch)) }}
         run: |
-          $dir = "desktop/dist/win-unpacked"
+          $dir = $env:OUT_DIR
           if (-not (Test-Path "$dir/XyDesk.exe")) { throw "XyDesk.exe tidak ditemukan di $dir" }
           if (-not (Test-Path "$dir/resources/engine/xydesk-host.exe")) {
             throw "engine tidak dibundel (resources/engine/xydesk-host.exe hilang)"
@@ -546,7 +552,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Windows-${{ matrix.arch }}
-          path: desktop/dist/win-unpacked/*
+          path: ${{ format('desktop/dist/{0}/*', matrix.arch == 'x64' && 'win-unpacked' || format('win-{0}-unpacked', matrix.arch)) }}
           retention-days: 30
           if-no-files-found: error
 
