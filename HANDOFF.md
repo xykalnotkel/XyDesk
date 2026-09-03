@@ -156,6 +156,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
+- [x] (dari Danu - XySpace Team, 2026-09-03, sesi WEB-DEPLOY) — **INFO deploy
+  cepat Web (aturan #5):** fix WEB10 (fallback 404 slug changelog) sudah LIVE
+  di `app.xystudio.my.id`. Build produksi `index-CCHcbcu7.js` (client ID
+  `495336144977-…` produksi), `wrangler deploy` versi
+  `eca5ab16-45af-4ea0-835b-c88cfe437782`; verifikasi pasca-deploy tercatat:
+  md5 live == build `2de36d14…`, `content-type: text/javascript`, fallback
+  "Catatan rilis versi ini belum tersedia" + `ApiError` path ada di bundle.
+  Ini deploy cepat, bukan rilis — tidak ada artefak Build/rilis baru.
+
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **Permintaan dispatch Build**
   atas restu operator di chat (3 Sep 2026, "gas + minta dispatch build"): push
   `SESI-20260903-GALIH-HOST-AUDIT` (host engine: masa tenggang disconnect,
@@ -298,13 +307,19 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `AGENT_BOARD.md` → push dengan `Izin: ...` di body. Commit tetap masuk,
   tapi audit mencatatnya sebagai pelanggaran.
 
-- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Pengingat deploy**: perubahan
+- [x] (dari Danu - XySpace Team, 2026-09-03) — **Pengingat deploy**: perubahan
   sesi WEB10 (fallback 404 slug changelog) sudah di `main` tapi **belum live** —
   push agent tidak memicu deploy (kebijakan 3 Sep). Sesuai aturan papan #5,
   Web boleh deploy cepat: `npm run build` dengan `VITE_GOOGLE_CLIENT_ID`
   produksi, deploy `wrangler`, lalu verifikasi (md5 bundle live == build,
   content-type JS, teks "Catatan rilis versi ini belum tersedia" muncul saat
   buka `/news/changelog-v6-4-0`). Atau serahkan ke dispatch CI/Release.
+  **Selesai (Danu, 3 Sep 2026, sesi WEB-DEPLOY):** di-deploy langsung lewat
+  jalur cepat aturan #5 — build produksi `index-CCHcbcu7.js`, wrangler versi
+  `eca5ab16-45af-4ea0-835b-c88cfe437782`, verifikasi pasca-deploy lolos penuh
+  (md5 live == build `2de36d14…`, content-type `text/javascript`, fallback
+  + client ID produksi ada di bundle live). Catatan untuk CI/Release di
+  bawah.
 
 ## Untuk: Backend / Edge
 
@@ -573,6 +588,13 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Danu - XySpace Team, 2026-09-03) — **Deploy cepat Web (aturan #5):**
+  fix WEB10 (fallback 404 slug changelog) LIVE di `app.xystudio.my.id`. Build
+  produksi `index-CCHcbcu7.js` + `wrangler deploy` versi `eca5ab16…`;
+  verifikasi pasca-deploy lolos penuh (md5 live==build, content-type JS,
+  fallback + client ID produksi di bundle live). Tercatat di papan + item
+  INFO untuk CI/Release.
 
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — Changelog 6.4.0 dirapikan:
   17 butir yang kalimatnya terpotong (efek samping commit bump `4cbbc22`)
