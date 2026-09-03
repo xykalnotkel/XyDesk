@@ -13,10 +13,12 @@
 //     (Resend) ke pelanggan — semuanya asinkron lewat waitUntil.
 //   - POST /api/subscribe      → daftar email langganan berita (unix email).
 
+import { verifyFounderAdmin } from './auth.js';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Token',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Token, X-Admin-Google-Token',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -254,12 +256,10 @@ export async function addComment(env, slug, body, request) {
   if (content.length < 2) return json({ error: 'komentar terlalu pendek' }, 400);
   if (!fp) return json({ error: 'fingerprint diperlukan' }, 400);
 
-  // Badge resmi ditentukan SERVER dari ADMIN_TOKEN, tidak pernah dari body.
-  // Kalau klien boleh mengirim `official: true`, badge itu cuma dekorasi
-  // yang bisa dipasang siapa saja lewat curl.
-  const adminToken = request?.headers?.get('x-admin-token') || '';
-  const official =
-    Boolean(env.ADMIN_TOKEN) && adminToken === env.ADMIN_TOKEN;
+  // Badge resmi ditentukan SERVER (ADMIN_TOKEN atau Google ID token founder),
+  // tidak pernah dari body. Kalau klien boleh mengirim `official: true`,
+  // badge itu cuma dekorasi yang bisa dipasang siapa saja lewat curl.
+  const official = await verifyFounderAdmin(env, request);
 
   if (!official && isProtectedName(author)) {
     return json(
@@ -351,8 +351,8 @@ export async function subscribe(env, body) {
 
 // ── Terbitkan artikel (admin) + notifikasi push & email ─────────────────
 async function adminPublish(env, request, body) {
-  const token = request.headers.get('x-admin-token') || '';
-  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
+  const admin = await verifyFounderAdmin(env, request);
+  if (!admin) {
     return json({ error: 'unauthorized' }, 401);
   }
   const title = clean(body.title).slice(0, 160);

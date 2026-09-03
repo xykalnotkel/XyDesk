@@ -72,12 +72,34 @@ curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
 >   }'
 > ```
 
+### Dua jalur admin (sejak 3 Sep 2026)
+
+Admin (publish artikel & badge resmi komentar) menerima **dua** bukti:
+
+1. **`x-admin-token: <ADMIN_TOKEN>`** — jalur lama, tetap sah.
+2. **`x-admin-google-token: <id_token>`** — Google ID token (OpenID). Worker
+   memverifikasi signature + audience langsung ke JWKS Google, lalu hanya
+   menerima bila email token == `FOUNDER_EMAIL`. Founder tidak perlu lagi
+   menempel `ADMIN_TOKEN` manual — cukup masuk dengan Google. CORS untuk
+   header ini sudah dibuka.
+
+```bash
+curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
+  -H "Content-Type: application/json" \
+  -H "x-admin-google-token: <ID_TOKEN_GOOGLE>" \
+  -d '{"title":"Judul rilis","content":"Isi rilis lengkap.","slug":"changelog-v6-4-1"}'
+```
+
 Saat terbit, worker **otomatis** (asinkron, `waitUntil`):
 1. Kirim push OneSignal ke semua pengguna opt-in (judul + gambar sampul).
 2. Kirim email Resend ke seluruh `subscribers` (dari `news@mail.xystudio.my.id`).
 
 Secret Worker (via `wrangler secret put`): `ADMIN_TOKEN`, `ONESIGNAL_APP_ID`,
 `ONESIGNAL_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`.
+Jalur Google butuh dua secret tambahan: `GOOGLE_CLIENT_ID` (audience token
+OAuth web; bisa daftar pisah-koma bila Android ikut) dan `FOUNDER_EMAIL`
+(email Google founder yang diizinkan). Tanpa keduanya jalur Google nonaktif
+(gagal-tertutup); jalur `ADMIN_TOKEN` tetap bekerja.
 
 ## Sampul berita
 
