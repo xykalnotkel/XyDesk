@@ -156,6 +156,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
+- [x] (dari Tara - XySpace Team, 2026-09-03, sesi TARA-NEWS-GOOGLE) — **INFO
+  deploy worker berita menunggu:** worker berita (`news/`) kini menerima
+  `x-admin-google-token` (jalur admin kedua; `x-admin-token` tetap sah).
+  Kode sudah di `main`, tes 32/32 hijau, **belum live** — deploy `news/`
+  belum dijalankan (push tidak memicu deploy, kebijakan 3 Sep). Jalur Google
+  butuh dua secret sebelum deploy: `GOOGLE_CLIENT_ID` (audience OAuth web) +
+  `FOUNDER_EMAIL` (email Google founder). Silakan deploy (aturan #5 / dispatch
+  `deploy-news`) atau set secret-nya saat rilis berikutnya.
+
 - [x] (dari Danu - XySpace Team, 2026-09-03, sesi WEB-DEPLOY) — **INFO deploy
   cepat Web (aturan #5):** fix WEB10 (fallback 404 slug changelog) sudah LIVE
   di `app.xystudio.my.id`. Build produksi `index-CCHcbcu7.js` (client ID
@@ -297,6 +306,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Web
 
+- [ ] (dari Tara - XySpace Team, 2026-09-03) — **Lengkapi sisi klien admin
+  Google.** Worker berita sudah menerima `x-admin-google-token` (ID token
+  OpenID; divalidasi signature + audience, email == `FOUNDER_EMAIL`). Yang
+  belum: klien web mengirim id_token ini saat founder (login Google
+  `xycdigital@gmail.com`, lihat `ADMIN_EMAIL` di `web/src/news.ts`) sudah
+  masuk — alih-alih menyuruh tempel `ADMIN_TOKEN` manual. Header lama
+  `x-admin-token` tetap berfungsi, jadi ini peningkatan bertahap, bukan
+  wajib segera.
+
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur web, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 
 
@@ -349,11 +367,18 @@ _(kosong)_
   yang menerima perintah dari backend kita lalu membuat member/top-up, atau
   (b) lepas dari billing CyberIndo untuk sesi remote — host XyDesk sendiri
   yang membatasi durasi sesi.
-- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Verifikasi admin komentar
+- [x] (dari Danu - XySpace Team, 2026-09-03) — **Verifikasi admin komentar
   yang lebih mulus**: sekarang founder menempel ADMIN_TOKEN sekali di
   perangkat (UI web sudah ada, worker memvalidasi). Peningkatan: worker
   berita menerima Google ID token dan memverifikasi email founder langsung
   (audience + signature), sehingga tidak perlu menempel token manual.
+  **Selesai sisi worker (Tara, 3 Sep 2026, sesi TARA-NEWS-GOOGLE):** worker
+  berita kini menerima `x-admin-google-token` (ID token diverifikasi RS256
+  via JWKS, audience + email == `FOUNDER_EMAIL`); `x-admin-token` lama tetap
+  sah; gagal-tertutup bila secret tidak lengkap. Tes `news/` 32/32 hijau.
+  **Belum live** — deploy worker berita belum dijalankan (lihat "Untuk: CI /
+  Release"). Sisi klien web (mengirim id_token saat founder masuk, tanpa
+  tempel token) menunggu sesi Web — lihat "Untuk: Web".
 
 - [x] (dari Laras - XySpace Team, 2026-09-03) — **SELESAI 3 Sep 2026 (sesi
   `SESI-20260903-LARAS-CLOUDINARY`, operator menyerahkan kunci Cloudinary di
@@ -588,6 +613,14 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Tara - XySpace Team, 2026-09-03) — **Worker berita: jalur admin
+  kedua via Google ID token.** `news/` kini menerima `x-admin-google-token`
+  (ID token diverifikasi RS256 via JWKS Google — signature + audience, lalu
+  email == `FOUNDER_EMAIL`); `x-admin-token` lama tetap sah; gagal-tertutup
+  tanpa secret. Kode baru `news/src/auth.js` (port dari signaling) +
+  `news/test/google-admin.test.js` (12 kasus). `news/` 32/32 hijau. Belum
+  live (deploy berita menunggu); sisi klien web dicatat di "Untuk: Web".
 
 - [x] (dari Danu - XySpace Team, 2026-09-03) — **Deploy cepat Web (aturan #5):**
   fix WEB10 (fallback 404 slug changelog) LIVE di `app.xystudio.my.id`. Build

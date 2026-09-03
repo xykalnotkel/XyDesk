@@ -37,6 +37,18 @@ Kebijakan rilis:
   di rilis 6.4.0: tanpa field `slug`, artikel changelog jatuh ke hash acak
   `p-…` dan tautan versi di footer web menunjuk ke artikel yang tidak ada.
   Hasil: `cloudflare/` 51/51 hijau, `news/` 20/20 hijau (`node --test`).
+- Backend/Edge: **admin berita kini punya jalur kedua lewat Google ID token.**
+  Sebelumnya founder menempel `ADMIN_TOKEN` sekali di perangkat (UI web sudah
+  ada, worker memvalidasi). Kini worker berita juga menerima header
+  `x-admin-google-token` (ID token OpenID) — diverifikasi signature +
+  audience langsung ke JWKS Google, lalu hanya diterima bila email token ==
+  `FOUNDER_EMAIL`. Jalur `x-admin-token` lama tetap sah. Gagal-tertutup:
+  tanpa `GOOGLE_CLIENT_ID`/`FOUNDER_EMAIL` jalur Google nonaktif. Verifikasi
+  identik dengan worker signaling (`cloudflare/src/auth.js`), dikunci
+  `news/test/google-admin.test.js` (12 kasus: RSA sungguhan, audience salah,
+  kedaluwarsa, email non-founder, tanpa konfigurasi, komentar + publish lewat
+  fetch). `news/` 32/32 hijau. Sisi klien (web mengirim token saat founder
+  masuk) menunggu sesi Web — dicatat di HANDOFF.
 
 ### Diubah
 - Client Flutter: **unggah foto profil kini aktif.** Kodenya sudah selesai
