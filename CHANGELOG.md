@@ -77,7 +77,18 @@ Kebijakan rilis:
   tanpa rincian. Parser markdown dikunci lewat
   `test/notifications/changelog_parse_test.dart`.
 
+### Ditambahkan
+- Web: **chip durasi & sisa waktu di layar sesi** — pojok kiri atas
+  menampilkan durasi berjalan dan, untuk sesi tamu, sisa waktu batas
+  2 jam (token tamu terbit persis 2 jam di authstore.js) berubah merah
+  saat ≤ 5 menit; tab Sesi kini memuat baris Durasi/Total/Sisa waktu.
 ### Diubah
+- Web: **Sewa PC (`/billing`)** — durasi kini bisa custom (input angka
+  1–24 jam di samping chip cepat; di luar rentang ditolak dengan pesan)
+  dan tiap paket menampilkan ketersediaan stok ("N unit tersedia" /
+  "Stok habis" — kartu & tombol pesan nonaktif). Stok adalah angka
+  operator di `web/src/Billing.tsx` (belum ada backend inventori),
+  diperbarui manual + tanggal "diperbarui" tampil di halaman.
 - Web: tombol hero beranda **"Status rilis" → "Ingatkan saya"** — klik
   membuka popup pilihan kanal kabar rilis: email (tersimpan berlabel
   `unduhan`, jalur sama dengan form halaman unduhan), saluran WhatsApp,
@@ -103,6 +114,11 @@ Kebijakan rilis:
   panjangnya bisa ribuan piksel — sebelumnya pembaca HP harus menggulir
   manual.
 ### Diperbaiki
+- Web: **deep link `/billing` jatuh ke beranda** — `currentRoute()` tidak
+  punya case `/billing`, jadi buka/refresh langsung ke URL itu merender
+  halaman beranda (navigasi lewat menu tetap benar). Ditemukan saat menguji
+  halaman sewa; audit responsivitas WEB5 sebelumnya keliru loloskannya
+  karena beranda juga tidak overflow.
 - Web: **race deploy-web.yml** — dua Build sukses berdekatan bisa mencampur payload sehingga deploy checkout SHA lama dan menimpa bundle baru (kejadian 6c5ba06/d90e12a, ditebus manual). Kini SHA & run Build diambil dari API, checkout memakai SHA itu, artefak dicocokkan dengan run-nya, deploy berjalan serial (tidak dibatalkan di tengah), dan hanya Build web terbaru yang boleh deploy.
 - Web: **overflow horizontal di detail berita (layar ≤ 390 px)** — baris
   langganan email tidak bisa membungkus sehingga tombol "Langganan"

@@ -1954,6 +1954,39 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
 .hud-icon-btn { position: static; }
 .hud-icon-btn img { width: 22px; height: 22px; }
 
+/* Chip durasi & sisa waktu sesi — pojok kiri atas video. Sesi tamu
+   berbatas 2 jam (token signaling), jadi sisanya diperlihatkan jujur;
+   merah saat tinggal <= 5 menit. */
+.sesi-waktu {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(24, 25, 29, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #efe9fb;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  backdrop-filter: blur(8px);
+}
+.sesi-waktu em {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 12px;
+  color: rgba(239, 233, 251, 0.65);
+}
+.sesi-waktu.kritis {
+  border-color: rgba(248, 113, 113, 0.6);
+  background: rgba(120, 20, 20, 0.85);
+}
+.sesi-waktu.kritis em { color: #fecaca; }
+
 /* Toast kecil untuk umpan balik papan klip/mic — pojok kiri bawah. */
 .hud-toast {
   position: absolute;
@@ -2537,6 +2570,51 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   font-weight: 600;
 }
 .durasi-chip.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+.paket-stok {
+  justify-self: start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-2);
+  color: var(--accent-deep);
+  font-size: 12px;
+  font-weight: 700;
+}
+.paket-stok.kosong {
+  background: rgba(185, 28, 28, 0.07);
+  border-color: rgba(185, 28, 28, 0.35);
+  color: var(--danger);
+}
+.paket-card.habis {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.paket-card.habis.active { border-color: var(--line-strong); }
+.durasi-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 999px;
+  color: var(--text-low);
+  font-size: 13px;
+}
+.durasi-custom input {
+  width: 64px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-hi);
+  text-align: center;
+  padding: 8px 0;
+}
+.durasi-custom input::-webkit-outer-spin-button,
+.durasi-custom input::-webkit-inner-spin-button { margin: 0; }
+.durasi-note { margin: 4px 0 0; font-size: 12.5px; color: var(--danger); }
 .order-summary {
   display: flex;
   align-items: center;

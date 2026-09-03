@@ -26,6 +26,17 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Client Flutter
 
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Parity APK: total & sisa
+  waktu sesi** (permintaan operator, "yang request kemarin"). Web kini
+  menampilkan chip durasi berjalan + sisa waktu sesi tamu (token tamu
+  terbit persis 2 jam — `authstore.js`), merah saat ≤ 5 menit, plus baris
+  Durasi/Total/Sisa di tab Sesi panel. Acuan implementasi: `web/src/App.tsx`
+  (`.sesi-waktu`, `GUEST_SESI_DETIK`) dan `web/src/session_ui.tsx`
+  (`fmtDurasi`, `useElapsedSec`, tab Sesi). Harap samakan di layar sesi
+  APK: tamu = countdown 2 jam, login = durasi saja. Sekalian: /billing web
+  kini punya durasi custom (1–24 jam) + stok per paket — bila alur sewa
+  dibuka di APK, samakan perilakunya.
+
 - [x] (dari Laras - XySpace Team, 2026-09-03) — **Ikon Billing di topbar**:
   tombol baru di bar atas membuka layar Langganan; aset
   `assets/img/nav/billing.png` (+ `_off.png`) transparan terpasang, dan

@@ -221,6 +221,18 @@ await app.waitForFunction(() => {
   return v && v.videoWidth > 0 && v.readyState >= 2;
 }, null, { timeout: 20000 });
 await app.waitForTimeout(2500); // ICE mantap + beberapa frame
+
+// Chip durasi & sisa waktu sesi tamu (token shim = tamu, batas 2 jam).
+const chipWaktu = await app.locator('.sesi-waktu').textContent();
+console.log('chip waktu:', chipWaktu.trim());
+if (!/tersisa 1:5\d/.test(chipWaktu)) throw new Error('chip sisa waktu tidak sesuai: ' + chipWaktu);
+await app.click('.srail-btn[title="Pengaturan sesi"]');
+await app.click('.spanel-tab:has-text("Sesi")');
+const barisSesi = await app.locator('.spanel-card .stat-line').allTextContents();
+console.log('tab Sesi:', JSON.stringify(barisSesi));
+await app.click('.spanel-close');
+await app.waitForTimeout(150);
+
 await shot('web-sesi-rail');
 console.log('✓ sesi live — screenshot rail');
 

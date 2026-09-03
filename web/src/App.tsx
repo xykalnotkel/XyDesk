@@ -59,7 +59,7 @@ import {
 } from './version';
 import { vkFromCode } from './vk';
 import BillingPage from './Billing';
-import { VirtualKeyboard, GamingPad, SessionPanel, SessionRail, DEFAULT_PREFS } from './session_ui';
+import { VirtualKeyboard, GamingPad, SessionPanel, SessionRail, DEFAULT_PREFS, fmtDurasi, useElapsedSec } from './session_ui';
 import type { SessionPrefs } from './session_ui';
 import { QrScanModal, ConnectGuide, SupportLinks } from './connect_extras';
 import { WhatsAppIcon, TelegramIcon, XIcon, FacebookIcon } from './brand-icons';
@@ -79,6 +79,9 @@ type AuthStep = 'closed' | 'login' | 'otp';
 const NEWS_IMAGE_BLOCK = /^!\[([^\]]*)\]\((https:\/\/app\.xystudio\.my\.id\/[^\s)]+)\)$/;
 
 const TOKEN_KEY = 'xydesk.web.jwt';const GUEST_TOKEN_KEY = 'xydesk.web.guestJwt';
+/// Batas sesi tamu: token signaling tamu terbit 2 jam (authstore.js) —
+/// dipakai untuk menampilkan sisa waktu di layar sesi.
+const GUEST_SESI_DETIK = 2 * 60 * 60;
 const LAST_HOST_KEY = 'xydesk.web.lastHost';
 const RELEASE_BASE =
   'https://github.com/xykalnotkel/XyDesk/releases/latest/download';
@@ -133,6 +136,8 @@ function currentRoute(): Route {
       return '/legal';
     case '/news':
       return '/news';
+    case '/billing':
+      return '/billing';
     default:
       return '/';
   }
@@ -1918,6 +1923,15 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const [stats, setStats] = useState<SessionStats | null>(null);
   const [connectedAt, setConnectedAt] = useState<number | null>(null);
   const [hudToast, setHudToast] = useState('');
+  // Sesi tamu berbatas 2 jam (token signaling); pengguna login tidak.
+  // Dihitung per render: token tamu baru tersimpan saat connect dimulai.
+  const tamu = !localStorage.getItem(TOKEN_KEY) && !!sessionStorage.getItem(GUEST_TOKEN_KEY);
+  const totalSesiDetik = tamu ? GUEST_SESI_DETIK : null;
+  const durasiDetik = useElapsedSec(phase === 'connected' ? connectedAt : null);
+  const sisaDetik =
+    totalSesiDetik !== null && durasiDetik !== null
+      ? Math.max(0, totalSesiDetik - durasiDetik)
+      : null;
   // Preferensi sesi — bertahan antar sesi di perangkat ini.
   const [prefs, setPrefs] = useState<SessionPrefs>(() => {
     try {
@@ -2312,6 +2326,21 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
         <video ref={videoRef} autoPlay playsInline muted />
         {/* Audio sistem host (track Opus) — elemen terpisah, tidak di-mute. */}
         <audio ref={audioRef} autoPlay />
+        {connected && (
+          <div
+            className={`sesi-waktu${sisaDetik !== null && sisaDetik <= 300 ? ' kritis' : ''}`}
+            title={
+              tamu
+                ? 'Sesi tamu berlaku dua jam — putuskan lalu konek ulang bila habis'
+                : 'Durasi sesi berjalan'
+            }
+          >
+            <span>{fmtDurasi(durasiDetik ?? 0)}</span>
+            {sisaDetik !== null && (
+              <em>{sisaDetik > 0 ? `tersisa ${fmtDurasi(sisaDetik)}` : 'batas tercapai'}</em>
+            )}
+          </div>
+        )}
         <SessionRail
           collapsed={railHidden}
           onToggleCollapsed={() => setRailHidden((v) => !v)}
@@ -2383,6 +2412,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
             onSelectDisplay={(i) => sessionRef.current?.selectDisplay(i)}
             connectedAt={connectedAt}
             railCollapsed={railHidden}
+            totalSesiDetik={totalSesiDetik}
             trackpad={trackpad}
             onTrackpadMode={(on) => {
               if (on !== trackpad) toggleTrackpad();

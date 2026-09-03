@@ -53,6 +53,21 @@ const PAKETS: Paket[] = [
 
 const DURASI = [1, 2, 3, 5, 10];
 
+/// Batas durasi sewa per pesanan (jam) — lebih dari ini harus lewat
+/// konsultasi supaya stok bisa diatur ulang.
+const MAKS_JAM = 24;
+
+/// Stok unit tiap paket — ANGKA OPERATOR, bukan hasil hitung sistem:
+/// belum ada backend inventori, jadi nilai di sini diperbarui manual
+/// saat stok berubah (lihat catatan "diperbarui" di bawah halaman).
+/// 0 = habis (kartu nonaktif, tombol pesan mati).
+const STOK: Record<string, number> = {
+  reguler: 6,
+  gaming: 4,
+  pro: 2,
+};
+const STOK_DIPERBARUI = '3 Sep 2026';
+
 function rupiah(n: number): string {
   return 'Rp ' + n.toLocaleString('id-ID');
 }
@@ -60,10 +75,27 @@ function rupiah(n: number): string {
 export default function BillingPage() {
   const [paketId, setPaketId] = useState('gaming');
   const [jam, setJam] = useState(1);
-  const paket = useMemo(() => PAKETS.find((p) => p.id === paketId) ?? PAKETS[0], [paketId]);
-  const total = paket.hargaPerJam * jam;
+  // Durasi custom: diisi lewat angka (bukan chip). Kosong = pakai chip.
+  const [jamCustom, setJamCustom] = useState('');
+  const paket = useMemo(
+    () => PAKETS.find((p) => p.id === paketId && STOK[p.id] > 0) ?? PAKETS.find((p) => STOK[p.id] > 0) ?? PAKETS[0],
+    [paketId],
+  );
+  const stokPaket = STOK[paket.id] ?? 0;
+  const jamAman = Math.min(MAKS_JAM, Math.max(1, Math.round(jam) || 1));
+  const total = paket.hargaPerJam * jamAman;
 
-  const pesan = `Halo XySpace! Mau sewa PC:%0A- Paket: ${paket.nama}%0A- Durasi: ${jam} jam%0A- Total: ${rupiah(total)}`;
+  const pilihDurasi = (d: number) => {
+    setJam(d);
+    setJamCustom('');
+  };
+  const isiDurasiCustom = (value: string) => {
+    setJamCustom(value);
+    const n = Number(value);
+    if (value !== '' && Number.isFinite(n) && n >= 1 && n <= MAKS_JAM) setJam(Math.round(n));
+  };
+
+  const pesan = `Halo XySpace! Mau sewa PC:%0A- Paket: ${paket.nama}%0A- Durasi: ${jamAman} jam%0A- Total: ${rupiah(total)}`;
   const orderHref = ORDER_WA ? `https://wa.me/${ORDER_WA}?text=${pesan}` : WA_CHANNEL;
 
   return (
@@ -79,26 +111,35 @@ export default function BillingPage() {
       </p>
 
       <section className="billing-pakets">
-        {PAKETS.map((p) => (
-          <button
-            type="button"
-            key={p.id}
-            className={`paket-card${p.id === paketId ? ' active' : ''}${p.unggulan ? ' featured' : ''}`}
-            onClick={() => setPaketId(p.id)}
-          >
-            {p.unggulan && <span className="paket-flag">Paling laris</span>}
-            <h3>{p.nama}</h3>
-            <p className="paket-harga">
-              <strong>{rupiah(p.hargaPerJam)}</strong> / jam
-            </p>
-            <p className="paket-ringkas">{p.ringkas}</p>
-            <ul>
-              {p.spesifikasi.map((s) => (
-                <li key={s}>{s}</li>
-              ))}
-            </ul>
-          </button>
-        ))}
+        {PAKETS.map((p) => {
+          const stok = STOK[p.id] ?? 0;
+          const habis = stok <= 0;
+          return (
+            <button
+              type="button"
+              key={p.id}
+              className={`paket-card${p.id === paket.id ? ' active' : ''}${p.unggulan ? ' featured' : ''}${habis ? ' habis' : ''}`}
+              onClick={() => !habis && setPaketId(p.id)}
+              disabled={habis}
+              aria-disabled={habis}
+            >
+              {p.unggulan && !habis && <span className="paket-flag">Paling laris</span>}
+              <h3>{p.nama}</h3>
+              <p className="paket-harga">
+                <strong>{rupiah(p.hargaPerJam)}</strong> / jam
+              </p>
+              <p className="paket-ringkas">{p.ringkas}</p>
+              <span className={`paket-stok${habis ? ' kosong' : ''}`}>
+                {habis ? 'Stok habis' : `${stok} unit tersedia`}
+              </span>
+              <ul>
+                {p.spesifikasi.map((s) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ul>
+            </button>
+          );
+        })}
       </section>
 
       <section className="billing-order surface-card">
@@ -108,31 +149,56 @@ export default function BillingPage() {
             <button
               type="button"
               key={d}
-              className={`durasi-chip${d === jam ? ' active' : ''}`}
-              onClick={() => setJam(d)}
+              className={`durasi-chip${d === jam && jamCustom === '' ? ' active' : ''}`}
+              onClick={() => pilihDurasi(d)}
             >
               {d} jam
             </button>
           ))}
+          <label className="durasi-custom">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={MAKS_JAM}
+              step={1}
+              placeholder="Custom"
+              value={jamCustom}
+              onChange={(e) => isiDurasiCustom(e.target.value)}
+              aria-label="Durasi custom dalam jam"
+            />
+            <span>jam</span>
+          </label>
         </div>
+        {jamCustom !== '' && (Number(jamCustom) < 1 || Number(jamCustom) > MAKS_JAM) && (
+          <p className="durasi-note" role="alert">
+            Durasi custom antara 1 sampai {MAKS_JAM} jam. Lebih dari itu tanya dulu lewat WhatsApp.
+          </p>
+        )}
         <div className="order-summary">
           <div>
             <span>
-              Paket {paket.nama} · {jam} jam
+              Paket {paket.nama} · {jamAman} jam
             </span>
             <small>
-              {rupiah(paket.hargaPerJam)} × {jam}
+              {rupiah(paket.hargaPerJam)} × {jamAman}
             </small>
           </div>
           <strong>{rupiah(total)}</strong>
         </div>
-        <a className="btn primary big" href={orderHref} target="_blank" rel="noopener noreferrer">
-          Pesan via WhatsApp
-        </a>
+        {stokPaket > 0 ? (
+          <a className="btn primary big" href={orderHref} target="_blank" rel="noopener noreferrer">
+            Pesan via WhatsApp
+          </a>
+        ) : (
+          <span className="btn primary big" aria-disabled="true" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+            Stok paket ini habis
+          </span>
+        )}
         <p className="order-note">
           Pembayaran otomatis (QRIS) sedang disiapkan — untuk sekarang pesanan
           dikonfirmasi manual oleh tim, biasanya dalam hitungan menit pada jam
-          operasional.
+          operasional. Stok terakhir diperbarui {STOK_DIPERBARUI}.
         </p>
       </section>
 

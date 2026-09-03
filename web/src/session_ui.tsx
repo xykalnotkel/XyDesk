@@ -431,8 +431,8 @@ const PANEL_TABS: [PanelTab, string, React.ReactNode][] = [
   ['sesi', 'Sesi', <Svg key="s"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></Svg>],
 ];
 
-/// Jam durasi sesi yang berdetak — dipakai tab Sesi.
-function useElapsed(from: number | null) {
+/// Detik sesi berjalan yang berdetak — dipakai tab Sesi dan chip HUD.
+export function useElapsedSec(from: number | null) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (from === null) return;
@@ -440,9 +440,17 @@ function useElapsed(from: number | null) {
     return () => clearInterval(t);
   }, [from]);
   if (from === null) return null;
-  const s = Math.max(0, Math.floor((now - from) / 1000));
-  const m = Math.floor(s / 60);
-  return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  return Math.max(0, Math.floor((now - from) / 1000));
+}
+
+/// "1:47:26" / "12:05" — tanpa library, angka konsisten lebar.
+export function fmtDurasi(totalDetik: number): string {
+  const s = Math.max(0, Math.floor(totalDetik));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${m}:${pad(ss)}`;
 }
 
 export function SessionPanel({
@@ -457,6 +465,7 @@ export function SessionPanel({
   onSelectDisplay,
   connectedAt,
   railCollapsed,
+  totalSesiDetik,
   trackpad,
   onTrackpadMode,
 }: {
@@ -474,12 +483,14 @@ export function SessionPanel({
   /// Waktu mulai sesi (epoch ms) untuk durasi di tab Sesi.
   connectedAt: number | null;
   railCollapsed: boolean;
+  /// Batas total sesi dalam detik (sesi tamu = 2 jam); null = tanpa batas.
+  totalSesiDetik: number | null;
   /// Mode gerak kursor: true = trackpad (relatif), false = langsung (absolut).
   trackpad: boolean;
   onTrackpadMode: (on: boolean) => void;
 }) {
   const [tab, setTab] = useState<PanelTab>('gambar');
-  const elapsed = useElapsed(connectedAt);
+  const elapsed = useElapsedSec(connectedAt);
 
   return (
     <aside
@@ -622,7 +633,16 @@ export function SessionPanel({
           <p className="spanel-section">Sesi</p>
           <div className="spanel-card">
             <StatRow label="Terhubung ke" value={hostId} />
-            <StatRow label="Durasi" value={elapsed ?? '—'} />
+            <StatRow label="Durasi" value={elapsed !== null ? fmtDurasi(elapsed) : '—'} />
+            <StatRow label="Total" value={totalSesiDetik !== null ? fmtDurasi(totalSesiDetik) : 'Bebas'} />
+            <StatRow
+              label="Sisa waktu"
+              value={
+                totalSesiDetik !== null && elapsed !== null
+                  ? fmtDurasi(Math.max(0, totalSesiDetik - elapsed))
+                  : '—'
+              }
+            />
           </div>
           <button type="button" className="spanel-disconnect" onClick={onDisconnect}>
             Putuskan sesi
