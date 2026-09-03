@@ -146,6 +146,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   komentar: ikuti pola web (`web/src/news.ts` — `newsDisplayName`,
   `newsAvatarUrl`). Flutter sudah; shell desktop menyusul.
 
+- [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — **INFO: aturan papan #5 —
