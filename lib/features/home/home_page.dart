@@ -6,6 +6,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/l10n_bridge.dart';
 import '../../core/responsive.dart';
+import '../../core/session_preview.dart';
+import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
 import '../devices/device_detail_page.dart';
@@ -63,16 +65,21 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-/// Kartu perangkat dengan ilustrasi status online / offline.
-class _DeviceCard extends StatelessWidget {
+/// Kartu perangkat dengan preview screenshot dan info status.
+/// 
+/// Kalau ada preview screenshot dari sesi terakhir, tampilkan di atas kartu
+/// sebagai thumbnail. Kalau tidak ada, tampilkan ilustrasi PC online/offline.
+class _DeviceCard extends ConsumerWidget {
   const _DeviceCard({required this.device});
 
   final Device device;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
     final online = device.isOnline;
+    final store = ref.watch(storeProvider);
+    final preview = loadSessionPreview(store, device.id);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -86,65 +93,152 @@ class _DeviceCard extends StatelessWidget {
               builder: (_) => DeviceDetailPage(deviceId: device.id),
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(13),
-            child: Row(
-              children: [
-                // Ilustrasi PC berbeda untuk online dan offline — lebih cepat
-                // dikenali daripada sekadar titik warna.
-                Opacity(
-                  opacity: online ? 1 : 0.45,
-                  child: Illus(online ? Img.pcOnline : Img.pcOffline, size: 48),
-                ),
-                const SizedBox(width: Gap.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Preview screenshot atau ilustrasi
+              if (preview != null)
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      Text(
-                        device.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.2,
-                          color: online ? c.textHi : c.textMid,
+                      Image.memory(
+                        preview,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        errorBuilder: (_, __, ___) => _buildFallbackIllustration(
+                          context,
+                          online,
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        device.gpu == null
-                            ? device.os
-                            : '${device.os} · ${device.gpu}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 11.5, color: c.textLow),
+                      // Overlay gradient di bawah untuk readability
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 40,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.6),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Badge "Last seen"
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(R.sm),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                LucideIcons.camera,
+                                size: 12,
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Preview',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: Gap.sm),
-                _StatusPill(device: device),
-                if (online) ...[
-                  const SizedBox(width: Gap.sm),
-                  IconButton(
-                    icon: Icon(LucideIcons.play, size: 18, color: c.accent),
-                    tooltip: 'Mulai Sesi Langsung',
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SessionPage(
-                          deviceName: device.name,
-                          deviceId: device.id,
-                        ),
+                )
+              else
+                _buildFallbackIllustration(context, online),
+              // Info device
+              Padding(
+                padding: const EdgeInsets.all(13),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            device.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.2,
+                              color: online ? c.textHi : c.textMid,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            device.gpu == null
+                                ? device.os
+                                : '${device.os} · ${device.gpu}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11.5, color: c.textLow),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    const SizedBox(width: Gap.sm),
+                    _StatusPill(device: device),
+                    if (online) ...[
+                      const SizedBox(width: Gap.sm),
+                      IconButton(
+                        icon: Icon(LucideIcons.play, size: 18, color: c.accent),
+                        tooltip: 'Mulai Sesi Langsung',
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => SessionPage(
+                              deviceName: device.name,
+                              deviceId: device.id,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackIllustration(BuildContext context, bool online) {
+    final c = context.c;
+    return Container(
+      height: 80,
+      color: c.bg,
+      child: Center(
+        child: Opacity(
+          opacity: online ? 1 : 0.45,
+          child: Illus(online ? Img.pcOnline : Img.pcOffline, size: 48),
         ),
       ),
     );

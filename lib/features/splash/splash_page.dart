@@ -1,38 +1,12 @@
-//! Splash XyDesk — revisi 6.2, disesuaikan untuk logo asli.
+//! Splash XyDesk — revisi 6.5: cukup logo + wordmark.
 //!
-//! ## Penyesuaian logo asli
-//!
-//! Logo asli (`design/logo-asli.png`) membawa margin transparan sendiri:
-//! isinya hanya menempati ~81% kanvas. Kalau ukuran boksnya disamakan dengan
-//! tile lama, mark-nya tampak lebih kecil meski angkanya identik — jadi boks
-//! diperbesar ~20% agar ukuran optisnya setara.
-//!
-//! Koreografi juga diperlambat pada wordmark: tadinya selesai di 62% durasi
-//! (terasa menyentak), sekarang melarut sampai 86% sehingga tulisan benar-
-//! benar "muncul perlahan".
-//!
-//! ## Yang berubah dari revisi 6.1 dan kenapa
-//!
-//! 1. **Durasi 1700 → 1250 ms.** Splash adalah pajak yang dibayar pengguna
-//!    setiap kali membuka aplikasi. 1,7 detik terasa mahal pada kali pertama
-//!    dan terasa lambat pada kali kelima puluh.
-//! 2. **Garis aksen diganti indikator progres tipis.** Garis lama tumbuh
-//!    lalu berhenti tanpa arti — dekorasi yang menyamar sebagai status.
-//!    Sekarang lebarnya benar-benar mewakili kemajuan boot.
-//! 3. **Versi + tahap rilis ditampilkan di kaki layar.** Selama pra-beta,
-//!    pengguna berhak tahu build apa yang sedang mereka jalankan tanpa
-//!    menggali ke Pengaturan — dan itu memangkas separuh basa-basi saat
-//!    mereka melapor bug.
-//! 4. Cahaya latar diredam (0,5 → 0,38) supaya tile tetap jadi subjek.
-//!
-//! Semua fase memakai satu kurva easeOutQuart agar terasa mahal, bukan
-//! sibuk. "Kurangi gerakan" → langsung ke keadaan akhir.
+//! Semua elemen tambahan (progres bar, tagline, versi di kaki) dihapus —
+//! splash hanya identitas visual singkat sebelum aplikasi siap.
+//! Durasi 1200 ms; "kurangi gerakan" langsung ke keadaan akhir.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/app_version.dart';
-import '../../core/release_stage.dart';
 import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
@@ -48,7 +22,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1250),
+    duration: const Duration(milliseconds: 1200),
   )..forward();
 
   @override
@@ -88,199 +62,90 @@ class _SplashScene extends StatelessWidget {
   /// Progres koreografi 0..1.
   final double t;
 
-  // Fase (fraksi total durasi).
-  static const _bgEnd = 0.28;
-  static const _tileEnd = 0.42;
-  // Wordmark dibiarkan melarut hampir sampai akhir: fokus splash adalah logo,
-  // lalu tulisan menyusul tanpa menyentak.
-  static const _wordStart = 0.34;
-  static const _wordEnd = 0.86;
-  static const _lineStart = 0.20;
-  static const _lineEnd = 1.00;
-  static const _tagStart = 0.68;
-  static const _tagEnd = 0.96;
-  static const _footStart = 0.72;
-  static const _footEnd = 0.96;
-
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final size = MediaQuery.sizeOf(context);
     final shortSide = size.width < size.height ? size.width : size.height;
-    // Logo asli punya margin transparan ~9% di tiap sisi, jadi boksnya
-    // dibesarkan supaya mark yang terlihat berukuran sama seperti tile lama.
-    final tileSize = (shortSide * 0.36).clamp(112.0, 164.0).toDouble();
+    final tileSize = (shortSide * 0.32).clamp(100.0, 150.0).toDouble();
 
-    // 1. Cahaya ungu latar memudar masuk.
-    final bgT = _quart(_frac(t, 0, _bgEnd));
+    // Logo fade + scale masuk.
+    final logoT = _quart(_frac(t, 0, 0.45));
+    final logoScale = 0.88 + 0.12 * logoT;
 
-    // 2. Tile logo membesar + fade.
-    final tileT = _quart(_frac(t, 0, _tileEnd));
-    final tileScale = 0.84 + 0.16 * tileT;
+    // Wordmark muncul setelah logo, fade + naik sedikit.
+    final wordT = _quart(_frac(t, 0.28, 0.75));
+    final wordDy = 10.0 * (1 - wordT);
 
-    // 3. Wordmark: fade + naik; letter-spacing mengendur.
-    final wordT = _quart(_frac(t, _wordStart, _wordEnd));
-    final wordDy = 12.0 * (1 - wordT);
-    final wordSpacing = 3.0 * (1 - wordT);
-
-    // 4. Garis aksen ungu tumbuh horizontal.
-    final lineT = _quart(_frac(t, _lineStart, _lineEnd));
-
-    // 5. Tagline.
-    final tagT = _frac(t, _tagStart, _tagEnd);
-
-    // 6. Kaki layar: versi + tahap rilis.
-    final footT = _frac(t, _footStart, _footEnd);
+    // Cahaya ungu halus di belakang logo.
+    final bgT = _quart(_frac(t, 0, 0.35));
 
     return Scaffold(
       backgroundColor: c.bg,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Cahaya ungu lembut di belakang tile — identitas tanpa mencolok.
+          // Cahaya ungu lembut — identitas tanpa mencolok.
           Center(
             child: Opacity(
-              opacity: bgT * 0.30,
+              opacity: bgT * 0.25,
               child: Container(
-                width: tileSize * 2.6,
-                height: tileSize * 2.6,
+                width: tileSize * 2.8,
+                height: tileSize * 2.8,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      c.accent.withValues(alpha: 0.35),
-                      c.accent.withValues(alpha: 0.08),
+                      c.accent.withValues(alpha: 0.30),
+                      c.accent.withValues(alpha: 0.06),
                       Colors.transparent,
                     ],
-                    stops: const [0.0, 0.55, 1.0],
+                    stops: const [0.0, 0.50, 1.0],
                   ),
                 ),
               ),
             ),
           ),
-          SafeArea(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Tile logo: kotak gelap rounded + X putih + aksen ungu.
-                  Opacity(
-                    opacity: tileT.clamp(0.0, 1.0),
-                    child: Transform.scale(
-                      scale: tileScale,
-                      child: Image.asset(
-                        Img.logo,
-                        width: tileSize,
-                        height: tileSize,
-                        fit: BoxFit.contain,
-                      ),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Logo.
+                Opacity(
+                  opacity: logoT.clamp(0.0, 1.0),
+                  child: Transform.scale(
+                    scale: logoScale,
+                    child: Image.asset(
+                      Img.logo,
+                      width: tileSize,
+                      height: tileSize,
+                      fit: BoxFit.contain,
                     ),
                   ),
-                  const SizedBox(height: 30),
-                  Opacity(
-                    opacity: wordT.clamp(0.0, 1.0),
-                    child: Transform.translate(
-                      offset: Offset(0, wordDy),
-                      child: ShaderMask(
-                        blendMode: BlendMode.srcIn,
-                        shaderCallback: (bounds) => const LinearGradient(
-                          colors: [Color(0xFF6D28D9), Color(0xFFA78BFA)],
-                        ).createShader(bounds),
-                        child: Text(
-                          'XyDesk',
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: wordSpacing,
-                          ),
+                ),
+                const SizedBox(height: 24),
+                // Wordmark — gradient ungu.
+                Opacity(
+                  opacity: wordT.clamp(0.0, 1.0),
+                  child: Transform.translate(
+                    offset: Offset(0, wordDy),
+                    child: ShaderMask(
+                      blendMode: BlendMode.srcIn,
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [Color(0xFF6D28D9), Color(0xFFA78BFA)],
+                      ).createShader(bounds),
+                      child: const Text(
+                        'XyDesk',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  // Rel progres: alur tipis yang selalu terlihat, terisi
-                  // sesuai kemajuan. Garis lama tumbuh dari nol tanpa rel,
-                  // jadi tidak ada yang bisa dibaca sebagai "sisa berapa".
-                  SizedBox(
-                    width: 104,
-                    height: 3,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: c.accent.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: FractionallySizedBox(
-                          widthFactor: lineT.clamp(0.0, 1.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF6D28D9), Color(0xFFA78BFA)],
-                              ),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Opacity(
-                    opacity: tagT.clamp(0.0, 1.0),
-                    child: Text(
-                      'PC kamu, di tangan kamu',
-                      style: TextStyle(
-                        fontSize: 13,
-                        letterSpacing: 0.4,
-                        color: c.textMid,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Kaki layar: versi yang sedang berjalan + tahap rilis.
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 26,
-            child: Opacity(
-              opacity: footT.clamp(0.0, 1.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: c.accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(R.pill),
-                    ),
-                    child: Text(
-                      ReleaseStage.label.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.1,
-                        color: c.accent,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    AppVersion.full,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      letterSpacing: 0.3,
-                      color: c.textLow,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

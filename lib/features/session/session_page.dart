@@ -10,12 +10,15 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/devlog.dart';
 import '../../core/l10n_bridge.dart';
+import '../../core/pip_controller.dart';
 import '../../core/session_preview.dart';
 import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../webrtc/input_codec.dart';
+import '../../webrtc/rtc_service.dart';
 import '../../webrtc/session_transport.dart';
 import '../../webrtc/vk_codes.dart';
+import '../devices/device_model.dart';
 import '../../widgets/brand.dart';
 import '../../widgets/hud_glyphs.dart';
 import 'media_capabilities.dart';
@@ -34,6 +37,7 @@ class SessionPage extends ConsumerStatefulWidget {
     required this.deviceName,
     required this.deviceId,
     this.password = '',
+    this.initialTransport,
   });
 
   final String deviceName;
@@ -44,11 +48,15 @@ class SessionPage extends ConsumerStatefulWidget {
   /// menolak bila mensyaratkan) atau tampilkan preview untuk mode tamu.
   final String password;
 
+  /// Transport yang sudah dibuat dan sedang berjalan (pairing sudah diterima).
+  /// Kalau null, SessionPage membuat transport baru dan memulai pairing sendiri.
+  final SessionTransport? initialTransport;
+
   @override
   ConsumerState<SessionPage> createState() => _SessionPageState();
 }
 
-class _SessionPageState extends ConsumerState<SessionPage> {
+class _SessionPageState extends ConsumerState<SessionPage> with WidgetsBindingObserver {
   bool _connecting = true;
   bool _overlayVisible = true;
   bool _panelVisible = false;
@@ -71,19 +79,45 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
   /// Aliran isi papan klip PC (balasan permintaan 0x09).
   StreamSubscription<String>? _clipboardSub;
+
+  /// Aliran meta dari host (hardware info, display list).
+  StreamSubscription<HostMeta>? _metaSub;
+
   KbLayout _keyboardLayout = KbLayout.split;
   double _keyboardOpacity = 0.95;
   late final SessionTransport _transport;
 
+  /// Waktu saat sesi menjadi live (connected). Null = belum tersambung.
+  DateTime? _sessionStartedAt;
+
+  /// Timer penghitung durasi sesi (diperbarui tiap detik saat live).
+  Timer? _durationTimer;
+
+  /// Detik elapsed sejak sesi tersambung — dipakai menampilkan durasi
+  /// di panel kontrol.
+  int _elapsedSec = 0;
+
+  /// Total durasi sesi untuk tamu (2 jam = 7200 detik). Null untuk login user.
+  static const int _guestSessionTotal = 2 * 60 * 60;
+  
+  /// Apakah ini sesi tamu (tanpa login).
+  bool get _isGuestSession => ref.read(authProvider).isGuest;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final preferences = ref.read(settingsProvider);
-    _transport = SessionTransport(jwt: ref.read(authProvider).token);
+    _transport = widget.initialTransport ??
+        SessionTransport(jwt: ref.read(authProvider).token);
     _transport.addListener(_onTransportChanged);
-    unawaited(
-      _transport.start(hostId: widget.deviceId, password: widget.password),
-    );
+    // Kalau transport sudah disediakan dari halaman Connect (pairing sudah
+    // diterima), tidak perlu start ulang — cukup dengarkan perubahannya.
+    if (widget.initialTransport == null) {
+      unawaited(
+        _transport.start(hostId: widget.deviceId, password: widget.password),
+      );
+    }
     _settings = SessionSettings(
       pcAudioRequested: preferences.audioEnabled,
       microphoneRequested: preferences.micPassthrough,
@@ -176,7 +210,39 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       final rtc = _transport.rtc;
       if (rtc != null) {
         _clipboardSub = rtc.clipboardStream.listen(_onClipboardFromHost);
+        // Listen ke meta stream untuk hardware info.
+        _metaSub = rtc.hostMetaStream.listen(_onHostMeta);
       }
+    }
+    // Saat transport tidak lagi live (retry, disconnect, dll), bersihkan
+    // subscription lama supaya bisa dipasang ulang saat live kembali.
+    // Tanpa ini, _clipboardSub tetap non-null (subscription dari RtcService
+    // lama yang sudah ditutup) dan subscription ke stream baru tidak pernah
+    // dibuat — clipboard dari host tidak pernah sampai ke perangkat.
+    if (!s.live && _clipboardSub != null) {
+      unawaited(_clipboardSub!.cancel());
+      _clipboardSub = null;
+    }
+    if (!s.live && _metaSub != null) {
+      unawaited(_metaSub!.cancel());
+      _metaSub = null;
+    }
+    // Mulai hitung durasi sesi saat pertama kali live.
+    if (s.live && _sessionStartedAt == null) {
+      _sessionStartedAt = DateTime.now();
+      _durationTimer?.cancel();
+      _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted || _sessionStartedAt == null) return;
+        final elapsed = DateTime.now().difference(_sessionStartedAt!).inSeconds;
+        if (elapsed != _elapsedSec) {
+          setState(() => _elapsedSec = elapsed);
+        }
+      });
+    }
+    // Stop penghitung saat sesi berakhir.
+    if (!s.live && _sessionStartedAt != null) {
+      _durationTimer?.cancel();
+      _durationTimer = null;
     }
     // Begitu live, HUD disembunyikan supaya layar remote bersih; pengguna
     // memunculkannya lewat handle kecil di tepi kanan.
@@ -184,16 +250,74 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       _overlayVisible = false;
       _idleTimer?.cancel();
     }
+    // Jika sesi aktif dan app di-background, masuk PiP mode
+    if (s.live && !mounted) {
+      PipController.instance.enterPipMode();
+    }
     setState(() {});
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Saat app di-minimize/paused dan sesi masih live, masuk PiP mode
+    if (state == AppLifecycleState.paused && _transport.state.live) {
+      PipController.instance.enterPipMode();
+      DevLog.i('sesi', 'Masuk PiP mode', 'Sesi aktif saat app di-background');
+    }
+    // Saat app di-resume, keluar PiP mode (jika aktif)
+    if (state == AppLifecycleState.resumed && PipController.instance.isInPipMode) {
+      PipController.instance.exitPipMode();
+    }
+  }
+
+  /// Terima meta dari host — simpan hardware info ke device repo.
+  void _onHostMeta(HostMeta meta) {
+    // Update device dengan hardware info dari host.
+    unawaited(_updateDeviceWithHardwareInfo(meta));
+  }
+
+  /// Update device di repo dengan hardware info dari HostMeta.
+  Future<void> _updateDeviceWithHardwareInfo(HostMeta meta) async {
+    // Konversi HostDisplay ke DisplayInfo.
+    final displays = meta.displays
+        .map((d) => DisplayInfo(
+              index: d.index,
+              name: d.name.isEmpty ? 'Monitor ${d.index + 1}' : d.name,
+              width: d.width,
+              height: d.height,
+              refreshRate: d.refreshRate,
+              isPrimary: d.isPrimary,
+            ))
+        .toList();
+
+    DevLog.i(
+      'sesi',
+      'Hardware info diterima dari host',
+      'GPU=${meta.gpu}, RAM=${meta.ram}, Displays=${displays.length}',
+    );
+
+    // Update device di repo dengan hardware info.
+    await ref.read(deviceRepoProvider.notifier).updateHardwareInfo(
+          widget.deviceId,
+          motherboard: meta.motherboard,
+          cpu: meta.cpu,
+          gpu: meta.gpu,
+          ram: meta.ram,
+          storage: meta.storage,
+          displays: displays,
+        );
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _transport.removeListener(_onTransportChanged);
     _transport.dispose();
     _idleTimer?.cancel();
     _connectTimer?.cancel();
     _captureTimer?.cancel();
+    _durationTimer?.cancel();
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     // Flag layar-tetap-menyala milik window, bukan halaman. Kalau tidak
@@ -201,6 +325,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     // ditutup dan diam-diam menghabiskan baterai.
     unawaited(DisplayControl.setKeepScreenOn(false));
     _clipboardSub?.cancel();
+    _metaSub?.cancel();
     DevLog.i('sesi', 'Menutup sesi');
     super.dispose();
   }
@@ -489,6 +614,9 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                   state: _settings,
                   transport: _transport.state,
                   rtc: _transport.rtc,
+                  elapsedSec: _elapsedSec,
+                  isGuestSession: _isGuestSession,
+                  guestSessionTotal: _guestSessionTotal,
                   onChanged: (value) => setState(() => _settings = value),
                   onClose: _closePanel,
                   onDisconnect: _confirmDisconnect,

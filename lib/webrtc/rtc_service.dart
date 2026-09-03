@@ -48,23 +48,30 @@ class HostDisplay {
     required this.name,
     required this.width,
     required this.height,
+    this.refreshRate,
+    this.isPrimary = false,
   });
 
   final int index;
   final String name;
   final int width;
   final int height;
+  final int? refreshRate;
+  final bool isPrimary;
 
   factory HostDisplay.fromJson(Map<String, dynamic> j) => HostDisplay(
     index: j['index'] as int? ?? 0,
     name: j['name'] as String? ?? '',
     width: j['width'] as int? ?? 0,
     height: j['height'] as int? ?? 0,
+    refreshRate: j['refreshRate'] as int?,
+    isPrimary: j['isPrimary'] as bool? ?? false,
   );
 }
 
 /// Meta yang dikirim host saat sesi dimulai (dan setiap kali berubah):
-/// daftar layar, layar terpilih, dan status pipeline audio host.
+/// daftar layar, layar terpilih, status pipeline audio host, dan spesifikasi
+/// hardware perangkat.
 @immutable
 class HostMeta {
   const HostMeta({
@@ -72,12 +79,24 @@ class HostMeta {
     required this.wantedDisplay,
     required this.audioAvailable,
     required this.audioPipeline,
+    this.motherboard,
+    this.cpu,
+    this.gpu,
+    this.ram,
+    this.storage,
   });
 
   final List<HostDisplay> displays;
   final int wantedDisplay;
   final bool audioAvailable;
   final String audioPipeline;
+
+  /// Spesifikasi hardware — dikirim host saat sesi dimulai.
+  final String? motherboard;
+  final String? cpu;
+  final String? gpu;
+  final String? ram;
+  final String? storage;
 
   factory HostMeta.fromJson(Map<String, dynamic> j) => HostMeta(
     displays: [
@@ -87,6 +106,11 @@ class HostMeta {
     wantedDisplay: j['wanted'] as int? ?? 0,
     audioAvailable: (j['audio']?['available'] as bool?) ?? false,
     audioPipeline: (j['audio']?['pipeline'] as String?) ?? '',
+    motherboard: j['hardware']?['motherboard'] as String?,
+    cpu: j['hardware']?['cpu'] as String?,
+    gpu: j['hardware']?['gpu'] as String?,
+    ram: j['hardware']?['ram'] as String?,
+    storage: j['hardware']?['storage'] as String?,
   );
 }
 

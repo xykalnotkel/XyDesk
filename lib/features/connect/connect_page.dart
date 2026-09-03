@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,10 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/devlog.dart';
 import '../../core/l10n_bridge.dart';
 import '../../core/store.dart';
 import '../../webrtc/signaling_client.dart';
 import '../../core/tokens.dart';
+import '../../webrtc/session_transport.dart';
 import '../devices/device_model.dart';
 import '../devices/history_page.dart';
 import 'guide_page.dart';
@@ -144,17 +147,13 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     super.dispose();
   }
 
-  /// Tekan Sambungkan → LANGSUNG ke layar sesi.
+  /// Tekan Sambungkan → VALIDASI pairing dulu, baru masuk sesi.
   ///
-  /// Sebelumnya alur ini menyisipkan `PairSuccessPage` — halaman konfirmasi
-  /// "Perangkat terhubung / Mulai sesi" — di antara tombol dan sesi. Itu
-  /// ketukan tambahan yang tidak membawa informasi baru: pengguna sudah
-  /// menekan Sambungkan, jadi niatnya sudah jelas. Lebih buruk lagi, halaman
-  /// itu berbohong: ia menulis "Perangkat terhubung" padahal transport belum
-  /// dimulai sama sekali — koneksi baru benar-benar dicoba setelah "Mulai
-  /// sesi" ditekan. SessionPage punya status menyambung yang jujur, jadi
-  /// biarkan layar itu yang bicara. Halaman perantara itu ikut dihapus —
-  /// tidak ada rute lain yang memakainya.
+  /// Sebelum navigasi, transport mencoba pairing ke host. Kalau ditolak
+  /// (password salah), host offline, atau host sibuk — error ditampilkan
+  /// di halaman Connect dan pengguna TIDAK masuk ke layar sesi. Hanya
+  /// kalau pairing diterima (fase negotiating/connected), baru push ke
+  /// SessionPage dengan transport yang sudah jalan.
   Future<void> _connect() async {
     if (!_valid || _connecting) return;
     setState(() {
@@ -171,26 +170,114 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
 
     final id = _id.text.replaceAll(' ', '');
     final password = _pw.text;
-    try {
-      await _saveRecent(id, password);
-      final device = await ref
-          .read(deviceRepoProvider.notifier)
-          .connect(id: id, name: _pendingName(id), remembered: _remember);
-      if (!mounted) return;
+    final jwt = ref.read(authProvider).token;
 
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => SessionPage(
-            deviceName: device.name,
-            deviceId: device.id,
-            password: password,
-          ),
-        ),
-      );
-    } finally {
-      // Dipulihkan setelah kembali dari sesi supaya tombol bisa dipakai lagi.
-      if (mounted) setState(() => _connecting = false);
+    // Tanpa JWT (tamu), tidak bisa melakukan pairing nyata — tampilkan
+    // pesan yang jelas tanpa masuk ke layar sesi.
+    if (jwt == null || jwt.isEmpty) {
+      setState(() {
+        _error = 'Masuk dengan akun untuk menyambung ke PC.';
+        _connecting = false;
+      });
+      return;
     }
+
+    // Buat transport dan mulai pairing. Tunggu hasilnya — hanya lanjut
+    // ke layar sesi kalau host menerima pairing.
+    final transport = SessionTransport(jwt: jwt);
+    TransportStatus? finalStatus;
+
+    final completer = Completer<void>();
+    void listener() {
+      final s = transport.state;
+      // Pairing diterima (host mulai negosiasi) atau gagal definitif.
+      if (s.status == TransportStatus.negotiating ||
+          s.status == TransportStatus.connected) {
+        if (!completer.isCompleted) {
+          finalStatus = s.status;
+          completer.complete();
+        }
+      } else if (s.status == TransportStatus.rejected ||
+          s.status == TransportStatus.peerOffline ||
+          s.status == TransportStatus.hostBusy ||
+          s.status == TransportStatus.error) {
+        if (!completer.isCompleted) {
+          finalStatus = s.status;
+          completer.complete();
+        }
+      }
+    }
+
+    transport.addListener(listener);
+    unawaited(
+      transport.start(hostId: id, password: password),
+    );
+
+    try {
+      await completer.future.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          if (!completer.isCompleted) {
+            finalStatus = TransportStatus.error;
+            completer.complete();
+          }
+        },
+      );
+    } catch (_) {
+      finalStatus = TransportStatus.error;
+    }
+    transport.removeListener(listener);
+
+    final status = finalStatus ?? TransportStatus.error;
+
+    if (status == TransportStatus.negotiating ||
+        status == TransportStatus.connected) {
+      // Pairing diterima! Simpan device dan buka sesi dengan transport
+      // yang sudah jalan — tidak perlu pair ulang.
+      try {
+        await _saveRecent(id, password);
+        final device = await ref
+            .read(deviceRepoProvider.notifier)
+            .connect(id: id, name: _pendingName(id), remembered: _remember);
+
+        if (!mounted) {
+          transport.dispose();
+          return;
+        }
+
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => SessionPage(
+              deviceName: device.name,
+              deviceId: device.id,
+              password: password,
+              initialTransport: transport,
+            ),
+          ),
+        );
+      } catch (_) {
+        // Kalau navigasi gagal (mis. context hilang), bersihkan transport.
+        transport.dispose();
+      }
+    } else {
+      // Pairing ditolak — jangan masuk sesi, tampilkan error di sini.
+      transport.dispose();
+      final msg = switch (status) {
+        TransportStatus.rejected =>
+          'Kata sandi salah atau host menolak sambungan.',
+        TransportStatus.peerOffline =>
+          'PC tidak online. Pastikan XyDesk Host berjalan di PC tujuan.',
+        TransportStatus.hostBusy =>
+          'PC sedang dipakai sesi lain. Tunggu sesi selesai, lalu coba lagi.',
+        TransportStatus.error =>
+          transport.state.message ?? 'Tidak dapat terhubung ke PC.',
+        _ => 'Tidak dapat terhubung ke PC.',
+      };
+      DevLog.w('connect', 'Pairing gagal', '$status: $msg');
+      if (mounted) setState(() => _error = msg);
+    }
+
+    if (mounted) setState(() => _connecting = false);
   }
 
   String _pendingName(String id) => 'PC-${id.substring(id.length - 4)}';

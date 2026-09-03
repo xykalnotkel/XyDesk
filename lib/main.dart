@@ -7,12 +7,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'core/app_version.dart';
 import 'core/devlog.dart';
+import 'core/pip_controller.dart';
 import 'core/store.dart';
 import 'features/auth/session_vault.dart';
 import 'features/notifications/notification_service.dart';
 import 'core/display_control.dart';
 
 void main() {
+  // PiP mode callback dari Android native
+  const pipChannel = MethodChannel('com.xystudio.xydesk/pip');
+  pipChannel.setMethodCallHandler((call) async {
+    if (call.method == 'onPipModeChanged') {
+      final isInPip = call.arguments as bool;
+      PipController.instance.handlePipModeChanged(isInPip);
+    }
+  });
+
   // runZonedGuarded menangkap error async yang lolos dari framework,
   // sehingga tidak ada kegagalan diam-diam yang berujung layar kosong.
   runZonedGuarded(

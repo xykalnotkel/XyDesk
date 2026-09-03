@@ -12,6 +12,9 @@ import 'update_page.dart';
 
 final appNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Callback untuk navigasi ke artikel berita dari push notification.
+typedef NewsNavigationCallback = void Function(String articleId, String slug);
+
 /// Integrasi tunggal OneSignal untuk seluruh aplikasi.
 ///
 /// SDK diinisialisasi tanpa memunculkan dialog izin. Dialog sistem hanya
@@ -30,6 +33,12 @@ class NotificationService extends ChangeNotifier {
   bool _optedIn = false;
   String? _lastError;
 
+  /// Callback untuk navigasi ke artikel berita.
+  NewsNavigationCallback? onNewsNavigate;
+
+  /// Pending news navigation data
+  _PendingNewsNavigation? _pendingNews;
+
   /// Kunci penanda "pengguna sengaja menjeda notifikasi". Selama tidak ada,
   /// izin sistem yang sudah diberikan dianggap sebagai persetujuan dan
   /// langganan diaktifkan otomatis.
@@ -38,6 +47,9 @@ class NotificationService extends ChangeNotifier {
   AppUpdateDetails? _pendingUpdate;
   bool _navigationScheduled = false;
   bool _updateRouteOpen = false;
+
+  /// Pending news article navigation
+  _PendingNewsNavigation? _pendingNews;
 
   bool get supported => NotificationConfig.isSupportedPlatform;
   bool get initialized => _initialized;
@@ -238,25 +250,57 @@ class NotificationService extends ChangeNotifier {
 
   void _onNotificationClick(OSNotificationClickEvent event) {
     final data = event.notification.additionalData;
-    if (!AppUpdateDetails.isUpdateDestination(
+    
+    // Check if this is a news article notification
+    if (data != null && data.containsKey('article_id') && data.containsKey('slug')) {
+      final articleId = data['article_id'] as String?;
+      final slug = data['slug'] as String?;
+      
+      if (articleId != null && slug != null) {
+        DevLog.i('push', 'Notifikasi berita diklik', 'article_id=$articleId');
+        _pendingNews = _PendingNewsNavigation(articleId: articleId, slug: slug);
+        _flushPendingNewsNavigation();
+        return;
+      }
+    }
+    
+    // Check if this is an update notification
+    if (AppUpdateDetails.isUpdateDestination(
       data,
       actionId: event.result.actionId,
     )) {
-      DevLog.i('push', 'Notifikasi dibuka', 'tanpa rute internal yang dikenal');
+      _pendingUpdate = AppUpdateDetails.fromPayload(
+        notificationTitle: event.notification.title,
+        notificationBody: event.notification.body,
+        data: data,
+      );
+      DevLog.i(
+        'push',
+        'Notifikasi pembaruan dibuka',
+        NotificationConfig.updateRoutePayload,
+      );
+      flushPendingNavigation();
       return;
     }
+    
+    DevLog.i('push', 'Notifikasi dibuka', 'tipe tidak dikenali');
+  }
 
-    _pendingUpdate = AppUpdateDetails.fromPayload(
-      notificationTitle: event.notification.title,
-      notificationBody: event.notification.body,
-      data: data,
-    );
-    DevLog.i(
-      'push',
-      'Notifikasi dibuka',
-      NotificationConfig.updateRoutePayload,
-    );
-    flushPendingNavigation();
+  /// Flush pending news navigation
+  void _flushPendingNewsNavigation() {
+    final pending = _pendingNews;
+    if (pending == null) return;
+    
+    final callback = onNewsNavigate;
+    if (callback != null) {
+      _pendingNews = null;
+      callback(pending.articleId, pending.slug);
+    } else {
+      // Callback belum di-set, coba lagi nanti
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _flushPendingNewsNavigation();
+      });
+    }
   }
 
   /// Aman dipanggil berkali-kali dari MaterialApp builder.
@@ -288,4 +332,15 @@ class NotificationService extends ChangeNotifier {
           });
     });
   }
+}
+
+/// Data navigasi berita yang tertunda.
+class _PendingNewsNavigation {
+  const _PendingNewsNavigation({
+    required this.articleId,
+    required this.slug,
+  });
+
+  final String articleId;
+  final String slug;
 }

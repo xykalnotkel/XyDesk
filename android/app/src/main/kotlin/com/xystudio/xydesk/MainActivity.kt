@@ -1,14 +1,17 @@
 package com.xystudio.xydesk
 
 import android.app.DownloadManager
+import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import android.util.Rational
 import android.view.WindowManager
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
@@ -25,6 +28,7 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val CHANNEL = "com.xystudio.xydesk/update"
         private const val DISPLAY_CHANNEL = "com.xystudio.xydesk/display"
+        private const val PIP_CHANNEL = "com.xystudio.xydesk/pip"
         private const val PREFS = "xydesk_update"
         private const val KEY_DOWNLOAD_ID = "download_id"
         private const val KEY_SHA256 = "sha256"
@@ -38,6 +42,8 @@ class MainActivity : FlutterActivity() {
     }
 
     private val updateExecutor = Executors.newSingleThreadExecutor()
+    private var isInPipMode = false
+    private var pipChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -45,6 +51,10 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler(::handleUpdateCall)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DISPLAY_CHANNEL)
             .setMethodCallHandler(::handleDisplayCall)
+        
+        // PiP channel for floating window during active sessions
+        pipChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PIP_CHANNEL)
+        pipChannel?.setMethodCallHandler(::handlePipCall)
     }
 
     // ── Tampilan: refresh rate & layar tetap menyala ─────────────────────
@@ -74,6 +84,46 @@ class MainActivity : FlutterActivity() {
             }
             else -> result.notImplemented()
         }
+    }
+
+    // ── Picture-in-Picture: floating window saat sesi aktif ──────────────
+    //
+    // Saat app di-minimize dan sesi remote desktop masih berjalan, masuk
+    // PiP mode agar video stream tetap terlihat di jendela kecil mengambang.
+    private fun handlePipCall(call: MethodCall, result: MethodChannel.Result) {
+        when (call.method) {
+            "enterPipMode" -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    enterPipMode()
+                    result.success(true)
+                } else {
+                    result.error("UNAVAILABLE", "PiP not available on this Android version", null)
+                }
+            }
+            "exitPipMode" -> {
+                // Android doesn't have explicit exit PiP, user needs to expand/close manually
+                result.success(true)
+            }
+            else -> result.notImplemented()
+        }
+    }
+
+    private fun enterPipMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val params = PictureInPictureParams.Builder()
+                .setAspectRatio(Rational(16, 9))
+                .build()
+            
+            enterPictureInPictureMode(params)
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode)
+        isInPipMode = isInPictureInPictureMode
+        
+        // Notify Flutter about PiP mode change
+        pipChannel?.invokeMethod("onPipModeChanged", isInPipMode)
     }
 
     /// Mode tampilan dengan resolusi sama seperti mode aktif, diurutkan

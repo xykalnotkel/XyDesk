@@ -71,12 +71,12 @@ class DeviceDetailPage extends ConsumerWidget {
           const SizedBox(height: Gap.xl),
           _StatusBar(device: device),
           const SizedBox(height: Gap.xl),
-          SectionLabel(context.tr('device_detail'), top: 0),
+
+          // ── Info Dasar ──
+          SectionLabel('Informasi Perangkat', top: 0),
           _spec(context, LucideIcons.hash, 'ID', device.prettyId, copy: true),
           _spec(context, LucideIcons.monitor, 'Sistem operasi', device.os),
-          if (device.gpu != null)
-            _spec(context, LucideIcons.cpu, 'GPU', device.gpu!),
-          _spec(context, LucideIcons.maximize, 'Resolusi', device.resolution),
+          _spec(context, LucideIcons.maximize, 'Resolusi utama', device.resolution),
           _spec(
             context,
             LucideIcons.clock,
@@ -96,6 +96,74 @@ class DeviceDetailPage extends ConsumerWidget {
             'Perangkat tepercaya',
             device.remembered ? 'Ya' : 'Tidak',
           ),
+
+          // ── Spesifikasi Hardware ──
+          if (device.motherboard != null ||
+              device.cpu != null ||
+              device.gpu != null ||
+              device.ram != null ||
+              device.storage != null ||
+              device.displays.isNotEmpty) ...[
+            const SizedBox(height: Gap.xl),
+            SectionLabel('Spesifikasi Hardware'),
+
+            if (device.motherboard != null)
+              _spec(
+                context,
+                LucideIcons.cpu,
+                'Motherboard',
+                device.motherboard!,
+              ),
+            if (device.cpu != null)
+              _spec(context, LucideIcons.cpu, 'Prosesor', device.cpu!),
+            if (device.gpu != null)
+              _spec(context, LucideIcons.gpu, 'Kartu grafis', device.gpu!),
+            if (device.ram != null)
+              _spec(context, LucideIcons.memoryStick, 'RAM', device.ram!),
+            if (device.storage != null)
+              _spec(context, LucideIcons.hardDrive, 'Penyimpanan', device.storage!),
+
+            // ── Daftar Monitor ──
+            if (device.displays.isNotEmpty) ...[
+              const SizedBox(height: Gap.md),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: context.c.raised,
+                  borderRadius: BorderRadius.circular(R.lg),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          LucideIcons.monitor,
+                          size: 16,
+                          color: context.c.textLow,
+                        ),
+                        const SizedBox(width: Gap.sm),
+                        Text(
+                          'Monitor tersambung (${device.displays.length})',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: context.c.textHi,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: Gap.md),
+                    for (final display in device.displays) ...[
+                      _DisplayCard(display: display),
+                      if (display != device.displays.last)
+                        const SizedBox(height: Gap.sm),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
         ],
       ),
       bottomNavigationBar: _BottomActions(device: device),
@@ -312,10 +380,34 @@ class _ScreenPreview extends ConsumerWidget {
                     : (device.isOnline ? AppColors.success : c.textLow),
               ),
             ),
+            // Timestamp kapan screenshot diambil
+            if (preview != null)
+              Positioned(
+                right: 12,
+                top: 12,
+                child: _Chip(
+                  text: _formatTimestamp(context),
+                  color: c.textLow,
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  String _formatTimestamp(BuildContext context) {
+    final now = DateTime.now();
+    final lastSeen = DateTime(now.year, now.month, now.day - 1);
+    final diff = now.difference(lastSeen);
+    
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m lalu';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}j lalu';
+    } else {
+      return '${diff.inDays}h lalu';
+    }
   }
 }
 
@@ -424,6 +516,115 @@ class _BottomActions extends StatelessWidget {
               : context.tr('status_offline'),
         ),
       ),
+    );
+  }
+}
+
+class _DisplayCard extends StatelessWidget {
+  const _DisplayCard({required this.display});
+
+  final DisplayInfo display;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: c.input.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(R.md),
+        border: Border.all(
+          color: display.isPrimary
+              ? c.accent.withValues(alpha: 0.3)
+              : c.textLow.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                display.isPrimary ? LucideIcons.monitor : LucideIcons.monitorDot,
+                size: 16,
+                color: display.isPrimary ? c.accent : c.textLow,
+              ),
+              const SizedBox(width: Gap.sm),
+              Expanded(
+                child: Text(
+                  display.name,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: c.textHi,
+                  ),
+                ),
+              ),
+              if (display.isPrimary)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: c.accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'UTAMA',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      color: c.accent,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: Gap.sm),
+          Row(
+            children: [
+              Expanded(
+                child: _DisplaySpec(
+                  icon: LucideIcons.maximize,
+                  value: display.resolution,
+                ),
+              ),
+              if (display.refreshRate != null)
+                Expanded(
+                  child: _DisplaySpec(
+                    icon: LucideIcons.zap,
+                    value: display.refreshRateLabel,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DisplaySpec extends StatelessWidget {
+  const _DisplaySpec({required this.icon, required this.value});
+
+  final IconData icon;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Row(
+      children: [
+        Icon(icon, size: 13, color: c.textLow),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 11.5,
+            color: c.textMid,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
     );
   }
 }

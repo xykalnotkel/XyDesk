@@ -20,6 +20,7 @@ import '../notifications/update_page.dart';
 import '../session/media_capabilities.dart';
 import 'billing_page.dart';
 import 'permissions_page.dart';
+import 'subscription_page.dart';
 import '../../core/display_control.dart';
 import '../../core/haptics.dart';
 
@@ -86,11 +87,11 @@ class AccountPage extends ConsumerWidget {
         ),
         const SectionLabel('Akun & informasi'),
         _CategoryRow(
-          title: 'XyDesk Premium',
-          subtitle: 'Paket, benefit, dan billing',
+          title: 'Langganan',
+          subtitle: 'Status keanggotaan & riwayat sewa',
           icon: LucideIcons.crown,
           value: 'Free',
-          onTap: () => _open(context, const BillingPage()),
+          onTap: () => _open(context, const SubscriptionPage()),
         ),
         _CategoryRow(
           title: 'Legal & tentang XyDesk',

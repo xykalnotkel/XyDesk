@@ -19,6 +19,11 @@ class Device {
     this.lastSeen,
     this.resolution = '1920×1080',
     this.remembered = false,
+    this.motherboard,
+    this.cpu,
+    this.ram,
+    this.displays = const [],
+    this.storage,
   });
 
   final String id;
@@ -30,6 +35,13 @@ class Device {
   final DateTime? lastSeen;
   final String resolution;
   final bool remembered;
+
+  /// Info hardware tambahan — dibaca dari host saat sesi.
+  final String? motherboard;
+  final String? cpu;
+  final String? ram;
+  final List<DisplayInfo> displays;
+  final String? storage;
 
   bool get isOnline => status == DeviceStatus.online;
 
@@ -46,6 +58,11 @@ class Device {
     int? pingMs,
     DateTime? lastSeen,
     bool? remembered,
+    String? motherboard,
+    String? cpu,
+    String? ram,
+    List<DisplayInfo>? displays,
+    String? storage,
   }) => Device(
     id: id,
     name: name ?? this.name,
@@ -56,6 +73,11 @@ class Device {
     lastSeen: lastSeen ?? this.lastSeen,
     resolution: resolution,
     remembered: remembered ?? this.remembered,
+    motherboard: motherboard ?? this.motherboard,
+    cpu: cpu ?? this.cpu,
+    ram: ram ?? this.ram,
+    displays: displays ?? this.displays,
+    storage: storage ?? this.storage,
   );
 
   Map<String, dynamic> toJson() => {
@@ -68,6 +90,11 @@ class Device {
     'lastSeen': lastSeen?.toIso8601String(),
     'res': resolution,
     'remembered': remembered,
+    'motherboard': motherboard,
+    'cpu': cpu,
+    'ram': ram,
+    'displays': displays.map((d) => d.toJson()).toList(),
+    'storage': storage,
   };
 
   factory Device.fromJson(Map<String, dynamic> j) => Device(
@@ -85,6 +112,13 @@ class Device {
         : DateTime.tryParse(j['lastSeen'] as String),
     resolution: j['res'] as String? ?? '1920×1080',
     remembered: j['remembered'] as bool? ?? false,
+    motherboard: j['motherboard'] as String?,
+    cpu: j['cpu'] as String?,
+    ram: j['ram'] as String?,
+    displays: (j['displays'] as List?)
+        ?.map((d) => DisplayInfo.fromJson(d as Map<String, dynamic>))
+        .toList() ?? [],
+    storage: j['storage'] as String?,
   );
 }
 
@@ -222,6 +256,40 @@ class DeviceRepo extends StateNotifier<List<Device>> {
     DevLog.i('devices', 'Perangkat diganti nama', '$id -> $name');
   }
 
+  /// Update hardware info perangkat (motherboard, CPU, GPU, RAM, storage, displays).
+  /// Dipanggil saat sesi dimulai dan host mengirim meta data.
+  Future<void> updateHardwareInfo(
+    String id, {
+    String? motherboard,
+    String? cpu,
+    String? gpu,
+    String? ram,
+    String? storage,
+    List<DisplayInfo>? displays,
+  }) async {
+    final current = byId(id);
+    if (current == null) {
+      DevLog.w('devices', 'Perangkat tidak ditemukan untuk update hardware', id);
+      return;
+    }
+
+    final updated = current.copyWith(
+      motherboard: motherboard ?? current.motherboard,
+      cpu: cpu ?? current.cpu,
+      gpu: gpu ?? current.gpu,
+      ram: ram ?? current.ram,
+      storage: storage ?? current.storage,
+      displays: displays ?? current.displays,
+    );
+
+    state = [
+      for (final d in state)
+        if (d.id == id) updated else d,
+    ];
+    await _persist();
+    DevLog.i('devices', 'Hardware info diupdate', '$id');
+  }
+
   Future<void> remove(String id) async {
     state = state.where((d) => d.id != id).toList();
     await _persist();
@@ -245,6 +313,48 @@ final deviceRepoProvider = StateNotifierProvider<DeviceRepo, List<Device>>((
   final scope = ref.watch(accountScopeProvider);
   return DeviceRepo(store, scope);
 });
+
+/// Info display host — dipakai untuk menampilkan monitor yang tersambung.
+@immutable
+class DisplayInfo {
+  const DisplayInfo({
+    required this.index,
+    required this.name,
+    required this.width,
+    required this.height,
+    this.refreshRate,
+    this.isPrimary = false,
+  });
+
+  final int index;
+  final String name;
+  final int width;
+  final int height;
+  final int? refreshRate;
+  final bool isPrimary;
+
+  String get resolution => '$width×$height';
+  String get refreshRateLabel =>
+      refreshRate != null ? '$refreshRate Hz' : '';
+
+  Map<String, dynamic> toJson() => {
+    'index': index,
+    'name': name,
+    'width': width,
+    'height': height,
+    'refreshRate': refreshRate,
+    'isPrimary': isPrimary,
+  };
+
+  factory DisplayInfo.fromJson(Map<String, dynamic> j) => DisplayInfo(
+    index: j['index'] as int? ?? 0,
+    name: j['name'] as String? ?? 'Monitor ${((j['index'] as int? ?? 0) + 1)}',
+    width: j['width'] as int? ?? 0,
+    height: j['height'] as int? ?? 0,
+    refreshRate: j['refreshRate'] as int?,
+    isPrimary: j['isPrimary'] as bool? ?? false,
+  );
+}
 
 /// Riwayat sesi.
 ///

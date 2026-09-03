@@ -61,6 +61,10 @@ class XyDeskApp extends ConsumerWidget {
 
       builder: (context, child) {
         NotificationService.instance.flushPendingNavigation();
+        // Set callback navigasi berita dari push notification
+        NotificationService.instance.onNewsNavigate = (articleId, slug) {
+          appNavigatorKey.currentState?.pushNamed('/news/$slug');
+        };
         // Arah teks mengikuti bahasa (Arab = kanan ke kiri).
         final dir = lang.rtl ? TextDirection.rtl : TextDirection.ltr;
         return Directionality(
@@ -114,8 +118,8 @@ class _BootState extends ConsumerState<_Boot> {
         .accessibilityFeatures
         .disableAnimations;
     _reduceMotion = ref.read(settingsProvider).reduceMotion || platformReduce;
-    // 1800 ms koreografi SplashPage + 200 ms jeda tenang di lockup akhir.
-    Future<void>.delayed(Duration(milliseconds: _reduceMotion ? 0 : 2000), () {
+    // 1200 ms koreografi SplashPage + 200 ms jeda tenang di lockup akhir.
+    Future<void>.delayed(Duration(milliseconds: _reduceMotion ? 0 : 1400), () {
       if (!mounted) return;
       _splashDone = true;
       _revealWhenReady();
@@ -607,7 +611,7 @@ class _BillingIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      tooltip: 'Langganan / Sewa PC',
+      tooltip: 'Sewa PC',
       onPressed: onPressed,
       icon: Image.asset(
         'assets/img/nav/billing.png',

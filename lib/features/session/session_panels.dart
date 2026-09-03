@@ -129,6 +129,9 @@ class SessionControlPanel extends ConsumerStatefulWidget {
     this.initialSection = SessionPanelSection.stream,
     this.transport = const TransportState(),
     this.rtc,
+    this.elapsedSec = 0,
+    this.isGuestSession = false,
+    this.guestSessionTotal = 0,
   });
 
   final String deviceName;
@@ -144,8 +147,17 @@ class SessionControlPanel extends ConsumerStatefulWidget {
 
   /// Sesi WebRTC yang sedang jalan. Dari sini panel membaca statistik nyata
   /// (resolusi, fps, bitrate, ping) dan daftar layar host. Null berarti belum
-  /// ada sesi, dan panel menampilkan tanda strip, bukan angka contoh.
+  /// ada sesi, dan panel menampilkan tanda strip — bukan angka contoh.
   final RtcService? rtc;
+
+  /// Detik elapsed sejak sesi tersambung. Ditampilkan di tab Sesi.
+  final int elapsedSec;
+
+  /// Apakah ini sesi tamu (tanpa login). Tamu punya batas waktu 2 jam.
+  final bool isGuestSession;
+
+  /// Total durasi sesi untuk tamu (dalam detik). Biasanya 7200 (2 jam).
+  final int guestSessionTotal;
 
   @override
   ConsumerState<SessionControlPanel> createState() =>
@@ -245,6 +257,9 @@ class _SessionControlPanelState extends ConsumerState<SessionControlPanel> {
                       deviceName: widget.deviceName,
                       transport: widget.transport,
                       rtc: widget.rtc,
+                      elapsedSec: widget.elapsedSec,
+                      isGuestSession: widget.isGuestSession,
+                      guestSessionTotal: widget.guestSessionTotal,
                       onDisconnect: widget.onDisconnect,
                     ),
                   },
@@ -1049,19 +1064,196 @@ class _SessionPanel extends StatelessWidget {
     required this.transport,
     required this.onDisconnect,
     this.rtc,
+    this.elapsedSec = 0,
+    this.isGuestSession = false,
+    this.guestSessionTotal = 0,
   });
 
   final String deviceName;
   final TransportState transport;
   final RtcService? rtc;
+  final int elapsedSec;
+  final bool isGuestSession;
+  final int guestSessionTotal;
   final VoidCallback onDisconnect;
+
+  static String _fmtDurasi(int totalSec) {
+    final h = totalSec ~/ 3600;
+    final m = (totalSec % 3600) ~/ 60;
+    final s = totalSec % 60;
+    if (h > 0) {
+      return '${h}j ${m.toString().padLeft(2, '0')}m ${s.toString().padLeft(2, '0')}d';
+    }
+    return '${m.toString().padLeft(2, '0')}m ${s.toString().padLeft(2, '0')}d';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     final service = rtc;
+
+    // Hitung sisa waktu untuk sesi tamu
+    final remaining = isGuestSession
+        ? (guestSessionTotal - elapsedSec).clamp(0, guestSessionTotal)
+        : 0;
+    final isCritical = isGuestSession && remaining <= 300 && remaining > 0;
+    final isExpired = isGuestSession && remaining <= 0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Countdown card untuk sesi tamu
+        if (isGuestSession) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isExpired
+                  ? c.danger.withValues(alpha: 0.12)
+                  : isCritical
+                      ? c.warning.withValues(alpha: 0.12)
+                      : c.raised,
+              borderRadius: BorderRadius.circular(R.md),
+              border: Border.all(
+                color: isExpired
+                    ? c.danger.withValues(alpha: 0.5)
+                    : isCritical
+                        ? c.warning.withValues(alpha: 0.5)
+                        : c.textLow.withValues(alpha: 0.16),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      isExpired
+                          ? LucideIcons.circleX
+                          : isCritical
+                              ? LucideIcons.timer
+                              : LucideIcons.clock,
+                      size: 18,
+                      color: isExpired
+                          ? c.danger
+                          : isCritical
+                              ? c.warning
+                              : c.textMid,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isExpired
+                          ? 'Sesi tamu berakhir'
+                          : isCritical
+                              ? 'Sesaat lagi berakhir!'
+                              : 'Sesi tamu',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: isExpired
+                            ? c.danger
+                            : isCritical
+                                ? c.warning
+                                : c.textHi,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'TOTAL',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: c.textLow,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _fmtDurasi(guestSessionTotal),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: c.textHi,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 32,
+                      color: c.textLow.withValues(alpha: 0.2),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'SISA',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isExpired
+                                  ? c.danger
+                                  : isCritical
+                                      ? c.warning
+                                      : c.textLow,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isExpired ? '00m 00d' : _fmtDurasi(remaining),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: isExpired
+                                  ? c.danger
+                                  : isCritical
+                                      ? c.warning
+                                      : c.accent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (isExpired) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Sesi tamu telah berakhir. Silakan login untuk '\
+                    'melanjutkan.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: c.danger,
+                      height: 1.4,
+                    ),
+                  ),
+                ] else if (isCritical) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Sesi akan berakhir dalam kurang dari 5 menit. '\
+                    'Segera simpan pekerjaanmu.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: c.warning,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         const _SectionTitle(title: 'Sesi ini'),
         StreamBuilder<SessionStats>(
           initialData: service?.stats,
@@ -1075,6 +1267,14 @@ class _SessionPanel extends StatelessWidget {
                     icon: LucideIcons.monitor,
                     title: 'Perangkat',
                     value: deviceName,
+                  ),
+                  const _CardGap(),
+                  _InfoRow(
+                    icon: LucideIcons.clock,
+                    title: 'Durasi',
+                    value: transport.live
+                        ? _fmtDurasi(elapsedSec)
+                        : '—',
                   ),
                   const _CardGap(),
                   _InfoRow(
