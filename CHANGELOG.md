@@ -49,6 +49,9 @@ Kebijakan rilis:
 - Host: **capture layar pulih dari penutupan OS** — bila Graphics Capture
 - Host: **mutex ter-poison tidak lagi merobohkan proses** — semua kunci
 - Desktop (host Windows): **supervisor kebal server hang** — permintaan
+- Desktop (host Windows): **"Engine belum siap" kini menjelaskan sebabnya** — supervisor mencatat kesalahan terakhir (token ditolak, exe tak ditemukan, kode keluar engine) dan mengirimnya ke UI, plus ID/password pairing tetap tampil walau engine mati. Sebelumnya kegagalan hanya tersembunyi di tab log dan halaman Home cuma bilang "belum siap".
+- Desktop (host Windows): **UI konsisten berbahasa Indonesia** — label navigasi `Home/Connect/News/Profile/Settings` → `Beranda/Hubungkan/Berita/Profil/Pengaturan`, judul halaman dan label `Mode` ikut dibumikan (sebelumnya campur Inggris di tengah konten Indonesia).
+- Desktop (host Windows): **tab Berita lebih tahan gangguan** — permintaan API news diberi timeout 10 dtk, pesan gagal dijelaskan dalam bahasa Indonesia ("Gagal memuat berita — periksa koneksi internet."), plus tombol `Coba lagi` dan tautan buka di web bila server tidak terjangkau.
 
 
 ## [6.3.0] - 2026-09-03

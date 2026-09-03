@@ -360,6 +360,8 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .news-cats button.active { background: var(--accent-soft); color: var(--accent); }
 
 .news-list { display: flex; flex-direction: column; gap: 12px; }
+.news-error { background: var(--raised); border-radius: var(--radius); padding: 16px; }
+.news-error .danger-text { margin-top: 0; }
 .news-card {
   display: flex;
   gap: 14px;

@@ -78,15 +78,18 @@ const LICENSES: [string, string, string][] = [
   ['Cloudflare Workers & D1', 'Layanan', 'Cloudflare'],
 ];
 
+// Label navigasi seragam bahasa Indonesia (konsisten dengan seluruh produk:
+// web & Android juga berbahasa Indonesia). Sebelumnya campur Inggris
+// ("Home/Connect/News/Profile/Settings") di tengah konten Indonesia.
 const NAV: { id: Page; label: string; icon: typeof Home }[] = [
-  { id: 'home', label: 'Home', icon: Home },
-  { id: 'connect', label: 'Connect', icon: Cable },
-  { id: 'news', label: 'News', icon: Newspaper },
+  { id: 'home', label: 'Beranda', icon: Home },
+  { id: 'connect', label: 'Hubungkan', icon: Cable },
+  { id: 'news', label: 'Berita', icon: Newspaper },
 ];
 
 const NAV_BOTTOM: { id: Page; label: string; icon: typeof Home }[] = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'profile', label: 'Profil', icon: User },
+  { id: 'settings', label: 'Pengaturan', icon: Settings },
 ];
 
 const STATE_LABEL: Record<string, { label: string; cls: string }> = {
@@ -238,7 +241,17 @@ export default function Page() {
 
       <main className="main">
         <header className="topbar">
-          <h2>{page === 'home' ? 'Home' : page === 'connect' ? 'Connect' : page === 'news' ? 'News' : page === 'profile' ? 'Profile' : 'Settings'}</h2>
+          <h2>
+            {page === 'home'
+              ? 'Beranda'
+              : page === 'connect'
+                ? 'Hubungkan'
+                : page === 'news'
+                  ? 'Berita'
+                  : page === 'profile'
+                    ? 'Profil'
+                    : 'Pengaturan'}
+          </h2>
           {flash && <span className="flash">{flash}</span>}
           <span className={`pill ${pill.cls}`}>
             <span className="dot" />
@@ -274,7 +287,10 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
       <section className="card">
         <h3>Status engine</h3>
         {status?.engine === false ? (
-          <p className="dim">Engine belum siap. Shell sedang menyiapkan proses host…</p>
+          <div>
+            <p className="dim">Engine belum siap. Shell sedang menyiapkan proses host…</p>
+            {status?.lastError && <p className="danger-text">Penyebab: {status.lastError}</p>}
+          </div>
         ) : (
           <>
             <div className="kv-grid">
@@ -419,6 +435,7 @@ function NewsPage() {
   const [posts, setPosts] = useState<NewsPost[] | null>(null);
   const [error, setError] = useState('');
   const [open, setOpen] = useState<NewsPost | null>(null);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -429,12 +446,17 @@ function NewsPage() {
         if (alive) setPosts(r.posts);
       })
       .catch((e) => {
-        if (alive) setError(e instanceof Error ? e.message : 'Gagal memuat berita.');
+        if (alive)
+          setError(
+            e instanceof Error && e.message !== 'Failed to fetch'
+              ? e.message
+              : 'Gagal memuat berita — periksa koneksi internet.',
+          );
       });
     return () => {
       alive = false;
     };
-  }, [category]);
+  }, [category, retry]);
 
   if (open) return <NewsDetail post={open} onBack={() => setOpen(null)} />;
 
@@ -447,7 +469,24 @@ function NewsPage() {
           </button>
         ))}
       </div>
-      {error && <p className="danger-text">{error}</p>}
+      {error && (
+        <div className="news-error">
+          <p className="danger-text">{error}</p>
+          <div className="set-row">
+            <button className="ghost" onClick={() => setRetry((n) => n + 1)}>
+              <RefreshCw size={14} /> Coba lagi
+            </button>
+            <a
+              className="btn-ghost-link"
+              href="https://app.xystudio.my.id/news"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink size={14} /> Buka di web
+            </a>
+          </div>
+        </div>
+      )}
       {!posts && !error && (
         <div className="news-list">
           {[0, 1, 2].map((i) => (
@@ -700,7 +739,7 @@ function ProfilePage({ status, info }: { status: StatusPayload | null; info: Inf
           </div>
           <div className="kv">
             <span>Encoder video</span>
-            <strong>{status?.video?.nvenc ? 'NVENC (hardware)' : 'Software (fallback)'}</strong>
+            <strong>{status?.video?.nvenc ? 'NVENC (hardware)' : 'Software (cadangan)'}</strong>
           </div>
           <div className="kv">
             <span>Sumber video</span>
@@ -718,7 +757,7 @@ function ProfilePage({ status, info }: { status: StatusPayload | null; info: Inf
           </div>
           <div className="kv">
             <span>Mode</span>
-            <strong>{info?.packaged ? 'Installed' : 'Dev'}</strong>
+            <strong>{info?.packaged ? 'Terpasang' : 'Pengembangan'}</strong>
           </div>
           <div className="kv">
             <span>Signaling</span>

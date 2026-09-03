@@ -37,6 +37,7 @@ let rendererPort = null; // port server statis (mode produksi)
 let engine = null; // ChildProcess
 let control = null; // { port, token } — dari baris "[control]" stdout engine
 let identity = null; // { deviceId, password }
+let lastEngineError = null; // pesan gagal terakhir — dipakai UI "Engine belum siap"
 let restartAttempt = 0;
 let watchdogTimer = null;
 let engineStarting = false; // jaga-jaga: jangan spawn engine dua kali sekaligus
@@ -138,6 +139,7 @@ function handleEngineOut(chunk) {
     if (m) {
       control = { port: Number(m[1]), token: m[2] };
       restartAttempt = 0; // engine sehat — reset backoff
+      lastEngineError = null; // control API siap — engine hidup
       addLog(`[shell] control API siap di 127.0.0.1:${m[1]}`);
     }
   }
@@ -172,17 +174,24 @@ async function startEngine() {
       addLog(
         `[shell] engine keluar (kode ${code}${signal ? `, sinyal ${signal}` : ''}) — restart terjadwal`
       );
+      // Catat penyebab untuk ditampilkan di UI. Kode keluar 0 = engine
+      // sengaja berhenti (mis. diminta); selain itu ada yang salah.
+      if (code !== 0 && code !== null) {
+        lastEngineError = `Engine keluar dengan kode ${code}${signal ? ` (sinyal ${signal})` : ''}.`;
+      }
       engine = null;
       control = null;
       scheduleRestart();
     });
     child.on('error', (e) => {
       addLog(`[shell] gagal start engine: ${e.message}`);
+      lastEngineError = `Gagal memulai engine: ${e.message}`;
       engine = null;
       scheduleRestart();
     });
   } catch (e) {
     addLog(`[shell] ${e.message}`);
+    lastEngineError = String(e && e.message ? e.message : e);
     scheduleRestart();
   } finally {
     engineStarting = false;
@@ -237,7 +246,16 @@ function registerIpc() {
       const s = await controlFetch('/status');
       return { ...s, engine: true };
     } catch {
-      return { state: 'starting', engine: false, deviceId: null, password: null };
+      // Engine belum siap / mati. Jangan sembunyikan kenapa: kirim identitas
+      // (ID + password pairing tetap terbaca dari mesin ini) + sebab terakhir
+      // supaya halaman Home bisa menjelaskan, bukan cuma "belum siap".
+      return {
+        state: 'starting',
+        engine: false,
+        deviceId: identity ? identity.deviceId : null,
+        password: identity ? identity.password : null,
+        lastError: lastEngineError,
+      };
     }
   });
 

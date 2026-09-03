@@ -55,7 +55,13 @@ export function newsDisplayName(): string {
 }
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  // Timeout 10 dtk: server news yang tidak responsif tidak boleh membuat
+  // tab Berita menggantung (spinner selamanya). Jaga sinyal panggilan
+  // milik pemanggil bila ada.
+  const res = await fetch(url, {
+    ...init,
+    signal: init?.signal ?? AbortSignal.timeout(10000),
+  });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
