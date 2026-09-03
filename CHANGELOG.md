@@ -20,6 +20,15 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Diperbaiki
+- CI: **Publikasi Release ditolak 403 oleh token bawaan.** `GITHUB_TOKEN`
+  menjawab "Resource not accessible by integration" saat membuat GitHub
+  Release, walau job sudah menyatakan `contents: write` dan izin default
+  workflow di repo sudah dinaikkan ke *read and write* — tiga run rilis 6.5.0
+  gagal berturut-turut di langkah yang sama, selalu setelah semua artefak
+  selesai dibangun. Membuat Release dengan PAT pemilik repo terbukti berhasil,
+  jadi langkah publikasi kini memakai secret `RELEASE_TOKEN` bila tersedia dan
+  jatuh kembali ke `GITHUB_TOKEN` supaya fork tanpa secret tidak langsung
+  patah.
 - CI: **Release tidak pernah jalan otomatis sejak push berhenti memicu Build.**
   Job `prepare` di `release.yml` mensyaratkan `workflow_run.event == 'push'` —
   sisa asumsi dari sebelum kebijakan 3 Sep 2026. Karena semua Build kini

@@ -488,6 +488,14 @@ jobs:
       - name: Publikasikan GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # `GITHUB_TOKEN` bawaan ditolak 403 "Resource not accessible by
+          # integration" saat membuat Release, walau job sudah punya
+          # `contents: write` dan izin default repo sudah dinaikkan ke write
+          # (rilis 6.5.0: tiga run gagal berturut-turut di langkah ini).
+          # Membuat Release + tag dengan PAT pemilik repo terbukti berhasil,
+          # jadi dipakai `RELEASE_TOKEN` bila tersedia dan jatuh kembali ke
+          # `GITHUB_TOKEN` supaya fork/uji tanpa secret tidak langsung patah.
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           tag_name: ${{ needs.prepare.outputs.tag }}
           target_commitish: ${{ needs.prepare.outputs.release_sha }}
           files: dist/*
