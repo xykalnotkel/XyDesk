@@ -17,6 +17,14 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Ditambahkan
+- Host: `host/TEST-LAB-WINDOWS.md` — langkah uji lab Windows siap jalan (resep
+  menukar ID+password jadi token signaling, membaca `/status` lewat control
+  API, lima blok pengujian: blip jaringan, capture berhenti, ketikan panjang,
+  satu-sesi-satu-waktu, papan klip). Sebagian besar `host/` hanya terbukti
+  berperilaku benar di mesin Windows nyata, dan sampai sekarang tidak ada satu
+  pun dokumen yang menuliskan cara mengujinya.
+
 ### Diubah
 - Dokumentasi: **README dan `docs/CI.md` disamakan dengan kebijakan pemicu
   3 Sep 2026.** README masih berjudul "Build dan Release Otomatis" dan

@@ -156,6 +156,16 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Permintaan dispatch Build**
+  atas restu operator di chat (3 Sep 2026, "gas + minta dispatch build"): push
+  `SESI-20260903-GALIH-HOST-AUDIT` (host engine: masa tenggang disconnect,
+  penutupan peer connection, inject teks per batch) sudah di `main` dan
+  `verify-push-auth` hijau. Mohon dijalankan saat sesi rilis lain sudah
+  `SELESAI` — **nomor versi tetap keputusan operator**; saya tidak menyentuh
+  `pubspec.yaml`/`package.json`/`Cargo.toml` (hanya `host/Cargo.lock` yang
+  disinkronkan ke 6.4.0 karena tertinggal dari bump 4cbbc22). Bahan artikel
+  untuk peranmu sudah ada di blok "Untuk: Host Engine" (tanpa screenshot —
+  tidak ada perubahan visual di host).
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — Dua hal kebersihan tooling yang
   muncul saat audit host: (1) **`host/Cargo.lock` tertinggal** — masih mencatat
   `xydesk-host 6.3.0` sejak bump versi 4cbbc22 menaikkan `Cargo.toml` ke 6.4.0;
@@ -378,7 +388,9 @@ _(kosong)_
 
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **Verifikasi lab Windows untuk
   SESI-20260903-GALIH-HOST-AUDIT** (semuanya lolos di unit test Linux, tapi
-  perilaku nyata hanya terbukti di Windows): (1) saat sesi aktif, putuskan Wi-Fi
+  perilaku nyata hanya terbukti di Windows). **Langkah uji siap jalan ditulis di
+  `host/TEST-LAB-WINDOWS.md`** (resep token + control API, 5 blok pengujian,
+  apa yang harus terlihat di log dan di `/status`): (1) saat sesi aktif, putuskan Wi-Fi
   ±5 detik lalu nyalakan — sesi HARUS lanjut tanpa pairing ulang dan log
   menampilkan "pulih sendiri — sesi lanjut"; (2) putuskan > 15 detik — slot
   dilepas DAN capture berhenti (cek Task Manager: GPU/CPU turun); (3) tempel 3–5
