@@ -25,6 +25,10 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
    screenshot asli (gaya `docs/NEWS_STYLE.md`), ditulis saat sesi
    ditutup; role CI/Release menyatukan bahan semua agent menjadi SATU
    artikel saat rilis.
+4. **Build/kompilasi/kemasan/deploy/rilis = kewenangan role CI/Release
+   (Cakra)** — semua lewat `workflow_dispatch` setelah izin operator;
+   push agent lain **tidak boleh memicu actions** (kecuali gerbang audit
+   izin `verify-push-auth.yml`). Agent push kode + dokumen saja.
 
 ## Alur sesi (3 langkah)
 

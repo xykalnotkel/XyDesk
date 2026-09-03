@@ -29,36 +29,28 @@ name: Build
 #   status check (termasuk PR dokumen) — tidak ada lagi "PR tampil tanpa check".
 
 on:
-  # KEBIJAKAN (permintaan operator, 3 Sep 2026): push TIDAK memicu build
-  # penuh. Satu-satunya jalur otomatis yang tersisa adalah bagian web:
-  # push yang menyentuh `web/**` → Build workflow berjalan dengan filter
-  # area (job `web` saja) → `deploy-web.yml` ikut bila artefak bundel ada.
-  # Array push/pull_request/service lain di sini? Semuanya MANUAL via
-  # `workflow_dispatch` (run penuh — gerbang mutu + APK + host + Web) —
-  # termasuk bump versi (satu-satunya pemicu rilis), jadi rilis terjadi
-  # persis saat operator menekan tombol: Build → Release → deploy → berita.
+  # KEBIJAKAN OPERATOR (3 Sep 2026, disempurnakan): push agent TIDAK
+  # memicu actions sama sekali. Semua build/kompilasi/kemasan/deploy/rilis
+  # = kewenangan role CI/Release (Cakra), dijalankan manual lewat
+  # `workflow_dispatch` setelah izin operator — satu run penuh saat semua
+  # siap: bump → Build → Release → deploy → berita.
   #
   # Mengapa: build otomatis dari push perantara menghasilkan "hijau palsu"
-  # (run terfilter, artefak tak lengkap) dan run yang terbuang. Hasil akhir
-  # yang dianggap bukti hanya run penuh yang disetujui.
+  # (run terfilter, artefak tak lengkap), run yang terbuang, dan tumpang
+  # tindih dengan jadwal rilis operator. Hasil akhir yang dianggap bukti
+  # hanya run penuh yang disetujui.
   #
-  # Kalau suatu saat area lain boleh memicu build parsial, tambahkan path
-  # di sini — job `changes` sudah mendukung pemfiltreran per-area.
-  push:
-    branches: [main]
-    paths:
-      - 'web/**'
+  # Kalau suatu saat area tertentu boleh memicu build parsial, tambahkan
+  # path di sini — job `changes` sudah mendukung pemfiltreran per-area.
   workflow_dispatch:
 
-# Push baru membatalkan run lama di branch yang sama — hemat waktu runner
-# dan mencegah dua build berebut artefak dengan nama sama.
-#
-# Khusus dispatch (build penuh / pemulihan rilis) dijalankan di jalur
-# tersendiri (`manual`) supaya TIDAK dibatalkan push biasa. Pelajaran nyata
-# (3 Sep 2026): run Build penuh untuk bump versi 6.3.0 dibatalkan oleh push
-# "board" berikutnya akibat cancel-in-progress — rilis jadi buntu.
+# Satu-satunya pemicu kini `workflow_dispatch` (push tidak memicu actions),
+# jadi run Build hanya milik operator yang memintanya. Dispatch berikutnya
+# membatalkan run manual lama di ref yang sama — operator yang menekan
+# tombol dua kali tetap menjalankan run terbaru saja (pelajaran 3 Sep 2026:
+# run Build penuh 6.3.0 sempat dibatalkan push "board" menyusul).
 concurrency:
-  group: build-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && 'manual' || 'auto' }}
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:

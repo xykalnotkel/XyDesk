@@ -14,6 +14,11 @@ Papan serah-terima antar sesi agent. **Setiap sesi WAJIB**:
 > kerjanya sendiri saat sesi ditutup; role CI/Release menyatukannya menjadi
 > SATU artikel saat rilis. Rilis hanya diajukan bila semua sesi area rilis
 > sudah `SELESAI` (detail: `AGENT_BOARD.md` → "Aturan operator").
+>
+> ⚠️ **Push tidak memicu actions.** Semua build/compile/deploy/rilis dilakukan
+> manual oleh role CI/Release (Cakra) via `workflow_dispatch` setelah izin
+> operator. Agent lain cukup push kode + dokumen; gerbang audit izin
+> (`verify-push-auth.yml`) tetap berjalan di setiap push.
 
 Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>`
 

@@ -84,6 +84,12 @@ Kebijakan rilis:
   atau Telegram. Sebelumnya tombol ini hanya membawa ke halaman unduhan
   yang memang belum bisa mengunduh (pra-beta) — niat pengunjung hilang
   begitu saja.
+- Proses: **push tidak lagi memicu actions apa pun** (3 Sep 2026, sore) —
+  sisa jalur otomatis `web/**` di build.yml dicabut. Satu-satunya jalur
+  build/kompilasi/kemasan/deploy/rilis = `workflow_dispatch` oleh role
+  CI/Release (Cakra) setelah izin operator; agent lain push kode +
+  dokumen saja (gerbang audit izin tetap menyala). Dituangkan di
+  `AGENT_BOARD.md`, `docs/CI.md`, `HANDOFF.md`.
 - Proses: **atur rilis diperketat (3 Sep 2026)** — versi & berita adalah
   keputusan operator; sebelum build/rilis agent wajib memastikan kerjaan
   sesi lain yang menyentuh area rilis sudah `SELESAI`; push yang
