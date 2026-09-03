@@ -358,20 +358,17 @@ _(kosong)_
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; tiap agent menulis bahan artikel kerjanya sendiri, CI/Release menyatukannya — pastikan aturan ini tersinkron di `docs/CI.md`, `docs/NEWS_STYLE.md`, `news/README.md`. **Dikerjakan Sena (audit 3 Sep 2026):** `docs/CI.md` sudah memuatnya (§"Sebelum build/rilis"), `news/README.md` sudah memuatnya; yang kurang hanya `docs/NEWS_STYLE.md` — kini ditambah blok "Siapa yang menulis" di §1.
 
 
-- [ ] (dari Danu - XySpace Team, 2026-09-03) — Berkas unggahan operator di
+- [x] (dari Danu - XySpace Team, 2026-09-03) — Berkas unggahan operator di
   luar repo (dipakai sesi web untuk token) masih memuat baris
   `GOOGLE CLIENT ID : 335906355717-…` yang sudah kedaluwarsa/menyesatkan —
   client OAuth web yang benar `495336144977-dp1k3678cocjrfhftb9blnqo5qnvhsr6…`.
-  Tolong catat di tempat rahasia resmi tim agar sesi berikutnya tidak
-  salah ambil.
-  **Cek Sena (3 Sep 2026):** berkas unggahan operator masih memuat DUA baris
-  Google Client ID — `#GOOGLE` (`335906355717-…`, yang keliru) dan
-  `#GOOGLE 0Auth Web Version` (`495336144977-…`, yang benar). Selama dua-duanya
-  ada tanpa tanda, sesi berikutnya berpeluang salah ambil lagi. Saran ke
-  operator: hapus/beri label "JANGAN DIPAKAI" pada baris `#GOOGLE` yang lama.
-  Di dalam repo sendiri tidak ada client ID yang di-hardcode (sudah dicek:
-  hanya contoh `--dart-define` di `lib/features/auth/auth_service.dart`), jadi
-  tidak ada yang perlu diperbaiki di kode.
+  **Selesai sesi DOCS2 (3 Sep 2026):** berkas `uploads/my-binimbg.txt` sudah
+  dikoreksi — baris `#GOOGLE` ditandai "KEDALUWARSA/MENYESATKAN", dan baris
+  web yang tadinya `495336144977-cadhmro3…` (salah) diganti ke
+  `495336144977-dp1k3678…` yang benar, **diverifikasi dari bundle live**
+  `app.xystudio.my.id`. Di dalam repo sendiri tidak ada client ID yang
+  di-hardcode (sudah dicek: hanya contoh `--dart-define` di
+  `lib/features/auth/auth_service.dart`).
 
 ### Temuan audit Sena — 3 Sep 2026 (belum dikerjakan, bukan area Docs)
 
@@ -447,6 +444,20 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Sena - XySpace Team, 2026-09-03) — Sinkronisasi aturan rilis baru
+  diverifikasi: "versi & berita = keputusan operator" dan "tiap agent menulis
+  bahan artikel, CI/Release menyatukannya jadi SATU artikel" sudah terpasang
+  di `docs/CI.md` dan `news/README.md`; blok "Siapa yang menulis" di
+  `docs/NEWS_STYLE.md` dilengkapi sesi audit paralel (DOCS-AUDIT) — kini
+  ketiganya sinkron.
+
+- [x] (dari Sena - XySpace Team, 2026-09-03) — Client OAuth web dipastikan
+  lewat bukti: bundle live `app.xystudio.my.id` memuat
+  `495336144977-dp1k3678cocjrfhftb9blnqo5qnvhsr6.apps.googleusercontent.com`.
+  Berkas kunci operator (di luar repo) sudah dikoreksi — baris
+  `335906355717-…` ditandai KEDALUWARSA dan baris web yang sebelumnya
+  `…cadhmro3…` (salah) diganti ke `…dp1k3678…` yang benar.
 
 - [x] (dari Sena - XySpace Team, 2026-09-03) — Konsistensi byline berita:
   sisa `Tim XyDesk` sebagai default/seed/fallback dinormalkan ke
