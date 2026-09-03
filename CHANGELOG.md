@@ -15,233 +15,32 @@ Kebijakan rilis:
   commit. Panduan lengkap nadanya ada di [`docs/NEWS_STYLE.md`](docs/NEWS_STYLE.md).
 - File ini otomatis dilampirkan ke GitHub Release oleh `release.yml`.
 
-## [Belum terbit]
+## [6.4.0] - 2026-09-03
 
 ### Ditambahkan
-- Desktop (host Windows): GUI host kembali ke **shell Electron + Next.js**
-  (`desktop/`), menggantikan jendela native Win32 5 MB yang selama ini
-  dikemas installer. Installer kini memaketkan `XyDesk.exe` (Electron) +
-  `resources/engine/xydesk-host.exe` (engine Rust, dibundel
-  electron-builder). Jendela native `host/src/bin/gui.rs` tetap ada di
-  sumber sebagai cadangan, tidak lagi dikemas.
-- Desktop (host Windows): **host selalu aktif** — menutup jendela kini
-  menyembunyikan ke **system tray** (ikon XyDesk), engine tetap hidup di
-  latar belakang; notifikasi balloon muncul sekali saat pertama kali
-  diminimize ke tray. Keluar beneran hanya lewat menu tray "Keluar
-  (hentikan host)". Sebelumnya menutup jendela mematikan engine — host
-  mati begitu jendela ditutup, bertentangan dengan standar remote desktop.
-- Web: **harness uji E2E lokal** (`web/e2e/`) — signaling Go + shim auth
-  (format token `ts.purpose.sig` yang sama dengan `auth.go`) + "host pola
-  uji" berupa tab Chromium (canvas beranimasi → H264 Chrome → WebRTC),
-  lalu build rilis dijalankan Playwright untuk menguji layar sesi dan
-  menghasilkan screenshot asli dengan video yang benar-benar ter-decode.
-  URL signaling kini bisa dioverride `VITE_SIGNAL_API`/`VITE_SIGNAL_WS`
-  saat build uji; produksi tetap default `signal.xystudio.my.id`.
-  Hasilnya: 11 screenshot sesi web di `web/public/news/shots/web-sesi-*`.
-- Host: **mic input PC → client** — mikrofon host direkam via WASAPI
-  `eCapture` (perangkat komunikasi default, PCM 16-bit 48 kHz mono) →
-  Opus 20 ms → track audio kedua (stream `mic`). Aktif otomatis hanya bila
-  ada perangkat capture, tanpa toggle apa pun; `AUDCLNT_BUFFERFLAGS_SILENT`
-  ditangani agar mic yang dimute tetap menghasilkan hening sah. Sebelumnya
-  host hanya meneruskan loopback (suara sistem) dan memutar mic *client* ke
-  speaker host — suara mic *PC host* tidak pernah sampai ke client.
-  `/status` dan `meta` data channel kini melaporkan `audio.micAvailable`
-  + `micPipeline`.
-- Host: `/status` kini melaporkan **latensi pipeline video** dan **label
-  encoder** — `video.latencyMs` (rata-rata EMA capture → tulis RTP),
-  `video.latencyMaxMs` (terburuk yang pernah terukur), dan
-  `video.encoder` (`nvenc`/`openh264`/`test-pattern`). Sebelumnya tidak ada
-  ukuran latensi host sama sekali: webrtc-rs 0.11 mengabaikan
-  `packet_timestamp` (timestamp RTP dibuat otomatis packetizer), jadi
-  penanda tidak bisa ditanam lewat bidang itu. Kini setiap frame membawa
-  `captured_at` sejak detik ditangkap di thread capture, dan latensi
-  dihitung sesaat sebelum `write_sample` — pemantauan target roadmap
-  < 40 ms glass-to-glass tanpa alat eksternal.
 - Client Flutter: **tombol Billing di topbar** — ikon AI 3D ungu glossy
-  (mesin + jam + koin sewa PC) yang membuka layar Langganan langsung dari
-  bar atas, tidak perlu lewat menu Akun. Aset di `assets/img/nav/billing.png`
-  (+ `_off.png`), latar putih dibuang (transparan); `BillingPage` kini
-  terlihat dari `app.dart` lewat `import features/account/billing_page.dart`.
 - Client Flutter: **data lokal diisolasi per akun** — daftar perangkat,
-  riwayat sesi, dan daftar "perangkat terakhir" di halaman Connect kini
-  memakai kunci penyimpanan yang memuat ruang lingkup akun
-  (`devices:$scope`, `history:$scope`, `connect_recents:$scope`; tamu
-  memakai `guest`). Sebelumnya semua akun memakai kunci global, sehingga
-  setelah keluar lalu masuk akun lain, daftar PC milik akun sebelumnya
-  masih tampil — kebocoran data antar akun. Dikunci lewat
-  `test/devices/account_scope_test.dart`.
 - Client Flutter: **changelog lengkap di halaman pembaruan** — selain catatan
-  ringkas dari manifest, "Pusat Update" kini mengambil body GitHub Release
-  resmi (isi `CHANGELOG.md`) dan menampilkannya sebagai "Catatan rilis".
-  Manifest hanya membawa tiga catatan umum, jadi sebelumnya halaman tampil
-  tanpa rincian. Parser markdown dikunci lewat
-  `test/notifications/changelog_parse_test.dart`.
-
-### Ditambahkan
 - Web: **chip durasi & sisa waktu di layar sesi** — pojok kiri atas
-  menampilkan durasi berjalan dan, untuk sesi tamu, sisa waktu batas
-  2 jam (token tamu terbit persis 2 jam di authstore.js) berubah merah
-  saat ≤ 5 menit; tab Sesi kini memuat baris Durasi/Total/Sisa waktu.
+
 ### Diubah
 - Web: **Sewa PC (`/billing`)** — durasi kini bisa custom (input angka
-  1–24 jam di samping chip cepat; di luar rentang ditolak dengan pesan)
-  dan tiap paket menampilkan ketersediaan stok ("N unit tersedia" /
-  "Stok habis" — kartu & tombol pesan nonaktif). Stok adalah angka
-  operator di `web/src/Billing.tsx` (belum ada backend inventori),
-  diperbarui manual + tanggal "diperbarui" tampil di halaman.
 - Web: tombol hero beranda **"Status rilis" → "Ingatkan saya"** — klik
-  membuka popup pilihan kanal kabar rilis: email (tersimpan berlabel
-  `unduhan`, jalur sama dengan form halaman unduhan), saluran WhatsApp,
-  atau Telegram. Sebelumnya tombol ini hanya membawa ke halaman unduhan
-  yang memang belum bisa mengunduh (pra-beta) — niat pengunjung hilang
-  begitu saja.
 - Proses: **push tidak lagi memicu actions apa pun** (3 Sep 2026, sore) —
-  sisa jalur otomatis `web/**` di build.yml dicabut. Satu-satunya jalur
-  build/kompilasi/kemasan/deploy/rilis = `workflow_dispatch` oleh role
-  CI/Release (Cakra) setelah izin operator; agent lain push kode +
-  dokumen saja (gerbang audit izin tetap menyala). Dituangkan di
-  `AGENT_BOARD.md`, `docs/CI.md`, `HANDOFF.md`.
 - Proses: **atur rilis diperketat (3 Sep 2026)** — versi & berita adalah
-  keputusan operator; sebelum build/rilis agent wajib memastikan kerjaan
-  sesi lain yang menyentuh area rilis sudah `SELESAI`; push yang
-  menyentuh versi/rilis wajib izin operator dulu; tiap agent menulis
-  bahan artikel untuk kerjanya sendiri dan role CI/Release menyatukannya
-  menjadi satu artikel rilis. Dituangkan di `AGENT_BOARD.md`,
-  `docs/CI.md`, `docs/NEWS_STYLE.md`, `news/README.md`.
 - Web: **tombol lompat di detail berita** — panah bawah melayang di pojok
-  kanan bawah menggulir halus ke komentar paling bawah; sampai di dasar ia
-  berubah jadi panah atas untuk kembali ke judul. Artikel changelog
-  panjangnya bisa ribuan piksel — sebelumnya pembaca HP harus menggulir
-  manual.
+
 ### Diperbaiki
 - Web: **deep link `/billing` jatuh ke beranda** — `currentRoute()` tidak
-  punya case `/billing`, jadi buka/refresh langsung ke URL itu merender
-  halaman beranda (navigasi lewat menu tetap benar). Ditemukan saat menguji
-  halaman sewa; audit responsivitas WEB5 sebelumnya keliru loloskannya
-  karena beranda juga tidak overflow.
 - Web: **race deploy-web.yml** — dua Build sukses berdekatan bisa mencampur payload sehingga deploy checkout SHA lama dan menimpa bundle baru (kejadian 6c5ba06/d90e12a, ditebus manual). Kini SHA & run Build diambil dari API, checkout memakai SHA itu, artefak dicocokkan dengan run-nya, deploy berjalan serial (tidak dibatalkan di tengah), dan hanya Build web terbaru yang boleh deploy.
 - Web: **overflow horizontal di detail berita (layar ≤ 390 px)** — baris
-  langganan email tidak bisa membungkus sehingga tombol "Langganan"
-  mendorong halaman melebar 33–63 px. Kini input dan tombol membungkus
-  rapi; tombol selebar input di layar sempit. Ditemukan lewat audit
-  responsivitas 7 halaman × 5 viewport (1440/1024/768/390/360) — semua
-  halaman lain lolos tanpa overflow.
 - Web: halaman **Connect** dirapikan — blok "Dukung kami di" naik ke atas
-  "Cara main", input ID perangkat kini rata kiri dengan gaya sama seperti
-  field password (dulu angka besar terpusat berspasi lebar, tampak berbeda
-  sendiri), dan password pairing punya tombol tampil/sembunyi (ikon mata).
-  Password host memang huruf besar semua by design (charset tanpa I/O/0/1,
-  10 karakter ≈ 50 bit) — tombol mata membuat pencocokan dengan layar PC
-  cepat tanpa menebak ketikan.
-- Web: **layar sesi didesain ulang ke arah paritas aplikasi** — baris tombol
-  teks diganti rail ikon vertikal di tepi kanan (Suara PC, Mik ke PC,
-  Keyboard, Gamepad, Trackpad, papan klip kirim/ambil, layar penuh,
-  pengaturan, putuskan) yang bisa disembunyikan jadi pil kecil, persis pola
-  rail sesi aplikasi Android. Panel pengaturan kini ber-tab
-  (Gambar/Suara/Kontrol/Sesi) seperti `SessionControlPanel` aplikasi:
-  statistik live dari `getStats()` (resolusi, fps, bitrate, ping, paket
-  hilang, codec), pemilih layar pindah ke panel (tidak lagi melayang di
-  atas video), segmen gerak kursor Langsung/Trackpad, durasi sesi.
-  "Ambil dari papan klip PC" akhirnya tersedia di UI — protokolnya
-  (`0x09 CLIPBOARD_REQ`) sudah ada di rtc.ts sejak lama tapi tidak pernah
-  dipakai; kini dijawab toast setelah tersalin ke perangkat.
-- Berita (lintas area, restu operator): penulis artikel selalu
-  `Haekal Saputra`, bukan `Tim XySpace` — nama manusia di byline, label
-  resmi `XySpace` tetap tampil sebagai badge. Diterapkan di default
-  `POST /api/admin/publish`, `news/README.md`, `docs/NEWS_STYLE.md`, dan
-  `AGENT.md`; artikel lama di D1 sudah dinormalisasi sesi sebelumnya.
-  Tooltip badge komentar resmi kini "Akun resmi XySpace — Haekal Saputra".
-- Host: durasi sampel video (maju timestamp RTP per frame) diseragamkan ke
-  FPS nominal 60 (16,67 ms) lewat `NOMINAL_FPS`/`frame_duration()` —
-  sebelumnya angka 33 ms terpatri acak di `main.rs`, dan sumber pola uji
-  (non-Windows) kini berpacing 60 fps, bukan ~30 fps.
-- Web: halaman **Sewa PC** (`/billing`) — pilih paket & spek, durasi mulai
-  1 jam / Rp 5.000, ringkasan total, pemesanan via WhatsApp; menjelaskan
-  alur ID+password+kode billing dengan verifikasi 4 digit akhir nomor WA.
-  Pembayaran otomatis (QRIS) belum aktif dan halaman mengatakannya jujur.
-- Web: mode founder di komentar berita — login Google `xycdigital@gmail.com`
-  + ADMIN_TOKEN (sekali, tersimpan lokal) membuat balasan tampil sebagai
-  Haekal Saputra dengan foto resmi dan badge; keabsahan tetap divalidasi
-  worker dari token, bukan dari email.
-
-- Client Flutter: **unggah foto profil dari galeri ke Cloudinary** (unsigned
-  upload preset, tanpa menyimpan `api_secret` di klien) — pilih foto lewat
-  `image_picker`, diunggah ke folder `profile`, lalu URL-nya dipakai sebagai
-  avatar. Yang tersisa: operator membuat unsigned preset di dasbor dan mengisi
-  `cloudinaryUploadPreset` (lihat `lib/core/cloudinary_upload.dart`). Kalau
-  belum diisi, opsi upload menampilkan pesan yang jelas, bukan gagal senyap.
-- Client Flutter: dependensi baru `image_picker` (untuk memilih foto dari
-  galeri). Inventaris lisensi pihak ketiga diregenerasi: **499 → 504**
-  komponen (Dart/Flutter 105 → 110).
-- Client Flutter: kontrak konfigurasi unggah Cloudinary dikunci lewat uji
-  (`test/core/cloudinary_upload_test.dart`).
-
-- Client Flutter: **nav bawah & rail memakai ikon AI 3D ungu glossy** (aset
-  `assets/img/nav/*.png`) dengan dua mode — aktif memakai versi penuh warna,
-  nonaktif versi "off" abu-abu. Ikon dibuat AI lalu latar putihnya dibuang
-  (transparan) memakai keying manual, dan baris bawah sedikit diperbesar
-  (tinggi + ikon 28 px) supaya lebih mudah dijangkau.
-- Client Flutter: **pilihan sumber papan ketik sesi** — "XyDesk" (papan ketik
-  penuh, F1–F12, modifier sticky, keycode Windows) atau "Sistem" (IME Android
-  via field teks, mengetik sebagai teks bebas melalui 0x06 TEXT). Dipilih di
-  panel kontrol; kontraknya dikunci lewat `test/session/`
-  `session_settings_test.dart`.
-- Client Flutter: **tombol "Kirim" komentar berita kini aktif saat mengetik**.
-  Sebelumnya `TextEditingController` tidak diberi listener sehingga tombol
-  tidak pernah menyala (terlihat seolah tidak bisa mengirim balasan). Balasan
-  juga kini mengikuti input yang baru diketik ("tidak sinkron").
-- Client Flutter: identitas komentar mengikuti sesi — pengguna yang *login*
-  memakai nama akun (fallback ke bagian depan email), sedangkan *tamu* memakai
-  nama manusia deterministik dari sidik jari perangkat; keduanya tetap
-  mendapatkan avatar (DiceBear).
-- Client Flutter: halaman **Syarat & Ketentuan / Kebijakan Privasi** kini
-  menyorot kata penting (warna aksen + tebal) dan membuat alamat email serta
-  tautan dapat diketuk — tanpa mengubah isi dokumen.
-- Client Flutter: jarak antara chip "Riwayat" dan kolom ID perangkat di
-  halaman Connect diperbaiki (sebelumnya menempel sehingga membaur jadi satu
-  blok).
-
-### Diubah
-- Client Flutter: dokumen legal tidak lagi menampilkan teks polos yang sama
-  untuk semua kata; kata penting diberi warna/tebal dan email/URL dapat
-  diketuk untuk membuka aplikasi email/browser.
-
-### Diperbaiki
 - Host: **host tidak lagi hidup-mati-hidup-mati sendiri.** Akar masalahnya
-  di dua lapis: (1) server signaling mengirim ping WebSocket tiap 30 dtk dan
-  menutup koneksi yang tidak membalas dalam 90 dtk (`signaling/client.go`),
-  sementara engine Rust tidak pernah membalas ping (loop hanya memproses
-  `Message::Text`) — jadi host idle dibunuh server tiap ~90 detik, lalu
-  `main()` selesai dan proses mati; (2) supervisor merestart proses itu,
-  lalu siklus terulang. Kini engine membalas ping dengan pong, dan `main()`
-  menyambung ulang DALAM proses dengan backoff (1→30 dtk) saat koneksi
-  putus — proses hanya keluar bila token ditolak server (401/403, token
-  host ≈5 menit) atau signaling tak terjangkau setelah 10 percobaan, agar
-  supervisor meminta token baru. Supervisor Electron juga dijaga agar tidak
-  men-spawn dua engine sekaligus (guard `engineStarting`), menghormati
-  backoff restart, dan mencatat kode keluar + sinyal engine di log.
 - Host: **capture layar berhenti saat sesi berakhir** — sebelumnya setelah
-  client menutup sesi, thread capture DXGI + encoder terus berjalan tanpa
-  penonton (frame dikirim ke channel yang sudah tertutup, diabaikan
-  diam-diam), menyedot GPU/CPU sia-sia dan bisa mengganggu sesi berikut.
-  Kini `on_frame_arrived` menghentikan capture begitu konsumen frame hilang
-  (`try_send` → `Disconnected`), dan `spawn_frame_source` membawa sinyal
-  hidup (`FrameSource`) supaya thread capture tahu kapan harus keluar.
 - Host: **capture layar pulih dari penutupan OS** — bila Graphics Capture
-  ditutup OS (secure desktop/UAC, monitor lepas, reset driver), thread
-  capture kini mencoba ulang dengan jeda singkat alih-alih keluar dan
-  membekukan gambar selamanya (sesi tetap "terhubung" tapi layar beku).
-  Sesi yang benar-benar berakhir tetap menghentikan capture bersih.
 - Host: **mutex ter-poison tidak lagi merobohkan proses** — semua kunci
-  `control`/`paired` di jalur produksi memakai `recover_lock`, sehingga
-  panic satu task media (video/audio/input) tidak menular jadi panic
-  berantai di `main()` yang dulu memicu restart supervisor.
 - Desktop (host Windows): **supervisor kebal server hang** — permintaan
-  token signaling dan panggilan control API kini punya timeout
-  (`AbortSignal.timeout` 10 dtk / 5 dtk, `execFile --identity-json` 15 dtk).
-  Sebelumnya server signaling yang hang membekukan `startEngine` selamanya
-  (guard `engineStarting` terus menyala), sehingga engine tak pernah lahir
-  dan watchdog ikut diam.
+
 
 ## [6.3.0] - 2026-09-03
 
@@ -513,6 +312,38 @@ Kebijakan rilis:
   gerbang "Inventaris lisensi usang" tidak lagi merah.
 - Rilis tidak lagi gagal merah saat Build pemicunya hanya build terfilter
   (tanpa artefak lengkap) — dilewati dengan peringatan sebagai gantinya.
+
+### Ikutan rilis ulang (build +26, 2026-09-03)
+
+_Ditambahkan_ — items yang sudah ikut terkirim di rilis ulang 6.3.0+26:
+
+- Desktop (host Windows): GUI host kembali ke **shell Electron + Next.js**
+- Desktop (host Windows): **host selalu aktif** — menutup jendela kini
+- Web: **harness uji E2E lokal** (`web/e2e/`) — signaling Go + shim auth
+- Host: **mic input PC → client** — mikrofon host direkam via WASAPI
+- Host: `/status` kini melaporkan **latensi pipeline video** dan **label
+
+_Diperbaiki_ — items yang sudah ikut terkirim di rilis ulang 6.3.0+26:
+
+- Web: **layar sesi didesain ulang ke arah paritas aplikasi** — baris tombol
+- Berita (lintas area, restu operator): penulis artikel selalu
+- Host: durasi sampel video (maju timestamp RTP per frame) diseragamkan ke
+- Web: halaman **Sewa PC** (`/billing`) — pilih paket & spek, durasi mulai
+- Web: mode founder di komentar berita — login Google `xycdigital@gmail.com`
+- Client Flutter: **unggah foto profil dari galeri ke Cloudinary** (unsigned
+- Client Flutter: dependensi baru `image_picker` (untuk memilih foto dari
+- Client Flutter: kontrak konfigurasi unggah Cloudinary dikunci lewat uji
+- Client Flutter: **nav bawah & rail memakai ikon AI 3D ungu glossy** (aset
+- Client Flutter: **pilihan sumber papan ketik sesi** — "XyDesk" (papan ketik
+- Client Flutter: **tombol "Kirim" komentar berita kini aktif saat mengetik**.
+- Client Flutter: identitas komentar mengikuti sesi — pengguna yang *login*
+- Client Flutter: halaman **Syarat & Ketentuan / Kebijakan Privasi** kini
+- Client Flutter: jarak antara chip "Riwayat" dan kolom ID perangkat di
+
+_Diubah_ — items yang sudah ikut terkirim di rilis ulang 6.3.0+26:
+
+- Client Flutter: dokumen legal tidak lagi menampilkan teks polos yang sama
+
 
 ## [6.2.2] - 2026-09-01
 
