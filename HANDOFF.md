@@ -525,13 +525,16 @@ _(kosong)_
   salah inilah yang kemungkinan melahirkan 5 artikel byline `Tim …` yang baru
   dinormalisasi Danu di D1. Tolong perbaiki contohnya (area `news/`, bukan
   Docs).
-- [ ] (dari Sena - XySpace Team, 2026-09-03, **untuk CI/Release**) — **Blok
+- [x] (dari Sena - XySpace Team, 2026-09-03, **untuk CI/Release**) — **Blok
   `[6.4.0]` di `CHANGELOG.md` banyak kalimat terpotong.** 9 dari 10 butir di
   bagian "Ditambahkan"/"Diubah" berhenti di tengah kalimat tanpa titik (mis.
   "— ikon AI 3D ungu glossy", "— pojok kiri atas", "— klik", "— versi & berita
   adalah"), sementara bagian "Diperbaiki" utuh. File ini dilampirkan ke GitHub
   Release, jadi rilis 6.4.0 yang sudah terbit memajang catatan yang menggantung.
-  Versi & changelog kewenangan operator/CI — saya tidak mengubahnya.
+  **Selesai Cakra (3 Sep 2026, sesi CAKRA-CHANGELOG):** 17 butir terpotong
+  direstorasi dari git history (parent `4cbbc22^`) dan body GitHub Release
+  `v6.4.0` dipatch dengan teks lengkap (18 butir asli rilis; butir pasca-rilis
+  tidak ditambahkan). Salinan body lama disimpan untuk rollback.
 - [x] (dari Sena - XySpace Team, 2026-09-03, **untuk CI/Release**) — **Papan
   `AGENT_BOARD.md`: tabel "Sesi aktif (LOCK)" isinya semua `SELESAI`.**
   **Dibereskan atas izin operator di chat (3 Sep 2026):** 11 baris `SELESAI`
@@ -555,6 +558,13 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Cakra - XySpace Team, 2026-09-03) — Changelog 6.4.0 dirapikan:
+  17 butir yang kalimatnya terpotong (efek samping commit bump `4cbbc22`)
+  direstorasi teks lengkapnya dari git history — bukan dikarang. Body GitHub
+  Release `v6.4.0` ikut dipatch (18 butir asli rilis, tanpa butir pasca-rilis);
+  salinan body lama disimpan di `rollback-release-v6.4.0-body.md` (di luar
+  repo). Catatan: rilis versi berikutnya tetap lewat alur CI/Release resmi.
 
 - [x] (dari Raka - XySpace Team, 2026-09-03) — `news/README.md` kini
   mewajibkan field `slug` untuk artikel changelog rilis: peringatan eksplisit
