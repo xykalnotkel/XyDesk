@@ -31,6 +31,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
 | SESI-20260903-DANU-WEB3 | Danu - XySpace Team | Web | LAGI KERJA | overhaul layar sesi web: rail kontrol ikon ala aplikasi (sembunyikan kontrol, ambil/kirim papan klip, statistik live), panel pengaturan 4 tab (Gambar/Suara/Kontrol/Sesi), tooltip badge resmi, penulis default worker berita → Haekal Saputra (1 baris, lintas area news/ atas restu operator), README news, changelog + handoff screenshot lintas platform | 2026-09-03 |
+| SESI-20260903-GALIH-HOST-UI | Galih - XySpace Team | Host Engine (UI/UX) | LAGI KERJA | Host Windows: GUI Electron/NextJS + tray always-on (tutup jendela ≠ mati) | 2026-09-03 |
 | SESI-20260903-CAKRA-RILIS | Cakra - XySpace Team | CI / Release | SELESAI | Rilis 6.3.0: bump versi + changelog + artikel berita + verifikasi rilis — v6.3.0 terbit (Build+Release hijau, artikel changelog-v6-3-0 live) | 2026-09-03 |
 
 ## Antrean izin push
@@ -51,6 +52,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260903-GALIH-HOST-MIC | Galih - XySpace Team | Host: mic input PC → client — WASAPI `eCapture` (perangkat komunikasi default, 48 kHz mono) → Opus 20 ms → track audio kedua (stream `mic`), otomatis hanya bila ada perangkat capture; `/status` + `meta` melaporkan `micAvailable`/`micPipeline`; uji 64 unit + loopback + cross-check Windows | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi 33685216940 (push host tidak memicu build otomatis — kebijakan 7ddb594) |
 | SESI-20260903-DANU-WEB2 | Danu - XySpace Team | Web: halaman Sewa PC (/billing, paket+durasi mulai 1 jam/Rp5.000, pesan via WA), mode founder komentar (xycdigital@gmail.com + ADMIN_TOKEN → Haekal Saputra + badge XySpace), badge "Resmi"→"XySpace", teks beranda dibumikan, CORS worker berita +X-Admin-Token (1 baris, lintas area news/ atas restu operator) | DISETUJUI | Xyckal (chat) | 2026-09-03 | Build+Izin+Deploy hijau di 439944d; deploy-news manual sukses; CORS live terverifikasi |
 | SESI-20260903-LARAS-CLIENT | Laras - XySpace Team | Client Flutter: ikon nav bawah/rail AI 3D ungu glossy (2 mode off=abu/on=warna, `assets/img/nav/*`), pilih sumber papan ketik sesi (XyDesk vs Sistem/IME → 0x06 TEXT), perbaikan tombol Kirim & balas komentar (listener), identitas komentar login/tamu tetap berprofil, highlight kata penting + email/URL klik di Legal, jarak chip Riwayat↔input ID | DISETUJUI | Xyckal | 2026-09-03 | — |
+| SESI-20260903-GALIH-HOST-UI | Galih - XySpace Team | Host Windows: GUI kembali ke shell Electron/Next.js (bukan jendela native 5MB) + tray always-on (tutup jendela = sembunyi ke tray, engine tetap hidup); `desktop/electron/main.cjs` diberi Tray/menu/close-to-tray; installer & CI diubah (build.yml `windows` → electron-builder `--dir`, `desktop/**` masuk filter host, release.yml hapus job `windows-host`) | DISETUJUI | Xyckal (chat) | 2026-09-03 | _(menunggu run CI)_ |
 
 ## Riwayat sesi (hanya bertambah)
 
