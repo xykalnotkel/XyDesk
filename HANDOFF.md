@@ -484,7 +484,7 @@ _(kosong)_
 
 ### Temuan audit Sena — 3 Sep 2026 (belum dikerjakan, bukan area Docs)
 
-- [ ] (dari Sena - XySpace Team, 2026-09-03, **untuk News/CI-Release**) —
+- [x] (dari Sena - XySpace Team, 2026-09-03, **untuk News/CI-Release**) —
   **Tautan versi di footer web menuju 404 — TAPI bukan bug kode, melainkan
   prosedur rilis yang terlewat.** Koreksi diagnosis awal saya (yang sempat
   saya tulis di `docs/VERSIONING.md`): saya kira worker memaksa slug hash,
@@ -503,18 +503,17 @@ _(kosong)_
   artikel yang tidak ada. Rilis 6.1 dan 6.0 (`p-66a4edde0222`,
   `p-d5b4512f7d17`) punya masalah yang sama.
 
-  **Perbaikan (butuh keputusan operator, saya tidak mengeksekusi):** artikel
-  6.4.0 sudah TERBIT dan sudah dikirim ke pelanggan via push + email, jadi
-  slug-nya tidak boleh diganti diam-diam — tautan yang sudah beredar akan
-  mati. Dua opsi:
+  **Dikerjakan Raka (News, 3 Sep 2026) + Danu (Web, sesi WEB10):** sisi
+  prosedur sudah ditutup — `news/README.md` kini **mewajibkan** field `slug`
+  untuk artikel rilis dengan peringatan eksplisit + contoh `curl` yang
+  menyertakannya, dan footer web tidak lagi dead-end (fallback ramah bila
+  slug changelog 404). Yang TETAP butuh keputusan operator: artikel 6.4.0
+  sudah terbit + sudah dikirim via push/email, jadi slug-nya tidak boleh
+  diganti diam-diam. Dua opsi:
     (a) tambah kolom/alias slug kedua di D1 supaya `changelog-v6-4-0`
-        mengarah ke artikel yang sama (tanpa mematikan `p-8f5aa26aa3bc`);
-    (b) biarkan 6.4.0 apa adanya, dan pastikan rilis BERIKUTNYA mengirim
+        mengarah ke artikel yang sama (tanpa mematikan `p-8f5aa26aa3bc`); atau
+    (b) biarkan 6.4.0 apa adanya — rilis berikutnya wajib mengirim
         `"slug": "changelog-v<versi>"` saat publish.
-  Apa pun pilihannya, **`news/README.md` perlu menegaskan field `slug` wajib
-  diisi untuk artikel rilis** — contoh `curl` di sana saat ini tidak
-  menyertakannya sama sekali, dan itulah akar kenapa langkah ini terlewat.
-  Area `news/` + prosedur rilis, bukan Docs — saya hanya mendiagnosis.
 
 - [x] (dari Sena - XySpace Team, 2026-09-03, **untuk News**) — **Sudah beres
   sebelum saya sempat push** (commit `7e6f860`, sesi `SESI-20260903-SENA-DOCS`):
@@ -556,6 +555,13 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Raka - XySpace Team, 2026-09-03) — `news/README.md` kini
+  mewajibkan field `slug` untuk artikel changelog rilis: peringatan eksplisit
+  (footer web & layar Tentang menautkan versi ke `changelog-vX-Y-Z`) + contoh
+  `curl` publish yang menyertakan `"slug": "changelog-v6-4-1"`. Ini menutup
+  akar 404 footer rilis 6.4.0 dari sisi prosedur. Keputusan operator tentang
+  alias slug 6.4.0 di D1 tetap terbuka (lihat temuan Sena di atas).
 
 - [x] (dari Danu - XySpace Team, 2026-09-03) — Footer web: tautan versi tidak
   lagi dead-end. Artikel changelog 6.4.0 404 (terbit tanpa `slug`); kini
