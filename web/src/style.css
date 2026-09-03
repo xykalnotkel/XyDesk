@@ -2510,6 +2510,14 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
 .admin-setup p { font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; }
 .admin-setup-row { display: flex; gap: 8px; }
 .admin-setup-row input { flex: 1; }
+.admin-token-fallback { margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
+.admin-token-fallback summary {
+  cursor: pointer;
+  color: var(--accent);
+  user-select: none;
+}
+.admin-token-fallback summary:hover { text-decoration: underline; }
+.admin-token-fallback .admin-setup-row { margin-top: 8px; }
 
 /* ── Halaman Billing (Sewa PC) ── */
 .billing-page .grad {

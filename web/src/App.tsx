@@ -22,6 +22,7 @@ import {
 import {
   beginGoogleLogin,
   consumeGoogleRedirect,
+  consumeGoogleReturn,
   storeGoogleIdToken,
   getStoredGoogleIdToken,
   clearStoredGoogleIdToken,
@@ -1484,29 +1485,40 @@ function NewsDetailPage({
               {adminEligible && !adminActive && (
                 <div className="admin-setup">
                   <p>
-                    Login founder terdeteksi. Tempel <code>ADMIN_TOKEN</code> sekali
-                    untuk membalas sebagai tim (tersimpan hanya di perangkat ini):
+                    Login founder terdeteksi. Masuk dengan Google untuk membalas
+                    sebagai tim — tanpa token manual:
                   </p>
-                  <div className="admin-setup-row">
-                    <input
-                      type="password"
-                      placeholder="ADMIN_TOKEN"
-                      value={adminDraft}
-                      onChange={(e) => setAdminDraft(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="btn primary"
-                      disabled={!adminDraft.trim()}
-                      onClick={() => {
-                        setAdminToken(adminDraft);
-                        setAdminTokenState(adminDraft.trim());
-                        setAdminDraft('');
-                      }}
-                    >
-                      Aktifkan
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    onClick={() => beginGoogleLogin(window.location.pathname)}
+                  >
+                    Lanjutkan dengan Google
+                  </button>
+                  <details className="admin-token-fallback">
+                    <summary>Cara lama: tempel ADMIN_TOKEN</summary>
+                    <p>Token tersimpan hanya di perangkat ini.</p>
+                    <div className="admin-setup-row">
+                      <input
+                        type="password"
+                        placeholder="ADMIN_TOKEN"
+                        value={adminDraft}
+                        onChange={(e) => setAdminDraft(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn primary"
+                        disabled={!adminDraft.trim()}
+                        onClick={() => {
+                          setAdminToken(adminDraft);
+                          setAdminTokenState(adminDraft.trim());
+                          setAdminDraft('');
+                        }}
+                      >
+                        Aktifkan
+                      </button>
+                    </div>
+                  </details>
                 </div>
               )}
               {replyTo && (
@@ -1606,12 +1618,19 @@ function RemoteApp() {
 
   // Kembali dari halaman login Google (redirect flow): tukar id_token
   // menjadi sesi XyDesk lalu bersihkan URL. id_token ikut disimpan agar
-  // mode founder berita bisa dipakai tanpa menempel ADMIN_TOKEN.
+  // mode founder berita bisa dipakai tanpa menempel ADMIN_TOKEN. Bila login
+  // ini dipicu dari halaman berita (returnPath), kembalikan ke sana.
   useEffect(() => {
     const idToken = consumeGoogleRedirect();
     if (idToken) {
       storeGoogleIdToken(idToken);
-      void doGoogle(idToken);
+      void doGoogle(idToken).then(() => {
+        const kembali = consumeGoogleReturn();
+        if (kembali && kembali !== window.location.pathname) {
+          window.history.pushState({}, '', kembali);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1849,7 +1868,7 @@ function GoogleButton() {
   // Redirect flow: tanpa popup/iframe — aman untuk Safari iOS dan in-app
   // browser yang memblokir popup GIS (gejala "mentok di about:blank").
   return (
-    <button type="button" className="google-btn" onClick={beginGoogleLogin}>
+    <button type="button" className="google-btn" onClick={() => beginGoogleLogin()}>
       <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden>
         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
         <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />

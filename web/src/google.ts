@@ -13,14 +13,23 @@ export const GOOGLE_CLIENT_ID =
   (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? '';
 
 const STATE_KEY = 'xydesk.google.state';
+const RETURN_KEY = 'xydesk.google.return';
 const RETURN_PATH = '/connect';
 
 /// Arahkan browser ke halaman login Google. Tidak ada popup.
-export function beginGoogleLogin(): void {
+/// `returnPath` (opsional): setelah login sukses, kembali ke halaman ini —
+/// dipakai tombol "Lanjutkan dengan Google" di halaman berita supaya founder
+/// tidak tersesat di /connect.
+export function beginGoogleLogin(returnPath?: string): void {
   if (!GOOGLE_CLIENT_ID) return;
   const state = crypto.randomUUID();
   const nonce = crypto.randomUUID();
   sessionStorage.setItem(STATE_KEY, state);
+  if (returnPath && returnPath !== RETURN_PATH) {
+    sessionStorage.setItem(RETURN_KEY, returnPath);
+  } else {
+    sessionStorage.removeItem(RETURN_KEY);
+  }
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: `${window.location.origin}${RETURN_PATH}`,
@@ -31,6 +40,13 @@ export function beginGoogleLogin(): void {
     prompt: 'select_account',
   });
   window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+
+/// Ambil (dan hapus) halaman yang dituju setelah login Google selesai.
+export function consumeGoogleReturn(): string | null {
+  const p = sessionStorage.getItem(RETURN_KEY);
+  sessionStorage.removeItem(RETURN_KEY);
+  return p;
 }
 
 /// Baca id_token dari fragment saat kembali dari Google.
@@ -65,7 +81,11 @@ const ID_TOKEN_KEY = 'xydesk.web.googleIdToken';
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const body = token.split('.')[1] ?? '';
-    const json = atob(body.replace(/-/g, '+').replace(/_/g, '/'));
+    // base64url → base64 + padding (atob butuh kelipatan 4; tanpa padding
+    // token dengan panjang % 4 == 1 akan gagal di beberapa browser).
+    let b64 = body.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const json = atob(b64);
     return JSON.parse(json) as Record<string, unknown>;
   } catch {
     return null;
