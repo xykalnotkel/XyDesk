@@ -148,6 +148,14 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: CI / Release
 
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Permintaan dispatch WEB7**:
+  push `5207989` (sewa PC durasi custom + stok, chip total & sisa waktu
+  sesi, fix deep link /billing) sudah di main dengan Verifikasi Izin
+  hijau. Sesuai kebijakan baru (semua build/deploy via dispatch CI),
+  mohon jalankan Build + Deploy Web App untuk SHA itu. E2E lokal hijau
+  (billing: stok/custom/routing; sesi: chip 1:59:58 countdown + panel
+  Total/Sisa via host pola uji).
+
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Tugas rilis kini:** menyatukan bahan artikel dari tiap agent menjadi SATU artikel rilis (bukan mengarang semuanya); versi & terbitnya berita = keputusan operator; jangan build/rilis sebelum semua sesi area rilis `SELESAI`.
 
 
