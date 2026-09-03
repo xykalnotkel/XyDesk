@@ -16,3 +16,4 @@ baris milik orang lain. Format nama agent: `Nama - XySpace Team`
 | Laras - XySpace Team | Client Flutter | 2026-09 |
 | Tara - XySpace Team | Backend / Edge | 2026-09 |
 | Bhre - XySpace Team | CI / Release | 2026-09 |
+| Raka - XySpace Team | News & Konten | 2026-09 |

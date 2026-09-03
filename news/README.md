@@ -48,6 +48,30 @@ curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
   }'
 ```
 
+> ⚠️ **Artikel changelog rilis WAJIB mengirim `slug` sendiri.** Footer web
+> dan layar "Tentang" menautkan versi ke `changelog-v<major>-<minor>-<patch>`
+> (`web/src/version.ts` → `CHANGELOG_SLUG`). Kalau field `slug` tidak
+> dikirim, slug jatuh ke hash acak `p-…` dan tautan versi itu menunjuk ke
+> artikel yang tidak ada (404) — persis yang terjadi pada rilis 6.4.0.
+> Satu-satunya slug yang boleh dipilih sendiri adalah pola
+> `changelog-vX-Y-Z` (mis. `changelog-v6-4-1`); slug lain tetap diacak
+> worker:
+>
+> ```bash
+> curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
+>   -H "Content-Type: application/json" \
+>   -H "x-admin-token: <ADMIN_TOKEN>" \
+>   -d '{
+>     "title": "Judul rilis",
+>     "excerpt": "Ringkasan 1-2 kalimat untuk kartu + OG",
+>     "content": "Isi panjang — paragraf dipisah baris kosong.",
+>     "cover": "https://app.xystudio.my.id/news/covers/<file>.jpg",
+>     "category": "rilis",
+>     "author": "Haekal Saputra",
+>     "slug": "changelog-v6-4-1"
+>   }'
+> ```
+
 Saat terbit, worker **otomatis** (asinkron, `waitUntil`):
 1. Kirim push OneSignal ke semua pengguna opt-in (judul + gambar sampul).
 2. Kirim email Resend ke seluruh `subscribers` (dari `news@mail.xystudio.my.id`).
