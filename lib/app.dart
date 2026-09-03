@@ -564,6 +564,7 @@ class _AppShellState extends ConsumerState<AppShell> {
               ? context.tr('account_guest')
               : (user.name ?? context.tr('account_user')),
           initial: user.initial,
+          pictureUrl: user.picture,
           onTap: () => _goTo(3),
         ),
       ),

@@ -572,45 +572,62 @@ class _PressableKeyState extends State<_PressableKey> {
   bool _down = false;
 
   void _trigger() {
+    // Haptic feedback berbeda untuk feedback yang lebih natural
     HapticFeedback.lightImpact();
     widget.onTap();
   }
 
+  void _onTapDown(TapDownDetails _) {
+    setState(() => _down = true);
+    _trigger();
+  }
+
+  void _onTapUp(TapUpDetails _) {
+    setState(() => _down = false);
+  }
+
+  void _onTapCancel() {
+    setState(() => _down = false);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (_) {
-        setState(() => _down = true);
-        _trigger();
-      },
-      onTapUp: (_) => setState(() => _down = false),
-      onTapCancel: () => setState(() => _down = false),
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
       child: AnimatedScale(
-        scale: _down ? 0.94 : 1,
-        duration: const Duration(milliseconds: 45),
+        scale: _down ? 0.92 : 1.0,
+        duration: const Duration(milliseconds: 60),
+        curve: Curves.easeOutCubic,
         child: Container(
-          height: 40,
+          height: 44, // Lebih tinggi untuk touch target yang lebih baik
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: _down
-                ? context.c.accent.withValues(alpha: 0.35)
+                ? c.accent.withValues(alpha: 0.45)
                 : widget.background,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: _down
-                  ? context.c.accent
-                  : context.c.textLow.withValues(alpha: 0.22),
-              width: _down ? 1.2 : 0.7,
+              color: _down ? c.accent : c.textLow.withValues(alpha: 0.18),
+              width: _down ? 1.5 : 0.8,
             ),
-            boxShadow: [
-              if (!_down)
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.22),
-                  blurRadius: 3,
-                  offset: const Offset(0, 1.5),
-                ),
-            ],
+            boxShadow: _down
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 1,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
           ),
           child: widget.child,
         ),

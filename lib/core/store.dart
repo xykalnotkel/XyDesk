@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/auth/session_vault.dart';
+import '../features/auth/guest_identity.dart';
 import 'devlog.dart';
 import 'l10n_bridge.dart';
 import 'display_control.dart';
@@ -322,8 +323,12 @@ class AuthNotifier extends StateNotifier<UserSession> {
     final email = _s.getStr('user_email');
     final guest = _s.getBool('user_guest');
     if (guest) {
-      state = const UserSession(isGuest: true);
-      DevLog.i('auth', 'Sesi dipulihkan', 'tamu');
+      final guestName = _s.getStr('user_name');
+      state = UserSession(
+        name: guestName ?? generateGuestName(),
+        isGuest: true,
+      );
+      DevLog.i('auth', 'Sesi dipulihkan', 'tamu${guestName != null ? ": $guestName" : ""}');
     } else if (initialToken != null) {
       // Email hanyalah cache metadata. JWT secure storage adalah sumber sesi;
       // `/auth/me` akan memulihkan profil bila cache SharedPreferences hilang.
@@ -406,12 +411,17 @@ class AuthNotifier extends StateNotifier<UserSession> {
 
   Future<void> signInGuest() async {
     await _vault.deleteToken();
+    // Generate nama acak manusia Indonesia untuk tamu
+    final guestName = generateGuestName();
     await _s.remove('user_email');
-    await _s.remove('user_name');
+    await _s.setStr('user_name', guestName);
     await _s.remove('user_picture');
     await _s.setBool('user_guest', true);
-    state = const UserSession(isGuest: true);
-    DevLog.ok('auth', 'Masuk sebagai tamu');
+    state = UserSession(
+      name: guestName,
+      isGuest: true,
+    );
+    DevLog.ok('auth', 'Masuk sebagai tamu', guestName);
   }
 
   Future<void> signOut() async {

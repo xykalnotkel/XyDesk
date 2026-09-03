@@ -58,10 +58,11 @@ String presetAvatarUrl(String seed) {
 
 /// Avatar profil yang dipakai di header Akun dan tombol di topbar.
 ///
-/// Menampilkan (berurutan):
-///   1. preset DiceBear (SVG)
-///   2. URL gambar sendiri (SVG/PNG/JPEG)
-///   3. inisial nama di atas gradient brand (perilaku lama)
+/// Menampilkan (berurutan prioritas):
+///   1. URL foto dari Google/profile (pictureUrl)
+///   2. preset DiceBear (SVG) — dari preferensi lokal
+///   3. URL gambar sendiri (SVG/PNG/JPEG) — dari preferensi lokal
+///   4. inisial nama di atas gradient brand (perilaku lama)
 /// Tidak pernah membuat layar gagal: kalau gambar tidak termuat, kembali
 /// ke inisial.
 class ProfileAvatar extends ConsumerWidget {
@@ -71,6 +72,7 @@ class ProfileAvatar extends ConsumerWidget {
     required this.initial,
     this.size = 52,
     this.bordered = false,
+    this.pictureUrl,
   });
 
   /// Nama tampilan (dipakai untuk fallback & seed bila nilai bukan preset).
@@ -81,12 +83,15 @@ class ProfileAvatar extends ConsumerWidget {
   /// Menampilkan cincin aksen tipis (untuk tombol topbar).
   final bool bordered;
 
+  /// URL foto dari akun Google / backend. Prioritas tertinggi.
+  final String? pictureUrl;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
     final store = ref.watch(storeProvider);
-    final value = loadAvatar(store);
-    final parsed = parseAvatar(value);
+    final localAvatar = loadAvatar(store);
+    final parsed = parseAvatar(localAvatar);
 
     final fallback = Text(
       initial,
@@ -98,7 +103,20 @@ class ProfileAvatar extends ConsumerWidget {
     );
 
     Widget inner;
-    if (parsed.isPreset) {
+    if (pictureUrl != null && pictureUrl!.isNotEmpty) {
+      // Prioritas 1: foto dari akun Google / backend
+      inner = Image.network(
+        pictureUrl!,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return fallback;
+        },
+      );
+    } else if (parsed.isPreset) {
       inner = SvgPicture.network(
         presetAvatarUrl(parsed.payload),
         width: size,
@@ -158,11 +176,13 @@ class TopbarAvatarButton extends ConsumerWidget {
     required this.name,
     required this.initial,
     required this.onTap,
+    this.pictureUrl,
   });
 
   final String name;
   final String initial;
   final VoidCallback onTap;
+  final String? pictureUrl;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -175,6 +195,7 @@ class TopbarAvatarButton extends ConsumerWidget {
         initial: initial,
         size: 30,
         bordered: true,
+        pictureUrl: pictureUrl,
       ),
       iconSize: 30,
     );

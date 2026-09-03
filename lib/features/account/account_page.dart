@@ -18,6 +18,7 @@ import '../notifications/app_update_details.dart';
 import '../notifications/notification_preferences_page.dart';
 import '../notifications/update_page.dart';
 import '../session/media_capabilities.dart';
+import '../session/control_mapping_page.dart';
 import 'billing_page.dart';
 import 'permissions_page.dart';
 import 'subscription_page.dart';
@@ -52,6 +53,7 @@ class AccountPage extends ConsumerWidget {
             badge: user.isGuest
                 ? 'MODE TAMU'
                 : 'AKUN AKTIF · ketuk untuk ganti nama & foto',
+            pictureUrl: user.picture,
           ),
         ),
         const SectionLabel('Preferensi'),
@@ -92,6 +94,12 @@ class AccountPage extends ConsumerWidget {
           icon: LucideIcons.crown,
           value: 'Free',
           onTap: () => _open(context, const SubscriptionPage()),
+        ),
+        _CategoryRow(
+          title: 'Control Mapping',
+          subtitle: 'Keyboard, joystick, mouse — mapping & profil kontrol',
+          icon: LucideIcons.gamepad2,
+          onTap: () => _open(context, const ControlMappingPage()),
         ),
         _CategoryRow(
           title: 'Legal & tentang XyDesk',
@@ -883,12 +891,14 @@ class _ProfileHero extends StatelessWidget {
     required this.name,
     required this.email,
     required this.badge,
+    this.pictureUrl,
   });
 
   final String initial;
   final String name;
   final String email;
   final String badge;
+  final String? pictureUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -902,6 +912,7 @@ class _ProfileHero extends StatelessWidget {
             initial: initial,
             size: 52,
             bordered: false,
+            pictureUrl: pictureUrl,
           ),
           const SizedBox(width: Gap.md),
           Expanded(

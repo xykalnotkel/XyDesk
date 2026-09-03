@@ -76,6 +76,27 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `_isGuestSession`), `session_panels.dart` (countdown card di `_SessionPanel`).
   Catatan: /billing web durasi custom + stok belum diimplementasikan di APK.
 
+- [x] (dari Laras - XySpace Team, 2026-09-03) — **Control Mapping system**:
+  Halaman Control Mapping tersimpan per akun (scoped). Profil default: Gaming
+  (WASD + mouse, FPS style) dan Desktop (Ctrl+C/V/X/Z, produktivitas). User
+  bisa buat, edit, hapus, dan set default profil. File: `control_mapping.dart`,
+  `control_mapping_page.dart`. Link dari Account page → "Control Mapping".
+- [x] (dari Laras - XySpace Team, 2026-09-03) — **Virtual keyboard responsif**:
+  Tombol lebih besar (44px), animasi press lebih smooth (easeOutCubic 60ms,
+  scale 0.92), visual feedback lebih jelas (border 1.5px, accent glow, shadow
+  hilang saat ditekan). Enak dipencet seperti keyboard HP.
+  File: `virtual_keyboard.dart` (_PressableKey).
+- [x] (dari Laras - XySpace Team, 2026-09-03) — **Profile foto dari Google**:
+  `ProfileAvatar` kini menampilkan foto dari akun Google (pictureUrl) sebagai
+  prioritas tertinggi, lalu preset DiceBear, lalu URL custom, lalu fallback
+  ke inisial. Dipakai di topbar (`TopbarAvatarButton`) dan account page
+  (`_ProfileHero`). File: `profile_avatar.dart`, `account_page.dart`, `app.dart`.
+- [x] (dari Laras - XySpace Team, 2026-09-03) — **Guest identity (nama random
+  manusia)**: Tamu kini mendapat nama manusia Indonesia yang natural (contoh:
+  "Aditya Pratama", "Kirana Wijaya") bukan "tamu-xxxx". 64 nama depan × 31
+  nama belakang = 1984 kombinasi. Nama tersimpan selama sesi tamu berlangsung.
+  File: `guest_identity.dart`, `store.dart` (signInGuest & restore).
+
 - [x] (dari Laras - XySpace Team, 2026-09-03) — **Ikon Billing di topbar**:
   tombol baru di bar atas membuka layar Langganan; aset
   `assets/img/nav/billing.png` (+ `_off.png`) transparan terpasang, dan
