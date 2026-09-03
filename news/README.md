@@ -21,7 +21,8 @@ Setiap rilis WAJIB punya artikel berita.
 **Baca dulu [`docs/NEWS_STYLE.md`](../docs/NEWS_STYLE.md) sebelum menulis.**
 Berita bukan changelog: tulis dampaknya untuk pengguna, bukan daftar
 pekerjaan. Tidak ada nama berkas, nama modul, atau nomor versi di judul.
-Penulis artikel selalu `Tim XySpace`.
+Penulis artikel selalu `Haekal Saputra` (identitas resmi; label `XySpace`
+tampil otomatis sebagai badge di klien).
 
 Terbitkan lewat endpoint admin —
 **slug dibuat otomatis sebagai HASH acak** (mis. `p-d5b4512f7d17`), tidak

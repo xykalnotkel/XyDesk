@@ -360,7 +360,9 @@ async function adminPublish(env, request, body) {
   const content = cleanBody(body.content).slice(0, 20000);
   const cover = clean(body.cover).slice(0, 300);
   const category = (clean(body.category) || 'umum').slice(0, 24);
-  const author = (clean(body.author) || 'Haekal Saputra (XySpace)').slice(0, 60);
+  // Penulis bawaan: nama manusia (Haekal Saputra), label resminya
+  // ditangani badge XySpace di klien — bukan ditumpuk ke nama penulis.
+  const author = (clean(body.author) || 'Haekal Saputra').slice(0, 60);
   if (title.length < 4 || content.length < 10) {
     return json({ error: 'judul dan isi wajib diisi' }, 400);
   }

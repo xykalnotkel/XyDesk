@@ -15,6 +15,21 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Client Flutter
 
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Screenshot layar sesi
+  Android untuk artikel berita** (permintaan operator: artikel harus punya
+  screenshot asli semua platform). Yang dibutuhkan: layar sesi dengan rail
+  kontrol terlihat + panel pengaturan terbuka, diambil dari **build rilis
+  yang berjalan di perangkat/emulator nyata dengan video host asli**
+  (bukan mockup). Simpan ke `web/public/news/shots/` dengan nama
+  `<versi>-android-sesi-*.jpg` — pola dan aturan ada di README folder itu.
+  Web sudah mengisi bagiannya (`web-sesi-*.jpg`, 11 lembar, hasil E2E
+  lokal dengan video host pola uji yang benar-benar ter-decode).
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — Rail sesi web sekarang
+  punya tombol **"Ambil dari papan klip PC"** (`0x09 CLIPBOARD_REQ` →
+  jawaban `0x08` lewat data channel). Kalau aplikasi Android belum
+  memakai model tarik ini (host Rust sudah menjawab sejak lama), ini
+  saatnya menyamakan — protokolnya sudah stabil.
+
 - [ ] (dari Danu - XySpace Team, 2026-09-02) — **Rebrand**: logo X baru sudah
   masuk, token ungu `lib/core/tokens.dart` sudah diselaraskan dengan web
   (accent `#7C3AED`, deep `#5B21B6`, lavender `#A78BFA`) oleh Laras. Yang
@@ -49,6 +64,12 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   Silakan verifikasi di Windows nyata (tray icon, balloon, `npm run build`
   + `npx electron-builder --win --dir`), dan lanjutkan pemolesan UI panel
   (bitrate, latensi, encoder, mic) yang endpoint-nya sudah ada.
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Screenshot shell desktop +
+  host Windows untuk artikel berita** (permintaan operator: lengkapi artikel
+  dengan screenshot asli semua platform): jendela host di Windows (ID+QR
+  terlihat) dan shell desktop saat sesi berjalan. Simpan ke
+  `web/public/news/shots/` dengan nama `<versi>-desktop-*.jpg` /
+  `<versi>-host-*.jpg` (lihat README folder itu).
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — Host kini mengirim **dua**
   stream audio: `audio` (loopback suara sistem) dan `mic` (mikrofon PC host,
   hanya bila ada perangkat capture). Client yang menyajikan track audio
@@ -146,6 +167,19 @@ _(kosong)_
   merender gambar inline (terbit 3 Sep 2026 di rilis 6.3.0): artikel
   rilis berikutnya dipastikan memakai format baru `docs/NEWS_STYLE.md`
   (apa+kenapa, changelog pengguna, screenshot di `web/public/news/shots/`).
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Lengkapi artikel dengan
+  screenshot semua platform** (mandat operator). Bagian web sudah tersedia:
+  11 screenshot sesi web baru di `web/public/news/shots/web-sesi-*`
+  (rail kontrol, rail disembunyikan, panel 4 tab, keyboard, gaming,
+  trackpad, papan klip, mik — semuanya dari build rilis via E2E lokal,
+  video host pola uji yang benar-benar ter-decode, bukan mockup).
+  Menunggu: Android (Client Flutter), desktop/host Windows (Desktop
+  Shell). Artikel `changelog-v6-3-0` juga masih menampilkan screenshot
+  sesi web versi LAMA (`6.3.0-*.jpg`) yang tidak lagi match dengan UI
+  live setelah sesi WEB3 — pertimbangkan pasang ulang bagian web artikel
+  itu dengan `web-sesi-*` atau terbitkan artikel baru saat semua
+  screenshot terkumpul. Penulis: `Haekal Saputra` (baru, lihat
+  NEWS_STYLE yang sudah dikoreksi).
 
 ## Untuk: Host Engine
 
@@ -163,7 +197,17 @@ _(kosong)_
 
 ## Untuk: Docs & Audit
 
-_(kosong)_
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — Byline berita diubah dari
+  `Tim XySpace` ke `Haekal Saputra` (mandat operator) di `AGENT.md`,
+  `docs/NEWS_STYLE.md`, `news/README.md`, dan default worker berita.
+  Mohon dicek konsistensi menyeluruh (termasuk `docs/` lain dan template
+  lama) supaya tidak ada instruksi sisa yang memunculkan nama lama lagi.
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — Berkas unggahan operator di
+  luar repo (dipakai sesi web untuk token) masih memuat baris
+  `GOOGLE CLIENT ID : 335906355717-…` yang sudah kedaluwarsa/menyesatkan —
+  client OAuth web yang benar `495336144977-dp1k3678cocjrfhftb9blnqo5qnvhsr6…`.
+  Tolong catat di tempat rahasia resmi tim agar sesi berikutnya tidak
+  salah ambil.
 
 ---
 

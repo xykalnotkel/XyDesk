@@ -48,6 +48,7 @@ import { LICENSE_TOTAL } from './license-total';
 // dibuka.
 const LicenseInventory = lazy(() => import('./LicenseInventory'));
 import { HostMeta, InputCodec, RtcPhase, RtcSession } from './rtc';
+import type { SessionStats } from './rtc';
 import {
   APP_VERSION,
   CHANGELOG_SLUG,
@@ -58,7 +59,7 @@ import {
 } from './version';
 import { vkFromCode } from './vk';
 import BillingPage from './Billing';
-import { VirtualKeyboard, GamingPad, SessionPanel, DEFAULT_PREFS } from './session_ui';
+import { VirtualKeyboard, GamingPad, SessionPanel, SessionRail, DEFAULT_PREFS } from './session_ui';
 import type { SessionPrefs } from './session_ui';
 import { QrScanModal, ConnectGuide, SupportLinks } from './connect_extras';
 import { WhatsAppIcon, TelegramIcon, XIcon, FacebookIcon } from './brand-icons';
@@ -852,7 +853,7 @@ function AuthorName({
     <span className={`author-name official ${size}`}>
       <img className="author-badge" src="/team/founder.jpg" alt="" aria-hidden="true" />
       <strong>{name}</strong>
-      <span className="official-tag" title="Diverifikasi — tim XySpace">
+      <span className="official-tag" title="Akun resmi XySpace — Haekal Saputra">
         XySpace
       </span>
     </span>
@@ -1739,6 +1740,15 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const [padOpen, setPadOpen] = useState(false);
   const [trackpad, setTrackpad] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  // Rail kontrol bisa disembunyikan agar tidak menutupi game — pilihan
+  // pengguna disimpan supaya konsisten antar sesi (ala aplikasi).
+  const [railHidden, setRailHidden] = useState(() => localStorage.getItem('xydesk.session.railHidden') === '1');
+  useEffect(() => {
+    localStorage.setItem('xydesk.session.railHidden', railHidden ? '1' : '0');
+  }, [railHidden]);
+  const [stats, setStats] = useState<SessionStats | null>(null);
+  const [connectedAt, setConnectedAt] = useState<number | null>(null);
+  const [hudToast, setHudToast] = useState('');
   // Preferensi sesi — bertahan antar sesi di perangkat ini.
   const [prefs, setPrefs] = useState<SessionPrefs>(() => {
     try {
@@ -1811,6 +1821,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           retryRef.current.tries = 0;
           retryRef.current.wasConnected = true;
           setRetryInfo('');
+          setConnectedAt(Date.now());
           saveRecent(hostId, pin);
           setRecents(loadRecents());
           window.history.replaceState({}, '', '/connect#session');
@@ -1846,6 +1857,16 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       };
       // Meta host (daftar layar + status audio) untuk pemilih monitor.
       session.onMeta = (meta) => setHostMeta(meta);
+      // Balasan "ambil dari papan klip PC": salin ke papan klip perangkat
+      // ini; kalau izin ditolak, tampilkan isinya biar tetap bisa disalin.
+      session.onClipboard = async (text) => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setHudToast(`Papan klip PC tersalin ke perangkat ini (${text.length} karakter)`);
+        } catch {
+          setHudToast(`Papan klip PC: ${text.slice(0, 80)}${text.length > 80 ? '…' : ''}`);
+        }
+      };
       await session.start(jwt, hostId, pin);
     } catch {
       setPhase('ended');
@@ -1860,6 +1881,9 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     setKbOpen(false);
     setPadOpen(false);
     setPanelOpen(false);
+    setStats(null);
+    setConnectedAt(null);
+    setHudToast('');
     setPhase('');
     if (window.location.hash === '#session') {
       window.history.replaceState({}, '', '/connect');
@@ -1869,6 +1893,58 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   useEffect(() => disconnect, [disconnect]);
 
   const send = (bytes: Uint8Array) => sessionRef.current?.sendInput(bytes);
+
+  // Statistik live (tab Gambar di panel): baca getStats tiap detik hanya
+  // saat panel terbuka supaya tidak bikin rame saat main.
+  useEffect(() => {
+    if (!connected || !panelOpen) return;
+    let alive = true;
+    const poll = async () => {
+      const s = await sessionRef.current?.readStats();
+      if (alive && s) setStats(s);
+    };
+    void poll();
+    const t = setInterval(() => void poll(), 1000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [connected, panelOpen]);
+
+  // Toast HUD hilang sendiri setelah 4 detik.
+  useEffect(() => {
+    if (!hudToast) return;
+    const t = setTimeout(() => setHudToast(''), 4000);
+    return () => clearTimeout(t);
+  }, [hudToast]);
+
+  const toggleTrackpad = useCallback(() => {
+    touchRef.current.points.clear();
+    setTrackpad((v) => !v);
+  }, []);
+
+  // Kirim papan klip perangkat ini ke PC (0x08 CLIPBOARD_SET, bukan
+  // diketik per karakter — sama seperti aplikasi).
+  const clipboardPush = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) {
+        setHudToast('Papan klip perangkat ini kosong.');
+        return;
+      }
+      sessionRef.current?.sendClipboard(text.slice(0, 32768));
+      setHudToast(`Terkirim ke papan klip PC (${text.length} karakter)`);
+    } catch {
+      setHudToast('Izin baca papan klip ditolak browser — buka keyboard virtual lalu tempel di sana.');
+    }
+  };
+
+  // Minta isi papan klip PC (0x09 CLIPBOARD_REQ); balasannya lewat
+  // onClipboard di atas.
+  const clipboardPull = () => {
+    sessionRef.current?.requestClipboard();
+    setHudToast('Meminta isi papan klip PC…');
+  };
 
   // Keyboard fisik -> host. Aktif hanya saat sesi live; preventDefault agar
   // shortcut browser (Ctrl+W dsb.) tidak membajak sesi.
@@ -2045,93 +2121,42 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
         <video ref={videoRef} autoPlay playsInline muted />
         {/* Audio sistem host (track Opus) — elemen terpisah, tidak di-mute. */}
         <audio ref={audioRef} autoPlay />
-        {hostMeta && hostMeta.displays.length > 1 && (
-          <div className="display-switcher">
-            {hostMeta.displays.map((d) => (
-              <button
-                key={d.index}
-                className={d.index === hostMeta.wanted ? 'active' : ''}
-                onClick={() => sessionRef.current?.selectDisplay(d.index)}
-              >
-                {d.name || `Layar ${d.index + 1}`} {d.width}×{d.height}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="session-actions">
-          <button
-            className={audioOn ? 'on' : ''}
-            title="Audio PC (WASAPI loopback host)"
-            onClick={() => {
-              const next = !audioOn;
-              setAudioOn(next);
-              void sessionRef.current?.setAudioEnabled(next);
-            }}
-          >
-            {audioOn ? 'Audio: hidup' : 'Audio: mati'}
-          </button>
-          <button
-            className={micOn ? 'on' : ''}
-            title="Kirim mic ke host (diputar di speaker PC)"
-            onClick={async () => {
-              if (micOn) {
-                await sessionRef.current?.disableMic();
-                setMicOn(false);
-                return;
-              }
-              const err = await sessionRef.current?.enableMic();
-              if (err) {
-                window.alert(err);
-                return;
-              }
-              setMicOn(true);
-            }}
-          >
-            {micOn ? 'Mic: hidup' : 'Mic: mati'}
-          </button>
-          <button
-            title="Kirim clipboard"
-            onClick={async () => {
-              try {
-                const text = await navigator.clipboard.readText();
-                if (text) send(InputCodec.text(text.slice(0, 32768)));
-              } catch {
-                // Izin clipboard ditolak — abaikan diam-diam.
-              }
-            }}
-          >
-            Clipboard
-          </button>
-          <button title="Keyboard" className={kbOpen ? 'on' : ''} onClick={() => setKbOpen((v) => !v)}>Keyboard</button>
-          <button
-            title="Panel gaming: WASD, Shift, Spasi, E/Q/R/F — tombol tahan"
-            className={padOpen ? 'on' : ''}
-            onClick={() => setPadOpen((v) => !v)}
-          >
-            Gamepad
-          </button>
-          <button
-            title="Mode trackpad: geser = gerak kursor, ketuk = klik, dua jari = scroll"
-            className={trackpad ? 'on' : ''}
-            onClick={() => {
-              touchRef.current.points.clear();
-              setTrackpad((v) => !v);
-            }}
-          >
-            Trackpad
-          </button>
-          <button title="Layar penuh" onClick={() => void enterImmersive()}>Fullscreen</button>
-          <button
-            title="Pengaturan sesi: volume, sensitivitas trackpad, arah scroll"
-            className={panelOpen ? 'on' : ''}
-            onClick={() => setPanelOpen((v) => !v)}
-          >
-            Panel
-          </button>
-          <button className="hud-icon-btn danger-action" title="Putuskan" onClick={disconnect}>
-            <img src="/hud-disconnect.png" alt="Putuskan" />
-          </button>
-        </div>
+        <SessionRail
+          collapsed={railHidden}
+          onToggleCollapsed={() => setRailHidden((v) => !v)}
+          audioOn={audioOn}
+          onAudio={() => {
+            const next = !audioOn;
+            setAudioOn(next);
+            void sessionRef.current?.setAudioEnabled(next);
+          }}
+          micOn={micOn}
+          onMic={async () => {
+            if (micOn) {
+              await sessionRef.current?.disableMic();
+              setMicOn(false);
+              return;
+            }
+            const err = await sessionRef.current?.enableMic();
+            if (err) {
+              setHudToast(err);
+              return;
+            }
+            setMicOn(true);
+          }}
+          kbOpen={kbOpen}
+          onKeyboard={() => setKbOpen((v) => !v)}
+          padOpen={padOpen}
+          onPad={() => setPadOpen((v) => !v)}
+          trackpad={trackpad}
+          onTrackpad={toggleTrackpad}
+          onClipboardPush={() => void clipboardPush()}
+          onClipboardPull={clipboardPull}
+          onFullscreen={() => void enterImmersive()}
+          panelOpen={panelOpen}
+          onPanel={() => setPanelOpen((v) => !v)}
+          onDisconnect={disconnect}
+        />
         <div className="hud-mouse" aria-hidden="false">
           <button
             className="hud-icon-btn"
@@ -2153,6 +2178,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           </button>
         </div>
         {retryInfo && <p className="session-retry">{retryInfo}</p>}
+        {hudToast && <p className="hud-toast" role="status">{hudToast}</p>}
         {panelOpen && (
           <SessionPanel
             prefs={prefs}
@@ -2160,6 +2186,16 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
             onClose={() => setPanelOpen(false)}
             hostId={hostId}
             onDisconnect={disconnect}
+            stats={stats}
+            displays={hostMeta?.displays ?? []}
+            wantedDisplay={hostMeta?.wanted ?? 0}
+            onSelectDisplay={(i) => sessionRef.current?.selectDisplay(i)}
+            connectedAt={connectedAt}
+            railCollapsed={railHidden}
+            trackpad={trackpad}
+            onTrackpadMode={(on) => {
+              if (on !== trackpad) toggleTrackpad();
+            }}
           />
         )}
         {padOpen && <GamingPad send={send} />}

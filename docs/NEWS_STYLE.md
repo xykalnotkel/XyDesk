@@ -68,7 +68,7 @@ hangat, jelas, nggak menggurui — tapi TUNTAS. Jangan pelit informasi.
 |---|---|
 | **XyDesk** | nama aplikasinya |
 | **XySpace** | nama tim/studio yang menulis |
-| **Tim XySpace** | penulis artikel (isi kolom `author`) |
+| **Haekal Saputra** | penulis artikel (isi kolom `author`) — label resmi `XySpace` tampil sebagai badge |
 
 Kata "XySpace" dipakai untuk timnya, bukan produknya. Jangan ketukar.
 
@@ -227,7 +227,7 @@ curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
     "content": "<PEMBUKA: apa yang kerasa berubah>\n\n<PER PERUBAHAN: apa + kenapa + ![keterangan](url screenshot) bila visual>\n\n<CHANGELOG: Semua perubahan di versi X.Y.Z: daftar lengkap bahasa pengguna>\n\n<PENUTUP: yang sedang kami siapkan>",
     "cover": "https://app.xystudio.my.id/news/covers/<file>.jpg",
     "category": "rilis",
-    "author": "Tim XySpace"
+    "author": "Haekal Saputra"
   }'
 ```
 
@@ -293,7 +293,7 @@ Salin ke PR kalau perlu.
 [ ] Semua gambar di web/public/news/ (covers/ dan shots/), bukan URL luar
 [ ] Setiap gambar punya keterangan yang menjelaskan isinya
 [ ] Tidak ada mockup, gambar stok, atau gambar hasil AI sebagai "screenshot"
-[ ] Penulis: "Tim XySpace"
+[ ] Penulis: "Haekal Saputra"
 [ ] Sebutan merek benar: XyDesk = aplikasi, XySpace = tim
 [ ] Excerpt ≤ 150 karakter dan enak dibaca sendiri
 [ ] Sudah dibaca keras-keras: terdengar seperti orang, bukan seperti bot

@@ -1,0 +1,13 @@
+{
+  "name": "xydesk-web-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Harness uji E2E lokal layar sesi web: signaling Go + host pola uji (tab browser) + screenshot Playwright.",
+  "scripts": {
+    "shots": "node session_shots.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  },
+  "license": "UNLICENSED"
+}

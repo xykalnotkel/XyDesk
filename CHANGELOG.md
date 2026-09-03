@@ -30,6 +30,14 @@ Kebijakan rilis:
   diminimize ke tray. Keluar beneran hanya lewat menu tray "Keluar
   (hentikan host)". Sebelumnya menutup jendela mematikan engine — host
   mati begitu jendela ditutup, bertentangan dengan standar remote desktop.
+- Web: **harness uji E2E lokal** (`web/e2e/`) — signaling Go + shim auth
+  (format token `ts.purpose.sig` yang sama dengan `auth.go`) + "host pola
+  uji" berupa tab Chromium (canvas beranimasi → H264 Chrome → WebRTC),
+  lalu build rilis dijalankan Playwright untuk menguji layar sesi dan
+  menghasilkan screenshot asli dengan video yang benar-benar ter-decode.
+  URL signaling kini bisa dioverride `VITE_SIGNAL_API`/`VITE_SIGNAL_WS`
+  saat build uji; produksi tetap default `signal.xystudio.my.id`.
+  Hasilnya: 11 screenshot sesi web di `web/public/news/shots/web-sesi-*`.
 - Host: **mic input PC → client** — mikrofon host direkam via WASAPI
   `eCapture` (perangkat komunikasi default, PCM 16-bit 48 kHz mono) →
   Opus 20 ms → track audio kedua (stream `mic`). Aktif otomatis hanya bila
@@ -51,6 +59,24 @@ Kebijakan rilis:
   < 40 ms glass-to-glass tanpa alat eksternal.
 
 ### Diubah
+- Web: **layar sesi didesain ulang ke arah paritas aplikasi** — baris tombol
+  teks diganti rail ikon vertikal di tepi kanan (Suara PC, Mik ke PC,
+  Keyboard, Gamepad, Trackpad, papan klip kirim/ambil, layar penuh,
+  pengaturan, putuskan) yang bisa disembunyikan jadi pil kecil, persis pola
+  rail sesi aplikasi Android. Panel pengaturan kini ber-tab
+  (Gambar/Suara/Kontrol/Sesi) seperti `SessionControlPanel` aplikasi:
+  statistik live dari `getStats()` (resolusi, fps, bitrate, ping, paket
+  hilang, codec), pemilih layar pindah ke panel (tidak lagi melayang di
+  atas video), segmen gerak kursor Langsung/Trackpad, durasi sesi.
+  "Ambil dari papan klip PC" akhirnya tersedia di UI — protokolnya
+  (`0x09 CLIPBOARD_REQ`) sudah ada di rtc.ts sejak lama tapi tidak pernah
+  dipakai; kini dijawab toast setelah tersalin ke perangkat.
+- Berita (lintas area, restu operator): penulis artikel selalu
+  `Haekal Saputra`, bukan `Tim XySpace` — nama manusia di byline, label
+  resmi `XySpace` tetap tampil sebagai badge. Diterapkan di default
+  `POST /api/admin/publish`, `news/README.md`, `docs/NEWS_STYLE.md`, dan
+  `AGENT.md`; artikel lama di D1 sudah dinormalisasi sesi sebelumnya.
+  Tooltip badge komentar resmi kini "Akun resmi XySpace — Haekal Saputra".
 - Host: durasi sampel video (maju timestamp RTP per frame) diseragamkan ke
   FPS nominal 60 (16,67 ms) lewat `NOMINAL_FPS`/`frame_duration()` —
   sebelumnya angka 33 ms terpatri acak di `main.rs`, dan sumber pola uji

@@ -641,6 +641,7 @@ Hanya dependensi runtime; alat build (`dev`) tidak ikut terkirim ke pengguna.
 | `nanoid` | 3.3.18 | MIT |
 | `next` | 15.1.6 | MIT |
 | `picocolors` | 1.1.1 | ISC |
+| `playwright` | 1.62.1 | Apache-2.0 |
 | `postcss` | 8.4.31 | MIT |
 | `react` | 19.2.8 | MIT |
 | `react` | 19.0.0 | MIT |

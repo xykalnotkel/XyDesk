@@ -55,7 +55,7 @@
 | **Desktop Shell** | `desktop/` | Electron + Next.js shell (engine tetap Rust — jangan pindahkan logika ke shell) |
 | **Web** | `web/`, `web_deploy/` | Landing, download, legal, blog, client tamu, OG renderer |
 | **Backend / Edge** | `cloudflare/`, `signaling/` | Worker signaling, auth (OTP/JWT/OAuth), TURN, D1, rate-limit |
-| **News & Konten** | `news/`, `web/public/news/` | Artikel berita rilis — WAJIB ikut `docs/NEWS_STYLE.md`: detail lengkap (apa + kenapa), changelog versi pengguna, screenshot asli; penulis `Tim XySpace` |
+| **News & Konten** | `news/`, `web/public/news/` | Artikel berita rilis — WAJIB ikut `docs/NEWS_STYLE.md`: detail lengkap (apa + kenapa), changelog versi pengguna, screenshot asli; penulis `Haekal Saputra` |
 | **CI / Release** | `.github/`, `tool/`, `packaging/` | Workflow, build, release, generator aset |
 | **Docs & Audit** | `docs/`, `README.md`, `ROADMAP.md`, `SETUP.md` | Dokumentasi, audit, sinkronisasi status agar README tidak bohong |
 
@@ -198,7 +198,7 @@ kerja apa.** Aturannya:
   versi X.Y.Z" (changelog bahasa pengguna, bukan salinan `CHANGELOG.md`),
   dan setiap perubahan visual disertai **screenshot asli dari build rilis**
   (bukan mockup/AI/stok) — banner saja tidak cukup. Tanpa nama berkas/fungsi,
-  tanpa versi di judul, penulis `Tim XySpace` (lihat `docs/NEWS_STYLE.md`).
+  tanpa versi di judul, penulis `Haekal Saputra` (lihat `docs/NEWS_STYLE.md`).
 - **Versi**: rilis wajib bump `pubspec.yaml X.Y.Z+NN`, `package.json`
   web/desktop, dan `Cargo.toml` host (lihat `docs/VERSIONING.md`).
 - **Logo/aset generate**: logo resmi XyDesk = X ungu glossy

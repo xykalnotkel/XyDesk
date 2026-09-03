@@ -1018,7 +1018,6 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 .hud-icon-btn:hover { background: rgba(13, 7, 22, 0.85); }
 .hud-mouse { bottom: 18px; right: 18px; }
 
-.session-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 .session-retry {
   color: var(--accent-deep);
   font-weight: 700;
@@ -1315,38 +1314,7 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   .mobile-nav { display: flex; }
 }
 
-/* ── Sesi: pemilih layar & tombol audio/mic ────────────────────── */
-.display-switcher {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-  z-index: 5;
-}
-.display-switcher button {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(13, 7, 22, 0.65);
-  color: #e9e2fa;
-  font-size: 12px;
-  font-weight: 600;
-  backdrop-filter: blur(6px);
-}
-.display-switcher button.active {
-  background: var(--accent);
-  border-color: var(--accent-2);
-  color: #fff;
-}
-.session-actions button.on {
-  background: var(--accent);
-  border-color: var(--accent-deep);
-  color: #fff;
-}
+/* ── Sesi: pemilih layar kini tinggal di panel (tab Gambar) ── */
 
 /* ── Pra-beta: unduhan ditahan ───────────────────────────────── */
 /* Tombol mati harus TERLIHAT mati. Tombol pudar yang tetap bisa diklik
@@ -1740,11 +1708,11 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
 /* ── Statistik strip ── */
 .stat strong { color: var(--accent-deep); }
 
-/* ── Layar sesi: overlay di atas video, bukan elemen nyasar ────
-   Dulu .session-actions mengalir DI DALAM flex video-surface (tombol
-   teks polos melayang di tengah video), dan .hud-icon-btn diberi
-   position:absolute sehingga dua tombol mouse menumpuk di titik yang
-   sama. Semua kontrol kini overlay berlapis rapi. */
+/* ── Layar sesi: overlay di atas video ──────────────────────────
+   Kontrol sesi memakai rail ikon vertikal di tepi kanan — cermin
+   _SessionRail aplikasi (suara, mic, keyboard, papan klip, pengaturan,
+   putuskan, sembunyikan kontrol). Dulu berupa baris tombol teks yang
+   menjuntai di bawah video. */
 .video-surface { display: block; }
 .video-surface video {
   position: absolute;
@@ -1752,38 +1720,78 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   width: 100%;
   height: 100%;
 }
-.session-actions {
+
+/* Rail kontrol: kolom ikon kaca gelap, bisa disembunyikan jadi pil. */
+.srail {
   position: absolute;
-  left: 12px;
-  right: 128px;
-  bottom: 12px;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  z-index: 7;
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
-  margin: 0;
-  z-index: 6;
+  gap: 4px;
+  padding: 7px 5px;
+  border-radius: 16px;
+  background: rgba(24, 25, 29, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
 }
-.session-actions > button {
-  padding: 7px 13px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(13, 7, 22, 0.65);
-  color: #e9e2fa;
-  font-size: 12.5px;
-  font-weight: 600;
-  backdrop-filter: blur(6px);
-  transition: background var(--speed) ease, border-color var(--speed) ease;
+.srail-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--speed) ease, color var(--speed) ease;
 }
-.session-actions > button:hover { background: rgba(13, 7, 22, 0.88); }
-.session-actions button.on {
-  background: var(--accent);
-  border-color: var(--accent-2);
+.srail-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
   color: #fff;
 }
-.hud-icon-btn { position: static; }
-.hud-icon-btn img { width: 22px; height: 22px; }
-.session-actions .hud-icon-btn { width: 36px; height: 36px; padding: 0; }
+.srail-btn.on {
+  background: rgba(124, 58, 237, 0.28);
+  border-color: rgba(167, 139, 250, 0.55);
+  color: #d6c6ff;
+}
+.srail-btn.danger { color: #fca5a5; }
+.srail-btn.danger:hover {
+  background: rgba(220, 38, 38, 0.25);
+  color: #fecaca;
+}
+.srail-sep {
+  width: 22px;
+  height: 1px;
+  margin: 3px 0;
+  background: rgba(255, 255, 255, 0.12);
+}
+/* Pil kecil saat rail disembunyikan — menempel tepi kanan, tidak menghalangi. */
+.srail-pill {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  z-index: 7;
+  width: 26px;
+  height: 58px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(24, 25, 29, 0.8);
+  color: rgba(255, 255, 255, 0.7);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+}
+.srail-pill:hover { background: rgba(24, 25, 29, 0.95); color: #fff; }
+
+/* HUD mouse sentuh (klik kiri/kanan) tetap di pojok kanan bawah. */
 .hud-mouse {
   position: absolute;
   right: 12px;
@@ -1791,6 +1799,26 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   display: flex;
   gap: 10px;
   z-index: 6;
+}
+.hud-icon-btn { position: static; }
+.hud-icon-btn img { width: 22px; height: 22px; }
+
+/* Toast kecil untuk umpan balik papan klip/mic — pojok kiri bawah. */
+.hud-toast {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 8;
+  max-width: min(340px, 70%);
+  margin: 0;
+  padding: 8px 13px;
+  border-radius: 12px;
+  background: rgba(24, 25, 29, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #efe9fb;
+  font-size: 12.5px;
+  line-height: 1.45;
+  backdrop-filter: blur(8px);
 }
 .session-retry {
   position: absolute;
@@ -1826,8 +1854,11 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   .field-head { flex-wrap: wrap; row-gap: 6px; }
   .recents-list { max-height: 40vh; overflow-y: auto; }
   .video-surface { border-radius: 10px; }
-  /* Kontrol sesi: baris tombol naik di atas HUD mouse agar tidak rebutan */
-  .session-actions { right: 12px; bottom: 64px; }
+  /* Layar sempit: rail sedikit dirampingkan, panel memenuhi lebar. */
+  .srail { right: 8px; padding: 6px 4px; }
+  .srail-btn { width: 38px; height: 38px; }
+  .spanel { top: 8px; bottom: 54px; right: 60px; width: min(300px, calc(100% - 72px)); padding: 12px; }
+  .spanel.no-rail { right: 8px; width: min(300px, calc(100% - 20px)); }
   .vkb { bottom: 108px; padding: 6px; gap: 4px; }
   .vkb-key { font-size: 10px; min-height: 30px; }
   .gp-cluster { bottom: 108px; }
@@ -1907,14 +1938,16 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
 }
 
 /* ── Panel pengaturan sesi ─────────────────────────────────────
-   Kaca gelap di sisi kanan video — cermin ringkas SessionControlPanel
-   aplikasi Android. Hanya setelan yang benar-benar berfungsi. */
+   Kaca gelap di sisi kanan video — cermin SessionControlPanel aplikasi
+   dengan empat tab: Gambar/Suara/Kontrol/Sesi. Hanya setelan yang
+   benar-benar berfungsi. Digeser dari rail supaya keduanya tidak
+   bertumpuk; saat rail disembunyikan panel menempel tepi lagi. */
 .spanel {
   position: absolute;
   top: 12px;
-  right: 12px;
+  right: 76px;
   bottom: 62px;
-  width: min(300px, calc(100% - 24px));
+  width: min(300px, calc(100% - 100px));
   z-index: 8;
   display: flex;
   flex-direction: column;
@@ -1927,6 +1960,111 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   backdrop-filter: blur(10px);
   color: #efe9fb;
   text-align: left;
+}
+.spanel.no-rail { right: 12px; width: min(300px, calc(100% - 24px)); }
+
+/* Tab panel: empat kolom sama lebar, ikon + label ala aplikasi. */
+.spanel-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.spanel-tab {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 7px 2px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: rgba(239, 233, 251, 0.6);
+  font-size: 10.5px;
+  font-weight: 600;
+  transition: background var(--speed) ease, color var(--speed) ease;
+}
+.spanel-tab.on {
+  background: rgba(124, 58, 237, 0.3);
+  color: #d6c6ff;
+}
+.spanel-tab svg { width: 16px; height: 16px; }
+
+/* Kartu angka statistik & info sesi. */
+.spanel-card {
+  display: grid;
+  gap: 7px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.stat-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12.5px;
+  color: rgba(239, 233, 251, 0.62);
+}
+.stat-line strong {
+  font-size: 13px;
+  color: #efe9fb;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.spanel-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(239, 233, 251, 0.55);
+}
+
+/* Segmen dua pilihan (Gerak kursor: Langsung/Trackpad). */
+.spanel-seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.spanel-seg button {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: rgba(239, 233, 251, 0.65);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.spanel-seg button.on {
+  background: rgba(124, 58, 237, 0.3);
+  color: #d6c6ff;
+}
+
+/* Chip pemilih layar host di dalam panel (dulu melayang di atas video). */
+.display-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.display-chips button {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e9e2fa;
+  font-size: 12px;
+  font-weight: 600;
+}
+.display-chips button.active {
+  background: var(--accent);
+  border-color: var(--accent-2);
+  color: #fff;
 }
 .spanel-head {
   display: flex;

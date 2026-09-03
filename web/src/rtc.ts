@@ -143,6 +143,18 @@ export interface HostMeta {
   audio: { available: boolean; pipeline: string };
 }
 
+/// Statistik sesi yang dibaca langsung dari koneksi (getStats).
+/// Nilai bitrate/fps adalah laju sesaat — dihitung dari delta antar bacaan.
+export interface SessionStats {
+  width: number;
+  height: number;
+  fps: number;
+  mbps: number;
+  rttMs: number;
+  lossPct: number;
+  codec: string;
+}
+
 export class RtcSession {
   private ws?: WebSocket;
   private pc?: RTCPeerConnection;
@@ -165,6 +177,11 @@ export class RtcSession {
 
   meta: HostMeta | null = null;
   micEnabled = false;
+
+  // Penanding delta untuk readStats(): byte & frame terakhir + waktu baca.
+  private lastBytes = -1;
+  private lastFrames = -1;
+  private lastAtMs = 0;
 
   async start(jwt: string, hostId: string, pin: string) {
     this.hostId = hostId.replace(/[\s-]/g, '');
@@ -367,6 +384,61 @@ export class RtcSession {
     b[0] = 0x07;
     b[1] = Math.max(0, Math.min(255, index | 0));
     this.sendInput(b);
+  }
+
+  /// Baca statistik koneksi (resolusi, fps, bitrate, RTT, loss, codec).
+  /// Laju dihitung dari delta sejak panggilan sebelumnya — panggil berkala
+  /// (mis. tiap detik) agar angkanya stabil. Null bila PC belum siap.
+  async readStats(): Promise<SessionStats | null> {
+    const pc = this.pc;
+    if (!pc || pc.connectionState !== 'connected') return null;
+    let stats: SessionStats | null = null;
+    try {
+      const report = await pc.getStats();
+      let rttMs = 0;
+      for (const s of report.values() as Iterable<RTCStats>) {
+        const x = s as unknown as Record<string, unknown>;
+        if (x.type === 'inbound-rtp' && (x.kind === 'video' || x.mediaType === 'video')) {
+          const now = performance.now();
+          const bytes = Number(x.bytesReceived ?? 0);
+          const frames = Number(x.framesDecoded ?? 0);
+          const dt = this.lastAtMs > 0 ? (now - this.lastAtMs) / 1000 : 0;
+          const mbps =
+            this.lastBytes >= 0 && dt > 0.2
+              ? Math.max(0, ((bytes - this.lastBytes) * 8) / dt / 1e6)
+              : 0;
+          const fps =
+            this.lastFrames >= 0 && dt > 0.2
+              ? Math.max(0, (frames - this.lastFrames) / dt)
+              : 0;
+          this.lastBytes = bytes;
+          this.lastFrames = frames;
+          this.lastAtMs = now;
+          const lost = Math.max(0, Number(x.packetsLost ?? 0));
+          const recv = Number(x.packetsReceived ?? 0);
+          const fmt = String(x.sdpFmtpsLine ?? '');
+          const profile = /profile-level-id=(\w{4})/i.exec(fmt)?.[1] ?? '';
+          const codecName = String(x.mimeType ?? '').replace('video/', '');
+          stats = {
+            width: Number(x.frameWidth ?? 0),
+            height: Number(x.frameHeight ?? 0),
+            fps,
+            mbps,
+            rttMs: 0,
+            lossPct: recv + lost > 0 ? (lost / (recv + lost)) * 100 : 0,
+            codec: `${codecName || '—'}${profile ? ` (${profile})` : ''}`,
+          };
+        } else if (x.type === 'candidate-pair' && (x.nominated || x.selected === true)) {
+          if (x.state === 'succeeded' && typeof x.currentRoundTripTime === 'number') {
+            rttMs = x.currentRoundTripTime * 1000;
+          }
+        }
+      }
+      if (stats) stats.rttMs = rttMs;
+      return stats;
+    } catch {
+      return null;
+    }
   }
 
   /// Aktif/nonaktifkan pemutaran audio host.
