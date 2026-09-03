@@ -787,9 +787,10 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   border-radius: var(--radius);
   padding: 22px;
 }
-.subscribe-row { display: flex; gap: 10px; margin-top: 12px; }
+.subscribe-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .subscribe-row input {
-  flex: 1;
+  flex: 1 1 200px;
+  min-width: 0;
   font: inherit;
   font-size: 14px;
   padding: 11px 14px;
@@ -797,7 +798,40 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   border: 1px solid var(--line-strong);
   outline: none;
 }
+/* Di layar sempit tombol pindah ke baris sendiri selebar input — dulu
+   baris ini tidak bisa wrap dan tombol "Langganan" mendorong halaman
+   melebar (overflow 33–63 px di layar 360–390 px). */
+.subscribe-row .btn { flex: 1 1 100%; }
+@media (min-width: 480px) {
+  .subscribe-row .btn { flex: 0 0 auto; }
+}
 .subscribe-row input:focus { border-color: var(--accent); }
+
+/* ── Tombol lompat di detail berita ───────────────────────────
+   Panah bawah → gulir ke komentar paling bawah; sampai di dasar ia
+   berubah jadi panah atas untuk kembali ke judul. */
+.lompat-btn {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-deep);
+  background: linear-gradient(160deg, #8b5cf6 0%, var(--accent) 45%, var(--accent-deep) 100%);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(91, 33, 182, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform var(--speed) ease, box-shadow var(--speed) ease;
+}
+.lompat-btn:hover { transform: translateY(-2px); }
+.lompat-btn:active { transform: translateY(0); }
+@media (max-width: 640px) {
+  .lompat-btn { right: 14px; bottom: 14px; width: 42px; height: 42px; }
+}
 
 /* ── Unduh ──────────────────────────────────────────────────── */
 .platform-table {

@@ -998,6 +998,19 @@ function NewsDetailPage({
   // keabsahan badge tetap diputuskan worker dari ADMIN_TOKEN.
   const [adminEligible, setAdminEligible] = useState(false);
   const [adminToken, setAdminTokenState] = useState(getAdminToken);
+  // Tombol lompat: panah bawah menuju komentar di dasar artikel; setelah
+  // sampai, berubah jadi panah atas untuk kembali ke judul. Artikel
+  // changelog bisa panjang — tanpa ini pembaca HP harus menggulir jauh.
+  const [diDasar, setDiDasar] = useState(false);
+  useEffect(() => {
+    const cek = () => {
+      const d = document.documentElement;
+      setDiDasar(window.innerHeight + window.scrollY >= d.scrollHeight - 90);
+    };
+    cek();
+    window.addEventListener('scroll', cek, { passive: true });
+    return () => window.removeEventListener('scroll', cek);
+  }, []);
   const [adminDraft, setAdminDraft] = useState('');
   useEffect(() => {
     const jwt = localStorage.getItem('xydesk.web.jwt');
@@ -1091,8 +1104,7 @@ function NewsDetailPage({
   };
 
   const subscribe = async () => {
-    if (!email.includes('@') || subBusy) return;
-    setSubBusy(true);
+    if (!email.includes('@') || subBusy) return;    setSubBusy(true);
     setNotice('');
     try {
       await subscribeNews(email.trim());
@@ -1384,6 +1396,32 @@ function NewsDetailPage({
             </div>
           </section>
         </article>
+      )}
+      {data && (
+        <button
+          type="button"
+          className="lompat-btn"
+          onClick={() =>
+            window.scrollTo({
+              top: diDasar ? 0 : document.documentElement.scrollHeight,
+              behavior: 'smooth',
+            })
+          }
+          title={diDasar ? 'Kembali ke atas' : 'Lompat ke paling bawah'}
+          aria-label={diDasar ? 'Kembali ke atas' : 'Lompat ke paling bawah'}
+        >
+          {diDasar ? (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 19V5" />
+              <path d="M5 12l7-7 7 7" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 5v14" />
+              <path d="M19 12l-7 7-7-7" />
+            </svg>
+          )}
+        </button>
       )}
     </main>
   );

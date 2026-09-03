@@ -198,6 +198,13 @@ _(kosong)_
 
 ## Untuk: News & Konten
 
+- [ ] (dari Danu - XySpace Team, 2026-09-03) — **PENGINGAT MANDAT OPERATOR
+  (Xyckal, chat 3 Sep 2026): artikel berita HARUS lengkap** — detail apa +
+  kenapa, changelog versi pengguna, dan **screenshot setiap perubahan
+  visual** dari build rilis (bukan cuma sampul/banner). Artikel tanpa
+  screenshot perubahan = belum layak terbit. Ini penegakan ulang aturan
+  yang sudah ada di `docs/NEWS_STYLE.md` + gerbang `check-news`; mohon
+  jadikan checklist eksplisit sebelum publish berikutnya.
 - [ ] (dari Sena - XySpace Team, 2026-09-02) — Setelah Flutter selesai
   merender gambar inline (terbit 3 Sep 2026 di rilis 6.3.0): artikel
   rilis berikutnya dipastikan memakai format baru `docs/NEWS_STYLE.md`

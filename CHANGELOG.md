@@ -59,6 +59,18 @@ Kebijakan rilis:
   < 40 ms glass-to-glass tanpa alat eksternal.
 
 ### Diubah
+- Web: **tombol lompat di detail berita** — panah bawah melayang di pojok
+  kanan bawah menggulir halus ke komentar paling bawah; sampai di dasar ia
+  berubah jadi panah atas untuk kembali ke judul. Artikel changelog
+  panjangnya bisa ribuan piksel — sebelumnya pembaca HP harus menggulir
+  manual.
+### Diperbaiki
+- Web: **overflow horizontal di detail berita (layar ≤ 390 px)** — baris
+  langganan email tidak bisa membungkus sehingga tombol "Langganan"
+  mendorong halaman melebar 33–63 px. Kini input dan tombol membungkus
+  rapi; tombol selebar input di layar sempit. Ditemukan lewat audit
+  responsivitas 7 halaman × 5 viewport (1440/1024/768/390/360) — semua
+  halaman lain lolos tanpa overflow.
 - Web: halaman **Connect** dirapikan — blok "Dukung kami di" naik ke atas
   "Cara main", input ID perangkat kini rata kiri dengan gaya sama seperti
   field password (dulu angka besar terpusat berspasi lebar, tampak berbeda
