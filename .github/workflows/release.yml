@@ -26,10 +26,15 @@ env:
 jobs:
   prepare:
     name: Validasi versi
+    # Sejak kebijakan 3 Sep 2026 push TIDAK memicu Build — semua Build
+    # dijalankan lewat `workflow_dispatch` oleh role CI/Release. Syarat lama
+    # `workflow_run.event == 'push'` karena itu tidak pernah lagi terpenuhi,
+    # dan Release diam-diam `skipped` walau versi sudah dinaikkan (terjadi di
+    # rilis 6.5.0, Build 33781937189). Yang benar-benar penting bukan APA yang
+    # memicu Build, melainkan bahwa Build-nya SUKSES di `main`.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.conclusion == 'success')
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       should_release: ${{ steps.release.outputs.should_release }}

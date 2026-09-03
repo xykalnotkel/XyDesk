@@ -17,6 +17,18 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+## [Belum terbit]
+
+### Diperbaiki
+- CI: **Release tidak pernah jalan otomatis sejak push berhenti memicu Build.**
+  Job `prepare` di `release.yml` mensyaratkan `workflow_run.event == 'push'` —
+  sisa asumsi dari sebelum kebijakan 3 Sep 2026. Karena semua Build kini
+  dijalankan lewat `workflow_dispatch`, syarat itu tidak pernah lagi terpenuhi
+  dan Release diam-diam berstatus `skipped` walaupun versi sudah dinaikkan
+  (ketahuan saat rilis 6.5.0: Build `33781937189` hijau 12/12, Release
+  `33783260164` skipped tanpa satu pun log). Kini yang diperiksa adalah
+  Build-nya **sukses**, bukan apa yang memicunya.
+
 ## [6.5.0] - 2026-09-03
 
 > **Build 28.** Rilis ini mengumpulkan kerja sepanjang 3 Sep 2026 dari
