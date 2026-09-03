@@ -305,6 +305,15 @@ async fn main() -> Result<()> {
     println!();
     println!("  Ketik ID + Password ini di aplikasi XyDesk di HP.");
     println!("  Ganti password: xydesk-host --set-password <baru>");
+    // Penanda "password lama" (tanpa satu pun huruf kecil) = besar-kecil tidak
+    // dihitung oleh host. Berguna untuk HP/APK lama, tetapi memangkas separuh
+    // ruang tebakan, jadi diingatkan sekali di startup — bukan dipaksa ganti.
+    if xydesk_host::identity::is_legacy_shape(&password) {
+        println!(
+            "[xydesk-host] Catatan: password ini tidak punya huruf kecil, jadi host tidak membedakan besar/kecil saat memverifikasinya."
+        );
+        println!("[xydesk-host]        Untuk proteksi penuh, jalankan: xydesk-host --new-password");
+    }
 
     let stun = args.stun.clone();
     // Penjaga brute force pairing — lihat pairguard.rs untuk model ancamannya.

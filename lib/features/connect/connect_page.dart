@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/l10n_bridge.dart';
 import '../../core/store.dart';
+import '../../webrtc/signaling_client.dart';
 import '../../core/tokens.dart';
 import '../devices/device_model.dart';
 import '../devices/history_page.dart';
@@ -84,6 +87,32 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
   bool get _valid =>
       _id.text.replaceAll(' ', '').length == 9 && _pw.text.isNotEmpty;
 
+  /// Kunci platform, huruf kecil: 'android' | 'ios' | 'linux' | 'macos' |
+  /// 'windows'. UI shell dan host menormalkan besar-kecil, jadi kunci stabil
+  /// lebih penting daripada cantik.
+  static String _platformKey() {
+    if (Platform.isAndroid) return 'android';
+    if (Platform.isIOS) return 'ios';
+    if (Platform.isLinux) return 'linux';
+    if (Platform.isMacOS) return 'macos';
+    if (Platform.isWindows) return 'windows';
+    return 'unknown';
+  }
+
+  static const _platformLabel = <String, String>{
+    'android': 'HP Android',
+    'ios': 'iPhone / iPad',
+    'linux': 'PC Linux',
+    'macos': 'Mac',
+    'windows': 'PC Windows',
+  };
+
+  String _selfLabel() {
+    final akun = ref.read(authProvider).name?.trim();
+    if (akun != null && akun.isNotEmpty) return akun;
+    return _platformLabel[_platformKey()] ?? 'Perangkat XyDesk';
+  }
+
   List<Map<String, dynamic>> get _recents =>
       ref.read(storeProvider).getList(_recentsKey);
 
@@ -132,6 +161,13 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
       _error = null;
       _connecting = true;
     });
+
+    // Label untuk panel host. Nama akun dipakai kalau sudah login supaya yang
+    // terlihat di PC adalah "siapa", bukan sekadar "HP Android"; kalau belum,
+    // label sistem. Keduanya HANYA tampilan — host tidak memutuskan akses
+    // dari nilai ini (lihat SignalingClient.name).
+    SignalingClient.selfName = _selfLabel();
+    SignalingClient.selfPlatform = _platformKey();
 
     final id = _id.text.replaceAll(' ', '');
     final password = _pw.text;
@@ -276,6 +312,13 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
           child: TextField(
             controller: _pw,
             obscureText: _obscure,
+            // WAJIB sejak host membandingkan kata sandi dengan peka-kasus:
+            // kapitalisasi otomatis (default Flutter = sentences, huruf pertama
+            // besar) akan MENGUBAH kata sandi yang diketik dan mengunci
+            // pengguna dari PC-nya sendiri.
+            textCapitalization: TextCapitalization.none,
+            autocorrect: false,
+            enableSuggestions: false,
             textAlignVertical: TextAlignVertical.center,
             onSubmitted: (_) => _connect(),
             decoration: InputDecoration(

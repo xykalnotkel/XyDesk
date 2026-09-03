@@ -18,6 +18,22 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Ditambahkan
+- Host + Web + Client Flutter: **client sekarang lapor diri saat pairing**
+  (`name` + `platform` di pesan `pair`), jadi panel host menampilkan "siapa yang
+  menonton" dengan nama, bukan ID acak: Web mengirim "Chrome di Windows"
+  (ditebak dari userAgent, tanpa izin tambahan), APK mengirim nama akun bila
+  sudah login dan kalau belum pakai label sistem ("HP Android"). Host menyimpan
+  label di `PairedPeers` selama izin peer hidup dan membersihkannya bersama
+  `revoke`; nilainya hanya tampilan — tidak pernah dipakai untuk memutuskan
+  akses, dan `SignalMessage`/`SignalMessage.toJson` tetap mengirim field kosong
+  sebagai tidak-ada supaya client lama tidak berubah bentuk pesannya.
+- Shell desktop: **Pengaturan punya kendali yang selama ini cuma bisa diubah dari
+  HP** — monitor sumber (`display-select`), batas bitrate + perkiraan
+  MB-per-jam (`video-bitrate`), volume master PC (`audio-volume`), dan pembacaan
+  pipeline audio/mic. Semuanya sudah lama didukung control API dan sudah lama
+  dilaporkan `GET /status`; yang belum cuma kendelinya.
+- Web + Client Flutter + shell desktop: **verifikasi password kini peka-kasus**,
+  jadi semua kolom password mematikan auto-kapital & koreksi otomatis.
 - Host + shell desktop: **panel host menampilkan perangkat mana yang menonton.**
   Client boleh mengirim `name` + `platform` di pesan `pair`; host menyimpannya
   (`PairedPeers::set_label`, ikut terhapus saat `revoke`) dan menampilkannya di
@@ -61,6 +77,32 @@ Kebijakan rilis:
   tetap ada) — keduanya sudah live.
 
 ### Diubah
+- Host: **perbandingan password pairing jadi peka-kasus** (`identity::verify_password`).
+  Password hasil generasi kini memakai 54 simbol (huruf besar + kecil + angka,
+  tanpa `I`/`l`/`1` dan `O`/`o`/`0`) sehingga besar-kecil benar-benar dihitung:
+  ≈ 5,75 bit/karakter → ~57,5 bit untuk 10 karakter (sebelumnya 31 simbol,
+  ~49,5 bit). Perubahan yang HARUS dibaca sebelum rilis: HP/APK lama yang
+  mengkapital huruf pertama akan gagal pairing kalau password-nya campuran.
+  Karena itu ada jaring satu arah — kalau password yang tersimpan tidak punya
+  satu pun huruf kecil (`is_legacy_shape`), host tetap membandingkan tanpa
+  peduli kasus, dan host mencetak catatan di startup + shell desktop memberi
+  peringatan di kolom password kustom. Tidak ada mode "kembali seperti dulu":
+  kalau pengguna terkunci, pemulihannya fisik (`--new-password` / tombol
+  "Password acak baru") lalu pairing ulang.
+- Host: `ActionRequest` menerima `bitrateMbps` sebagai alias dari
+  `bitrate_mbps` (body `POST /action` memang snake_case sementara `GET /status`
+  camelCase — jebakan yang sudah sekali menjebak); `identity::set_password` kini
+  juga menolak password yang seluruhnya karakter kontrol dan menghitung
+  minimum per KARAKTER, bukan per byte.
+- Shell desktop: **merek di sidebar sekarang logo resmi**, bukan SVG "X"
+  gambar tangan. `desktop/public/logo.png` dan `desktop/electron/tray.ico`
+  (ikon tray + taskbar + `build.win.icon`) ditambahkan sebagai target
+  `tool/gen_logo.py`, jadi keduanya ikut diregenerasi bersama aset platform
+  lain; `docs/BRAND_ASSETS.md` mencatat barisnya. `themeColor` layout ikut
+  disamakan ke terang (#fafaf9) dan favicon jendela memakai aset yang sama.
+- Host: pesan penolakan pairing di APK diperjelas ("periksa huruf besar/kecil
+  dan spasi di ujung") tanpa membocorkan apa yang salah ke pihak yang mencoba
+  menebak — host tetap hanya menjawab diterima/ditolak.
 - Client Flutter: **unggah foto profil kini aktif.** Kodenya sudah selesai
   sejak 2 Sep, tetapi menunggu satu langkah yang hanya bisa dilakukan pemilik
   akun Cloudinary — membuat *unsigned upload preset*. Preset
@@ -174,6 +216,15 @@ Kebijakan rilis:
   tersebar di `matches!` dalam handler.
 
 ### Diperbaiki
+- Web: **kolom password pairing tidak lagi memaksa huruf besar.**
+  `autoCapitalize="characters"` di form Hubungkan membuat peramban ponsel
+  menampilkan (dan di sebagian peramban, mengirim) password dalam huruf besar semua —
+  dulu tidak terasa karena host mengabaikan kasus, sekarang langsung mengunci
+  pengguna. Diganti `none` + `autoCorrect=off` + `spellCheck=false`; pesan
+  "ID atau password salah" ikut menyebut besar-kecil.
+- Client Flutter: kolom kata sandi memakai `TextCapitalization.none` +
+  `autocorrect: false` + `enableSuggestions: false` (default Flutter adalah
+  `sentences`: huruf pertama dikapital diam-diam).
 - Pengujian: **flake lama di tes identitas ditutup.** Beberapa tes mengarahkan
   penyimpanan identitas lewat env `XYDESK_HOME` lalu menulis ke direktori
   sementara masing-masing, sementara `cargo test` menjalankan tes paralel dalam

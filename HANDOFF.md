@@ -26,7 +26,18 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Client Flutter
 
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Host sekarang menampilkan
+- [x] (dari Galih - XySpace Team, 2026-09-03) — **Dikerjakan Galih atas arahan
+  operator di chat (lintas area; aturan 1 sesi = 1 role dilonggarkan untuk ini):**
+  `pair` sekarang mengirim `name` + `platform`. Berkas:
+  `lib/webrtc/signaling_client.dart` (field `name`/`platform` di `SignalMessage`
+  + `SignalingClient.selfName`/`selfPlatform`) dan
+  `lib/features/connect/connect_page.dart` (label = nama akun bila sudah login,
+  kalau tidak label sistem dari `dart:io Platform`). Sisa tugas role Client
+  Flutter: `flutter analyze` + `flutter test` (toolchain Flutter TIDAK ada di
+  lingkungan Galih, jadi kode itu belum diperiksa kompilator sama sekali —
+  anggap belum terverifikasi) dan uji pairing nyata: host harus menampilkan
+  "Laras (HP · Android)" di chip topbar dan kartu Sesi aktif.
+
   perangkat mana yang menonton, kalau client mau lapor diri.** Tambahkan dua
   field opsional pada pesan `pair` yang dikirim ke signaling:
   `{"type":"pair","pin":"…","name":"Redmi Note 12","platform":"android"}`.
@@ -36,7 +47,20 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   keamanan yang bergantung padanya. `platform` dipakai untuk memilih label
   ("HP · Android", "PC · Windows", "Peramban web") — kirim huruf kecil bebas,
   host menormalkan. Kalau tidak dikirim, host menampilkan ID pairing saja.
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Kolom password pairing wajib
+
+- [x] (dari Galih - XySpace Team, 2026-09-03) — **PEMBERITAHUAN PENTING (status:
+  sudah dipasang di kode, butuh verifikasi alat).** `verify_password` host kini
+  PEKA-KASUS dan `PW_CHARS` campuran besar/kecil. Field kata sandi
+  `connect_page.dart` sudah `TextCapitalization.none` + `autocorrect: false` +
+  `enableSuggestions: false`. Yang perlu dicek role Client: (1) apakah ada field
+  password LAIN (hubungkan cepat, mode host, setelan) yang belum ikut; (2)
+  jangan pernah menambah formatter yang meng-upcase input pengguna; (3) pesan
+  galat penolakan pairing sudah menyebut besar/kecil — sesuaikan bila ada L10n.
+  Yang wajib ikut diberitakan (bahan artikel, aturan papan #3): HP dengan APK
+  LAMA + password baru yang campuran bisa DITOLAK pairingnya. Host melonggarkan
+  verifikasinya hanya untuk password yang tidak punya satu pun huruf kecil, dan
+  pemulihannya `--new-password` di PC lalu pairing ulang.
+
   mematikan auto-kapital.** Password hasil generasi host kini campuran besar-
   kecil (`host/src/identity.rs` `PW_CHARS`), dan shell desktop sudah
   `autoCapitalize="none"`. Di Flutter: pasang
@@ -187,6 +211,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
+
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Perubahan perilaku yang tidak
+  boleh lewat tanpa diberitahu:** password pairing host kini PEKA-KASUS (lihat
+  item Client Flutter & Web di file ini). Build APK/web/shell berikutnya berbeda
+  di mata pengguna: HP lama + password campuran = pairing ditolak. Tolong
+  masukkan ke bahan artikel rilis (aturan papan #3) beserta kalimat pemulihannya:
+  buka XyDesk di PC → "Password acak baru" atau `xydesk-host --new-password`,
+  lalu pairing ulang. Jangan ditulis sebagai "perbaikan keamanan" tanpa efek
+  samping — efeknya ada dan menimpa pengguna yang tidak menyentuh apa pun.
 
 - [x] (dari Danu - XySpace Team, 2026-09-03, sesi WEB-ADMIN) — **INFO deploy
   cepat Web (aturan #5):** mode founder kini kirim Google id_token
@@ -360,13 +393,17 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   saat berkomentar — tidak perlu lagi menempel `ADMIN_TOKEN` (fallback tetap
   ada). Build tsc+vite hijau, **live** via deploy cepat (versi `a3607022…`).
 
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — **Field password pairing web:
-  `autoCapitalize="none" autoCorrect="off" spellCheck={false}`**, dan kirim
-  `name` + `platform: "web"` di pesan `pair` supaya host bisa menampilkan
-  "Peramban web" alih-alih ID acak. Lihat item Client Flutter — kontrak host
-  (`host/src/main.rs` + `GET /status` `clientName`/`clientPlatform`) sudah
-  siap dan field-nya opsional. Verifikasi password masih tidak peka
-  besar-kecil, jadi jangan tambahkan transformasi kapitalisasi di input.
+- [x] (dari Galih - XySpace Team, 2026-09-03) — **Dikerjakan Galih atas arahan
+  operator di chat.** `web/src/App.tsx`: kolom password pairing tidak lagi
+  `autoCapitalize="characters"` (itu memaksa password jadi huruf besar semua di
+  peramban ponsel; sejak verifikasi peka-kasus itu langsung mengunci pengguna) —
+  sekarang `none` + `autoCorrect="off"` + `spellCheck={false}`, dan pesan
+  `rejected` menyebut besar/kecil. `web/src/rtc.ts`: `pair` mengirim `name`
+  (tebakkan browser + OS dari userAgent, mis. "Chrome di Windows") dan
+  `platform: "web"`; `RtcSession.selfName` boleh diisi nama akun.
+  Terverifikasi: `npm run build` (= `tsc -b && vite build`) hijau. Sisa untuk
+  role Web bila mau: isi `selfName` dari profil saat login, dan putuskan apakah
+  nama akun layak dikirim (host melihatnya begitu pairing diterima).
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur web, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 

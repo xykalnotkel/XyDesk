@@ -55,7 +55,23 @@ const DEMO_STATUS: StatusPayload = {
     startedAtMs: Date.now() - 60000,
     durationMs: 60000,
   },
-  video: { framesSent: 214400, fps: 60, nvenc: true },
+  video: { framesSent: 214400, fps: 60, nvenc: true, encoder: 'nvenc', latencyMs: 21.4, latencyMaxMs: 46 },
+  audio: {
+    captureAvailable: true,
+    pipeline: 'wasapi-loopback → opus 48kHz stereo',
+    micAvailable: true,
+    micPipeline: 'opus 48kHz mono → default render endpoint',
+    outputs: 2,
+    volume: 0.65,
+  },
+  displays: {
+    list: [
+      { index: 0, name: '\\\\.\\DISPLAY1', width: 2560, height: 1440 },
+      { index: 1, name: '\\\\.\\DISPLAY2', width: 1920, height: 1080 },
+    ],
+    wanted: 0,
+  },
+  targetBitrateBps: 8000000,
   lastError: null,
 };
 
@@ -132,6 +148,14 @@ const PLATFORM_LABEL: Record<string, string> = {
   macos: 'Mac',
   web: 'Peramban web',
 };
+
+/// Sama seperti `identity::is_legacy_shape` di host: tanpa satu pun huruf
+/// kecil, host melonggarkan verifikasinya jadi tidak peka-kasus. UI memperingatkan
+/// ini supaya pengguna tahu apa yang ia korbankan.
+function isLegacyShape(pw: string): boolean {
+  const t = pw.trim();
+  return t.length > 0 && !/[a-z]/.test(t);
+}
 
 function platformLabel(platform?: string | null): string | null {
   if (!platform) return null;
@@ -239,18 +263,26 @@ export default function Page() {
     else if (info && info.platform !== 'win32') root.classList.remove(cls);
   }, [info]);
 
-  const runAction = async (action: string, password?: string) => {
+  // `extra` sengaja longgar: control API menerima bidang berbeda per aksi
+  // (`password`, `index`, `volume`, `bitrateMbps`) dan proses utama meneruskan
+  // JSON-nya apa adanya, jadi shell tidak perlu tahu bentuk tiap aksi.
+  const runAction = async (action: string, extra: Record<string, unknown> = {}) => {
     if (DEMO) {
       flashMsg('Mode pratinjau — aksi hanya jalan di aplikasi desktop.');
       return;
     }
     try {
-      const res = await window.xydesk!.runAction({ action, password });
+      const res = await window.xydesk!.runAction({ action, ...extra });
       if (res.ok) {
         if (action === 'new-password') flashMsg('Password baru dibuat.');
         if (action === 'set-password') flashMsg('Password disimpan.');
         if (action === 'stop-session')
           flashMsg(res.stopped ? 'Sesi diakhiri. Peer wajib pairing ulang.' : 'Tidak ada sesi aktif.');
+        if (action === 'display-select')
+          flashMsg(`Monitor sumber diganti ke indeks ${extra.index}.`);
+        if (action === 'video-bitrate')
+          flashMsg(`Batas bitrate ${extra.bitrateMbps} Mbps — berlaku pada sesi berikutnya.`);
+        if (action === 'audio-volume') flashMsg('Volume PC diubah.');
         setStatus(await window.xydesk!.getStatus());
       } else {
         flashMsg(res.error || 'Aksi gagal.');
@@ -277,23 +309,12 @@ export default function Page() {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
-            <defs>
-              <linearGradient id="xg" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor="#7654F6" />
-                <stop offset="1" stopColor="#9A7BFF" />
-              </linearGradient>
-            </defs>
-            <rect x="3" y="3" width="26" height="26" rx="7" fill="url(#xg)" opacity="0.16" />
-            <path
-              d="M9.5 10.5 L16 22.5 L22.5 10.5 M16 22.5 L16 14.5"
-              stroke="url(#xg)"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-          </svg>
+          {/* Logo resmi, bukan gambar tangan. `desktop/public/logo.png`
+              dihasilkan `tool/gen_logo.py` dari `design/logo-asli.png` seperti
+              semua aset identitas lain (lihat docs/BRAND_ASSETS.md) — dulu di
+              sini ada SVG "X" bikinan sendiri sehingga shell memajang logo yang
+              berbeda dari web/APK. Berkasnya ikut dibundel ke `out/`. */}
+          <img className="mark" src="/logo.png" width={32} height={32} alt="Logo XyDesk" />
           <div>
             <h1>XyDesk</h1>
             <span className="sub">Host Desktop</span>
@@ -375,7 +396,13 @@ export default function Page() {
           {page === 'news' && <NewsPage />}
           {page === 'profile' && <ProfilePage status={st} info={info} />}
           {page === 'settings' && (
-            <SettingsPage status={st} info={info} logs={logs} flashMsg={flashMsg} />
+            <SettingsPage
+              status={st}
+              info={info}
+              logs={logs}
+              flashMsg={flashMsg}
+              onAction={runAction}
+            />
           )}
         </div>
       </main>
@@ -437,7 +464,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
               menampilkannya, tidak memakainya untuk memutuskan akses. Kalau kosong, client-nya
               versi lama yang belum mengirim label.
             </p>
-            <div className="stat-row">
+            <div className="stat-row four">
               <div className="stat">
                 <span className="k">FPS kirim</span>
                 <span className="v">{v ? Math.round(v.fps) : '—'}</span>
@@ -448,7 +475,19 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
               </div>
               <div className="stat">
                 <span className="k">Encoder</span>
-                <span className="v">{v?.nvenc ? 'NVENC' : 'Software'}</span>
+                <span className="v">{v?.encoder ? v.encoder.toUpperCase() : v?.nvenc ? 'NVENC' : 'Software'}</span>
+              </div>
+              {/* Latensi pipeline host (capture -> tulis RTP). Angka KECIL di
+                  sini bukan berarti nyaman: bolak-balik jala belum termasuk. */}
+              <div className="stat">
+                <span className="k">Latensi host</span>
+                <span className="v">{v?.latencyMs != null ? `${v.latencyMs.toFixed(1)} ms` : '—'}</span>
+              </div>
+              <div className="stat">
+                <span className="k">Monitor</span>
+                <span className="v">
+                  {status?.displays?.list?.length ? `#${(status.displays.wanted ?? 0) + 1}` : '—'}
+                </span>
               </div>
             </div>
             <button className="danger" onClick={onStop}>
@@ -475,7 +514,7 @@ function ConnectPage({
 }: {
   status: StatusPayload | null;
   onCopy: (text: string, label: string) => void;
-  onAction: (action: string, password?: string) => void;
+  onAction: (action: string, extra?: Record<string, unknown>) => void;
 }) {
   const [showPw, setShowPw] = useState(false);
   const [customPw, setCustomPw] = useState('');
@@ -532,20 +571,31 @@ function ConnectPage({
             spellCheck={false}
             autoComplete="off"
           />
-          <button className="primary" disabled={customPw.length < 6} onClick={() => onAction('set-password', customPw)}>
+          <button
+            className="primary"
+            disabled={customPw.trim().length < 6}
+            onClick={() => onAction('set-password', { password: customPw })}
+          >
             Simpan
           </button>
         </div>
         <p className="hint">
-          Boleh huruf besar, kecil, angka, bahkan spasi — yang penting minimal 6 karakter.
-          Yang tidak boleh hanya karakter kontrol (Enter/Tab), karena tidak bisa diketik dari
-          papan ketik ponsel. Password acak baru memakai campuran huruf besar-kecil tanpa
-          karakter yang mudah tertukar (tanpa I/l/1 dan O/o/0).
+          Boleh huruf besar, kecil, angka, bahkan spasi di tengah — minimal 6 karakter. Yang
+          ditolak hanya karakter kontrol (Enter/Tab): tidak bisa diketik dari papan ketik ponsel.
           <br />
-          Saat mengetik di HP, besar-kecil TIDAK membedakan: <code>KopiPagi2026</code> dan{' '}
-          <code>kopipagi2026</code> sama-sama diterima. Ini disengaja supaya papan ketik ponsel
-          yang suka mengkapital huruf pertama tidak mengunci pemilik PC-nya sendiri.
+          <strong>Besar-kecil dihitung.</strong> Sejak host memverifikasi password secara
+          peka-kasus, <code>KopiPagi2026</code> dan <code>kopipagi2026</code> adalah dua password
+          berbeda. Ketik ulang, jangan salin dari catatan yang sudah terkapitalisasi, dan pastikan
+          papan ketik HP tidak mengkapital huruf pertama sendiri (kolom ini sudah
+          autoCapitalize=none; aplikasi HP juga sudah diperbaiki).
         </p>
+        {customPw.trim().length >= 6 && isLegacyShape(customPw) && (
+          <p className="danger-text">
+            Password ini tidak punya satu pun huruf kecil, jadi host akan memperlakukannya sebagai
+            password lama: besar-kecil TIDAK dihitung dan ruang tebakannya turun dari ~5,75 ke
+            ~4,95 bit per karakter. Tambahkan huruf kecil untuk proteksi penuh.
+          </p>
+        )}
         <p className="hint">
           Password pendek hanya aman karena engine membatasi laju percobaan pairing (pairguard).
           Mengganti password tidak memutus sesi yang sedang berjalan.
@@ -915,14 +965,28 @@ function SettingsPage({
   info,
   logs,
   flashMsg,
+  onAction,
 }: {
   status: StatusPayload | null;
   info: InfoPayload | null;
   logs: LogEntry[];
   flashMsg: (m: string) => void;
+  onAction: (action: string, extra?: Record<string, unknown>) => void;
 }) {
   const [autostart, setAutostart] = useState(false);
   const [busy, setBusy] = useState(false);
+  const displays = status?.displays;
+  const daftarMonitor = displays?.list ?? [];
+  const bitrateMbps = status?.targetBitrateBps ? Math.round(status.targetBitrateBps / 1_000_000) : null;
+  const [bps, setBps] = useState<string>(bitrateMbps ? String(bitrateMbps) : '8');
+  const volume = status?.audio?.volume ?? null;
+  const [vol, setVol] = useState<number>(volume == null ? 60 : Math.round(volume * 100));
+  useEffect(() => {
+    // Jangan timpa angka yang sedang digeser pengguna dengan nilai hasil polling.
+    if (volume != null && Math.round(volume * 100) !== volRef.current) setVol(Math.round(volume * 100));
+  }, [volume]);
+  const volRef = useRef(vol);
+  volRef.current = vol;
   const logScroll = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1009,6 +1073,119 @@ function SettingsPage({
         <p className="hint">
           Engine dimulai ulang dengan token signaling baru. Sesi yang sedang berjalan akan putus.
         </p>
+      </section>
+
+      {/* Dua kartu berikut menutup lubang yang cukup aneh: engine SUDAH
+          mendukung `display-select`, `video-bitrate`, dan `audio-volume` lewat
+          control API (dan `/status` bahkan melaporkan nilainya), tetapi shell
+          tidak pernah punya kendalinya — pemilik PC harus pindah monitor atau
+          menurunkan bitrate dari HP-nya. */}
+      <section className="card">
+        <h3>Tampilan &amp; kualitas</h3>
+        {daftarMonitor.length > 1 ? (
+          <>
+            <span className="field-label">Monitor sumber</span>
+            <div className="chip-row">
+              {daftarMonitor.map((d) => (
+                <button
+                  key={d.index}
+                  className={`chip select${displays?.wanted === d.index ? ' on' : ''}`}
+                  onClick={() => onAction('display-select', { index: d.index })}
+                  title={d.name}
+                >
+                  {d.index === 0 ? 'Utama' : `#${d.index + 1}`} · {d.width}×{d.height}
+                </button>
+              ))}
+            </div>
+            <p className="hint">
+              Dipakai untuk sesi berikutnya. Client juga bisa memindah monitor lewat daftar
+              display di layarnya — nilai di atas hanya mengikuti yang terakhir dipilih.
+            </p>
+          </>
+        ) : (
+          <p className="dim">
+            {daftarMonitor.length === 1
+              ? 'Satu monitor terdeteksi — tidak ada yang perlu dipilih.'
+              : 'Daftar monitor belum tersedia (engine belum siap, atau platform ini tidak mendukung enumerasi monitor).'}
+          </p>
+        )}
+
+        <span className="field-label">Batas bitrate video</span>
+        <div className="chip-row">
+          {[4, 8, 16, 24].map((m) => (
+            <button
+              key={m}
+              className={`chip select${bitrateMbps === m ? ' on' : ''}`}
+              onClick={() => {
+                setBps(String(m));
+                onAction('video-bitrate', { bitrateMbps: m });
+              }}
+            >
+              {m} Mbps
+            </button>
+          ))}
+          <span className="chip">
+            <input
+              className="mini"
+              type="number"
+              min={1}
+              max={60}
+              value={bps}
+              onChange={(e) => setBps(e.target.value)}
+              aria-label="Bitrate kustom dalam Mbps"
+            />
+            <button
+              className="ghost tiny"
+              disabled={!/^[1-9][0-9]?$/.test(bps.trim())}
+              onClick={() => onAction('video-bitrate', { bitrateMbps: Number(bps.trim()) })}
+            >
+              Pakai
+            </button>
+          </span>
+        </div>
+        <p className="hint">
+          Sekarang {bitrateMbps != null ? `${bitrateMbps} Mbps` : '—'} ≈{' '}
+          {bitrateMbps != null ? ((bitrateMbps * 450) / 1000).toFixed(1) : '—'} MB per jam sesi.
+          Turunkan kalau terhubung lewat tethering HP; naikkan kalau layar diam tapi tetap patah-patah.
+          Nilai lama tetap dipakai sampai sesi berikutnya.
+        </p>
+      </section>
+
+      <section className="card">
+        <h3>Audio</h3>
+        {status?.audio ? (
+          <>
+            <div className="kv-grid">
+              <div className="kv">
+                <span>Suara PC ke HP</span>
+                <strong>{status.audio.captureAvailable ? status.audio.pipeline : 'Tidak tersedia'}</strong>
+              </div>
+              <div className="kv">
+                <span>Mic HP ke PC</span>
+                <strong>{status.audio.micAvailable ? status.audio.micPipeline : 'Tidak ada mic'}</strong>
+              </div>
+            </div>
+            <span className="field-label">Volume master PC ({vol}%)</span>
+            <input
+              className="slider"
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={vol}
+              onChange={(e) => setVol(Number(e.target.value))}
+              onPointerUp={() => onAction('audio-volume', { volume: vol / 100 })}
+              onKeyUp={() => onAction('audio-volume', { volume: vol / 100 })}
+              disabled={status.audio.outputs === 0}
+            />
+            <p className="hint">
+              Slider ini mengatur volume MASTER perangkat output default PC — jadi yang didengar
+              pengguna di HP ikut berubah. {status.audio.outputs} perangkat output terdeteksi.
+            </p>
+          </>
+        ) : (
+          <p className="dim">Status audio belum terbaca dari engine.</p>
+        )}
       </section>
 
       <section className="card">

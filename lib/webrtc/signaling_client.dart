@@ -16,6 +16,8 @@ class SignalMessage {
     this.error,
     this.reason,
     this.devices,
+    this.name,
+    this.platform,
   });
 
   final String type;
@@ -29,6 +31,18 @@ class SignalMessage {
   final String? reason;
   final List<Map<String, dynamic>>? devices;
 
+  /// Label diri untuk panel host: `name` = nama perangkat/akun, `platform`
+  /// = 'android' | 'ios' | 'linux' | 'macos' | 'windows' | 'web'.
+  ///
+  /// Hanya dikirim pada pesan `pair`. Host cuma Menampilkannya (chip "siapa
+  /// yang menonton") dan tidak pernah menjadikannya dasar keputusan akses, jadi
+  /// nilai kosong/tidak akurat tidak berbahaya. Hub Cloudflare meneruskan
+  /// field tambahan apa adanya; hub Go dev (`signaling/protocol.go`) memakai
+  /// struct bertipe dan akan MEMBUANG keduanya sampai role Backend ikut
+  /// menambahkannya (sudah dicatat di HANDOFF).
+  final String? name;
+  final String? platform;
+
   Map<String, dynamic> toJson() => {
     'type': type,
     if (to != null) 'to': to,
@@ -38,6 +52,8 @@ class SignalMessage {
     if (sdp != null) 'sdp': sdp,
     if (candidate != null) 'candidate': candidate,
     if (reason != null) 'reason': reason,
+    if (name != null) 'name': name,
+    if (platform != null) 'platform': platform,
   };
 
   factory SignalMessage.fromJson(Map<String, dynamic> j) => SignalMessage(
@@ -46,6 +62,8 @@ class SignalMessage {
     from: j['from'] as String?,
     pin: j['pin'] as String?,
     accepted: j['accepted'] as bool?,
+    name: j['name'] as String?,
+    platform: j['platform'] as String?,
     sdp: j['sdp'] as Map<String, dynamic>?,
     candidate: j['candidate'] as Map<String, dynamic>?,
     error: j['error'] as String?,
@@ -111,8 +129,21 @@ class SignalingClient {
   /// "123 456 789" / "123-456-789" → "123456789" (cocok dgn ID host).
   static String normalizeId(String id) => id.replaceAll(RegExp(r'[\s\-]'), '');
 
-  void sendPair(String hostId, String pin) =>
-      _send(SignalMessage(type: 'pair', to: normalizeId(hostId), pin: pin));
+  /// Label diri untuk `pair` — diisi lapisan UI (halaman Connect) sebelum
+  /// connect. Dibiarkan bisa `null` supaya layanan signaling tetap bisa
+  /// dipakai tanpa tahu-menahu soal identitas: host menampilkan ID saja.
+  static String? selfName;
+  static String? selfPlatform;
+
+  void sendPair(String hostId, String pin) => _send(
+    SignalMessage(
+      type: 'pair',
+      to: normalizeId(hostId),
+      pin: pin,
+      name: selfName,
+      platform: selfPlatform,
+    ),
+  );
 
   void sendOffer(String hostId, Map<String, dynamic> sdp) =>
       _send(SignalMessage(type: 'offer', to: normalizeId(hostId), sdp: sdp));

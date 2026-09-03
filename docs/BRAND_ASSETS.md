@@ -29,6 +29,7 @@ generated from it by `python3 tool/gen_logo.py`:
 | Android launcher | `mipmap-*/ic_launcher.png` (legacy, logo on dark tile) + `ic_launcher_foreground.png` (adaptive, 108 dp) | five densities |
 | Android splash | `splash_logo_tight.png` (104 dp) + `splash_logo_android12.png` (inside the 2/3 masked circle) | |
 | Windows | `packaging/windows/xydesk.ico` | 16–256 px |
+| Desktop shell | `desktop/public/logo.png` (merek di sidebar + favicon), `desktop/electron/tray.ico` (tray, taskbar, dan `build.win.icon`) | jangan digambar ulang di JSX |
 
 The Android splash mark fits Android 12's masked icon safe zone and matches
 Flutter's centered first frame before the wordmark reveal.

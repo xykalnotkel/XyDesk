@@ -2251,7 +2251,8 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     pairing: 'Menghubungi host…',
     negotiating: 'Menyiapkan koneksi langsung…',
     connected: 'Tersambung',
-    rejected: 'ID atau password salah. Periksa keduanya lalu coba lagi.',
+    rejected:
+      'ID atau password salah. Periksa keduanya lalu coba lagi — huruf besar dan kecil ikut dihitung.',
     'peer-offline':
       'ID tidak ditemukan. Pastikan ID benar dan XyDesk Host sedang berjalan di PC.',
     'host-busy':
@@ -2330,14 +2331,19 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           }} />
           <span className="field-label">Password pairing</span>
           <div className="pw-field">
+            {/* autoCapitalize "none", bukan "characters" seperti dulu: host
+                membandingkan password secara peka-kasus, jadi peramban mobile
+                yang mengkapital huruf pertama akan MENGUBAH password yang
+                diketik dan mengunci penggunanya sendiri. */}
             <input
               ref={pinRef}
               type={showPw ? 'text' : 'password'}
               placeholder="Password pairing"
               value={pin}
-              autoCapitalize="characters"
+              autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
+              autoComplete="off"
               onChange={(e) => setPin(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && canConnect && connect()}
             />

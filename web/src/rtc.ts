@@ -27,6 +27,41 @@ interface SignalMessage {
   };
   error?: string;
   reason?: string;
+  /** Label diri untuk panel host (pesan `pair`): browser + OS, mis.
+   *  "Chrome di Windows". Host hanya MENAMPILKANNYA — tidak pernah
+   *  memutuskan akses dari nilai ini. */
+  name?: string;
+  /** Selalu "web" untuk peramban; host memakainya untuk memilih label. */
+  platform?: string;
+}
+
+/// Tebak "browser di OS" dari userAgent — tanpa izin, tanpa dependensi baru.
+/// Tidak akurat itu boleh: nilainya cuma label di layar host.
+function browserLabel(): string {
+  const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent;
+  const browser = /Edg\//.test(ua)
+    ? 'Edge'
+    : /OPR\//.test(ua)
+      ? 'Opera'
+      : /Firefox\//.test(ua)
+        ? 'Firefox'
+        : /Chrome\//.test(ua)
+          ? 'Chrome'
+          : /Safari\//.test(ua)
+            ? 'Safari'
+            : 'Peramban web';
+  const os = /Windows/.test(ua)
+    ? 'Windows'
+    : /Android/.test(ua)
+      ? 'Android'
+      : /iPhone|iPad|iPod/.test(ua)
+        ? 'iOS'
+        : /Mac OS X/.test(ua)
+          ? 'macOS'
+          : /Linux/.test(ua)
+            ? 'Linux'
+            : '';
+  return os ? `${browser} di ${os}` : browser;
 }
 
 export const InputCodec = {
@@ -177,6 +212,9 @@ export class RtcSession {
 
   meta: HostMeta | null = null;
   micEnabled = false;
+  /// Nama yang dilaporkan ke host pada pesan `pair`. Kalau kosong, label
+  /// browser dipakai. Diisi dari App.tsx bila ada nama akun yang lebih berguna.
+  selfName?: string;
 
   // Penanding delta untuk readStats(): byte & frame terakhir + waktu baca.
   private lastBytes = -1;
@@ -196,7 +234,13 @@ export class RtcSession {
 
     ws.onopen = () => {
       this.send({ type: 'hello', to: this.deviceId, reason: 'client' });
-      this.send({ type: 'pair', to: this.hostId, pin });
+      this.send({
+        type: 'pair',
+        to: this.hostId,
+        pin,
+        name: (this.selfName?.trim() || browserLabel()).slice(0, 48),
+        platform: 'web',
+      });
     };
     ws.onclose = () => {
       if (!this.stopped) this.onPhase('ended');

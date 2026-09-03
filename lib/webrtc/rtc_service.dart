@@ -266,6 +266,12 @@ class RtcService {
 
     sig.onPairResponse = (accepted, from) async {
       if (!accepted) {
+        // Host sengaja TIDAK mengirim sebab penolakan (biar respons pairing
+        // tidak jadi oracle password). Ini dugaan paling umum di sisi kita:
+        // sejak 3 Sep 2026 host membandingkan password PEKA-KASUS, sementara
+        // papan ketik ponsel hobi mengkapital huruf pertama.
+        _lastError =
+            'Password ditolak host. Periksa huruf besar/kecil dan spasi di ujung \u2014 ketik ulang, jangan salin dari catatan yang sudah terkapitalisasi.';
         _emit(RtcPhase.rejected);
         return;
       }

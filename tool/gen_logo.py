@@ -267,6 +267,13 @@ OUTPUTS = [
     ("android/app/src/main/res/drawable-nodpi/splash_logo_tight.png", 640, "splash"),
     ("android/app/src/main/res/drawable-nodpi/splash_logo_android12.png", 640, "splash12"),
     ("packaging/windows/xydesk.ico", 256, "ico"),
+    # Shell desktop (Electron + Next.js). `tray.ico` dipakai TIGA tempat sekaligus
+    # di desktop/package.json (ikon jendela, tray, dan build Windows), jadi dia
+    # harus ikut di sini — bukan file hasil ekspor manual. `logo.png` untuk merek
+    # di sidebar: dulu `page.tsx` menggambar "X" ungu inline (SVG bikinan
+    # sendiri) sehingga shell memajang logo yang berbeda dari platform lain.
+    ("desktop/public/logo.png", 256, "mark"),
+    ("desktop/electron/tray.ico", 256, "ico"),
 ]
 
 # Ukuran yang ikut dibundel dalam satu berkas .ico.

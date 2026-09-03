@@ -19,6 +19,34 @@ declare global {
     framesSent: number;
     fps: number;
     nvenc: boolean;
+    /** 'nvenc' | 'openh264' | 'test-pattern' — label encoder aktif. */
+    encoder?: string;
+    /** Latensi pipeline host (capture -> tulis RTP), rata-rata EMA dalam ms. */
+    latencyMs?: number;
+    latencyMaxMs?: number;
+  }
+
+  interface AudioPayload {
+    captureAvailable: boolean;
+    pipeline: string;
+    micAvailable: boolean;
+    micPipeline: string;
+    outputs: number;
+    /** Volume master perangkat output default, 0.0-1.0 (bisa null). */
+    volume: number | null;
+  }
+
+  interface DisplayPayload {
+    index: number;
+    name: string;
+    width: number;
+    height: number;
+  }
+
+  interface DisplaysPayload {
+    list: DisplayPayload[];
+    /** Indeks monitor yang dipakai sesi berikutnya. */
+    wanted: number;
   }
 
   interface StatusPayload {
@@ -31,6 +59,9 @@ declare global {
     uptimeMs?: number;
     session: SessionPayload | null;
     video?: VideoPayload;
+    audio?: AudioPayload;
+    displays?: DisplaysPayload;
+    targetBitrateBps?: number;
     lastError?: string | null;
   }
 
@@ -56,7 +87,16 @@ declare global {
   interface Window {
     xydesk?: {
       getStatus(): Promise<StatusPayload>;
-      runAction(req: { action: string; password?: string }): Promise<ActionPayload>;
+      runAction(req: {
+        action: string;
+        password?: string;
+        /** aksi `display-select` */
+        index?: number;
+        /** aksi `audio-volume`, 0.0-1.0 */
+        volume?: number;
+        /** aksi `video-bitrate`, Mbps */
+        bitrateMbps?: number;
+      }): Promise<ActionPayload>;
       getLogs(): Promise<LogEntry[]>;
       getInfo(): Promise<InfoPayload>;
       getAutostart(): Promise<boolean>;

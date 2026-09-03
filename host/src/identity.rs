@@ -27,9 +27,9 @@ pub const ID_LEN: usize = 9;
 pub const PW_MIN_LEN: usize = 6;
 /// Panjang password yang DIHASILKAN otomatis.
 ///
-/// Dinaikkan dari 8 ke 10. Dengan charset 32 simbol, tiap karakter menyumbang
-/// 5 bit, jadi ini menaikkan entropi dari 40 bit ke 50 bit — ruang pencarian
-/// 1024 kali lebih besar. Biayanya cuma dua karakter tambahan yang diketik
+/// Dinaikkan dari 8 ke 10. Dengan charset [`PW_CHARS`] (54 simbol, besar-kecil
+/// dihitung) tiap karakter menyumbang ≈ 5,75 bit: 8 karakter lama ≈ 46 bit,
+/// 10 karakter ≈ 57,5 bit. Biayanya cuma dua karakter tambahan yang diketik
 /// sekali saat pairing.
 pub const PW_GEN_LEN: usize = 10;
 
@@ -40,17 +40,19 @@ pub const PW_GEN_LEN: usize = 10;
 /// ponsel. Dulu charset-nya hanya huruf besar; di layar password itu terlihat
 /// seperti teriakan dan tetap saja `L` mirip `I` di font mono.
 ///
-/// Huruf kecil TIDAK menambah entropi di sini: [`verify_password`] sengaja
-/// tidak peka besar-kecil, jadi `a` dan `A` menempati ruang tebakan yang sama.
-/// Yang bertambah hanyalah keterbacaan dan kenyamanan mengetik. Ruang tebakan
-/// efektifnya 31 simbol per karakter (23 huruf + 8 angka) ≈ 4,95 bit, sehingga
-/// password [`PW_GEN_LEN`] = 10 karakter ≈ 49,5 bit.
+/// Besar-kecil dihitung: [`verify_password`] peka-kasus untuk password campuran,
+/// jadi ruang tebakannya penuh 54 simbol (23 besar + 23 kecil + 8 angka) ≈ 5,75
+/// bit per karakter → [`PW_GEN_LEN`] = 10 karakter ≈ 57,5 bit. Bandingkan
+/// dengan keadaan lama (hanya huruf besar, 31 simbol ≈ 4,95 bit, ~49,5 bit).
 ///
-/// Kalau besar-kecil mau dijadikan ruang tebakan (≈59 simbol, 5,9 bit per
-/// karakter), `verify_password` harus jadi peka-kasus — dan SEBELUM itu
-/// terjadi, semua tempat mengetik password (APK, web, shell) wajib
-/// menonaktifkan auto-kapital & koreksi otomatis, kalau tidak pengguna
-/// terkunci dari PC-nya sendiri.
+/// Password yang diketik pengguna TIDAK dibatasi ke charset ini — `set_password`
+/// menerima apa saja (min. [`PW_MIN_LEN`] karakter, tanpa karakter kontrol).
+/// Aturan charset ini hanya untuk yang kita generasi.
+///
+/// Kalau pengguna memilih password yang tidak punya huruf kecil sama sekali,
+/// host memperlakukannya sebagai password lama: besar-kecil tidak dihitung
+/// (lihat [`verify_password`]). Itu disengaja supaya HP/APK lama tidak terkunci
+/// — dan itu berarti password semacam itu hanya punya ~4,95 bit per karakter.
 const PW_CHARS: &[u8] = b"ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
 
 /// Muat ID perangkat yang sudah ada, atau buat + simpan yang baru.
@@ -137,33 +139,88 @@ pub fn generate_password() -> String {
 /// Password kustom disimpan apa adanya, jadi yang tampil di layar host persis
 /// yang diketik pengguna; yang longgar hanya pembandingnya. Konsekuensinya
 /// perlu diketahui: memilih `Rahasia123` dan `rahasia123` menghasilkan efek
-/// yang sama.
+/// Bandingkan password yang diketik client dengan password host.
+///
+/// PEKA-KASUS sejak 3 Sep 2026: `aV7k…` dan `AV7k…` adalah dua password yang
+/// berbeda. Konsekuensi yang harus diterima: semua tempat mengetik password
+/// (APK, web, shell desktop) WAJIB menonaktifkan auto-kapital & koreksi
+/// otomatis — kalau tidak, huruf pertama yang dikapital otomatis membuat
+/// pairing gagal. Sudah dilakukan di `lib/features/connect/connect_page.dart`,
+/// `web/src/App.tsx`, dan halaman Hubungkan shell desktop.
+///
+/// Untuk password yang tersimpan seluruhnya huruf besar tanpa satu pun huruf
+/// kecil ([`is_legacy_shape`] — warisan generator lama atau pilihan pengguna),
+/// perbandingan tetap tidak peka-kasus. Sengaja, supaya HP/APK lama yang
+/// mengkapital huruf pertama (atau yang lama: memaksa semua huruf besar) tidak
+/// terkunci oleh host yang baru diperbarui. Efek sampingnya harus disadari:
+/// password semacam itu hanya punya ~4,95 bit per karakter dan diterima juga
+/// dalam bentuk huruf kecil. Pilih password campuran untuk manfaat penuh.
+///
+/// Spasi di ujung dibuang di kedua sisi (hasil salin-tempel), perbandingan
+/// memakai hash SHA-256 + akumulasi XOR supaya konstan-waktu terhadap
+/// panjangnya.
 pub fn verify_password(input: &str, actual: &str) -> bool {
-    let a = Sha256::digest(input.trim().to_ascii_uppercase().as_bytes());
-    let b = Sha256::digest(actual.trim().to_ascii_uppercase().as_bytes());
+    let given = input.trim();
+    let stored = actual.trim();
+    if equal_digests(given.as_bytes(), stored.as_bytes()) {
+        return true;
+    }
+    // Jaring kompatibilitas, satu arah.
+    //
+    // Password LAMA (generator lama hanya huruf besar) dan password kustom yang
+    // seluruhnya huruf besar tetap diterima tanpa peduli besar-kecil. Itu
+    // penting karena papan ketik ponsel suka mengkapital huruf pertama dan
+    // client lama bahkan ada yang memaksa semua huruf jadi besar: tanpa jaring
+    // ini, memperbarui host saja bisa mengunci pemilik PC dari PC-nya sendiri.
+    //
+    // Password CAMPURAN (hasil generator baru) TIDAK pernah dilonggarkan —
+    // begitu ada satu huruf kecil di nilai yang tersimpan, besar-kecil dihitung.
+    if is_legacy_shape(stored) {
+        return equal_digests(
+            given.to_ascii_uppercase().as_bytes(),
+            stored.to_ascii_uppercase().as_bytes(),
+        );
+    }
+    false
+}
+
+/// `SHA-256(a) == SHA-256(b)` dengan perbandingan konstan-waktu.
+///
+/// Hash dipakai supaya panjang input tidak terbaca dari waktu eksekusi; XOR
+/// accumulate dipakai supaya hasil != tidak keluar lebih awal di byte pertama.
+fn equal_digests(a: &[u8], b: &[u8]) -> bool {
+    let x = Sha256::digest(a);
+    let y = Sha256::digest(b);
     let mut diff = 0u8;
-    for (x, y) in a.iter().zip(b.iter()) {
-        diff |= x ^ y;
+    for (p, q) in x.iter().zip(y.iter()) {
+        diff |= p ^ q;
     }
     diff == 0
 }
 
-/// Set password kustom (persisten). Gagal bila < 6 karakter.
-/// Simpan password pairing kustom.
+/// Bentuk password "lama": tidak ada satu pun huruf kecil. Host memakai ini
+/// untuk memutuskan apakah verifikasinya dilonggarkan jadi tidak peka-kasus
+/// (lihat [`verify_password`]).
+pub fn is_legacy_shape(pw: &str) -> bool {
+    let pw = pw.trim();
+    !pw.is_empty() && pw.chars().all(|c| !c.is_ascii_lowercase())
+}
+
+/// Simpan password pairing kustom (persisten).
 ///
 /// Semua aturan password kustom hidup DI SINI — bukan di UI shell atau di
 /// control API — supaya CLI `--set-password`, `POST /action` dari shell
 /// desktop, dan jalur apa pun di masa depan menolak hal yang sama:
 ///
 /// * spasi di ujung dibuang (yang tersimpan = yang ditampilkan ke pengguna);
-/// * minimal [`PW_MIN_LEN`] KARAKTER (dihitung per karakter, bukan byte —
-///   `password̂` bukan 12 karakter buat pengguna);
+/// * minimal [`PW_MIN_LEN`] KARAKTER — dihitung per karakter, bukan per byte,
+///   jadi password beraksen tidak dihitung dua kali;
 /// * tanpa karakter kontrol: Enter/Tab/ESC tidak bisa diketik dari papan ketik
 ///   ponsel, jadi menyimpannya berarti mengunci pemilik PC dari PC-nya sendiri.
 ///
-/// Besar-kecil sengaja TIDAK dinormalisasi saat menyimpan: layar menampilkan
-/// persis yang dipilih pengguna. Yang longgar hanya pembandingnya
-/// ([`verify_password`]).
+/// Besar-kecil TIDAK dinormalisasi saat menyimpan: layar menampilkan persis yang
+/// dipilih pengguna, dan [`verify_password`] membandingkannya apa adanya
+/// (kecuali untuk password yang seluruhnya huruf besar — lihat di sana).
 pub fn set_password(pw: &str) -> std::io::Result<()> {
     let pw = pw.trim();
     if pw.chars().count() < PW_MIN_LEN {
@@ -290,18 +347,60 @@ mod tests {
     }
 
     #[test]
-    fn perbandingan_tidak_peka_kasus_tapi_peka_isi() {
-        let host = generate_password();
-        assert!(verify_password(&host, &host));
-        assert!(verify_password(&host.to_lowercase(), &host));
-        assert!(verify_password(&host.to_uppercase(), &host));
-        // Spasi di ujung (hasil salin-tempel) tidak menggagalkan pairing.
-        assert!(verify_password(&format!("  {host} "), &host));
-        assert!(!verify_password(&format!("{host}x"), &host));
-        let beda = generate_password();
-        if beda.to_uppercase() != host.to_uppercase() {
-            assert!(!verify_password(&beda, &host));
+    fn perbandingan_peka_kasus_untuk_password_campuran() {
+        // Yang berubah sejak 3 Sep 2026: besar-kecil ikut menghitung.
+        let pw = "aV7kQm2d9x";
+        assert!(verify_password(pw, pw));
+        assert!(
+            !verify_password(&pw.to_uppercase(), pw),
+            "password campuran tidak boleh diterima dalam bentuk lain"
+        );
+        assert!(!verify_password("AV7kQm2d9x", pw));
+        assert!(!verify_password("av7kQm2d9x", pw));
+        // Spasi ujung (salin-tempel) tetap dimaafkan.
+        assert!(verify_password(&format!("  {pw}\n"), pw));
+        assert!(!verify_password(&format!("{pw}x"), pw));
+    }
+
+    #[test]
+    fn password_lama_huruf_besar_tetap_diterima_tanpa_peduli_kasus() {
+        // Jaring kompatibilitas satu arah: inilah yang membuat host baru tidak
+        // mengunci APK lama yang mengkapital huruf pertama.
+        let lama = "AB2CDE7FGH";
+        assert!(is_legacy_shape(lama));
+        assert!(verify_password(lama, lama));
+        assert!(verify_password(&lama.to_lowercase(), lama));
+        // Termasuk password kustom tanpa huruf kecil — konsekuensi yang dipilih
+        // sadar, bukan kejutan: jangan pakai password begini kalau mau penuh.
+        assert!(is_legacy_shape("RAHASIA123"));
+        assert!(verify_password("rahasia123", "RAHASIA123"));
+        // Begitu ada satu huruf kecil, jaringnya lepas.
+        assert!(!is_legacy_shape("Rahasia123"));
+        assert!(!verify_password("RAHASIA123", "Rahasia123"));
+    }
+
+    #[test]
+    fn password_hasil_generasi_selalu_bisa_diterima_dan_campur_kasus() {
+        // Sanitasi menyeluruh: yang kita generasi harus lolos verifikasinya
+        // sendiri, dan karena charset kini campuran, tidak boleh ada yang
+        // jatuh ke bentuk "legacy" (semua huruf besar) terus-menerus.
+        let mut ada_kecil = 0;
+        let mut ada_besar = 0;
+        for _ in 0..500 {
+            let pw = generate_password();
+            assert!(
+                verify_password(&pw, &pw),
+                "tidak cocok dengan dirinya sendiri: {pw}"
+            );
+            assert_eq!(pw.chars().count(), PW_GEN_LEN);
+            ada_kecil += usize::from(pw.chars().any(|c| c.is_ascii_lowercase()));
+            ada_besar += usize::from(pw.chars().any(|c| c.is_ascii_uppercase()));
         }
+        // Peluang satu password 10 karakter tanpa huruf kecil = (31/54)^10 ≈ 0,4%.
+        assert!(
+            ada_kecil > 480 && ada_besar > 480,
+            "{ada_kecil}/{ada_besar} dari 500"
+        );
     }
 
     #[test]
@@ -332,7 +431,10 @@ mod tests {
         assert!(set_password("XyDesk2026").is_ok());
         let pw = load_or_create_password();
         assert_eq!(pw, "XyDesk2026");
-        assert!(verify_password("xydesk2026", &pw));
+        // Campuran besar/kecil = peka-kasus: bentuk lain harus DITOLAK.
+        assert!(verify_password("XyDesk2026", &pw));
+        assert!(!verify_password("xydesk2026", &pw));
+        assert!(!verify_password("XYDESK2026", &pw));
         assert!(
             set_password("abc").is_err(),
             "di bawah PW_MIN_LEN harus ditolak"

@@ -34,11 +34,24 @@ punya control API HTTP **hanya di `127.0.0.1`** (`host/src/control.rs`):
   membacanya. Perbandingan token konstan-waktu (hash SHA-256 + XOR).
 - `GET /health` — liveness (tanpa token; tidak membocorkan apa pun).
 - `GET /status` — status JSON: `state` (`starting|connecting|ready|streaming|
-  error`), `deviceId`, `password`, `session` (client + durasi), `video`
-  (framesSent, fps, nvenc), `lastError`.
-- `POST /action` — `new-password`, `set-password` (min 6 karakter),
-  `stop-session` (tutup peer connection + cabut izin pairing — sama seperti
-  `bye` dari client).
+  error`), `deviceId`, `password`, `signalingUrl`, `startedAtMs`, `uptimeMs`,
+  `session` (`clientId`, `clientName`, `clientPlatform`, durasi), `video`
+  (framesSent, fps, nvenc, encoder, latencyMs, latencyMaxMs), `audio`
+  (captureAvailable/pipeline, micAvailable/micPipeline, outputs, volume),
+  `displays` (`list[]` + `wanted`), `targetBitrateBps`, `lastError`.
+  Semua nama di sisi ini camelCase — lihat tipe-nya di `desktop/global.d.ts`.
+- `POST /action` — `new-password`, `set-password` (min. 6 karakter; aturannya
+  ada di `identity::set_password`, bukan di shell), `stop-session` (tutup peer
+  connection + cabut izin pairing — sama seperti `bye` dari client),
+  `audio-volume` (`{"volume":0..1}`), `display-select` (`{"index":n}`),
+  `video-bitrate` (`{"bitrate_mbps":n}`).
+  **Awas:** body `ActionRequest` TIDAK di-`rename_all`, jadi nama bidangnya
+  snake_case apa adanya; `bitrateMbps` diterima lewat `serde(alias)` supaya
+  TypeScript tidak salah tebak, tetapi kanoniknya `bitrate_mbps`.
+- `session.clientName` / `clientPlatform` berasal dari pesan `pair` client
+  (dilaporkan sendiri, boleh dikarang) — dipakai untuk menampilkan "siapa yang
+  menonton" dan TIDAK pernah jadi dasar keputusan akses. UI shell: chip di
+  topbar, kartu Sesi aktif, tooltip tray, judul jendela.
 
 Yang **sengaja tidak bisa** dilakukan control API: memberi izin pairing /
 offer. Jalur kepercayaan itu tetap di loop signaling (`pairguard`,
@@ -87,12 +100,46 @@ data contoh dengan banner "Mode pratinjau".
 
 ## Halaman sidebar
 
-- **Home** — status engine, uptime, sesi aktif (durasi/FPS/encoder) + akhiri sesi.
+- **Home** — status engine, uptime, sesi aktif (perangkat pengendali, ID
+  pairing, durasi, FPS/frame/encoder/latensi/monitor) + akhiri sesi.
 - **Connect** — ID + password pairing, salin/tampilkan, password acak/kustom.
+  Kolom password kustom TIDAK mengkapital otomatis (`autoCapitalize="none"`)
+  karena host membandingkan secara peka-kasus; ada peringatan kalau password
+  yang dipilih tidak punya huruf kecil sama sekali (lihat `host/README.md`).
 - **News** — feed publik `news.xystudio.my.id` (like, komentar, salin tautan berbagi).
 - **Profile** — identitas perangkat, versi, tautan eksternal.
 - **Settings** (pojok kiri bawah) — mulai dengan Windows (nyata lewat
-  `app.setLoginItemSettings`), mulai ulang engine, log engine.
+  `app.setLoginItemSettings`), mulai ulang engine, monitor sumber
+  (`display-select`), batas bitrate + perkiraan MB/jam (`video-bitrate`),
+  volume master PC (`audio-volume`), pipeline audio, lisensi, log engine.
+
+## Aturan tata letak (yang sudah dibayar mahal)
+
+- **Yang menggulung = `.page-body`, bukan jendela.** `.shell` grid-nya
+  `grid-template-rows: minmax(0, 100%)` + `overflow: hidden`, dan `.main`
+  serta `.page-body` diberi `min-height: 0`. Baris `auto` (keadaan dulu) membuat
+  grid memanjang mengikuti isi sehingga `overflow-y: auto` tidak pernah aktif:
+  konten terpotong tanpa scrollbar (`body { overflow: hidden }`). Sidebar
+  punya scroll sendiri. Diuji Playwright: 5 halaman × 3 viewport (1280×720,
+  900×560, 1100×480) → nol baris terkunci.
+- **Topbar = baris judul Windows = quick surface.** `titleBarStyle: 'hidden'` +
+  `titleBarOverlay` sewarna `--bg`; `.topbar` `-webkit-app-region: drag` dan
+  SETIAP elemen yang bisa diklik di dalamnya `no-drag`. Jangan pakai
+  `frame: false` (snap layouts + tombol caption asli ikut hilang). Baris di
+  ATAS topbar menutupi tombol caption — jangan dipakai di mode Electron.
+  `padding-right: 150px` khusus `<html class="electron">` adalah tempat tombol
+  min/maks/tutup; cek ulang kalau Electron di-upgrade.
+- **Satu data, satu tempat.** Pill status pernah dobel (topbar + bawah
+  sidebar); yang dibuang yang di sidebar.
+- **Merek dari generator.** `desktop/public/logo.png` dan
+  `desktop/electron/tray.ico` adalah keluaran `tool/gen_logo.py`
+  (`docs/BRAND_ASSETS.md`). Jangan menggambar logo sendiri di JSX dan jangan
+  menyunting berkas hasil — jalankan generatornya.
+- **Teks konten bisa diseleksi** (`.page-body { user-select: text }`) supaya
+  log/pesan error bisa disalin; chrome aplikasi (`body`, sidebar, tombol) tetap
+  `none`.
+- **Aset & warna latar jendela sinkron**: `backgroundColor` di `main.cjs`
+  sama dengan `--bg`; kalau beda, satu frame pertama menampilkan kilat gelap.
 
 ## Paket & rilis
 

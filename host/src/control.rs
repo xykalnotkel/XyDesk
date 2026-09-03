@@ -317,7 +317,12 @@ pub struct ActionRequest {
     #[serde(default)]
     pub index: Option<usize>,
     /// Target bitrate (Mbps) untuk aksi `video-bitrate`.
-    #[serde(default)]
+    ///
+    /// `ActionRequest` TIDAK di-`rename_all` (bidang lain snake_case apa adanya,
+    /// mis. `bitrate_mbps`), sementara `GET /status` justru camelCase — sumber
+    /// kebingungan yang sudah sekali terjadi di shell. Alias camelCase dibuat
+    /// supaya keduanya jalan; nama kanonik tetap `bitrate_mbps`.
+    #[serde(default, alias = "bitrateMbps")]
     pub bitrate_mbps: Option<u32>,
 }
 
@@ -794,6 +799,20 @@ mod tests {
         assert_eq!(code, 200);
         let v: serde_json::Value = serde_json::from_str(&body).expect("JSON valid");
         assert_eq!(v["targetBitrateBps"], 12_000_000);
+
+        // Alias camelCase juga harus diterima (shell TypeScript menulis
+        // camelCase karena /status memang camelCase) - dan nilainya yang
+        // dipakai, bukan ditolak diam-diam.
+        let (_code, resp2) = http_request(
+            addr,
+            "POST",
+            "/action",
+            &[(TOKEN_HEADER, &token)],
+            Some(r#"{"action":"video-bitrate","bitrateMbps":9}"#),
+        );
+        let v2: serde_json::Value = serde_json::from_str(&resp2).expect("JSON valid");
+        assert_eq!(v2["ok"], true, "body: {resp2}");
+        assert_eq!(crate::screen::target_bitrate_bps(), 9_000_000);
         // Kembalikan bawaan agar test lain yang membaca bawaan aman.
         crate::screen::set_target_bitrate_bps(crate::screen::DEFAULT_TARGET_BPS);
     }
