@@ -96,6 +96,12 @@ Kebijakan rilis:
 
 ## [6.3.0] - 2026-09-03
 
+> **Rilis ulang — build 26 (3 Sep 2026).** Build 25 sempat terbit dalam
+> keadaan belum lengkap (tanpa perbaikan layar hitam di bawah) lalu
+> ditarik; karena build number tidak boleh dipakai ulang, rilis resmi
+> 6.3.0 kini build 26. Aplikasi akan menyajikannya sebagai pembaruan bagi
+> semua perangkat yang sempat memasang build 25.
+
 ### Ditambahkan
 - Web: panel pengaturan sesi (tombol "Panel" di bar sesi) — volume audio
   PC, sensitivitas kursor trackpad, ketuk-untuk-klik, arah scroll, info

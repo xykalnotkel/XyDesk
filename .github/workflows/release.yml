@@ -60,11 +60,38 @@ jobs:
 
           # Keberadaan tag adalah penanda bahwa nilai version ini sudah dirilis.
           # Ini tetap mengizinkan commit perbaikan setelah Build versi baru gagal.
+          # Pengecualian — RILIS ULANG (pelajaran 3 Sep 2026): bila tag sudah
+          # ada tetapi build number pubspec LEBIH TINGGI dari build number pada
+          # update.json yang sudah terbit, rilis ulang diizinkan (aset rilis
+          # ditimpa + notifikasi baru). Tanpa ini, rilis yang ditarik lalu
+          # diterbitkan ulang dengan build yang sama membuat aplikasi menolak
+          # pembaruan selamanya ("Build yang terpasang sudah sama atau lebih
+          # baru dari Release resmi saat ini") — persis yang dialami pengguna
+          # 6.3.0 build 25 hari ini.
+          re_release=false
+          existing_build=0
           if git ls-remote --exit-code --tags origin "refs/tags/$tag" \
             >/dev/null 2>&1; then
-            echo "Tag $tag sudah ada; tidak membuat Release duplikat."
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            existing_url="$(
+              gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" \
+                --jq '.assets[] | select(.name == "update.json") | .browser_download_url' \
+                2>/dev/null || true
+            )"
+            if [ -n "$existing_url" ]; then
+              existing_build="$(
+                curl -fsSL "$existing_url" 2>/dev/null \
+                  | python3 -c 'import json,sys; print(json.load(sys.stdin).get("build", 0))' \
+                  2>/dev/null || echo 0
+              )"
+            fi
+            if [ "$existing_build" -lt "$build_number" ] 2>/dev/null; then
+              echo "Tag $tag sudah ada (update.json build $existing_build) — rilis ulang ke build $build_number."
+              re_release=true
+            else
+              echo "Tag $tag sudah ada (build $existing_build) dan build pubspec ($build_number) tidak lebih tinggi; tidak membuat Release duplikat."
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
           fi
 
           build_run_id="${WORKFLOW_RUN_ID:-}"
@@ -115,6 +142,7 @@ jobs:
             echo "tag=$tag"
             echo "release_sha=$release_sha"
             echo "build_run_id=$build_run_id"
+            echo "re_release=$re_release"
           } >> "$GITHUB_OUTPUT"
           echo "Siap merilis $tag (build $build_number) dari $release_sha."
 
@@ -442,6 +470,21 @@ jobs:
           sha256sum update.json >> SHA256SUMS.txt
           cat SHA256SUMS.txt
 
+      - name: Hapus aset rilis lama (mode rilis ulang)
+        if: needs.prepare.outputs.re_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for asset in \
+            CHANGELOG.md SHA256SUMS.txt update.json \
+            XyDesk-Android-arm64-v8a.apk XyDesk-Android-armeabi-v7a.apk \
+            XyDesk-x64.exe XyDesk-arm64.exe \
+            xydesk_update_banner_1024x512.jpg
+          do
+            gh release delete-asset "$RELEASE_TAG" "$asset" --yes 2>/dev/null || true
+          done
+
       - name: Siapkan isi changelog untuk Release
         run: |
           {
@@ -457,6 +500,7 @@ jobs:
           target_commitish: ${{ needs.prepare.outputs.release_sha }}
           files: dist/*
           fail_on_unmatched_files: true
+          update_release: true
           generate_release_notes: true
           body: |
             ## XyDesk ${{ needs.prepare.outputs.tag }}
@@ -521,8 +565,12 @@ jobs:
               },
               "big_picture": f"{base}/xydesk_update_banner_1024x512.jpg",
               "name": f"XyDesk release {tag}",
+              # Sertakan build number: rilis ulang dengan tag yang sama (mis.
+              # build 25 → 26) HARUS tetap mengirim notifikasi — tanpa build
+              # di key, OneSignal menolak duplikat dan pengguna build lama
+              # tidak pernah tahu ada pembaruan.
               "idempotency_key": str(uuid.UUID(
-                  bytes=uuid.uuid5(uuid.NAMESPACE_URL, f"xydesk:{tag}").bytes,
+                  bytes=uuid.uuid5(uuid.NAMESPACE_URL, f"xydesk:{tag}:{build}").bytes,
                   version=4,
               )),
           }
