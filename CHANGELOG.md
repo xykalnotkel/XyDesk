@@ -48,7 +48,9 @@ Kebijakan rilis:
   `news/test/google-admin.test.js` (12 kasus: RSA sungguhan, audience salah,
   kedaluwarsa, email non-founder, tanpa konfigurasi, komentar + publish lewat
   fetch). `news/` 32/32 hijau. Sisi klien (web mengirim token saat founder
-  masuk) menunggu sesi Web — dicatat di HANDOFF.
+  masuk) ikut dikerjakan sesi Web: id_token disimpan saat login dan dikirim
+  sebagai `x-admin-google-token` saat berkomentar (fallback `ADMIN_TOKEN`
+  tetap ada) — keduanya sudah live.
 
 ### Diubah
 - Client Flutter: **unggah foto profil kini aktif.** Kodenya sudah selesai

@@ -156,6 +156,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
+- [x] (dari Danu - XySpace Team, 2026-09-03, sesi WEB-ADMIN) — **INFO deploy
+  cepat Web (aturan #5):** mode founder kini kirim Google id_token
+  (`x-admin-google-token`) otomatis, tanpa tempel `ADMIN_TOKEN`. Build
+  produksi `index-DAHi_-aE.js`, `wrangler deploy` versi
+  `a3607022-4ca4-4bd8-828b-07f847857e0f`; verifikasi pasca-deploy: md5 live
+  == build `a428669f…`, content-type JS, `x-admin-google-token` + key
+  penyimpanan + fallback WEB10 + client ID produksi ada di bundle live.
+  Murni deploy cepat, bukan rilis.
+
 - [x] (dari Tara - XySpace Team, 2026-09-03, sesi TARA-NEWS-DEPLOY) — **INFO
   deploy worker berita TUNTAS:** worker berita (`news/`) kini menerima
   `x-admin-google-token` (jalur admin kedua; `x-admin-token` tetap sah).
@@ -307,7 +316,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Web
 
-- [ ] (dari Tara - XySpace Team, 2026-09-03) — **Lengkapi sisi klien admin
+- [x] (dari Tara - XySpace Team, 2026-09-03) — **Lengkapi sisi klien admin
   Google.** Worker berita sudah menerima `x-admin-google-token` (ID token
   OpenID; divalidasi signature + audience, email == `FOUNDER_EMAIL`). Yang
   belum: klien web mengirim id_token ini saat founder (login Google
@@ -315,6 +324,10 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   masuk — alih-alih menyuruh tempel `ADMIN_TOKEN` manual. Header lama
   `x-admin-token` tetap berfungsi, jadi ini peningkatan bertahap, bukan
   wajib segera.
+  **Selesai (Danu, 3 Sep 2026, sesi WEB-ADMIN):** klien web kini menyimpan
+  id_token saat login Google dan mengirimnya sebagai `x-admin-google-token`
+  saat berkomentar — tidak perlu lagi menempel `ADMIN_TOKEN` (fallback tetap
+  ada). Build tsc+vite hijau, **live** via deploy cepat (versi `a3607022…`).
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur web, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 
@@ -624,6 +637,13 @@ _(kosong)_
 ---
 
 ## Selesai
+
+- [x] (dari Danu - XySpace Team, 2026-09-03) — **Mode founder web tanpa
+  tempel ADMIN_TOKEN:** klien web menyimpan Google id_token saat login dan
+  mengirim `x-admin-google-token` saat berkomentar (fallback `ADMIN_TOKEN`
+  tetap ada; bila keduanya kosong jatuh ke komentar publik). `google.ts`
+  +`news.ts` + `App.tsx`; build tsc+vite hijau; **live** (deploy cepat versi
+  `a3607022…`). Item "Lengkapi sisi klien admin Google" ditutup.
 
 - [x] (dari Tara - XySpace Team, 2026-09-03) — **Deploy cepat worker berita
   (aturan #5):** jalur admin Google (`x-admin-google-token`) LIVE di
