@@ -152,10 +152,13 @@ langsung tahu macetnya di penemuan host, autentikasi, atau NAT.
 
 ---
 
-## Build dan Release Otomatis
+## Build dan Release
 
-Push ke `main` menjalankan analisis statis serta build Android, Windows, dan Web.
-Artefak build biasa tersedia melalui tab **Actions**.
+**Sejak 3 September 2026 push ke `main` TIDAK memicu build.** Satu-satunya
+workflow yang jalan karena push adalah gerbang audit izin
+(`verify-push-auth.yml`). Analisis statis serta build Android, Windows, dan Web
+dijalankan manual (`workflow_dispatch`) oleh role CI/Release setelah izin
+operator. Artefak build tersedia melalui tab **Actions**.
 
 | Target | Artefak Release | Status |
 |---|---|---|
@@ -170,7 +173,7 @@ Artefak build biasa tersedia melalui tab **Actions**.
 | Windows desktop portable | `XyDesk-Desktop-<ver>-x64-Portable.exe` | Shell desktop tanpa instalasi |
 | Web | `XyDesk-Web.zip` | Bundle web client (Vite + React) |
 
-Bundle Web dari Build `main` yang sukses juga dideploy otomatis ke Cloudflare
+Bundle Web dari Build `main` yang sukses dideploy ke Cloudflare
 Workers Static Assets di `https://app.xystudio.my.id`; frontend ini tetap
 berkomunikasi dengan Worker API/signaling di `https://signal.xystudio.my.id`.
 

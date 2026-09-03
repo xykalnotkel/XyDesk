@@ -37,6 +37,18 @@ Ringkasnya:
   (sekali, di bagian changelog) supaya pembaca tahu persis rilis mana yang
   dibahas.
 
+**Siapa yang menulis (aturan operator, 3 Sep 2026):**
+
+- **Versi & berita adalah keputusan operator** — agent tidak menetapkan nomor
+  versi maupun memutuskan kapan/isi apa yang terbit.
+- **Tiap agent menulis bahan artikel untuk kerjanya sendiri** saat sesinya
+  ditutup: blok dampak pengguna (apa + kenapa) + screenshot asli, mengikuti
+  gaya dokumen ini.
+- **Satu rilis = SATU artikel.** Role CI/Release menyatukan bahan semua agent
+  menjadi satu artikel saat rilis; jangan menerbitkan artikel per fitur.
+  Detail alurnya di [`../AGENT_BOARD.md`](../AGENT_BOARD.md) → "Aturan
+  operator" dan [`../news/README.md`](../news/README.md).
+
 ---
 
 ## 2. Nada: Gaul, Formal, Manusiawi

@@ -18,6 +18,27 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Diubah
+- Dokumentasi: **README dan `docs/CI.md` disamakan dengan kebijakan pemicu
+  3 Sep 2026.** README masih berjudul "Build dan Release Otomatis" dan
+  membuka dengan "Push ke `main` menjalankan analisis statis serta build
+  Android, Windows, dan Web" — sudah tidak benar sejak push berhenti memicu
+  actions, dan itu menyesatkan kontributor baru untuk menunggu build yang
+  tidak akan pernah jalan. Bagian Release di `docs/CI.md` juga masih menyebut
+  versi sebagai "satu-satunya pemicu rilis" lewat push; kini dijelaskan
+  alur sebenarnya (operator → push berizin → dispatch Build → Release via
+  `workflow_run`). Tabel workflow ditambah tiga berkas yang sebelumnya tidak
+  terdaftar: `build-desktop.yml`, `deploy-news.yml`, `test-lab.yml`.
+- Dokumentasi: **`docs/VERSIONING.md` dimutakhirkan** — contoh versi acuan
+  `6.2.0+22` → `6.4.0+27` (sesuai `pubspec.yaml`), tag contoh `v6.2.0` →
+  `v6.4.0`, dan kalimat usang "rilis berikutnya adalah 6.2.0" diganti catatan
+  status. Ditambah peringatan bahwa pola slug `changelog-v6-2-0` tidak lagi
+  cocok dengan slug hash acak yang diterbitkan worker berita (tautan versi di
+  footer jatuh ke 404) — diteruskan ke role Web/News lewat `HANDOFF.md`.
+- Dokumentasi: **`docs/NEWS_STYLE.md` memuat pembagian penulisan berita** —
+  versi & berita keputusan operator, tiap agent menulis bahan kerjanya
+  sendiri, satu rilis satu artikel yang disatukan role CI/Release. Sebelumnya
+  aturan ini hanya hidup di `AGENT_BOARD.md` dan `news/README.md`, sehingga
+  penulis yang membuka panduan gaya saja tidak menemukannya.
 - Proses: **papan koordinasi dirapikan** — semua baris sesi berstatus
   `SELESAI` yang masih menumpuk di tabel *Sesi aktif* dan *Antrean izin
   push* dipindahkan ke *Riwayat sesi* (sejarah tidak dihapus), dan rilis

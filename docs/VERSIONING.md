@@ -110,7 +110,7 @@ XyDesk **belum** memenuhi ini per 1 September 2026:
 Versi hidup di **satu** tempat: `pubspec.yaml`. Semua yang lain membacanya.
 
 ```
-version: 6.2.0+22
+version: 6.4.0+27
          ^^^^^ ^^
          SemVer BUILD
 ```
@@ -121,7 +121,7 @@ version: 6.2.0+22
 | Aplikasi Flutter | `AppVersion` via `package_info_plus` |
 | Web | `vite.config.ts` membaca `pubspec.yaml` saat build → `__APP_VERSION__` |
 | Host Rust | `host/Cargo.toml` (disamakan manual saat rilis) |
-| Release CI | `release.yml` mengurai pubspec → tag `v6.2.0` |
+| Release CI | `release.yml` mengurai pubspec → tag `v6.4.0` |
 
 **Jangan pernah** menulis nomor versi di tempat lain. Footer web pernah memajang
 "v2.5.0" selama empat rilis karena angkanya diketik tangan di JSX.
@@ -165,9 +165,13 @@ Artikel News bukan salinan CHANGELOG. Formatnya:
 - **Apa dampaknya** — yang perlu pengguna lakukan, atau tidak sama sekali.
 - **Yang masih belum** — jujur soal batasan. Ini yang membangun kepercayaan.
 
-Slug artikel mengikuti pola `changelog-v6-2-0`, karena tautan versi di footer
-web dan di aplikasi menunjuk ke sana secara otomatis
-(`CHANGELOG_SLUG` di `web/src/version.ts`).
+> ⚠️ **Tidak sinkron (temuan audit 3 Sep 2026, belum diperbaiki).** Dokumen ini
+> dan `CHANGELOG_SLUG` di `web/src/version.ts` masih mengasumsikan slug artikel
+> berpola `changelog-v6-2-0`, padahal worker berita **menerbitkan slug hash
+> acak** (`news/README.md`: mis. `p-8f5aa26aa3bc`, yang dipakai rilis 6.4.0).
+> Akibatnya tautan versi di footer web/aplikasi menunjuk ke slug yang tidak
+> ada. Diteruskan ke role Web + News lewat `HANDOFF.md` — jangan dianggap
+> sudah beres.
 
 ---
 
@@ -178,6 +182,10 @@ Nomor 6.1.0 sudah beredar sebagai tag publik. Mengembalikannya ke 0.x atau
 kecil — installer dan Play Store akan menolaknya, dan riwayat rilis jadi tidak
 terbaca.
 
-Jadi 6.x diteruskan, tetapi **berhenti bergerak liar**. Rilis berikutnya adalah
-`6.2.0` (fitur baru, kompatibel), dan angka 7 disimpan untuk saat protokolnya
-benar-benar patah.
+Jadi 6.x diteruskan, tetapi **berhenti bergerak liar**. Angka 7 disimpan untuk
+saat protokolnya benar-benar patah.
+
+> Catatan status (3 Sep 2026): versi yang beredar saat ini adalah **6.4.0+27**
+> (`pubspec.yaml`). Kalimat lama di paragraf ini masih menyebut "rilis
+> berikutnya adalah 6.2.0" — sudah usang dan dihapus. Contoh angka di bagian
+> §1–§3 tetap ilustratif, bukan status.

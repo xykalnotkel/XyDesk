@@ -355,7 +355,7 @@ _(kosong)_
 
 ## Untuk: Docs & Audit
 
-- [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; tiap agent menulis bahan artikel kerjanya sendiri, CI/Release menyatukannya — pastikan aturan ini tersinkron di `docs/CI.md`, `docs/NEWS_STYLE.md`, `news/README.md`.
+- [x] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; tiap agent menulis bahan artikel kerjanya sendiri, CI/Release menyatukannya — pastikan aturan ini tersinkron di `docs/CI.md`, `docs/NEWS_STYLE.md`, `news/README.md`. **Dikerjakan Sena (audit 3 Sep 2026):** `docs/CI.md` sudah memuatnya (§"Sebelum build/rilis"), `news/README.md` sudah memuatnya; yang kurang hanya `docs/NEWS_STYLE.md` — kini ditambah blok "Siapa yang menulis" di §1.
 
 
 - [ ] (dari Danu - XySpace Team, 2026-09-03) — Berkas unggahan operator di
@@ -364,6 +364,62 @@ _(kosong)_
   client OAuth web yang benar `495336144977-dp1k3678cocjrfhftb9blnqo5qnvhsr6…`.
   Tolong catat di tempat rahasia resmi tim agar sesi berikutnya tidak
   salah ambil.
+  **Cek Sena (3 Sep 2026):** berkas unggahan operator masih memuat DUA baris
+  Google Client ID — `#GOOGLE` (`335906355717-…`, yang keliru) dan
+  `#GOOGLE 0Auth Web Version` (`495336144977-…`, yang benar). Selama dua-duanya
+  ada tanpa tanda, sesi berikutnya berpeluang salah ambil lagi. Saran ke
+  operator: hapus/beri label "JANGAN DIPAKAI" pada baris `#GOOGLE` yang lama.
+  Di dalam repo sendiri tidak ada client ID yang di-hardcode (sudah dicek:
+  hanya contoh `--dart-define` di `lib/features/auth/auth_service.dart`), jadi
+  tidak ada yang perlu diperbaiki di kode.
+
+### Temuan audit Sena — 3 Sep 2026 (belum dikerjakan, bukan area Docs)
+
+- [ ] (dari Sena - XySpace Team, 2026-09-03, **untuk Web + News**) — **Tautan
+  changelog di web menunjuk slug yang tidak ada.** `web/src/version.ts`
+  menyusun `CHANGELOG_SLUG = changelog-v<versi>` (mis. `changelog-v6-4-0`),
+  padahal worker berita menerbitkan **slug hash acak** — artikel 6.4.0 nyatanya
+  `p-8f5aa26aa3bc` (lihat catatan rilis Cakra di bawah). Jadi tautan versi di
+  footer web/aplikasi jatuh ke 404 sejak slug hash diberlakukan. Perlu
+  keputusan: simpan slug artikel rilis di manifest/`update.json`, atau beri
+  endpoint `/api/news/changelog/<versi>`. Saya hanya menandainya di
+  `docs/VERSIONING.md`, tidak menyentuh kode.
+- [x] (dari Sena - XySpace Team, 2026-09-03, **untuk News**) — **Sudah beres
+  sebelum saya sempat push** (commit `7e6f860`, sesi `SESI-20260903-SENA-DOCS`):
+  contoh `author` kini `Haekal Saputra`, plus `news/schema.sql`, `news/seed.sql`,
+  dan fallback `news_service.dart` ikut diselaraskan — lebih menyeluruh dari
+  yang saya usulkan. Temuan asli: `news/README.md`
+  contoh `curl` publish masih memakai `"author": "Tim XyDesk"`, padahal
+  paragraf di atasnya sendiri sudah mewajibkan `Haekal Saputra`. Contoh yang
+  salah inilah yang kemungkinan melahirkan 5 artikel byline `Tim …` yang baru
+  dinormalisasi Danu di D1. Tolong perbaiki contohnya (area `news/`, bukan
+  Docs).
+- [ ] (dari Sena - XySpace Team, 2026-09-03, **untuk CI/Release**) — **Blok
+  `[6.4.0]` di `CHANGELOG.md` banyak kalimat terpotong.** 9 dari 10 butir di
+  bagian "Ditambahkan"/"Diubah" berhenti di tengah kalimat tanpa titik (mis.
+  "— ikon AI 3D ungu glossy", "— pojok kiri atas", "— klik", "— versi & berita
+  adalah"), sementara bagian "Diperbaiki" utuh. File ini dilampirkan ke GitHub
+  Release, jadi rilis 6.4.0 yang sudah terbit memajang catatan yang menggantung.
+  Versi & changelog kewenangan operator/CI — saya tidak mengubahnya.
+- [x] (dari Sena - XySpace Team, 2026-09-03, **untuk CI/Release**) — **Papan
+  `AGENT_BOARD.md`: tabel "Sesi aktif (LOCK)" isinya semua `SELESAI`.**
+  **Dibereskan atas izin operator di chat (3 Sep 2026):** 11 baris `SELESAI`
+  dikeluarkan dari tabel LOCK; 10 di antaranya sudah punya salinan di *Riwayat
+  sesi*, dan `SESI-20260903-CAKRA-RILIS` yang belum ada disalin dulu ke riwayat
+  sebelum dikeluarkan — tidak ada sejarah yang hilang. Tabel LOCK kini kosong +
+  diberi catatan agar tidak menumpuk lagi. Keterangan asli: Per
+  aturan papan langkah 3, baris `SELESAI` harus dipindahkan ke "Riwayat sesi"
+  (dan memang sudah ada duplikatnya di sana). Tabel LOCK yang penuh baris mati
+  membuat fungsinya — melihat area mana yang sedang dikunci — hilang. Perlu
+  dibersihkan oleh pemilik papan, bukan diam-diam oleh saya.
+- [x] (dari Sena - XySpace Team, 2026-09-03, **untuk CI/Release**) — **Sudah
+  beres di commit `5dbf923`**: rilis 6.4.0 kini punya baris sendiri
+  `SESI-20260903-CAKRA-RILIS64`, terpisah dari `SESI-20260903-CAKRA-RILIS`
+  (6.3.0), sehingga jejak `Izin: <ID>` tidak lagi ambigu. Temuan asli: baris
+  `SESI-20260903-CAKRA-RILIS` di papan masih berbunyi "Rilis 6.3.0", padahal
+  ID sesi yang sama dipakai untuk rilis 6.4.0+27 (commit `ed1eb02`, catatan
+  HANDOFF di bawah). Satu ID sesi dipakai dua rilis = jejak audit `Izin: <ID>`
+  jadi ambigu. Saran: baris terpisah `SESI-20260903-CAKRA-RILIS640`.
 
 ---
 

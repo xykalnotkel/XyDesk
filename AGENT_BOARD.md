@@ -56,14 +56,21 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 ## Sesi aktif (LOCK)
 
+> Kosong = tidak ada area yang sedang dikunci. Baris `SELESAI` **tidak boleh**
+> menumpuk di sini — begitu sesi ditutup, pindahkan ke *Riwayat sesi* (langkah
+> 3 alur sesi). Tabel ini hanya untuk yang benar-benar `LAGI KERJA`.
+
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+
+_Tidak ada sesi aktif (3 Sep 2026)._
 
 ## Antrean izin push
 
 | ID Sesi | Agent | Ringkasan perubahan | Status izin | Disetujui oleh | Kapan | Run CI |
 |---|---|---|---|---|---|---|
 | SESI-20260903-SENA-DOCS | Sena - XySpace Team | Docs & Audit (restu operator di chat, lintas area News+Client): rapi papan koordinasi — pindah semua baris SELESAI dari Sesi aktif & Antrean ke Riwayat, catat rilis 6.4.0 yang belum tercatat; selaraskan byline sisa 'Tim XyDesk' -> 'Haekal Saputra' (news/schema.sql, news/seed.sql, news/README.md, fallback client news_service.dart); CHANGELOG [Belum terbit]; HANDOFF ditutup | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi izin push (run gate) — lihat push sesi ini |
+| SESI-20260903-SENA-DOCS-AUDIT | Sena - XySpace Team | Docs & Audit (tanpa perubahan kode): README §Build/Release tidak lagi mengklaim push memicu build; `docs/CI.md` tabel workflow dilengkapi (build-desktop/deploy-news/test-lab) + bagian Release diluruskan (dispatch, bukan push) + aturan #3 dikoreksi; `docs/VERSIONING.md` versi acuan 6.2.0+22 → 6.4.0+27, tag contoh v6.4.0, kalimat "rilis berikutnya 6.2.0" dihapus, peringatan slug changelog 404; `docs/NEWS_STYLE.md` +blok "Siapa yang menulis"; `HANDOFF.md` 2 item Docs ditutup + 5 temuan baru (slug changelog 404, contoh author `Tim XyDesk` di news/README, butir CHANGELOG 6.4.0 terpotong, tabel LOCK penuh baris SELESAI, ID sesi rilis dipakai dua kali); `CHANGELOG.md` [Belum terbit] | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi izin — lihat push sesi ini |
 
 ## Riwayat sesi (hanya bertambah)
 
@@ -72,6 +79,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260903-SENA-DOCS | Sena - XySpace Team | Docs & Audit | SELESAI | Audit + beres-beres: AGENT_BOARD.md dirapikan (baris SELESAI dipindah dari Sesi aktif & Antrean ke Riwayat; rilis 6.4.0 dicatat), byline sisa 'Tim XyDesk' -> 'Haekal Saputra' di schema/seed/README news + fallback client; CHANGELOG [Belum terbit]; HANDOFF diperbarui | 2026-09-03 |
 | SESI-20260903-CAKRA-RILIS64 | Cakra - XySpace Team | CI / Release | SELESAI | Rilis 6.4.0+27: bump 4cbbc22 -> Build 33728695280 12/12 -> Release 33729544852 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal e4f5574a); aset artikel cache-bust 8b1ebbd -> Build 33732158168 -> deploy 33732896248; artikel p-8f5aa26aa3bc (id 73) live | 2026-09-03 |
 | SESI-20260903-CAKRA-RILIS | Cakra - XySpace Team | CI / Release | SELESAI | Rilis 6.3.0: bump versi 6.3.0+25 (pubspec/Cargo/web/desktop), changelog, artikel berita changelog-v6-3-0, screenshot asli, verifikasi rantai Build->Release->Deploy | 2026-09-03 |
+| SESI-20260903-SENA-DOCS-AUDIT | Sena - XySpace Team | Docs & Audit | SELESAI | Audit konsistensi repo: README & `docs/CI.md` disamakan dengan kebijakan pemicu 3 Sep (push tidak memicu build), tabel workflow dilengkapi 3 berkas, `docs/VERSIONING.md` dimutakhirkan ke 6.4.0+27 + peringatan slug changelog 404, `docs/NEWS_STYLE.md` +pembagian penulisan berita; 5 temuan lintas role dicatat di HANDOFF (slug changelog 404, contoh author `Tim XyDesk` di news/README, butir CHANGELOG 6.4.0 terpotong, tabel LOCK penuh baris SELESAI, ID sesi rilis dipakai dua kali). Tanpa perubahan kode; flutter/cargo tidak tersedia di lingkungan — analisis tidak dijalankan (tidak diperlukan untuk perubahan Markdown) | 2026-09-03 |
 | SESI-20260903-GALIH-HOST-DIAG | Galih - XySpace Team | Host Engine | SELESAI | Diagnostik & konsistensi UI desktop: "Engine belum siap" menyertakan sebab (lastEngineError) + ID/password tetap tampil saat engine mati; nav/judul dibumikan (Beranda/Hubungkan/Berita/Profil/Pengaturan); tab Berita timeout 10 dtk + pesan Indonesia + Coba lagi + tautan web; uji tsc/next build/node --check; jalur signaling terverifikasi end-to-end (host-token→/ws 101→welcome) | 2026-09-03 |
 | SESI-20260903-DANU-WEB9 | Danu - XySpace Team | Web | SELESAI | Aturan papan #5: jalur deploy cepat Web + worker Backend/berita (syarat: main + izin hijau, env produksi, verifikasi pasca-deploy tercatat, info ke CI); tanpa perubahan kode | 2026-09-03 |
 | SESI-20260903-DANU-WEB8 | Danu - XySpace Team | Web | SELESAI | Fix avatar ganda komentar resmi (prop avatar=false di komentar/reply) + byline 5 artikel lama 'Tim …' dinormalisasi di D1; verifikasi visual + D1 hijau | 2026-09-03 |

@@ -11,6 +11,9 @@ perlu menjalankan Flutter, Android SDK, Rust, atau Visual Studio secara lokal.
 | `.github/workflows/deploy-signaling.yml` | **manual** (`workflow_dispatch`) | deploy Cloudflare Worker API/signaling |
 | `.github/workflows/deploy-web.yml` | Build `main` sukses, manual recovery | deploy bundle Flutter Web terverifikasi ke Cloudflare Static Assets |
 | `.github/workflows/release.yml` | Build `main` sukses + nilai `version` berubah, manual recovery | GitHub Release multi-platform + push OneSignal |
+| `.github/workflows/build-desktop.yml` | **manual** (`workflow_dispatch`) | kemasan shell desktop Electron + Next.js |
+| `.github/workflows/deploy-news.yml` | **manual** (`workflow_dispatch`) | deploy Worker berita + migrasi D1 |
+| `.github/workflows/test-lab.yml` | **manual** (`workflow_dispatch`) | uji lab perangkat |
 | `.github/workflows/verify-push-auth.yml` | setiap push ke `main` | audit izin push: commit wajib memuat `Izin: <ID>` yang berstatus `DISETUJUI` di `AGENT_BOARD.md` |
 
 ## Kebijakan pemicu (sejak 3 Sep 2026): push TIDAK memicu actions
@@ -41,8 +44,8 @@ Aturan operator — bukan saran, bukan kebiasaan:
    memaksakan rilis.
 3. **Push wajib izin operator.** Termasuk bump versi dan push yang
    menyentuh `pubspec.yaml`/`release.yml`/`build.yml` — antre di
-   `AGENT_BOARD.md`, tunggu `DISETUJUI`, baru push. Build terfilter (web)
-   tetap satu-satunya jalur otomatis seperti di atas.
+   `AGENT_BOARD.md`, tunggu `DISETUJUI`, baru push. Push sendiri tidak
+   menjalankan build apa pun — hanya gerbang audit izin.
 4. **Satu gerakan saat siap.** Rilis penuh dikerjakan SEKALIGUS ketika
    operator menyatakan siap: bump → Build → Release → deploy → berita
    (artikel = bahan yang disatukan dari tiap agent).
@@ -216,10 +219,12 @@ Artefak Web tidak boleh di-commit ke repository.
 
 ## Menerbitkan GitHub Release
 
-Versi aplikasi adalah satu-satunya pemicu rilis. Naikkan nilai `version` di
-`pubspec.yaml` dengan format SemVer + Android build, misalnya `1.1.0+3`, lalu
-push commit tersebut ke `main`. Workflow Build berjalan lebih dahulu. Setelah
-seluruh analisis dan build sukses, workflow Release otomatis:
+Versi aplikasi adalah syarat rilis, **bukan lagi pemicunya**. Sejak kebijakan
+3 Sep 2026, push tidak menjalankan Build; alurnya: operator menetapkan versi →
+naikkan nilai `version` di `pubspec.yaml` (SemVer + Android build, mis.
+`6.4.0+27`) → push (dengan izin) → role CI/Release men-*dispatch* `build.yml`.
+Setelah run Build itu sukses, workflow Release berjalan (dipicu `workflow_run`
+dari Build, bukan dari push) dan:
 
 1. memastikan tag `v<versi>` belum ada (tag menandai versi yang sudah dirilis);
 2. memastikan Build sukses berasal dari commit yang sama;
@@ -229,8 +234,8 @@ seluruh analisis dan build sukses, workflow Release otomatis:
 6. mengirim OneSignal ke Android dengan `app_version` lebih kecil dari build
    baru.
 
-Push biasa tanpa perubahan nilai versi tidak membuat Release. Trigger manual
-hanya disediakan untuk pemulihan jika run otomatis perlu dijalankan ulang.
+Build yang sukses tanpa perubahan nilai versi tidak membuat Release. Trigger
+manual (`workflow_dispatch` + `release_sha`) disediakan untuk pemulihan.
 
 Aset Release:
 
