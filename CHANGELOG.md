@@ -141,8 +141,6 @@ Kebijakan rilis:
   mengompilasi cfg non-Windows.
 - Host: `host/Cargo.lock` kembali cocok dengan `Cargo.toml` — sejak bump 6.4.0
   lock masih mencatat 6.3.0.
-
-### Diperbaiki
 - Web: **tautan versi di footer tidak lagi berujung dead-end.** Artikel
   changelog 6.4.0 diterbitkan tanpa field `slug`, jadi `changelog-v6-4-0`
   mengembalikan 404 dan klik "XyDesk v6.4.0" menampilkan galat mentah.
@@ -151,21 +149,73 @@ Kebijakan rilis:
   menampilkan penjelasan ramah "Catatan rilis versi ini belum tersedia"
   dengan tombol ke daftar semua berita bila slug changelog 404. Perbaikan
   akar (slug wajib saat publish) tetap milik News/CI — dicatat di HANDOFF.
+- Changelog: **17 butir rilis 6.4.0 yang kalimatnya terpotong direstorasi.**
+  Commit bump versi 6.4.0 (`4cbbc22`) memotong bullet multi-baris menjadi
+  baris pertama saja (mis. "— ikon AI 3D ungu glossy" tanpa kelanjutan),
+  sehingga catatan rilis yang terbit di GitHub memajang kalimat menggantung.
+  Teks lengkap dipulihkan dari git history (parent `4cbbc22^`), bukan
+  dikarang; body GitHub Release `v6.4.0` ikut dipatch dengan teks lengkap
+  (18 butir asli rilis — butir yang masuk setelah rilis tidak ditambahkan).
+  Salinan body lama tersimpan untuk rollback.
 
 ## [6.4.0] - 2026-09-03
 
 ### Ditambahkan
 - Client Flutter: **tombol Billing di topbar** — ikon AI 3D ungu glossy
+  (mesin + jam + koin sewa PC) yang membuka layar Langganan langsung dari
+  bar atas, tidak perlu lewat menu Akun. Aset di `assets/img/nav/billing.png`
+  (+ `_off.png`), latar putih dibuang (transparan); `BillingPage` kini
+  terlihat dari `app.dart` lewat `import features/account/billing_page.dart`.
 - Client Flutter: **data lokal diisolasi per akun** — daftar perangkat,
+  riwayat sesi, dan daftar "perangkat terakhir" di halaman Connect kini
+  memakai kunci penyimpanan yang memuat ruang lingkup akun
+  (`devices:$scope`, `history:$scope`, `connect_recents:$scope`; tamu
+  memakai `guest`). Sebelumnya semua akun memakai kunci global, sehingga
+  setelah keluar lalu masuk akun lain, daftar PC milik akun sebelumnya
+  masih tampil — kebocoran data antar akun. Dikunci lewat
+  `test/devices/account_scope_test.dart`.
 - Client Flutter: **changelog lengkap di halaman pembaruan** — selain catatan
+  ringkas dari manifest, "Pusat Update" kini mengambil body GitHub Release
+  resmi (isi `CHANGELOG.md`) dan menampilkannya sebagai "Catatan rilis".
+  Manifest hanya membawa tiga catatan umum, jadi sebelumnya halaman tampil
+  tanpa rincian. Parser markdown dikunci lewat
+  `test/notifications/changelog_parse_test.dart`.
 - Web: **chip durasi & sisa waktu di layar sesi** — pojok kiri atas
+  menampilkan durasi berjalan dan, untuk sesi tamu, sisa waktu batas
+  2 jam (token tamu terbit persis 2 jam di authstore.js) berubah merah
+  saat ≤ 5 menit; tab Sesi kini memuat baris Durasi/Total/Sisa waktu.
 
 ### Diubah
 - Web: **Sewa PC (`/billing`)** — durasi kini bisa custom (input angka
+  1–24 jam di samping chip cepat; di luar rentang ditolak dengan pesan)
+  dan tiap paket menampilkan ketersediaan stok ("N unit tersedia" /
+  "Stok habis" — kartu & tombol pesan nonaktif). Stok adalah angka
+  operator di `web/src/Billing.tsx` (belum ada backend inventori),
+  diperbarui manual + tanggal "diperbarui" tampil di halaman.
 - Web: tombol hero beranda **"Status rilis" → "Ingatkan saya"** — klik
+  membuka popup pilihan kanal kabar rilis: email (tersimpan berlabel
+  `unduhan`, jalur sama dengan form halaman unduhan), saluran WhatsApp,
+  atau Telegram. Sebelumnya tombol ini hanya membawa ke halaman unduhan
+  yang memang belum bisa mengunduh (pra-beta) — niat pengunjung hilang
+  begitu saja.
 - Proses: **push tidak lagi memicu actions apa pun** (3 Sep 2026, sore) —
+  sisa jalur otomatis `web/**` di build.yml dicabut. Satu-satunya jalur
+  build/kompilasi/kemasan/deploy/rilis = `workflow_dispatch` oleh role
+  CI/Release (Cakra) setelah izin operator; agent lain push kode +
+  dokumen saja (gerbang audit izin tetap menyala). Dituangkan di
+  `AGENT_BOARD.md`, `docs/CI.md`, `HANDOFF.md`.
 - Proses: **atur rilis diperketat (3 Sep 2026)** — versi & berita adalah
+  keputusan operator; sebelum build/rilis agent wajib memastikan kerjaan
+  sesi lain yang menyentuh area rilis sudah `SELESAI`; push yang
+  menyentuh versi/rilis wajib izin operator dulu; tiap agent menulis
+  bahan artikel untuk kerjanya sendiri dan role CI/Release menyatukannya
+  menjadi satu artikel rilis. Dituangkan di `AGENT_BOARD.md`,
+  `docs/CI.md`, `docs/NEWS_STYLE.md`, `news/README.md`.
 - Web: **tombol lompat di detail berita** — panah bawah melayang di pojok
+  kanan bawah menggulir halus ke komentar paling bawah; sampai di dasar ia
+  berubah jadi panah atas untuk kembali ke judul. Artikel changelog
+  panjangnya bisa ribuan piksel — sebelumnya pembaca HP harus menggulir
+  manual.
 
 ### Diperbaiki
 - Web: **foto profil ganda di komentar resmi berita** — kepala komentar
@@ -178,14 +228,59 @@ Kebijakan rilis:
   `Tim …` (mis. `Tim XyDesk`, luput dari normalisasi sebelumnya yang
   hanya menangkap `Tim XySpace`) kini semua `Haekal Saputra`.
 - Web: **deep link `/billing` jatuh ke beranda** — `currentRoute()` tidak
+  punya case `/billing`, jadi buka/refresh langsung ke URL itu merender
+  halaman beranda (navigasi lewat menu tetap benar). Ditemukan saat menguji
+  halaman sewa; audit responsivitas WEB5 sebelumnya keliru loloskannya
+  karena beranda juga tidak overflow.
 - Web: **race deploy-web.yml** — dua Build sukses berdekatan bisa mencampur payload sehingga deploy checkout SHA lama dan menimpa bundle baru (kejadian 6c5ba06/d90e12a, ditebus manual). Kini SHA & run Build diambil dari API, checkout memakai SHA itu, artefak dicocokkan dengan run-nya, deploy berjalan serial (tidak dibatalkan di tengah), dan hanya Build web terbaru yang boleh deploy.
 - Web: **overflow horizontal di detail berita (layar ≤ 390 px)** — baris
+  langganan email tidak bisa membungkus sehingga tombol "Langganan"
+  mendorong halaman melebar 33–63 px. Kini input dan tombol membungkus
+  rapi; tombol selebar input di layar sempit. Ditemukan lewat audit
+  responsivitas 7 halaman × 5 viewport (1440/1024/768/390/360) — semua
+  halaman lain lolos tanpa overflow.
 - Web: halaman **Connect** dirapikan — blok "Dukung kami di" naik ke atas
+  "Cara main", input ID perangkat kini rata kiri dengan gaya sama seperti
+  field password (dulu angka besar terpusat berspasi lebar, tampak berbeda
+  sendiri), dan password pairing punya tombol tampil/sembunyi (ikon mata).
+  Password host memang huruf besar semua by design (charset tanpa I/O/0/1,
+  10 karakter ≈ 50 bit) — tombol mata membuat pencocokan dengan layar PC
+  cepat tanpa menebak ketikan.
 - Host: **host tidak lagi hidup-mati-hidup-mati sendiri.** Akar masalahnya
+  di dua lapis: (1) server signaling mengirim ping WebSocket tiap 30 dtk dan
+  menutup koneksi yang tidak membalas dalam 90 dtk (`signaling/client.go`),
+  sementara engine Rust tidak pernah membalas ping (loop hanya memproses
+  `Message::Text`) — jadi host idle dibunuh server tiap ~90 detik, lalu
+  `main()` selesai dan proses mati; (2) supervisor merestart proses itu,
+  lalu siklus terulang. Kini engine membalas ping dengan pong, dan `main()`
+  menyambung ulang DALAM proses dengan backoff (1→30 dtk) saat koneksi
+  putus — proses hanya keluar bila token ditolak server (401/403, token
+  host ≈5 menit) atau signaling tak terjangkau setelah 10 percobaan, agar
+  supervisor meminta token baru. Supervisor Electron juga dijaga agar tidak
+  men-spawn dua engine sekaligus (guard `engineStarting`), menghormati
+  backoff restart, dan mencatat kode keluar + sinyal engine di log.
 - Host: **capture layar berhenti saat sesi berakhir** — sebelumnya setelah
+  client menutup sesi, thread capture DXGI + encoder terus berjalan tanpa
+  penonton (frame dikirim ke channel yang sudah tertutup, diabaikan
+  diam-diam), menyedot GPU/CPU sia-sia dan bisa mengganggu sesi berikut.
+  Kini `on_frame_arrived` menghentikan capture begitu konsumen frame hilang
+  (`try_send` → `Disconnected`), dan `spawn_frame_source` membawa sinyal
+  hidup (`FrameSource`) supaya thread capture tahu kapan harus keluar.
 - Host: **capture layar pulih dari penutupan OS** — bila Graphics Capture
+  ditutup OS (secure desktop/UAC, monitor lepas, reset driver), thread
+  capture kini mencoba ulang dengan jeda singkat alih-alih keluar dan
+  membekukan gambar selamanya (sesi tetap "terhubung" tapi layar beku).
+  Sesi yang benar-benar berakhir tetap menghentikan capture bersih.
 - Host: **mutex ter-poison tidak lagi merobohkan proses** — semua kunci
+  `control`/`paired` di jalur produksi memakai `recover_lock`, sehingga
+  panic satu task media (video/audio/input) tidak menular jadi panic
+  berantai di `main()` yang dulu memicu restart supervisor.
 - Desktop (host Windows): **supervisor kebal server hang** — permintaan
+  token signaling dan panggilan control API kini punya timeout
+  (`AbortSignal.timeout` 10 dtk / 5 dtk, `execFile --identity-json` 15 dtk).
+  Sebelumnya server signaling yang hang membekukan `startEngine` selamanya
+  (guard `engineStarting` terus menyala), sehingga engine tak pernah lahir
+  dan watchdog ikut diam.
 - Desktop (host Windows): **"Engine belum siap" kini menjelaskan sebabnya** — supervisor mencatat kesalahan terakhir (token ditolak, exe tak ditemukan, kode keluar engine) dan mengirimnya ke UI, plus ID/password pairing tetap tampil walau engine mati. Sebelumnya kegagalan hanya tersembunyi di tab log dan halaman Home cuma bilang "belum siap".
 - Desktop (host Windows): **UI konsisten berbahasa Indonesia** — label navigasi `Home/Connect/News/Profile/Settings` → `Beranda/Hubungkan/Berita/Profil/Pengaturan`, judul halaman dan label `Mode` ikut dibumikan (sebelumnya campur Inggris di tengah konten Indonesia).
 - Desktop (host Windows): **tab Berita lebih tahan gangguan** — permintaan API news diberi timeout 10 dtk, pesan gagal dijelaskan dalam bahasa Indonesia ("Gagal memuat berita — periksa koneksi internet."), plus tombol `Coba lagi` dan tautan buka di web bila server tidak terjangkau.
