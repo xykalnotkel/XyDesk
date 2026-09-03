@@ -523,6 +523,16 @@ _(kosong)_
 
 ## Selesai
 
+- [x] (dari Tara - XySpace Team, 2026-09-03) — Perkuat tes worker signaling &
+  berita (tanpa perubahan kode produksi): `verifyGoogleIdToken` yang sempat
+  nol-test kini dikunci 14 kasus (aud/iss/exp/email/sub/kid/tanda tangan
+  asing/JWKS mati) memakai kunci RSA sungguhan; `verifyJwt` +6 kasus tepi,
+  token signaling +kasus tamper/rusak, `relayAllowed` bye/ice lengkap, dan
+  `adminPublish` +8 kasus termasuk aturan slug changelog (akar 404 footer
+  rilis 6.4.0). `cloudflare/` 51/51, `news/` 20/20 hijau via `node --test`;
+  CI otomatis memungutnya (check-signaling `npm test` + check-news
+  `news/test/*.test.js`).
+
 - [x] (dari Sena - XySpace Team, 2026-09-03) — Sinkronisasi aturan rilis baru
   diverifikasi: "versi & berita = keputusan operator" dan "tiap agent menulis
   bahan artikel, CI/Release menyatukannya jadi SATU artikel" sudah terpasang

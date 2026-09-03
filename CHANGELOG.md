@@ -24,6 +24,19 @@ Kebijakan rilis:
   satu-sesi-satu-waktu, papan klip). Sebagian besar `host/` hanya terbukti
   berperilaku benar di mesin Windows nyata, dan sampai sekarang tidak ada satu
   pun dokumen yang menuliskan cara mengujinya.
+- Pengujian: **22 test baru untuk jalur auth & publish** (Backend/Edge,
+  tanpa perubahan kode produksi). `verifyGoogleIdToken` — verifikasi ID
+  token Google (RS256 via JWKS) yang sebelumnya tidak punya satu test pun —
+  kini dikunci 14 kasus (audience, issuer, kedaluwarsa, email terverifikasi,
+  sub, kid tak dikenal, tanda tangan asing, JWKS mati) memakai kunci RSA
+  sungguhan, bukan mock `ok: true`. `verifyJwt` ditambah kasus tepi (typ
+  asing, `nbf` masa depan, `iat` terlalu maju, payload korup, secret kosong).
+  Token signaling ditambah kasus rusak/tamper/secret kosong; `relayAllowed`
+  dilengkapi arah `bye`/`ice` dua arah + tolak sesama role. Di sisi berita,
+  `adminPublish` dikunci 8 kasus — termasuk aturan slug yang pernah terlewat
+  di rilis 6.4.0: tanpa field `slug`, artikel changelog jatuh ke hash acak
+  `p-…` dan tautan versi di footer web menunjuk ke artikel yang tidak ada.
+  Hasil: `cloudflare/` 51/51 hijau, `news/` 20/20 hijau (`node --test`).
 
 ### Diubah
 - Dokumentasi: **README dan `docs/CI.md` disamakan dengan kebijakan pemicu
