@@ -30,12 +30,14 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260903-DANU-WEB3 | Danu - XySpace Team | Web | LAGI KERJA | overhaul layar sesi web: rail kontrol ikon ala aplikasi (sembunyikan kontrol, ambil/kirim papan klip, statistik live), panel pengaturan 4 tab (Gambar/Suara/Kontrol/Sesi), tooltip badge resmi, penulis default worker berita → Haekal Saputra (1 baris, lintas area news/ atas restu operator), README news, changelog + handoff screenshot lintas platform | 2026-09-03 |
 | SESI-20260903-CAKRA-RILIS | Cakra - XySpace Team | CI / Release | SELESAI | Rilis 6.3.0: bump versi + changelog + artikel berita + verifikasi rilis — v6.3.0 terbit (Build+Release hijau, artikel changelog-v6-3-0 live) | 2026-09-03 |
 
 ## Antrean izin push
 
 | ID Sesi | Agent | Ringkasan perubahan | Status izin | Disetujui oleh | Kapan | Run CI |
 |---|---|---|---|---|---|---|
+| SESI-20260903-DANU-WEB3 | Danu - XySpace Team | Web: overhaul layar sesi web ke paritas aplikasi — rail kontrol ikon vertikal (Suara PC, Mik ke PC, Keyboard, Gamepad, Trackpad, papan klip kirim/ambil, layar penuh, pengaturan, putuskan, sembunyikan kontrol), panel pengaturan 4 tab (Gambar/Suara/Kontrol/Sesi) + statistik live dari getStats, pemilih layar masuk panel; tooltip badge resmi; lintas area news/ atas restu operator: penulis default worker berita `Haekal Saputra (XySpace)` → `Haekal Saputra` + README news; CHANGELOG + HANDOFF screenshot semua platform | DISETUJUI | Xyckal (chat) | 2026-09-03 | — |
 | SESI-20260903-CAKRA-CI | Cakra - XySpace Team | Filter area di `build.yml` (job `changes` + jobs terpisah), `check-meta`/`check-news`/`check-signaling` baru, skip gracful `deploy-web.yml`, workflow `verify-push-auth.yml`, `AGENT_BOARD.md`, pembaruan `AGENT.md`/`docs/CI.md`/`CHANGELOG.md`/`CONTRIBUTORS.md` | DISETUJUI | Xyckal | 2026-09-03 | Run 1: Build 33663421875 + Verifikasi 33663421843 · Run 2: Build 33663874463 + Verifikasi 33663874589 |
 | SESI-20260903-CAKRA-NOTIF | Cakra - XySpace Team | Notifikasi push tanpa izin ke ntfy/Telegram pada `verify-push-auth.yml` + dokumentasi `docs/CI.md` + `CHANGELOG.md` | DISETUJUI | Xyckal | 2026-09-03 | Build 33664638977 + Verifikasi 33664638941 |
 | SESI-20260903-GALIH-HOST | Galih - XySpace Team | Host Engine: bitrate video live lewat control API (aksi `video-bitrate` 1–50 Mbps, `targetBitrateBps` di `/status`), perbaikan E0308 build Windows (satu sumber tipe NVENC), pindah konstanta/perakit NVENC ke `nvenc_config.rs` + uji | DISETUJUI | Xyckal (chat) | 2026-09-03 | Build 33665824839 + Verifikasi 33665824719 |
