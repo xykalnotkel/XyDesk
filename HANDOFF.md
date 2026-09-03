@@ -25,6 +25,19 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `api.dicebear.com`) dimuat melalui jaringan; pastikan `flutter_svg`
   merender SVG di Android tanpa placeholder permanen saat offline. Belum
   diuji di perangkat.
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Verifikasi ikon nav bawah &
+  rail yang baru** (AI 3D ungu glossy, `assets/img/nav/*.png`, dua mode
+  off=abu / on=warna): pastikan di build Android nyata ikon tampil tajam
+  (tidak terpotong) di `NavigationBar` dan `NavigationRail`, dan
+  transparansi latar bersih di atas tema terang. Belum diuji di perangkat.
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Verifikasi papan ketik
+  "Sistem" (IME)** di perangkat nyata: ketik teks di sesi → host menerima
+  sebagai 0x06 TEXT; perbaiki jika IME Android mengirim teks dengan urutan
+  berbeda (delta di `_SystemKeyboard` hanya mengasumsikan menambah/menghapus
+  di akhir). Belum diuji di perangkat.
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — **Verifikasi identitas komentar
+  di perangkat nyata**: pengguna yang login memakai nama akun (bukan nama acak)
+  dan tamu memakai nama deterministik; keduanya menampilkan avatar. Belum diuji.
 
 ## Untuk: Desktop Shell
 
@@ -119,6 +132,12 @@ _(kosong)_
 
 ## Untuk: Host Engine
 
+- [ ] (dari Laras - XySpace Team, 2026-09-03) — Kontrak perilaku keyboard saat
+  sesi: sisi klien kini bisa mengirim **teks bebas (0x06 TEXT)** lewat papan
+  ketik sistem selain keycode (0x05 KEY). Pastikan host (`host/src/input.rs`)
+  mengetik 0x06 TEXT apa adanya (tidak tergantung tata letak keyboard host)
+  dan berperilaku wajar bila karakter banyak/rapat. Keycode 0x05 (termasuk
+  Backspace 0x08, Enter 0x0D, F1–F12) tetap tidak berubah.
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — Push `f12dace` (bitrate
   live via control API) membuat run `verify-push-auth.yml` MERAH: commit
   tidak memuat penanda `Izin: <ID-SESI>` di body. Aturan baru: klaim

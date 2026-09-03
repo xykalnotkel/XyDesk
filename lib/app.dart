@@ -352,22 +352,24 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (mounted) setState(() {});
   }
 
-  /// Destinasi rail untuk layar lebar — ikon vektor Lucide yang warnanya
-  /// mengikuti tema (tidak lagi gambar webp dua varian).
+  /// Suatu tambahan kecil ke rail: memakai ikon AI 3D ungu glossy.
+  /// Aktif memakai versi warna; nonaktif memakai versi "off" (abu-abu).
   NavigationRailDestination _railDest(
     BuildContext context,
-    IconData icon,
     String label,
+    String asset,
+    int index,
   ) {
     return NavigationRailDestination(
-      icon: Icon(icon),
-      selectedIcon: Icon(icon),
+      icon: _NavIconImage(asset: asset, selected: _index == index),
+      selectedIcon: _NavIconImage(asset: asset, selected: true),
       label: Text(label),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     final titles = [
       context.tr('home_devices'),
       context.tr('nav_connect'),
@@ -395,26 +397,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                 labelType: NavigationRailLabelType.all,
                 backgroundColor: Colors.transparent,
                 destinations: [
-                  _railDest(
-                    context,
-                    LucideIcons.monitor,
-                    context.tr('nav_home'),
-                  ),
-                  _railDest(
-                    context,
-                    LucideIcons.screenShare,
-                    context.tr('nav_connect'),
-                  ),
-                  _railDest(
-                    context,
-                    LucideIcons.newspaper,
-                    context.tr('nav_news'),
-                  ),
-                  _railDest(
-                    context,
-                    LucideIcons.circleUserRound,
-                    context.tr('nav_account'),
-                  ),
+                  _railDest(context, context.tr('nav_home'), 'home', 0),
+                  _railDest(context, context.tr('nav_connect'), 'connect', 1),
+                  _railDest(context, context.tr('nav_news'), 'news', 2),
+                  _railDest(context, context.tr('nav_account'), 'account', 3),
                 ],
               ),
               // Geser kanan-kiri untuk berpindah halaman — sama seperti
@@ -456,25 +442,35 @@ class _AppShellState extends ConsumerState<AppShell> {
         bottomNav: NavigationBar(
           selectedIndex: _index,
           onDestinationSelected: _goTo,
+          // Beberapa highlight & ruang ikon sedikit lebih besar.
+          height: 76,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          indicatorColor: c.accent.withValues(alpha: 0.12),
           destinations: [
             NavigationDestination(
-              icon: const Icon(LucideIcons.monitor),
-              selectedIcon: const Icon(LucideIcons.monitor),
+              icon: const _NavIconImage(asset: 'home', selected: false),
+              selectedIcon: const _NavIconImage(asset: 'home', selected: true),
               label: context.tr('nav_home'),
             ),
             NavigationDestination(
-              icon: const Icon(LucideIcons.screenShare),
-              selectedIcon: const Icon(LucideIcons.screenShare),
+              icon: const _NavIconImage(asset: 'connect', selected: false),
+              selectedIcon: const _NavIconImage(
+                asset: 'connect',
+                selected: true,
+              ),
               label: context.tr('nav_connect'),
             ),
             NavigationDestination(
-              icon: const Icon(LucideIcons.newspaper),
-              selectedIcon: const Icon(LucideIcons.newspaper),
+              icon: const _NavIconImage(asset: 'news', selected: false),
+              selectedIcon: const _NavIconImage(asset: 'news', selected: true),
               label: context.tr('nav_news'),
             ),
             NavigationDestination(
-              icon: const Icon(LucideIcons.circleUserRound),
-              selectedIcon: const Icon(LucideIcons.circleUserRound),
+              icon: const _NavIconImage(asset: 'account', selected: false),
+              selectedIcon: const _NavIconImage(
+                asset: 'account',
+                selected: true,
+              ),
               label: context.tr('nav_account'),
             ),
           ],
@@ -561,6 +557,35 @@ class _AppShellState extends ConsumerState<AppShell> {
       ),
     );
     return actions;
+  }
+}
+
+/// Ikon AI 3D untuk navigasi bawah/rail. Aktif memakai versi warna ungu
+/// glossy; nonaktif memakai versi "off" (abu-abu). Gambar sudah dibersihkan
+/// latar putihnya (transparan) sehingga cocok di atas tema terang.
+class _NavIconImage extends StatelessWidget {
+  const _NavIconImage({required this.asset, required this.selected});
+
+  final String asset;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final suffix = selected ? '' : '_off';
+    return Image.asset(
+      'assets/img/nav/$asset$suffix.png',
+      width: 28,
+      height: 28,
+      fit: BoxFit.contain,
+      // Ikon nav sebaiknya tidak diekspos sebagai gambar yang "berbeda warna
+      // tema" — warnanya sudah final dari aset. Hilangkan kaca efek bila
+      // tema diubah.
+      errorBuilder: (_, __, ___) => Icon(
+        LucideIcons.circle,
+        size: 28,
+        color: selected ? context.c.accent : context.c.textLow,
+      ),
+    );
   }
 }
 

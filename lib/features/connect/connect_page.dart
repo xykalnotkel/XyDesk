@@ -219,11 +219,15 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
               ),
           ],
         ),
+        // Ruang napas antara baris "ID Perangkat + chip Riwayat" dan kolom
+        // ID. Tanpa ini, chip Riwayat menempel ke field ID begitu panel
+        // riwayat tertutup, membaur jadi satu blok.
+        const SizedBox(height: Gap.md),
         if (_recentsOpen) ...[
           // Panel riwayat sebelumnya berjarak 6 px dari label DAN 6 px dari
           // kolom ID — terlihat menempel pada keduanya sehingga ketiganya
           // membaur jadi satu blok. Diberi ruang napas yang jelas.
-          const SizedBox(height: Gap.md),
+          const SizedBox(height: Gap.sm),
           _RecentsList(
             entries: _recents,
             onPick: (id, pw) {

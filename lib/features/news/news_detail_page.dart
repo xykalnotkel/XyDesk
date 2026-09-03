@@ -11,6 +11,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/l10n_bridge.dart';
+import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/official_badge.dart';
 import '../../widgets/seamless.dart';
@@ -60,6 +61,14 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
   void initState() {
     super.initState();
     _load();
+    // Tanpa listener ini, tombol "Kirim" tidak pernah aktif saat pengguna
+    // mengetik — teks di TextField berubah, tetapi widget tidak di-build
+    // ulang sehingga `_commentText.text.trim().length < 2` tetap dibaca
+    // dari nilai awal (kosong). Ini juga yang membuat tombol balasan tampak
+    // "tidak sinkron": setState datang hanya saat pengiriman, bukan saat
+    // mengetik.
+    _commentText.addListener(() => setState(() {}));
+    _emailCtrl.addListener(() => setState(() {}));
   }
 
   @override
@@ -130,13 +139,28 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
     }
   }
 
+  /// Nama penulis komentar: akun jika sudah masuk, nama manusia deterministik
+  /// jika tamu (tidak pernah lagi "tamu-xxxx").
+  String _commentAuthor() {
+    final session = ref.read(authProvider);
+    if (!session.isGuest) {
+      final name = session.name?.trim();
+      if (name != null && name.isNotEmpty) return name;
+      final email = session.email?.trim();
+      if (email != null && email.isNotEmpty) return email.split('@').first;
+      return context.tr('account_user');
+    }
+    return ref.read(newsApiProvider).displayName;
+  }
+
   Future<void> _sendComment() async {
     final text = _commentText.text.trim();
     if (text.length < 2 || _commentBusy || _post == null) return;
     setState(() => _commentBusy = true);
     try {
-      // Nama tampilan acak per perangkat — tidak ada kolom nama manual.
-      final name = ref.read(newsApiProvider).displayName;
+      // Akun terbaca lewat profil bila login; tamu memakai nama acak yang
+      // deterministik (tetap dapat avatar dari DiceBear).
+      final name = _commentAuthor();
       final c = await ref
           .read(newsApiProvider)
           .addComment(widget.slug, name, text, parentId: _replyTo?.id);

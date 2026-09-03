@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_version.dart';
 import '../../core/l10n_bridge.dart';
@@ -496,13 +498,109 @@ Widget _sec(BuildContext c, String t) => Padding(
   ),
 );
 
+/// Kata/frasa penting yang disorot (warna aksen, sedikit tebal) di teks
+/// legal. Ini murni penyajian — tidak mengubah makna atau isi.
+const _importantTerms = <String>[
+  'XySpace Tech',
+  'Republik Indonesia',
+  'Pelindungan Data Pribadi',
+  'DTLS-SRTP',
+  'HTTPS dan WSS',
+  'privacy@xydesk.app',
+  'legal@xydesk.app',
+  'TIDAK PERNAH',
+  '13 tahun',
+  'pra-beta',
+];
+
+/// Render satu paragraf legal dengan penyorotan kata penting + email/URL
+/// yang bisa diketuk. Teks asli tidak berubah; hanya presentasi yang
+/// diperkaya (warna/tebal/tautkan).
 Widget _para(BuildContext c, String t) => Padding(
   padding: const EdgeInsets.only(bottom: Gap.sm),
-  child: Text(
-    t,
-    style: TextStyle(fontSize: 13, height: 1.65, color: c.c.textMid),
-  ),
+  child: _rich(c, t, fontSize: 13, height: 1.65),
 );
+
+/// Abstraksi teks kaya paragraf legal: pecah string jadi bagian biasa,
+/// email, URL, dan frasa penting — masing-masing diberi gaya sesuai.
+Widget _rich(
+  BuildContext c,
+  String text, {
+  required double fontSize,
+  required double height,
+}) {
+  final base = TextStyle(
+    fontSize: fontSize,
+    height: height,
+    color: c.c.textMid,
+  );
+  final accent = TextStyle(
+    fontSize: fontSize,
+    height: height,
+    color: c.c.accent,
+    fontWeight: FontWeight.w600,
+  );
+  final strong = TextStyle(
+    fontSize: fontSize,
+    height: height,
+    color: c.c.textHi,
+    fontWeight: FontWeight.w600,
+  );
+
+  final spans = <InlineSpan>[];
+  final emailRe = RegExp(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}');
+  final urlRe = RegExp(r'https?://[^\s)]+');
+
+  // Gabungkan semua token penting ke satu regex pencocok, urutan panjang
+  // dulu supaya frasa dua kata tidak kalah oleh pemicu yang lebih pendek.
+  final terms = [..._importantTerms]
+    ..sort((a, b) => b.length.compareTo(a.length));
+  final termRe = RegExp(terms.map(RegExp.escape).join('|'));
+  final tokenRe = RegExp(
+    '(${emailRe.pattern})|(${urlRe.pattern})|(${termRe.pattern})',
+  );
+
+  var idx = 0;
+  for (final m in tokenRe.allMatches(text)) {
+    if (m.start > idx) {
+      spans.add(TextSpan(text: text.substring(idx, m.start)));
+    }
+    final token = m.group(0)!;
+    if (emailRe.hasMatch(token)) {
+      spans.add(
+        TextSpan(
+          text: token,
+          style: accent.copyWith(decoration: TextDecoration.underline),
+          recognizer: (TapGestureRecognizer()
+            ..onTap = () => launchUrl(
+              Uri.parse('mailto:$token'),
+              mode: LaunchMode.externalApplication,
+            )),
+        ),
+      );
+    } else if (urlRe.hasMatch(token)) {
+      spans.add(
+        TextSpan(
+          text: token,
+          style: accent.copyWith(decoration: TextDecoration.underline),
+          recognizer: (TapGestureRecognizer()
+            ..onTap = () => launchUrl(
+              Uri.parse(token),
+              mode: LaunchMode.externalApplication,
+            )),
+        ),
+      );
+    } else {
+      spans.add(TextSpan(text: token, style: strong));
+    }
+    idx = m.end;
+  }
+  if (idx < text.length) {
+    spans.add(TextSpan(text: text.substring(idx)));
+  }
+
+  return Text.rich(TextSpan(style: base, children: spans));
+}
 
 Widget _bullets(BuildContext c, List<String> items) => Padding(
   padding: const EdgeInsets.only(top: 4, bottom: Gap.sm),
@@ -526,16 +624,7 @@ Widget _bullets(BuildContext c, List<String> items) => Padding(
                   ),
                 ),
               ),
-              Expanded(
-                child: Text(
-                  i,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.6,
-                    color: c.c.textMid,
-                  ),
-                ),
-              ),
+              Expanded(child: _rich(c, i, fontSize: 13, height: 1.6)),
             ],
           ),
         ),
@@ -555,12 +644,7 @@ Widget _warnBox(BuildContext c, String t) => Container(
     children: [
       const Icon(LucideIcons.triangleAlert, size: 16, color: AppColors.warning),
       const SizedBox(width: Gap.md),
-      Expanded(
-        child: Text(
-          t,
-          style: TextStyle(fontSize: 12.5, height: 1.6, color: c.c.textHi),
-        ),
-      ),
+      Expanded(child: _rich(c, t, fontSize: 12.5, height: 1.6)),
     ],
   ),
 );

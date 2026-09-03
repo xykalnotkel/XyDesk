@@ -59,10 +59,40 @@ Kebijakan rilis:
   `cloudinaryUploadPreset` (lihat `lib/core/cloudinary_upload.dart`). Kalau
   belum diisi, opsi upload menampilkan pesan yang jelas, bukan gagal senyap.
 - Client Flutter: dependensi baru `image_picker` (untuk memilih foto dari
-  galeri). Inventaris lisensi pihak ketiga diregenerasi: **499 → 514**
-  komponen (Dart/Flutter 105 → 120).
+  galeri). Inventaris lisensi pihak ketiga diregenerasi: **499 → 504**
+  komponen (Dart/Flutter 105 → 110).
 - Client Flutter: kontrak konfigurasi unggah Cloudinary dikunci lewat uji
   (`test/core/cloudinary_upload_test.dart`).
+
+- Client Flutter: **nav bawah & rail memakai ikon AI 3D ungu glossy** (aset
+  `assets/img/nav/*.png`) dengan dua mode — aktif memakai versi penuh warna,
+  nonaktif versi "off" abu-abu. Ikon dibuat AI lalu latar putihnya dibuang
+  (transparan) memakai keying manual, dan baris bawah sedikit diperbesar
+  (tinggi + ikon 28 px) supaya lebih mudah dijangkau.
+- Client Flutter: **pilihan sumber papan ketik sesi** — "XyDesk" (papan ketik
+  penuh, F1–F12, modifier sticky, keycode Windows) atau "Sistem" (IME Android
+  via field teks, mengetik sebagai teks bebas melalui 0x06 TEXT). Dipilih di
+  panel kontrol; kontraknya dikunci lewat `test/session/`
+  `session_settings_test.dart`.
+- Client Flutter: **tombol "Kirim" komentar berita kini aktif saat mengetik**.
+  Sebelumnya `TextEditingController` tidak diberi listener sehingga tombol
+  tidak pernah menyala (terlihat seolah tidak bisa mengirim balasan). Balasan
+  juga kini mengikuti input yang baru diketik ("tidak sinkron").
+- Client Flutter: identitas komentar mengikuti sesi — pengguna yang *login*
+  memakai nama akun (fallback ke bagian depan email), sedangkan *tamu* memakai
+  nama manusia deterministik dari sidik jari perangkat; keduanya tetap
+  mendapatkan avatar (DiceBear).
+- Client Flutter: halaman **Syarat & Ketentuan / Kebijakan Privasi** kini
+  menyorot kata penting (warna aksen + tebal) dan membuat alamat email serta
+  tautan dapat diketuk — tanpa mengubah isi dokumen.
+- Client Flutter: jarak antara chip "Riwayat" dan kolom ID perangkat di
+  halaman Connect diperbaiki (sebelumnya menempel sehingga membaur jadi satu
+  blok).
+
+### Diubah
+- Client Flutter: dokumen legal tidak lagi menampilkan teks polos yang sama
+  untuk semua kata; kata penting diberi warna/tebal dan email/URL dapat
+  diketuk untuk membuka aplikasi email/browser.
 
 ## [6.3.0] - 2026-09-03
 

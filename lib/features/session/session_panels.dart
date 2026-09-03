@@ -16,6 +16,19 @@ enum AudioLatencyMode { lowLatency, balanced, quality }
 
 enum MicrophoneMode { alwaysOn, pushToTalk }
 
+/// Sumber papan ketik saat sesi.
+enum KeyboardSource {
+  /// Papan ketik XyDesk (tata letak penuh, F1–F12, modifier sticky) —
+  /// mengirim keycode Windows ke host. Paling cocok untuk game dan kontrol
+  /// penuh.
+  xydesk,
+
+  /// Papan ketik sistem (IME Android) lewat field teks — mengetik sebagai
+  /// teks bebas, tidak tergantung tata letak keyboard host. Cocok untuk
+  /// formulir, kolom pencarian, dan mengetik cepat.
+  system,
+}
+
 @immutable
 class SessionSettings {
   const SessionSettings({
@@ -37,6 +50,7 @@ class SessionSettings {
     this.tapToClick = true,
     this.reverseScroll = false,
     this.pointerLock = false,
+    this.keyboardSource = KeyboardSource.xydesk,
   });
 
   final SessionExperience experience;
@@ -57,6 +71,7 @@ class SessionSettings {
   final bool tapToClick;
   final bool reverseScroll;
   final bool pointerLock;
+  final KeyboardSource keyboardSource;
 
   SessionSettings copyWith({
     SessionExperience? experience,
@@ -77,6 +92,7 @@ class SessionSettings {
     bool? tapToClick,
     bool? reverseScroll,
     bool? pointerLock,
+    KeyboardSource? keyboardSource,
   }) {
     return SessionSettings(
       experience: experience ?? this.experience,
@@ -97,6 +113,7 @@ class SessionSettings {
       tapToClick: tapToClick ?? this.tapToClick,
       reverseScroll: reverseScroll ?? this.reverseScroll,
       pointerLock: pointerLock ?? this.pointerLock,
+      keyboardSource: keyboardSource ?? this.keyboardSource,
     );
   }
 }
@@ -913,6 +930,7 @@ class _ControlsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     final gaming = state.experience == SessionExperience.gaming;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -937,6 +955,36 @@ class _ControlsPanel extends StatelessWidget {
                 ),
                 const _CardGap(),
               ],
+              _Segmented<KeyboardSource>(
+                value: state.keyboardSource,
+                onChanged: (value) =>
+                    onChanged(state.copyWith(keyboardSource: value)),
+                entries: const [
+                  _SegmentEntry<KeyboardSource>(
+                    value: KeyboardSource.xydesk,
+                    label: 'XyDesk',
+                    icon: LucideIcons.keyboard,
+                  ),
+                  _SegmentEntry<KeyboardSource>(
+                    value: KeyboardSource.system,
+                    label: 'Sistem',
+                    icon: LucideIcons.smartphone,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.only(left: 2, bottom: 10),
+                child: Text(
+                  state.keyboardSource == KeyboardSource.system
+                      ? 'Mengetik memakai papan ketik HP (IME); cocok untuk '
+                            'formulir dan mengetik teks.'
+                      : 'Papan ketik penuh XyDesk (F1–F12, modifier); cocok '
+                            'untuk game dan kontrol tepat.',
+                  style: TextStyle(fontSize: 10.5, color: c.textLow),
+                ),
+              ),
+              const _CardGap(),
               _ToggleRow(
                 icon: LucideIcons.vibrate,
                 title: 'Umpan balik haptik',
