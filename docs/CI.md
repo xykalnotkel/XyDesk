@@ -52,6 +52,8 @@ Untuk memicu Build penuh:
 gh workflow run build.yml --ref main
 ```
 
+**Catatan anti-race (3 Sep 2026):** `deploy-web.yml` mempercayai API, bukan payload `workflow_run` — SHA run Build diambil dari catatan run, checkout memakai SHA itu, artefak dicocokkan dengan run-nya, deploy berjalan serial (`cancel-in-progress: false`), dan hanya Build web terbaru yang deploy (run basi menyingkirkan diri). Pelajaran: dua Build sukses berdekatan sempat membuat run deploy menimpa bundle baru dengan yang lama (6c5ba06/d90e12a).
+
 ## Filter area di Build (sejak 3 Sep 2026)
 
 `build.yml` tidak lagi menjalankan seluruh rantai untuk setiap push/PR.

@@ -78,6 +78,7 @@ Kebijakan rilis:
   panjangnya bisa ribuan piksel — sebelumnya pembaca HP harus menggulir
   manual.
 ### Diperbaiki
+- Web: **race deploy-web.yml** — dua Build sukses berdekatan bisa mencampur payload sehingga deploy checkout SHA lama dan menimpa bundle baru (kejadian 6c5ba06/d90e12a, ditebus manual). Kini SHA & run Build diambil dari API, checkout memakai SHA itu, artefak dicocokkan dengan run-nya, deploy berjalan serial (tidak dibatalkan di tengah), dan hanya Build web terbaru yang boleh deploy.
 - Web: **overflow horizontal di detail berita (layar ≤ 390 px)** — baris
   langganan email tidak bisa membungkus sehingga tombol "Langganan"
   mendorong halaman melebar 33–63 px. Kini input dan tombol membungkus

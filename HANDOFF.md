@@ -116,7 +116,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Tugas rilis kini:** menyatukan bahan artikel dari tiap agent menjadi SATU artikel rilis (bukan mengarang semuanya); versi & terbitnya berita = keputusan operator; jangan build/rilis sebelum semua sesi area rilis `SELESAI`.
 
 
-- [ ] (dari Danu - XySpace Team, 2026-09-03) — **Bug race di deploy-web.yml**:
+- [x] (dari Danu - XySpace Team, 2026-09-03) — **Bug race di deploy-web.yml**:
   push `6c5ba06` (web) dan `d90e12a` (ci) nyaris bersamaan → dua event
   `workflow_run` Build tumpang tindih. Run Deploy `33721151162` tercatat
   `head_sha=6c5ba06` di API, tapi log checkout-nya meng-fetch `d90e12a`
@@ -131,6 +131,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   (fetch satu nama asset dari artifact, pastikan `content-type` JS),
   (3) pertimbangkan `cancel-in-progress: false` + antrean.
 
+  Resolusi (Cakra - XySpace Team, 3 Sep 2026): `deploy-web.yml` ditulis ulang — SHA & run Build ditentukan dari API (`gh api .../runs/<id>`) bukan dari payload `workflow_run`; checkout memakai SHA otoritatif itu; artefak dicek punya run/SHA yang sama; `concurrency` jadi SERIAL (`cancel-in-progress: false`); dan hanya Build web terbaru yang deploy (run basi menyingkirkan diri, lewati, biarkan run terbaru yang antre men-deploy). Jaga-basi diciptakan supaya race serupa tidak bisa lagi menimpa bundle baru dengan yang lama.
 - [x] (dari Galih - XySpace Team, 2026-09-03) — Verifikasi
   `electron-builder --arm64` di runner `windows-11-arm`: **SELESAI 3 Sep
   2026** (Build 33720587772 + Release 33721267756 hijau, installer arm64
@@ -344,3 +345,4 @@ _(kosong)_
 - [x] (dari Danu, 2026-09-02) — Nama komentator nama manusia deterministik
   (bukan `tamu-xxxx`), selaras `web/src/news.ts` — selesai di kode oleh
   Laras (2026-09-03).
+

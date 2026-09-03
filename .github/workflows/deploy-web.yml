@@ -13,7 +13,12 @@ permissions:
 
 concurrency:
   group: deploy-flutter-web-production
-  cancel-in-progress: true
+  # Deploy berjalan SERIAL, tidak boleh dibatalkan (cancel-in-progress:
+  # false): membatalkan run yang sedang upload = state parsial di worker,
+  # dan run basi yang selamat bisa menimpa bundle baru dengan yang lama.
+  # Run basi menyingkirkan dirinya sendiri lewat jaga-basi di step resolve
+  # + fetch — hanya Build web terbaru yang benar-benar deploy.
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -24,20 +29,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Ambil bundle Web dari Build yang lulus
-        id: fetch
+      # Step 1: tentukan run Build & SHA secara OTORITATIF dari API, bukan
+      # dari payload workflow_run. Ada kasus payload tertukar saat dua Build
+      # sukses berdekatan (race 6c5ba06/d90e12a, lihat HANDOFF): run deploy
+      # sempat checkout SHA lama lalu menimpa bundle baru. head_sha dari
+      # catatan run di API = satu-satunya yang dipercaya.
+      - name: Tentukan run Build & SHA dari API
+        id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
           WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
-          RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           set -euo pipefail
           run_id="${WORKFLOW_RUN_ID:-}"
@@ -46,7 +47,7 @@ jobs:
               gh run list \
                 --repo "$GITHUB_REPOSITORY" \
                 --workflow build.yml \
-                --commit "$RELEASE_SHA" \
+                --commit "$GITHUB_SHA" \
                 --status success \
                 --limit 1 \
                 --json databaseId \
@@ -54,16 +55,57 @@ jobs:
             )"
           fi
           if [ -z "$run_id" ]; then
-            echo "::error::Build Web sukses untuk $RELEASE_SHA tidak ditemukan."
+            echo "::error::Build sukses untuk $GITHUB_SHA tidak ditemukan."
             exit 1
           fi
-          # Build kini difilter per area (`.github/workflows/build.yml`): run
-          # yang tidak menyentuh `web/**` tidak memuat artefak XyDesk-Web.
-          # Kalau begitu dan ini bukan pemicuan manual, deploy dilewati —
-          # memanggil `gh run download` untuk artefak yang tidak ada akan
-          # menggagalkan run yang sebenarnya tidak punya pekerjaan.
-          names="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts" \
-            --jq '.artifacts[].name')"
+          meta="$(
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" \
+              --jq '{id, head_sha, conclusion, event}'
+          )"
+          target_sha="$(echo "$meta" | jq -r '.head_sha')"
+          conclusion="$(echo "$meta" | jq -r '.conclusion')"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
+          if [ "$conclusion" != "success" ]; then
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "::error::Run Build $run_id tidak sukses (conclusion=$conclusion); deploy manual dibatalkan."
+              exit 1
+            fi
+            echo "::warning::Payload tertukar — run $run_id ber-conclusion $conclusion. Deploy dilewati."
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Menarget run Build $run_id @ $target_sha (dari API, bukan payload)."
+
+      - uses: actions/checkout@v4
+        if: steps.resolve.outputs.skipped != 'true'
+        with:
+          ref: ${{ steps.resolve.outputs.target_sha }}
+
+      - uses: actions/setup-node@v4
+        if: steps.resolve.outputs.skipped != 'true'
+        with:
+          node-version: '24'
+
+      - name: Ambil bundle Web dari Build yang lulus
+        id: fetch
+        if: steps.resolve.outputs.skipped != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.resolve.outputs.run_id }}
+          TARGET_SHA: ${{ steps.resolve.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          run_id="$RUN_ID"
+          target_sha="$TARGET_SHA"
+
+          # Build difilter per area (`.github/workflows/build.yml`): run yang
+          # tidak menyentuh `web/**` tidak memuat artefak XyDesk-Web. Kalau
+          # begitu dan ini bukan pemicuan manual, deploy dilewati.
+          names="$(
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts" \
+              --jq '.artifacts[].name'
+          )"
           if ! echo "$names" | grep -qx 'XyDesk-Web'; then
             if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
               echo "::error::Artefak XyDesk-Web tidak ada di run $run_id; deploy manual dibatalkan."
@@ -73,6 +115,40 @@ jobs:
             echo "skipped=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
+          # Konsistensi: artefak XyDesk-Web harus milik run yang sama dengan
+          # SHA target — jangan sampai bundle SHA lain ikut ter-deploy.
+          art_sha="$(
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts" \
+              --jq '.artifacts[] | select(.name=="XyDesk-Web") | .workflow_run.head_sha'
+          )"
+          if [ "$art_sha" != "$target_sha" ]; then
+            echo "::error::Artefak XyDesk-Web milik $art_sha, bukan $target_sha — dibatalkan."
+            exit 1
+          fi
+
+          # Jaga-basi (pemicu otomatis saja): bila sudah ada Build sukses
+          # LEBIH BARU yang memuat artefak web, run ini basi — biarkan run
+          # milik Build terbaru itu yang deploy (antre; tidak dibatalkan).
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            newest_web=""
+            for id in $(
+              gh api "repos/$GITHUB_REPOSITORY/actions/runs?workflow_id=build.yml&branch=main&status=success&per_page=20" \
+                --jq '.workflow_runs[].id'
+            ); do
+              if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/artifacts" \
+                   --jq 'any(.artifacts[]; .name=="XyDesk-Web")' | grep -qx true; then
+                newest_web="$id"
+                break
+              fi
+            done
+            if [ -n "$newest_web" ] && [ "$newest_web" != "$run_id" ]; then
+              echo "::warning::Build Web $newest_web lebih baru — run basi $run_id ($target_sha) dilewati; run $newest_web yang akan deploy."
+              echo "skipped=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
           rm -rf web_deploy/site
           mkdir -p web_deploy/site
           gh run download "$run_id" \
@@ -85,7 +161,7 @@ jobs:
           ls web_deploy/site/assets/*.js >/dev/null
 
       - name: Deploy ke Cloudflare
-        if: steps.fetch.outputs.skipped != 'true'
+        if: steps.resolve.outputs.skipped != 'true' && steps.fetch.outputs.skipped != 'true'
         working-directory: web_deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
