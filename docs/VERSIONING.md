@@ -165,13 +165,22 @@ Artikel News bukan salinan CHANGELOG. Formatnya:
 - **Apa dampaknya** — yang perlu pengguna lakukan, atau tidak sama sekali.
 - **Yang masih belum** — jujur soal batasan. Ini yang membangun kepercayaan.
 
-> ⚠️ **Tidak sinkron (temuan audit 3 Sep 2026, belum diperbaiki).** Dokumen ini
-> dan `CHANGELOG_SLUG` di `web/src/version.ts` masih mengasumsikan slug artikel
-> berpola `changelog-v6-2-0`, padahal worker berita **menerbitkan slug hash
-> acak** (`news/README.md`: mis. `p-8f5aa26aa3bc`, yang dipakai rilis 6.4.0).
-> Akibatnya tautan versi di footer web/aplikasi menunjuk ke slug yang tidak
-> ada. Diteruskan ke role Web + News lewat `HANDOFF.md` — jangan dianggap
-> sudah beres.
+Slug artikel changelog mengikuti pola `changelog-v6-2-0`, karena tautan versi
+di footer web dan di aplikasi menunjuk ke sana secara otomatis
+(`CHANGELOG_SLUG` di `web/src/version.ts`).
+
+> ⚠️ **Ini WAJIB dikirim saat menerbitkan artikel rilis.** Worker berita
+> mengacak slug jadi `p-<hash>` secara bawaan; pola `changelog-v<X>-<Y>-<Z>`
+> adalah **satu-satunya** pengecualian yang boleh diminta sendiri lewat field
+> `slug` di `POST /api/admin/publish` (lihat `adminPublish` di
+> `news/src/worker.js`). Kalau field itu lupa diisi, artikel tetap terbit
+> tetapi tombol versi di footer jatuh ke 404.
+>
+> Ini sudah terjadi: artikel rilis **6.4.0** terbit sebagai `p-8f5aa26aa3bc`,
+> sehingga `changelog-v6-4-0` → HTTP 404 (terverifikasi 3 Sep 2026), sementara
+> `changelog-v6-2-0` … `changelog-v6-3-0` semuanya masih HTTP 200. Rilis 6.1
+> dan 6.0 kena hal yang sama. Ditindaklanjuti lewat `HANDOFF.md` (area News +
+> prosedur rilis).
 
 ---
 

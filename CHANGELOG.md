@@ -34,6 +34,14 @@ Kebijakan rilis:
   status. Ditambah peringatan bahwa pola slug `changelog-v6-2-0` tidak lagi
   cocok dengan slug hash acak yang diterbitkan worker berita (tautan versi di
   footer jatuh ke 404) — diteruskan ke role Web/News lewat `HANDOFF.md`.
+- Dokumentasi: **koreksi diagnosis slug changelog** (audit lanjutan, hari yang
+  sama). Peringatan yang saya tulis sebelumnya keliru menyimpulkan worker
+  memaksa slug hash. Setelah membaca `adminPublish` di `news/src/worker.js`:
+  pola `changelog-v<X>-<Y>-<Z>` justru SUDAH didukung sebagai satu-satunya
+  slug yang boleh diminta sendiri. Jadi ini bukan bug kode melainkan langkah
+  rilis yang terlewat — artikel 6.4.0 diterbitkan tanpa field `slug` sehingga
+  jatuh ke `p-8f5aa26aa3bc`. `docs/VERSIONING.md` kini menegaskan field itu
+  wajib diisi untuk artikel rilis, dengan bukti HTTP yang diverifikasi.
 - Dokumentasi: **`docs/NEWS_STYLE.md` memuat pembagian penulisan berita** —
   versi & berita keputusan operator, tiap agent menulis bahan kerjanya
   sendiri, satu rilis satu artikel yang disatukan role CI/Release. Sebelumnya

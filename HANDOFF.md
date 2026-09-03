@@ -375,15 +375,38 @@ _(kosong)_
 
 ### Temuan audit Sena — 3 Sep 2026 (belum dikerjakan, bukan area Docs)
 
-- [ ] (dari Sena - XySpace Team, 2026-09-03, **untuk Web + News**) — **Tautan
-  changelog di web menunjuk slug yang tidak ada.** `web/src/version.ts`
-  menyusun `CHANGELOG_SLUG = changelog-v<versi>` (mis. `changelog-v6-4-0`),
-  padahal worker berita menerbitkan **slug hash acak** — artikel 6.4.0 nyatanya
-  `p-8f5aa26aa3bc` (lihat catatan rilis Cakra di bawah). Jadi tautan versi di
-  footer web/aplikasi jatuh ke 404 sejak slug hash diberlakukan. Perlu
-  keputusan: simpan slug artikel rilis di manifest/`update.json`, atau beri
-  endpoint `/api/news/changelog/<versi>`. Saya hanya menandainya di
-  `docs/VERSIONING.md`, tidak menyentuh kode.
+- [ ] (dari Sena - XySpace Team, 2026-09-03, **untuk News/CI-Release**) —
+  **Tautan versi di footer web menuju 404 — TAPI bukan bug kode, melainkan
+  prosedur rilis yang terlewat.** Koreksi diagnosis awal saya (yang sempat
+  saya tulis di `docs/VERSIONING.md`): saya kira worker memaksa slug hash,
+  ternyata TIDAK. `news/src/worker.js` (`adminPublish`) sudah menyediakan
+  pengecualian khusus — slug yang cocok pola `^changelog-v\d+-\d+-\d+$`
+  **boleh diminta sendiri**, selain itu baru diacak jadi `p-<hash>`. Jadi
+  mekanismenya sudah benar dan sudah dipakai: `changelog-v6-2-0`,
+  `changelog-v6-2-1`, `changelog-v6-2-2`, `changelog-v6-3-0` semuanya HTTP 200
+  (saya cek langsung ke `news.xystudio.my.id`).
+
+  Yang terjadi di rilis 6.4.0: artikelnya diterbitkan **tanpa mengirim field
+  `slug`**, sehingga jatuh ke hash `p-8f5aa26aa3bc`. Akibatnya
+  `https://news.xystudio.my.id/api/news/changelog-v6-4-0` → **HTTP 404**
+  (terverifikasi), dan tombol versi di footer web (`web/src/App.tsx` baris
+  ~2497, memakai `CHANGELOG_SLUG` dari `web/src/version.ts`) menunjuk ke
+  artikel yang tidak ada. Rilis 6.1 dan 6.0 (`p-66a4edde0222`,
+  `p-d5b4512f7d17`) punya masalah yang sama.
+
+  **Perbaikan (butuh keputusan operator, saya tidak mengeksekusi):** artikel
+  6.4.0 sudah TERBIT dan sudah dikirim ke pelanggan via push + email, jadi
+  slug-nya tidak boleh diganti diam-diam — tautan yang sudah beredar akan
+  mati. Dua opsi:
+    (a) tambah kolom/alias slug kedua di D1 supaya `changelog-v6-4-0`
+        mengarah ke artikel yang sama (tanpa mematikan `p-8f5aa26aa3bc`);
+    (b) biarkan 6.4.0 apa adanya, dan pastikan rilis BERIKUTNYA mengirim
+        `"slug": "changelog-v<versi>"` saat publish.
+  Apa pun pilihannya, **`news/README.md` perlu menegaskan field `slug` wajib
+  diisi untuk artikel rilis** — contoh `curl` di sana saat ini tidak
+  menyertakannya sama sekali, dan itulah akar kenapa langkah ini terlewat.
+  Area `news/` + prosedur rilis, bukan Docs — saya hanya mendiagnosis.
+
 - [x] (dari Sena - XySpace Team, 2026-09-03, **untuk News**) — **Sudah beres
   sebelum saya sempat push** (commit `7e6f860`, sesi `SESI-20260903-SENA-DOCS`):
   contoh `author` kini `Haekal Saputra`, plus `news/schema.sql`, `news/seed.sql`,
