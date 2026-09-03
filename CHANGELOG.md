@@ -139,6 +139,21 @@ Kebijakan rilis:
   untuk semua kata; kata penting diberi warna/tebal dan email/URL dapat
   diketuk untuk membuka aplikasi email/browser.
 
+### Diperbaiki
+- Host: **host tidak lagi hidup-mati-hidup-mati sendiri.** Akar masalahnya
+  di dua lapis: (1) server signaling mengirim ping WebSocket tiap 30 dtk dan
+  menutup koneksi yang tidak membalas dalam 90 dtk (`signaling/client.go`),
+  sementara engine Rust tidak pernah membalas ping (loop hanya memproses
+  `Message::Text`) — jadi host idle dibunuh server tiap ~90 detik, lalu
+  `main()` selesai dan proses mati; (2) supervisor merestart proses itu,
+  lalu siklus terulang. Kini engine membalas ping dengan pong, dan `main()`
+  menyambung ulang DALAM proses dengan backoff (1→30 dtk) saat koneksi
+  putus — proses hanya keluar bila token ditolak server (401/403, token
+  host ≈5 menit) atau signaling tak terjangkau setelah 10 percobaan, agar
+  supervisor meminta token baru. Supervisor Electron juga dijaga agar tidak
+  men-spawn dua engine sekaligus (guard `engineStarting`), menghormati
+  backoff restart, dan mencatat kode keluar + sinyal engine di log.
+
 ## [6.3.0] - 2026-09-03
 
 > **Rilis ulang — build 26 (3 Sep 2026).** Build 25 sempat terbit dalam

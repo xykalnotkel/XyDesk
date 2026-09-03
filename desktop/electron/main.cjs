@@ -39,6 +39,7 @@ let control = null; // { port, token } — dari baris "[control]" stdout engine
 let identity = null; // { deviceId, password }
 let restartAttempt = 0;
 let watchdogTimer = null;
+let engineStarting = false; // jaga-jaga: jangan spawn engine dua kali sekaligus
 let tray = null; // ikon tray — host selalu aktif walau jendela ditutup
 let isQuitting = false; // pembeda tutup-jendela (sembunyi) vs keluar beneran
 let trayNoticeShown = false;
@@ -140,8 +141,11 @@ function handleEngineOut(chunk) {
 }
 
 async function startEngine() {
+  if (engineStarting) return; // sudah ada proses start berjalan — jangan tumpuk
   if (engine && engine.exitCode === null) return; // masih hidup
+  engineStarting = true;
   clearTimeout(watchdogTimer);
+  watchdogTimer = null;
   try {
     if (!identity) identity = await loadIdentity();
     addLog(`[shell] identitas host ${identity.deviceId}`);
@@ -161,8 +165,10 @@ async function startEngine() {
     child.stderr.on('data', (d) => {
       for (const line of String(d).split(/\r?\n/)) if (line) addLog(`[engine] ${line}`);
     });
-    child.on('exit', (code) => {
-      addLog(`[shell] engine keluar (kode ${code}) — restart terjadwal`);
+    child.on('exit', (code, signal) => {
+      addLog(
+        `[shell] engine keluar (kode ${code}${signal ? `, sinyal ${signal}` : ''}) — restart terjadwal`
+      );
       engine = null;
       control = null;
       scheduleRestart();
@@ -175,6 +181,8 @@ async function startEngine() {
   } catch (e) {
     addLog(`[shell] ${e.message}`);
     scheduleRestart();
+  } finally {
+    engineStarting = false;
   }
 }
 
@@ -184,12 +192,16 @@ function scheduleRestart() {
   const delay = Math.min(RESTART_BACKOFF_BASE_MS * 2 ** (restartAttempt - 1), RESTART_BACKOFF_MAX_MS);
   addLog(`[shell] restart engine dalam ${Math.round(delay / 1000)} dtk`);
   watchdogTimer = setTimeout(() => {
+    watchdogTimer = null;
     startEngine().catch(() => {});
   }, delay);
 }
 
 function startWatchdog() {
   setInterval(() => {
+    if (engine && engine.exitCode === null) return; // hidup — tidak usah
+    if (engineStarting) return; // sedang start — jangan tumpuk
+    if (watchdogTimer) return; // restart sudah terjadwal — hormati backoff
     startEngine().catch(() => {});
   }, WATCHDOG_MS);
 }

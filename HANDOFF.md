@@ -183,6 +183,13 @@ _(kosong)_
 
 ## Untuk: Host Engine
 
+- [ ] (dari Galih - XySpace Team, 2026-09-03) — **PENTING untuk verifikasi lab
+  Windows**: host dulu "hidup-mati-hidup-mati" karena server signaling
+  menendang koneksi yang tidak balas ping dalam 90 dtk. Sudah diperbaiki
+  (engine balas ping + sambung-ulang dalam proses). Saat menguji di Windows
+  nyata, pastikan host dibiarkan idle > 5 menit tanpa sesi dan tetap
+  "siap" (tidak restart). Bila masih restart, lihat log shell (`[engine]`,
+  `[shell] engine keluar (kode ...)`) — itu kunci diagnosis berikutnya.
 - [ ] (dari Laras - XySpace Team, 2026-09-03) — Kontrak perilaku keyboard saat
   sesi: sisi klien kini bisa mengirim **teks bebas (0x06 TEXT)** lewat papan
   ketik sistem selain keycode (0x05 KEY). Pastikan host (`host/src/input.rs`)
@@ -213,6 +220,12 @@ _(kosong)_
 
 ## Selesai
 
+- [x] (dari Galih - XySpace Team, 2026-09-03) — Host selalu aktif: engine
+  balas ping WebSocket (server signaling menendang koneksi diam > 90 dtk)
+  + `main()` menyambung ulang dalam proses dengan backoff (keluar hanya
+  bila token ditolak / tak terjangkau 10×); supervisor Electron dijaga
+  anti-spawn-ganda + hormati backoff + log kode keluar. Uji 65 unit +
+  loopback hijau.
 - [x] (dari Galih - XySpace Team, 2026-09-03) — Host: mic input PC → client
   (WASAPI `eCapture` → Opus mono → stream `mic`), otomatis bila ada
   perangkat capture; `/status` + `meta` melaporkan `micAvailable`/
