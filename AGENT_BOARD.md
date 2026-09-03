@@ -33,6 +33,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260903-DANU-WEB4 | Danu - XySpace Team | Web | LAGI KERJA | Halaman Connect: blok "Dukung kami di" pindah ke atas "Cara main", input ID rata kiri menyamai field password, tombol show/hide password pairing | 2026-09-03 |
 | SESI-20260903-DANU-WEB3 | Danu - XySpace Team | Web | SELESAI | Overhaul layar sesi web (rail ikon + panel 4 tab + stats live + papan klip ambil/kirim + E2E lokal), penulis berita → Haekal Saputra, screenshot sesi web untuk artikel | 2026-09-03 |
 | SESI-20260903-CAKRA-RILIS | Cakra - XySpace Team | CI / Release | SELESAI | Rilis 6.3.0: bump versi + changelog + artikel berita + verifikasi rilis — v6.3.0 terbit (Build+Release hijau, artikel changelog-v6-3-0 live) | 2026-09-03 |
+| SESI-20260903-GALIH-HOST-KEEPALIVE | Galih - XySpace Team | Host Engine | LAGI KERJA | Host selalu aktif: balas ping WebSocket + sambung-ulang dalam proses (fix hidup-mati) | 2026-09-03 |
 
 ## Antrean izin push
 
@@ -54,6 +55,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260903-DANU-WEB2 | Danu - XySpace Team | Web: halaman Sewa PC (/billing, paket+durasi mulai 1 jam/Rp5.000, pesan via WA), mode founder komentar (xycdigital@gmail.com + ADMIN_TOKEN → Haekal Saputra + badge XySpace), badge "Resmi"→"XySpace", teks beranda dibumikan, CORS worker berita +X-Admin-Token (1 baris, lintas area news/ atas restu operator) | DISETUJUI | Xyckal (chat) | 2026-09-03 | Build+Izin+Deploy hijau di 439944d; deploy-news manual sukses; CORS live terverifikasi |
 | SESI-20260903-LARAS-CLIENT | Laras - XySpace Team | Client Flutter: ikon nav bawah/rail AI 3D ungu glossy (2 mode off=abu/on=warna, `assets/img/nav/*`), pilih sumber papan ketik sesi (XyDesk vs Sistem/IME → 0x06 TEXT), perbaikan tombol Kirim & balas komentar (listener), identitas komentar login/tamu tetap berprofil, highlight kata penting + email/URL klik di Legal, jarak chip Riwayat↔input ID | DISETUJUI | Xyckal | 2026-09-03 | — |
 | SESI-20260903-GALIH-HOST-UI | Galih - XySpace Team | Host Windows: GUI kembali ke shell Electron/Next.js (bukan jendela native 5MB) + tray always-on (tutup jendela = sembunyi ke tray, engine tetap hidup); `desktop/electron/main.cjs` diberi Tray/menu/close-to-tray; installer & CI diubah (build.yml `windows` → electron-builder `--dir`, `desktop/**` masuk filter host, release.yml hapus job `windows-host`) | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi 33717936050 (push host tidak memicu build otomatis — kebijakan 7ddb594) |
+| SESI-20260903-GALIH-HOST-KEEPALIVE | Galih - XySpace Team | Host: fix hidup-mati — engine balas ping WebSocket (server signaling menendang koneksi diam > 90 dtk) + `main()` sambung-ulang dalam proses dgn backoff (keluar hanya bila token ditolak/tak terjangkau 10×); supervisor Electron anti-spawn-ganda + hormati backoff + log kode keluar; uji 65 unit + loopback | DISETUJUI | Xyckal (chat) | 2026-09-03 | _(menunggu run CI)_ |
 
 ## Riwayat sesi (hanya bertambah)
 
