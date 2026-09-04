@@ -97,56 +97,6 @@ jobs:
             Write-Host ("Hasil: Success={0} RestartNeeded={1}" -f $r.Success, $r.RestartNeeded)
           }
 
-      - name: Pasang XyDesk rilis terbaru
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path C:\xydesk | Out-Null
-          Invoke-WebRequest -Uri 'https://github.com/xykalnotkel/XyDesk/releases/latest/download/XyDesk-x64.exe' -OutFile C:\xydesk\XyDesk-Setup.exe
-          # Buang Mark-of-the-Web supaya SmartScreen tidak menghadang.
-          Unblock-File C:\xydesk\XyDesk-Setup.exe
-          # Installer Inno Setup: pasang senyap + tulis log.
-          $p = Start-Process C:\xydesk\XyDesk-Setup.exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/LOG=C:\xydesk\install.log' -Wait -PassThru
-          Write-Host "Installer exit code: $($p.ExitCode)"
-          if (Test-Path C:\xydesk\install.log) {
-            Write-Host '--- ekor install.log ---'
-            Get-Content C:\xydesk\install.log -Tail 15
-          }
-          # Temukan hasil instalasi.
-          $exes = Get-ChildItem -Path 'C:\Program Files','C:\Program Files (x86)',"$env:LOCALAPPDATA\Programs" -Recurse -Filter '*.exe' -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match 'xydesk' }
-          if (-not $exes) { Write-Error 'Tidak ada EXE XyDesk ditemukan setelah install!'; exit 1 }
-          $exes | ForEach-Object { Write-Host "TERPASANG: $($_.FullName)" }
-
-      - name: Uji jalan XyDesk (tangkap crash)
-        shell: pwsh
-        run: |
-          $exe = Get-ChildItem -Path 'C:\Program Files','C:\Program Files (x86)',"$env:LOCALAPPDATA\Programs" -Recurse -Filter '*.exe' -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match '^xydesk(\.exe)?$|^XyDesk\.exe$' } | Select-Object -First 1
-          if (-not $exe) { $exe = Get-ChildItem -Path 'C:\Program Files' -Recurse -Filter 'xydesk*.exe' -EA SilentlyContinue | Select-Object -First 1 }
-          Write-Host "Menguji: $($exe.FullName)"
-          $proc = Start-Process $exe.FullName -PassThru
-          Start-Sleep -Seconds 8
-          if ($proc.HasExited) {
-            Write-Warning "App EXIT dalam 8 detik — exit code: $($proc.ExitCode)"
-            Write-Host '--- Event log Application (error terbaru) ---'
-            Get-WinEvent -FilterHashtable @{LogName='Application'; Level=2} -MaxEvents 5 -ErrorAction SilentlyContinue |
-              ForEach-Object { Write-Host ("[{0}] {1}" -f $_.ProviderName, ($_.Message -split "`n")[0..3] -join ' ') }
-          } else {
-            Write-Host 'App BERTAHAN >8 detik — kemungkinan jalan normal.'
-            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-          }
-          # Skrip debug di Desktop untuk dipakai manual dari dalam RDP.
-          $desktop = 'C:\Users\runneradmin\Desktop'
-          New-Item -ItemType Directory -Force -Path $desktop | Out-Null
-          @"
-          @echo off
-          echo Menjalankan XyDesk dari konsol (error tampil di sini)...
-          "$($exe.FullName)"
-          echo Exit code: %ERRORLEVEL%
-          pause
-          "@ | Set-Content "$desktop\XyDesk-Debug.cmd"
-          Write-Host "Skrip debug: Desktop\XyDesk-Debug.cmd"
-
       - name: Info koneksi
         shell: pwsh
         run: |
