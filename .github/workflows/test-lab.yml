@@ -3,7 +3,7 @@ name: Test Lab (RDP via Tailscale)
 # Lab uji fungsional XyDesk host di runner Windows GitHub, diakses via RDP
 # melalui Tailscale. BUKAN benchmark latency (CPU virtual, tanpa GPU) —
 # gunanya memverifikasi: pairing, video muncul, input/clipboard jalan.
-#
+
 # Cara pakai:
 #   1. Set secrets repo: TAILSCALE_AUTHKEY (auth key dari admin Tailscale,
 #      disarankan ephemeral+reusable) dan RDP_PASSWORD (password kuat).
