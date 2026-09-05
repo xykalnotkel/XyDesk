@@ -17,6 +17,26 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Ditambahkan
+- Backend / Edge + Desktop Shell: **kredensial penyegaran host** — identitas
+  perangkat yang menetap, terpisah dari token sesi. Host menyimpannya di
+  berkas identitasnya (bukan di command line) dan menukarnya sendiri menjadi
+  token sesi setiap kali menyambung: tanpa password pairing, tanpa rem
+  klaim, tanpa menunggu jatah percobaan. Token sesi tetap berumur 5 menit —
+  yang berumur panjang cuma identitasnya, persis seperti produk remote
+  desktop pada umumnya. Kredensial berlaku 90 hari dan bisa diperbarui lewat
+  jalur ikat ulang.
+
+### Diperbaiki
+- Backend / Edge: **mengganti password pairing mengunci perangkat
+  selamanya.** Server menyimpan hash password pada pemakaian pertama dan
+  menolak password yang berbeda, sedangkan `set-password` di host hanya
+  mengubah berkas lokal — server tidak pernah diberi tahu. Hasilnya: 403
+  terus-menerus, lalu kunci 15 menit setiap lima percobaan. Kini host bisa
+  mengikat ulang perangkatnya ke password baru dengan menyertakan kredensial
+  penyegaran; tanpa kredensial itu, tebakan password yang benar pun tetap
+  ditolak (tidak bisa memindahkan ikatan ke password penyerang).
+
 ### Diperbaiki
 - Client Flutter: **aplikasi bisa berhenti di layar peluncuran tanpa batas.**
   `main()` menunggu inisialisasi layanan notifikasi selesai sebelum

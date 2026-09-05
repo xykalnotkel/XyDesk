@@ -11,6 +11,19 @@ Authorization: Bearer <token>
 ```
 
 - `token` = HMAC-SHA256 berumur 5 menit, diterbitkan dengan secret bersama.
+
+`POST /host-token` melayani tiga jalur:
+
+| Isi permintaan | Untuk | Balasan |
+|---|---|---|
+| `{id, claim}` | perangkat baru (TOFU), atau host tanpa kredensial tersimpan | `200` token teks polos (kompatibel aplikasi lama); dengan `v: 2` → `{token, refresh}` |
+| `{id, refresh}` | menyambung ulang — tanpa password, tanpa rem klaim | `200 {token}` |
+| `{id, refresh, claim}` | password pairing diganti di PC | `200 {token, refresh}` — hash claim diperbarui |
+
+Kredensial penyegaran berbentuk `<kedaluwarsa>.<id>.<HMAC(secret, hostref \x00 id \x00 kedaluwarsa)>`.
+Ganti password tanpa kredensial ini akan **mengunci perangkat selamanya**:
+hash claim lama tersimpan di server dan lima kali gagal memicu kunci 15
+menit — karena itu jalur ikat ulang wajib menyertakannya.
   Format (IDENTIK di Worker Cloudflare dan server Go self-host):
 
   ```
@@ -93,4 +106,11 @@ client                server                 host
 - **Transport signaling**: pasang TLS (Caddy/nginx di depan) agar SDP/ICE
   tidak bisa disadap dan pairing tidak bisa dibajak. Di LAN murni boleh tanpa TLS.
 - **Token**: HMAC 5 menit — kompromi secret = kompromi semua; rotasi secret
-  wajib saat bocor.
+  wajib saat bocor. Umur pendek ini **hanya berlaku saat handshake**: sesi
+  yang sudah tersambung tidak diperiksa ulang.
+- **Kredensial penyegaran host** (90 hari): identitas perangkat yang menetap,
+  diterbitkan bersama token pertama dan disimpan di berkas identitas host —
+  bukan di command line. Host menukarnya menjadi token sesi kapan saja tanpa
+  password pairing, sehingga menyambung ulang tidak lagi mematikan engine.
+  Kredensial ini juga satu-satunya bukti "ini perangkat yang sama" saat
+  password pairing diganti (lihat `/host-token` di bawah).

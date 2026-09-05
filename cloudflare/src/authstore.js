@@ -89,6 +89,9 @@ export class AuthStore {
     if (path === '/auth/claim-device' && request.method === 'POST') {
       return this.claimDevice(request);
     }
+    if (path === '/auth/rebind-device' && request.method === 'POST') {
+      return this.rebindDevice(request);
+    }
     if (path === '/auth/me' && request.method === 'GET') {
       return this.me(request);
     }
@@ -433,6 +436,56 @@ export class AuthStore {
     });
     await this.ctx.storage.delete(`claimfail:${device_id}`);
     return json({ ok: true, claimed: true }, 200);
+  }
+
+  // Ikat ulang perangkat ke password pairing yang BARU.
+  //
+  // Tanpa ini, mengganti password di PC mengunci perangkat selamanya:
+  // `claimDevice` menyimpan hash claim saat pemakaian pertama dan menolak
+  // claim yang berbeda, sedangkan `identity::set_password` di host hanya
+  // mengubah berkas lokal — server tidak pernah diberi tahu. Lima kali
+  // gagal lalu memicu kunci 15 menit, berulang tanpa akhir.
+  //
+  // Yang membuktikan "ini perangkat yang sama" adalah kredensial
+  // penyegaran host (diperiksa Worker sebelum masuk ke sini), bukan
+  // claim: kalau tidak, permintaan ini tidak bisa dibedakan dari orang
+  // yang sedang menebak password.
+  async rebindDevice(request) {
+    if (request.headers.get('X-XyDesk-Internal') !== this.env.XYDESK_SECRET) {
+      return json({ error: 'forbidden' }, 403);
+    }
+    let device_id, claim;
+    try {
+      ({ device_id, claim } = await request.json());
+    } catch {
+      return json({ error: 'bad-json' }, 400);
+    }
+    if (
+      typeof device_id !== 'string' ||
+      !/^\d{9}$/.test(device_id) ||
+      typeof claim !== 'string' ||
+      claim.length < 6 ||
+      claim.length > 128
+    ) {
+      return json({ error: 'invalid-claim' }, 400);
+    }
+
+    const key = `device:${device_id}`;
+    const existing = await this.ctx.storage.get(key);
+    if (!existing) {
+      // Perangkat belum pernah klaim — bukan urusan endpoint ini.
+      return json({ error: 'not-claimed' }, 409);
+    }
+
+    await this.ctx.storage.put(key, {
+      ...existing,
+      claim_hash: await hashOtp(this.secret(), `device:${device_id}`, claim),
+      rebound_at: Math.floor(Date.now() / 1000),
+    });
+    // Gagal klaim yang lalu tidak lagi dihitung: password-nya memang
+    // sudah berganti, jadi kegagalan itu bukan percobaan membobol.
+    await this.ctx.storage.delete(`claimfail:${device_id}`);
+    return json({ ok: true, rebound: true }, 200);
   }
 
   /// Status kunci klaim untuk satu device. Kunci kedaluwarsa sendiri; tidak

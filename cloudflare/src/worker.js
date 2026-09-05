@@ -135,6 +135,46 @@ function extractToken(request, url) {
 
 // Token tetap ringkas `ts.purpose.sig`, tetapi signature mengikat purpose DAN
 // role. Role tidak perlu dikirim dua kali karena sudah ada di query /ws.
+// ── Kredensial penyegaran host (identitas perangkat yang menetap) ─────────
+//
+// Token koneksi sengaja berumur 5 menit: ia ikut di URL dan di command line
+// engine, dan server tidak bisa mencabutnya. Tapi karena hanya diperiksa
+// saat handshake, host yang sudah lama menyala tersandung setiap kali
+// jaringan kedip — tokennya basi, engine keluar, dan dari luar tampak
+// "engine tidak terhubung".
+//
+// Kredensial penyegaran memisahkan dua hal yang dulu digabung: IDENTITAS
+// perangkat (menetap, tersimpan di berkas identitas host, tidak pernah
+// lewat command line) dan TOKEN SESI (5 menit, hanya untuk handshake).
+// Host menukar sendiri kredensialnya tiap kali menyambung — tanpa password,
+// tanpa keluar dari proses. Ganti password pairing pun tidak lagi mengunci
+// perangkat: kredensial ini yang membuktikan "ini perangkat yang sama".
+export const HOST_REFRESH_TTL = 60 * 60 * 24 * 90; // 90 hari
+
+export async function signHostRefresh(id, secret, nowSeconds) {
+  const base = nowSeconds ?? Math.floor(Date.now() / 1000);
+  const exp = String(base + HOST_REFRESH_TTL);
+  const sig = await hmacHex(secret, `hostref\x00${id}\x00${exp}`);
+  return `${exp}.${id}.${sig}`;
+}
+
+export async function verifyHostRefresh(token, id, secret) {
+  if (!secret || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  if (parts.length !== 3 || !/^\d+$/.test(parts[0])) return false;
+  if (parts[1] !== id) return false;
+  if (Number(parts[0]) <= Math.floor(Date.now() / 1000)) return false;
+  const expect = await hmacHex(secret, `hostref\x00${id}\x00${parts[0]}`);
+  return timingSafeEqual(expect, parts[2]);
+}
+
+export function jsonHost(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
 export async function signSignalToken(purpose, role, secret, timestamp) {
   const ts = String(timestamp ?? Math.floor(Date.now() / 1000));
   const sig = await hmacHex(secret, `${purpose}\x00${role}\x00${ts}`);
@@ -203,44 +243,92 @@ async function handleHostToken(request, env) {
   if (request.method !== 'POST') {
     return new Response('method not allowed', { status: 405 });
   }
-  let id, claim;
+  let id, claim, refresh, v2;
   try {
     const body = await request.json();
     id = String(body.id || '').trim();
-    claim = String(body.claim || '');
+    claim = body.claim == null ? null : String(body.claim);
+    refresh = body.refresh == null ? null : String(body.refresh);
+    v2 = body.v === 2;
   } catch {
     return new Response('bad json', { status: 400 });
   }
-  if (!/^\d{9}$/.test(id) || claim.length < 6 || claim.length > 128) {
+  if (!/^\d{9}$/.test(id)) return new Response('bad request', { status: 400 });
+  if (refresh != null && refresh.length > 512) {
     return new Response('bad request', { status: 400 });
   }
 
+  // (1) JALUR PENYEGARAN — identitas perangkat, tanpa password pairing.
+  //     Inilah jalur yang dipakai engine setiap kali menyambung ulang,
+  //     sehingga kedip jaringan tidak lagi menghabiskan satu restart.
+  if (refresh != null && claim == null) {
+    if (!(await verifyHostRefresh(refresh, id, env.XYDESK_SECRET))) {
+      return jsonHost({ error: 'refresh-invalid' }, 401);
+    }
+    return jsonHost({ token: await signSignalToken(id, 'host', env.XYDESK_SECRET) });
+  }
+
+  // (2) JALUR IKAT ULANG — password pairing diganti di PC. Kredensial
+  //     penyegaran yang membuktikan ini perangkat yang sama; tanpanya,
+  //     permintaan ini tidak bisa dibedakan dari orang yang menebak
+  //     password, dan perangkat terkunci selamanya (lihat PROTOCOL.md).
+  if (refresh != null && claim != null) {
+    if (claim.length < 6 || claim.length > 128) {
+      return new Response('bad request', { status: 400 });
+    }
+    if (!(await verifyHostRefresh(refresh, id, env.XYDESK_SECRET))) {
+      return jsonHost({ error: 'refresh-invalid' }, 401);
+    }
+    const bound = await authStoreCall(env, 'rebind-device', { device_id: id, claim }, request);
+    if (!bound.res.ok) {
+      const detail = await bound.res.text();
+      return new Response(detail || 'rebind rejected', { status: bound.res.status });
+    }
+    return jsonHost({
+      token: await signSignalToken(id, 'host', env.XYDESK_SECRET),
+      refresh: await signHostRefresh(id, env.XYDESK_SECRET),
+    });
+  }
+
+  // (3) JALUR KLASIK (TOFU) — {id, claim}: perangkat baru, atau host yang
+  //     kehilangan berkas identitasnya. Responsnya tetap teks polos untuk
+  //     aplikasi lama; yang meminta v2 mendapat kredensial penyegaran juga.
+  if (claim == null || claim.length < 6 || claim.length > 128) {
+    return new Response('bad request', { status: 400 });
+  }
+  const claimed = await authStoreCall(env, 'claim-device', { device_id: id, claim }, request);
+  if (!claimed.res.ok) {
+    const detail = await claimed.res.text();
+    return new Response(detail || 'claim rejected', { status: claimed.res.status });
+  }
+  const token = await signSignalToken(id, 'host', env.XYDESK_SECRET);
+  if (!v2) {
+    return new Response(token, {
+      status: 200,
+      headers: { 'content-type': 'text/plain' },
+    });
+  }
+  return jsonHost({ token, refresh: await signHostRefresh(id, env.XYDESK_SECRET) });
+}
+
+// Panggilan internal ke AuthStore. IP penerus diteruskan supaya rem per-IP
+// tidak mati diam-diam (request ke DO dirakit dari nol).
+async function authStoreCall(env, action, body, source) {
   const authStore = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'));
   const res = await authStore.fetch(
-    new Request('https://internal/auth/claim-device', {
+    new Request(`https://internal/auth/${action}`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'X-XyDesk-Internal': env.XYDESK_SECRET,
-        // Request ke DO dirakit dari nol, jadi CF-Connecting-IP tidak ikut
-        // sendirinya. Tanpa diteruskan, rem per-IP di claimDevice mati diam
-        // diam (consumeRateLimit melepas request yang tidak punya IP).
-        'CF-Connecting-IP': request.headers.get('CF-Connecting-IP') || '',
+        'CF-Connecting-IP': source.headers.get('CF-Connecting-IP') || '',
       },
-      body: JSON.stringify({ device_id: id, claim }),
+      body: JSON.stringify(body),
     }),
   );
-  if (!res.ok) {
-    // Rem klaim menjawab 429; teruskan apa adanya supaya host bisa
-    // menampilkan "coba lagi nanti", bukan "password salah".
-    const detail = await res.text();
-    return new Response(detail || 'claim rejected', { status: res.status });
-  }
-  return new Response(await signSignalToken(id, 'host', env.XYDESK_SECRET), {
-    status: 200,
-    headers: { 'content-type': 'text/plain' },
-  });
+  return { res };
 }
+
 
 // ── Endpoint token signaling untuk client ber-JWT ────────────────────────
 //

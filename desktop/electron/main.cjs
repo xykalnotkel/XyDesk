@@ -100,23 +100,115 @@ function loadIdentity() {
   });
 }
 
-// Tukar id+password → token signaling host berumur pendek. Dari proses utama
-// (Node), tanpa CORS — sama seperti GUI native dulu (ureq di Rust).
-async function fetchHostToken(id, claim) {
+// ── Kredensial penyegaran host ──────────────────────────────────────────
+//
+// Token sesi berumur 5 menit dan hanya diperiksa saat handshake, jadi setiap
+// kedip jaringan setelah engine lama menyala membuat token basi, engine
+// keluar, dan dari luar tampak "engine tidak terhubung". Kredensial
+// penyegaran memisahkan identitas perangkat (menetap, tersimpan di berkas
+// ini) dari token sesi: host menukarnya sendiri tanpa password, tanpa rem
+// klaim, tanpa restart yang menunggu jatah percobaan.
+function refreshFile() {
+  return path.join(app.getPath('userData'), 'host-refresh.json');
+}
+
+function loadRefresh() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(refreshFile(), 'utf8'));
+    return typeof parsed.refresh === 'string' && parsed.refresh ? parsed.refresh : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveRefresh(refresh) {
+  if (!refresh) return;
+  try {
+    fs.writeFileSync(refreshFile(), JSON.stringify({ refresh }), { mode: 0o600 });
+  } catch (e) {
+    addLog(`[shell] kredensial penyegaran gagal disimpan: ${e.message}`);
+  }
+}
+
+function clearRefresh() {
+  try {
+    fs.unlinkSync(refreshFile());
+  } catch {
+    // sudah tidak ada — tidak apa-apa
+  }
+}
+
+async function postHostToken(body) {
   // Timeout 10 dtk: server signaling yang hang tidak boleh membekukan
   // supervisor (engine tak kunjung lahir dan watchdog ikut diam).
   const res = await fetch(`${SIGNALING_HTTP}/host-token`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ id, claim }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(10000),
   });
-  if (!res.ok) {
-    throw new Error(`Server menolak token (HTTP ${res.status}).`);
-  }
   const text = (await res.text()).trim();
-  if (!text) throw new Error('Server mengembalikan token kosong.');
-  return text;
+  let json = null;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = null; // worker lama menjawab token teks polos
+  }
+  return { status: res.status, text, json };
+}
+
+// Tukar identitas perangkat → token signaling host berumur pendek. Dari
+// proses utama (Node), tanpa CORS — sama seperti GUI native dulu (ureq di
+// Rust). Urutan: kredensial penyegaran dulu, klaim dengan password hanya
+// kalau kredensial itu tidak ada atau ditolak.
+async function fetchHostToken(id, claim) {
+  const refresh = loadRefresh();
+
+  // (1) Identitas perangkat: tanpa password, tanpa rem klaim.
+  if (refresh) {
+    try {
+      const res = await postHostToken({ id, refresh });
+      if (res.status === 200 && res.json && res.json.token) return res.json.token;
+      if (res.status === 401) {
+        addLog('[shell] kredensial penyegaran ditolak — minta ulang dengan password pairing');
+        clearRefresh();
+      } else if (!res.ok) {
+        addLog(`[shell] penyegaran ditolak (HTTP ${res.status}) — coba klaim dengan password`);
+      }
+    } catch (e) {
+      addLog(`[shell] penyegaran gagal: ${e.message} — coba klaim dengan password`);
+    }
+  }
+
+  // (2) Klaim klasik (perangkat baru, atau berkas identitas hilang).
+  const claimed = await postHostToken({ id, claim, v: 2 });
+
+  // (3) Password pairing berganti di PC ini. Kredensial penyegaran yang
+  //     membuktikan ini perangkat yang sama — tanpanya perangkat terkunci
+  //     selamanya karena server menyimpan hash password yang lama.
+  if (claimed.status === 403 && refresh) {
+    addLog('[shell] password pairing berbeda dari yang tersimpan — ikat ulang perangkat');
+    const rebound = await postHostToken({ id, refresh, claim });
+    if (rebound.status === 200 && rebound.json && rebound.json.token) {
+      saveRefresh(rebound.json.refresh);
+      addLog('[shell] perangkat terikat ulang ke password pairing yang baru');
+      return rebound.json.token;
+    }
+    throw new Error(
+      `Ikat ulang ditolak (HTTP ${rebound.status}). Password pairing tidak bisa diperbarui.`,
+    );
+  }
+
+  if (claimed.status !== 200) {
+    throw new Error(`Server menolak token (HTTP ${claimed.status}).`);
+  }
+  const token = (claimed.json && claimed.json.token) || claimed.text;
+  if (!token) throw new Error('Server mengembalikan token kosong.');
+  if (claimed.json && claimed.json.refresh) {
+    saveRefresh(claimed.json.refresh);
+    addLog('[shell] kredensial penyegaran tersimpan — Engine bisa sambung ulang tanpa password');
+  }
+  return token;
 }
 
 function freePort() {
