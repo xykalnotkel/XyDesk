@@ -19,7 +19,6 @@ import '../notifications/notification_preferences_page.dart';
 import '../notifications/update_page.dart';
 import '../session/media_capabilities.dart';
 import '../session/control_mapping_page.dart';
-import 'billing_page.dart';
 import 'permissions_page.dart';
 import 'subscription_page.dart';
 import '../../core/display_control.dart';

@@ -16,7 +16,6 @@ class ControlMappingPage extends ConsumerStatefulWidget {
 class _ControlMappingPageState extends ConsumerState<ControlMappingPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String? _editingProfileId;
 
   @override
   void initState() {
@@ -91,7 +90,6 @@ class _ControlMappingPageState extends ConsumerState<ControlMappingPage>
   }
 
   void _editProfile(ControlProfile profile) {
-    setState(() => _editingProfileId = profile.id);
     _tabController.animateTo(1);
   }
 
@@ -113,9 +111,9 @@ class _ControlMappingPageState extends ConsumerState<ControlMappingPage>
           ),
           FilledButton(
             onPressed: () {
-              ref.read(controlMappingManagerProvider.notifier).deleteProfile(
-                profileId,
-              );
+              ref
+                  .read(controlMappingManagerProvider.notifier)
+                  .deleteProfile(profileId);
               Navigator.pop(ctx);
             },
             style: FilledButton.styleFrom(backgroundColor: c.danger),
@@ -171,7 +169,7 @@ class _ControlMappingPageState extends ConsumerState<ControlMappingPage>
                 final profile = ControlProfile(
                   id: 'custom-${DateTime.now().millisecondsSinceEpoch}',
                   name: name,
-                  mappings: [],
+                  mappings: const [],
                   createdAt: DateTime.now(),
                 );
                 ref
@@ -365,11 +363,7 @@ class _ProfileCard extends StatelessWidget {
               children: [
                 if (!profile.isDefault)
                   IconButton(
-                    icon: Icon(
-                      LucideIcons.star,
-                      size: 18,
-                      color: c.textLow,
-                    ),
+                    icon: Icon(LucideIcons.star, size: 18, color: c.textLow),
                     onPressed: onSetDefault,
                     tooltip: 'Jadikan default',
                   ),
@@ -380,11 +374,7 @@ class _ProfileCard extends StatelessWidget {
                 ),
                 if (!profile.isDefault)
                   IconButton(
-                    icon: Icon(
-                      LucideIcons.trash2,
-                      size: 18,
-                      color: c.danger,
-                    ),
+                    icon: Icon(LucideIcons.trash2, size: 18, color: c.danger),
                     onPressed: onDelete,
                     tooltip: 'Hapus profil',
                   ),
@@ -446,14 +436,10 @@ class _MappingChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            _inputIcon(mapping.inputType),
-            size: 12,
-            color: c.textLow,
-          ),
+          Icon(_inputIcon(mapping.inputType), size: 12, color: c.textLow),
           const SizedBox(width: 4),
           Text(
-            '${mapping.inputKey}',
+            mapping.inputKey,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
@@ -495,22 +481,21 @@ class _MappingPreviewTabState extends ConsumerState<_MappingPreviewTab> {
   @override
   void initState() {
     super.initState();
-    _selectedProfile = widget.profiles.isNotEmpty ? widget.profiles.first : null;
+    _selectedProfile = widget.profiles.isNotEmpty
+        ? widget.profiles.first
+        : null;
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     final profiles = ref.watch(controlMappingManagerProvider);
-    final profile = _selectedProfile ??
-        (profiles.isNotEmpty ? profiles.first : null);
+    final profile =
+        _selectedProfile ?? (profiles.isNotEmpty ? profiles.first : null);
 
     if (profile == null) {
       return Center(
-        child: Text(
-          'Tidak ada profil',
-          style: TextStyle(color: c.textMid),
-        ),
+        child: Text('Tidak ada profil', style: TextStyle(color: c.textMid)),
       );
     }
 
@@ -521,10 +506,7 @@ class _MappingPreviewTabState extends ConsumerState<_MappingPreviewTab> {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              Text(
-                'Profil:',
-                style: TextStyle(fontSize: 13, color: c.textMid),
-              ),
+              Text('Profil:', style: TextStyle(fontSize: 13, color: c.textMid)),
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButton<String>(
@@ -542,17 +524,16 @@ class _MappingPreviewTabState extends ConsumerState<_MappingPreviewTab> {
                     });
                   },
                   items: profiles.map((p) {
-                    return DropdownMenuItem(
-                      value: p.id,
-                      child: Text(p.name),
-                    );
+                    return DropdownMenuItem(value: p.id, child: Text(p.name));
                   }).toList(),
                 ),
               ),
             ],
           ),
         ),
-        const Divider(height: 1),
+        // Pemisah visual memakai jarak, bukan garis: desain XyDesk
+        // (Quiet Surface) melarang divider di mana pun.
+        const SizedBox(height: Gap.sm),
         // Mapping list
         Expanded(
           child: ListView.builder(

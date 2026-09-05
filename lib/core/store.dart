@@ -328,7 +328,11 @@ class AuthNotifier extends StateNotifier<UserSession> {
         name: guestName ?? generateGuestName(),
         isGuest: true,
       );
-      DevLog.i('auth', 'Sesi dipulihkan', 'tamu${guestName != null ? ": $guestName" : ""}');
+      DevLog.i(
+        'auth',
+        'Sesi dipulihkan',
+        'tamu${guestName != null ? ": $guestName" : ""}',
+      );
     } else if (initialToken != null) {
       // Email hanyalah cache metadata. JWT secure storage adalah sumber sesi;
       // `/auth/me` akan memulihkan profil bila cache SharedPreferences hilang.
@@ -417,10 +421,7 @@ class AuthNotifier extends StateNotifier<UserSession> {
     await _s.setStr('user_name', guestName);
     await _s.remove('user_picture');
     await _s.setBool('user_guest', true);
-    state = UserSession(
-      name: guestName,
-      isGuest: true,
-    );
+    state = UserSession(name: guestName, isGuest: true);
     DevLog.ok('auth', 'Masuk sebagai tamu', guestName);
   }
 

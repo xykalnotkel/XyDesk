@@ -44,14 +44,22 @@ const _pakets = <_Paket>[
     nama: 'Reguler',
     hargaPerJam: 5000,
     ringkas: 'Buat kerja, browsing, dan game ringan.',
-    spesifikasi: ['PC warnet standar', 'Game populer terpasang', 'Simpanan sesi aman'],
+    spesifikasi: [
+      'PC warnet standar',
+      'Game populer terpasang',
+      'Simpanan sesi aman',
+    ],
   ),
   _Paket(
     id: 'gaming',
     nama: 'Gaming',
     hargaPerJam: 8000,
     ringkas: 'Buat game kompetitif dengan frame stabil.',
-    spesifikasi: ['GPU kelas gaming', 'Monitor refresh tinggi', 'Game AAA siap main'],
+    spesifikasi: [
+      'GPU kelas gaming',
+      'Monitor refresh tinggi',
+      'Game AAA siap main',
+    ],
     unggulan: true,
   ),
   _Paket(
@@ -59,7 +67,11 @@ const _pakets = <_Paket>[
     nama: 'Pro',
     hargaPerJam: 12000,
     ringkas: 'Buat streaming, render, dan game berat.',
-    spesifikasi: ['GPU + CPU tertinggi', 'RAM lega untuk multitask', 'Prioritas bandwidth'],
+    spesifikasi: [
+      'GPU + CPU tertinggi',
+      'RAM lega untuk multitask',
+      'Prioritas bandwidth',
+    ],
   ),
 ];
 
@@ -67,16 +79,10 @@ const _durasi = [1, 2, 3, 5, 10];
 const _maksJam = 24;
 
 /// Stok unit tiap paket — angka operator.
-const _stok = <String, int>{
-  'reguler': 6,
-  'gaming': 4,
-  'pro': 2,
-};
+const _stok = <String, int>{'reguler': 6, 'gaming': 4, 'pro': 2};
 
-String _rupiah(int n) => 'Rp ${n.toString().replaceAllMapped(
-  RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-  (m) => '${m[1]}.',
-)}';
+String _rupiah(int n) =>
+    'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
@@ -128,7 +134,8 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   Future<void> _pesan() async {
-    final pesan = 'Halo XySpace! Mau sewa PC:\n'
+    final pesan =
+        'Halo XySpace! Mau sewa PC:\n'
         '- Paket: ${_paket.nama}\n'
         '- Durasi: $_jam jam\n'
         '- Total: ${_rupiah(_total)}';
@@ -273,10 +280,7 @@ class _BillingPageState extends State<BillingPage> {
                             const SizedBox(height: 2),
                             Text(
                               '${_rupiah(paket.hargaPerJam)} × $_jam',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: c.textLow,
-                              ),
+                              style: TextStyle(fontSize: 11, color: c.textLow),
                             ),
                           ],
                         ),
@@ -311,7 +315,11 @@ class _BillingPageState extends State<BillingPage> {
                   'Pembayaran otomatis (QRIS) sedang disiapkan — untuk '
                   'sekarang pesanan dikonfirmasi manual oleh tim, biasanya '
                   'dalam hitungan menit pada jam operasional.',
-                  style: TextStyle(fontSize: 11, color: c.textLow, height: 1.45),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: c.textLow,
+                    height: 1.45,
+                  ),
                 ),
               ],
             ),
@@ -359,11 +367,7 @@ class _BillingPageState extends State<BillingPage> {
                   'Kami juga merakit PC sesuai budget — konsultasi spek '
                   'gratis, garansi toko, dan XyDesk Host terpasang siap '
                   'remote dari hari pertama.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: c.textMid,
-                    height: 1.5,
-                  ),
+                  style: TextStyle(fontSize: 12, color: c.textMid, height: 1.5),
                 ),
                 const SizedBox(height: Gap.md),
                 SizedBox(
@@ -374,9 +378,7 @@ class _BillingPageState extends State<BillingPage> {
                     icon: const Icon(LucideIcons.messageCircle, size: 16),
                     label: const Text('Konsultasi via WhatsApp'),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                        color: c.accent.withValues(alpha: 0.5),
-                      ),
+                      side: BorderSide(color: c.accent.withValues(alpha: 0.5)),
                       foregroundColor: c.accent,
                     ),
                   ),
@@ -395,10 +397,7 @@ const _langkah = <(String, String)>[
     'Pilih paket & durasi',
     'Tentukan spek PC dan berapa lama kamu main — mulai dari 1 jam.',
   ),
-  (
-    'Bayar',
-    'Selesaikan pembayaran lewat WhatsApp (QRIS otomatis menyusul).',
-  ),
+  ('Bayar', 'Selesaikan pembayaran lewat WhatsApp (QRIS otomatis menyusul).'),
   (
     'Terima akses',
     'Kamu dikirimi ID + password XyDesk dan kode billing untuk PC-nya.',
@@ -438,9 +437,7 @@ class _PaketCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             border: Border.all(
-              color: selected
-                  ? c.accent
-                  : c.textLow.withValues(alpha: 0.15),
+              color: selected ? c.accent : c.textLow.withValues(alpha: 0.15),
               width: selected ? 1.5 : 1,
             ),
             borderRadius: BorderRadius.circular(R.md),
@@ -486,7 +483,7 @@ class _PaketCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    '${_rupiah(paket.hargaPerJam)}',
+                    _rupiah(paket.hargaPerJam),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,

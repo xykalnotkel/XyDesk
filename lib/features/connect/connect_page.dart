@@ -209,9 +209,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     }
 
     transport.addListener(listener);
-    unawaited(
-      transport.start(hostId: id, password: password),
-    );
+    unawaited(transport.start(hostId: id, password: password));
 
     try {
       await completer.future.timeout(

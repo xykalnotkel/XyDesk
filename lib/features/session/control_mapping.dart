@@ -2,17 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/store.dart';
 
 /// Tipe input yang bisa di-map ke aksi.
-enum InputType {
-  keyboard,
-  joystick,
-  mouse,
-  touch,
-}
+enum InputType { keyboard, joystick, mouse, touch }
 
 /// Satu mapping dari input ke aksi.
 @immutable
@@ -126,9 +120,9 @@ final _defaultGamingProfile = ControlProfile(
   name: 'Gaming Default',
   isDefault: true,
   createdAt: DateTime.now(),
-  mappings: [
+  mappings: const [
     // Movement
-    const ControlMapping(
+    ControlMapping(
       id: 'move-forward',
       name: 'Maju',
       inputType: InputType.keyboard,
@@ -136,7 +130,7 @@ final _defaultGamingProfile = ControlProfile(
       action: 'move_forward',
       description: 'Gerak ke depan',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'move-backward',
       name: 'Mundur',
       inputType: InputType.keyboard,
@@ -144,7 +138,7 @@ final _defaultGamingProfile = ControlProfile(
       action: 'move_backward',
       description: 'Gerak ke belakang',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'move-left',
       name: 'Kiri',
       inputType: InputType.keyboard,
@@ -152,7 +146,7 @@ final _defaultGamingProfile = ControlProfile(
       action: 'move_left',
       description: 'Gerak ke kiri',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'move-right',
       name: 'Kanan',
       inputType: InputType.keyboard,
@@ -161,7 +155,7 @@ final _defaultGamingProfile = ControlProfile(
       description: 'Gerak ke kanan',
     ),
     // Actions
-    const ControlMapping(
+    ControlMapping(
       id: 'jump',
       name: 'Lompat',
       inputType: InputType.keyboard,
@@ -169,7 +163,7 @@ final _defaultGamingProfile = ControlProfile(
       action: 'jump',
       description: 'Lompat / meloncat',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'crouch',
       name: 'Jongkok',
       inputType: InputType.keyboard,
@@ -177,7 +171,7 @@ final _defaultGamingProfile = ControlProfile(
       action: 'crouch',
       description: 'Jongkok / merunduk',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'sprint',
       name: 'Lari',
       inputType: InputType.keyboard,
@@ -186,7 +180,7 @@ final _defaultGamingProfile = ControlProfile(
       description: 'Lari cepat',
     ),
     // Mouse
-    const ControlMapping(
+    ControlMapping(
       id: 'shoot',
       name: 'Tembak',
       inputType: InputType.mouse,
@@ -194,7 +188,7 @@ final _defaultGamingProfile = ControlProfile(
       action: 'shoot',
       description: 'Tembak / aksi utama',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'aim',
       name: 'Bidik',
       inputType: InputType.mouse,
@@ -202,7 +196,7 @@ final _defaultGamingProfile = ControlProfile(
       action: 'aim',
       description: 'Bidik / ADS',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'reload',
       name: 'Reload',
       inputType: InputType.keyboard,
@@ -211,7 +205,7 @@ final _defaultGamingProfile = ControlProfile(
       description: 'Isi ulang peluru',
     ),
     // Utility
-    const ControlMapping(
+    ControlMapping(
       id: 'interact',
       name: 'Interaksi',
       inputType: InputType.keyboard,
@@ -219,7 +213,7 @@ final _defaultGamingProfile = ControlProfile(
       action: 'interact',
       description: 'Interaksi dengan objek',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'inventory',
       name: 'Inventory',
       inputType: InputType.keyboard,
@@ -227,7 +221,7 @@ final _defaultGamingProfile = ControlProfile(
       action: 'inventory',
       description: 'Buka inventory',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'map',
       name: 'Peta',
       inputType: InputType.keyboard,
@@ -244,8 +238,8 @@ final _defaultDesktopProfile = ControlProfile(
   name: 'Desktop Default',
   isDefault: true,
   createdAt: DateTime.now(),
-  mappings: [
-    const ControlMapping(
+  mappings: const [
+    ControlMapping(
       id: 'copy',
       name: 'Salin',
       inputType: InputType.keyboard,
@@ -253,7 +247,7 @@ final _defaultDesktopProfile = ControlProfile(
       action: 'copy',
       description: 'Salin teks/objek',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'paste',
       name: 'Tempel',
       inputType: InputType.keyboard,
@@ -261,7 +255,7 @@ final _defaultDesktopProfile = ControlProfile(
       action: 'paste',
       description: 'Tempel dari clipboard',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'cut',
       name: 'Potong',
       inputType: InputType.keyboard,
@@ -269,7 +263,7 @@ final _defaultDesktopProfile = ControlProfile(
       action: 'cut',
       description: 'Potong teks/objek',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'undo',
       name: 'Undo',
       inputType: InputType.keyboard,
@@ -277,7 +271,7 @@ final _defaultDesktopProfile = ControlProfile(
       action: 'undo',
       description: 'Batalkan aksi',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'redo',
       name: 'Redo',
       inputType: InputType.keyboard,
@@ -285,7 +279,7 @@ final _defaultDesktopProfile = ControlProfile(
       action: 'redo',
       description: 'Ulangi aksi',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'save',
       name: 'Simpan',
       inputType: InputType.keyboard,
@@ -293,7 +287,7 @@ final _defaultDesktopProfile = ControlProfile(
       action: 'save',
       description: 'Simpan file',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'select-all',
       name: 'Pilih Semua',
       inputType: InputType.keyboard,
@@ -301,7 +295,7 @@ final _defaultDesktopProfile = ControlProfile(
       action: 'select_all',
       description: 'Pilih semua',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'new-tab',
       name: 'Tab Baru',
       inputType: InputType.keyboard,
@@ -309,7 +303,7 @@ final _defaultDesktopProfile = ControlProfile(
       action: 'new_tab',
       description: 'Buka tab baru',
     ),
-    const ControlMapping(
+    ControlMapping(
       id: 'close-tab',
       name: 'Tutup Tab',
       inputType: InputType.keyboard,
@@ -372,10 +366,7 @@ class ControlMappingManager extends StateNotifier<List<ControlProfile>> {
   }
 
   Future<void> setDefault(String profileId) async {
-    state = [
-      for (final p in state)
-        p.copyWith(isDefault: p.id == profileId),
-    ];
+    state = [for (final p in state) p.copyWith(isDefault: p.id == profileId)];
     await _save();
   }
 
@@ -392,11 +383,12 @@ class ControlMappingManager extends StateNotifier<List<ControlProfile>> {
   }
 }
 
-final controlMappingManagerProvider = StateNotifierProvider.autoDispose<
-  ControlMappingManager,
-  List<ControlProfile>
->((ref) {
-  final store = ref.watch(storeProvider);
-  final scope = ref.watch(accountScopeProvider);
-  return ControlMappingManager(store, scope);
-});
+final controlMappingManagerProvider =
+    StateNotifierProvider.autoDispose<
+      ControlMappingManager,
+      List<ControlProfile>
+    >((ref) {
+      final store = ref.watch(storeProvider);
+      final scope = ref.watch(accountScopeProvider);
+      return ControlMappingManager(store, scope);
+    });

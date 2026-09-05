@@ -10,15 +10,15 @@ bersama aplikasi, beserta lisensinya — diambil langsung dari lockfile dan
 teks lisensi paket yang benar-benar terpasang, bukan dari daftar ketik
 tangan yang bisa ketinggalan zaman.
 
-**Total komponen: 504**
-(Dart/Flutter 110 · Rust 324 · npm 59 · aset & layanan 11)
+**Total komponen: 503**
+(Dart/Flutter 109 · Rust 324 · npm 59 · aset & layanan 11)
 
 ## Ringkasan lisensi
 
 | Lisensi | Jumlah komponen |
 |---|---|
 | tidak dinyatakan | 326 |
-| BSD-3-Clause | 91 |
+| BSD-3-Clause | 90 |
 | MIT | 42 |
 | Apache-2.0 | 19 |
 | LGPL-3.0-or-later | 8 |
@@ -137,7 +137,7 @@ Login opsional dengan akun Google.
 
 ---
 
-## 2. Paket Dart / Flutter (110)
+## 2. Paket Dart / Flutter (109)
 
 Termasuk dependensi transitif yang ikut ter-bundle di APK.
 
@@ -169,7 +169,6 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `flutter_secure_storage_windows` | 4.2.2 | BSD-3-Clause |
 | `flutter_svg` | 2.3.0 | MIT |
 | `flutter_webrtc` | 1.6.0 | MIT |
-| `go_router` | 14.8.1 | BSD-3-Clause |
 | `google_identity_services_web` | 0.3.3+1 | BSD-3-Clause |
 | `google_sign_in` | 7.2.0 | BSD-3-Clause |
 | `google_sign_in_android` | 7.2.16 | BSD-3-Clause |

@@ -5,7 +5,7 @@
     "host/Cargo.lock",
     "package-lock.json"
   ],
-  "count": 493,
+  "count": 492,
   "licenses": {
     "Dart/Flutter (pub.dev)|args@2.7.0": "BSD-3-Clause",
     "Dart/Flutter (pub.dev)|async@2.11.0": "BSD-3-Clause",
@@ -33,7 +33,6 @@
     "Dart/Flutter (pub.dev)|flutter_secure_storage_windows@4.2.2": "BSD-3-Clause",
     "Dart/Flutter (pub.dev)|flutter_svg@2.3.0": "MIT",
     "Dart/Flutter (pub.dev)|flutter_webrtc@1.6.0": "MIT",
-    "Dart/Flutter (pub.dev)|go_router@14.8.1": "BSD-3-Clause",
     "Dart/Flutter (pub.dev)|google_identity_services_web@0.3.3+1": "BSD-3-Clause",
     "Dart/Flutter (pub.dev)|google_sign_in@7.2.0": "BSD-3-Clause",
     "Dart/Flutter (pub.dev)|google_sign_in_android@7.2.16": "BSD-3-Clause",

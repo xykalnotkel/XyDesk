@@ -66,7 +66,7 @@ class HomePage extends ConsumerWidget {
 }
 
 /// Kartu perangkat dengan preview screenshot dan info status.
-/// 
+///
 /// Kalau ada preview screenshot dari sesi terakhir, tampilkan di atas kartu
 /// sebagai thumbnail. Kalau tidak ada, tampilkan ilustrasi PC online/offline.
 class _DeviceCard extends ConsumerWidget {
@@ -107,10 +107,8 @@ class _DeviceCard extends ConsumerWidget {
                         preview,
                         fit: BoxFit.cover,
                         gaplessPlayback: true,
-                        errorBuilder: (_, __, ___) => _buildFallbackIllustration(
-                          context,
-                          online,
-                        ),
+                        errorBuilder: (_, __, ___) =>
+                            _buildFallbackIllustration(context, online),
                       ),
                       // Overlay gradient di bawah untuk readability
                       Positioned(

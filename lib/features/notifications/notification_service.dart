@@ -48,9 +48,6 @@ class NotificationService extends ChangeNotifier {
   bool _navigationScheduled = false;
   bool _updateRouteOpen = false;
 
-  /// Pending news article navigation
-  _PendingNewsNavigation? _pendingNews;
-
   bool get supported => NotificationConfig.isSupportedPlatform;
   bool get initialized => _initialized;
   bool get busy => _busy;
@@ -250,12 +247,14 @@ class NotificationService extends ChangeNotifier {
 
   void _onNotificationClick(OSNotificationClickEvent event) {
     final data = event.notification.additionalData;
-    
+
     // Check if this is a news article notification
-    if (data != null && data.containsKey('article_id') && data.containsKey('slug')) {
+    if (data != null &&
+        data.containsKey('article_id') &&
+        data.containsKey('slug')) {
       final articleId = data['article_id'] as String?;
       final slug = data['slug'] as String?;
-      
+
       if (articleId != null && slug != null) {
         DevLog.i('push', 'Notifikasi berita diklik', 'article_id=$articleId');
         _pendingNews = _PendingNewsNavigation(articleId: articleId, slug: slug);
@@ -263,7 +262,7 @@ class NotificationService extends ChangeNotifier {
         return;
       }
     }
-    
+
     // Check if this is an update notification
     if (AppUpdateDetails.isUpdateDestination(
       data,
@@ -282,7 +281,7 @@ class NotificationService extends ChangeNotifier {
       flushPendingNavigation();
       return;
     }
-    
+
     DevLog.i('push', 'Notifikasi dibuka', 'tipe tidak dikenali');
   }
 
@@ -290,7 +289,7 @@ class NotificationService extends ChangeNotifier {
   void _flushPendingNewsNavigation() {
     final pending = _pendingNews;
     if (pending == null) return;
-    
+
     final callback = onNewsNavigate;
     if (callback != null) {
       _pendingNews = null;
@@ -336,10 +335,7 @@ class NotificationService extends ChangeNotifier {
 
 /// Data navigasi berita yang tertunda.
 class _PendingNewsNavigation {
-  const _PendingNewsNavigation({
-    required this.articleId,
-    required this.slug,
-  });
+  const _PendingNewsNavigation({required this.articleId, required this.slug});
 
   final String articleId;
   final String slug;

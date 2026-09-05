@@ -60,6 +60,7 @@ class Device {
     bool? remembered,
     String? motherboard,
     String? cpu,
+    String? gpu,
     String? ram,
     List<DisplayInfo>? displays,
     String? storage,
@@ -67,7 +68,7 @@ class Device {
     id: id,
     name: name ?? this.name,
     os: os,
-    gpu: gpu,
+    gpu: gpu ?? this.gpu,
     status: status ?? this.status,
     pingMs: pingMs ?? this.pingMs,
     lastSeen: lastSeen ?? this.lastSeen,
@@ -115,9 +116,11 @@ class Device {
     motherboard: j['motherboard'] as String?,
     cpu: j['cpu'] as String?,
     ram: j['ram'] as String?,
-    displays: (j['displays'] as List?)
-        ?.map((d) => DisplayInfo.fromJson(d as Map<String, dynamic>))
-        .toList() ?? [],
+    displays:
+        (j['displays'] as List?)
+            ?.map((d) => DisplayInfo.fromJson(d as Map<String, dynamic>))
+            .toList() ??
+        [],
     storage: j['storage'] as String?,
   );
 }
@@ -269,7 +272,11 @@ class DeviceRepo extends StateNotifier<List<Device>> {
   }) async {
     final current = byId(id);
     if (current == null) {
-      DevLog.w('devices', 'Perangkat tidak ditemukan untuk update hardware', id);
+      DevLog.w(
+        'devices',
+        'Perangkat tidak ditemukan untuk update hardware',
+        id,
+      );
       return;
     }
 
@@ -287,7 +294,7 @@ class DeviceRepo extends StateNotifier<List<Device>> {
         if (d.id == id) updated else d,
     ];
     await _persist();
-    DevLog.i('devices', 'Hardware info diupdate', '$id');
+    DevLog.i('devices', 'Hardware info diupdate', id);
   }
 
   Future<void> remove(String id) async {
@@ -334,8 +341,7 @@ class DisplayInfo {
   final bool isPrimary;
 
   String get resolution => '$width×$height';
-  String get refreshRateLabel =>
-      refreshRate != null ? '$refreshRate Hz' : '';
+  String get refreshRateLabel => refreshRate != null ? '$refreshRate Hz' : '';
 
   Map<String, dynamic> toJson() => {
     'index': index,

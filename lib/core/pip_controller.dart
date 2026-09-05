@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 /// Picture-in-Picture controller untuk floating window saat sesi aktif.
-/// 
+///
 /// Ketika app di-minimize saat sesi remote desktop berjalan, PiP mode
 /// menampilkan video stream dalam jendela kecil mengambang agar user
 /// tetap bisa monitor sesi tanpa harus membuka app penuh.
@@ -20,12 +20,13 @@ class PipController {
   /// Enter PiP mode - dipanggil saat app di-minimize dan sesi aktif
   Future<void> enterPipMode() async {
     if (_isInPipMode) return;
-    
+
     try {
       // Android: Enter picture-in-picture mode
       if (defaultTargetPlatform == TargetPlatform.android) {
-        await const MethodChannel('com.xystudio.xydesk/pip')
-            .invokeMethod('enterPipMode');
+        await const MethodChannel(
+          'com.xystudio.xydesk/pip',
+        ).invokeMethod('enterPipMode');
         _isInPipMode = true;
         onPipModeChanged?.call();
       }
@@ -37,11 +38,12 @@ class PipController {
   /// Exit PiP mode
   Future<void> exitPipMode() async {
     if (!_isInPipMode) return;
-    
+
     try {
       if (defaultTargetPlatform == TargetPlatform.android) {
-        await const MethodChannel('com.xystudio.xydesk/pip')
-            .invokeMethod('exitPipMode');
+        await const MethodChannel(
+          'com.xystudio.xydesk/pip',
+        ).invokeMethod('exitPipMode');
         _isInPipMode = false;
         onPipModeChanged?.call();
       }

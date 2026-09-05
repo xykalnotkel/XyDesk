@@ -18,7 +18,7 @@ class SubscriptionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    
+
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
@@ -45,11 +45,7 @@ class SubscriptionPage extends StatelessWidget {
                         color: c.accent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(R.md),
                       ),
-                      child: Icon(
-                        LucideIcons.crown,
-                        size: 24,
-                        color: c.accent,
-                      ),
+                      child: Icon(LucideIcons.crown, size: 24, color: c.accent),
                     ),
                     const SizedBox(width: Gap.md),
                     Expanded(
@@ -67,10 +63,7 @@ class SubscriptionPage extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             'Anggota sejak Sep 2026',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: c.textMid,
-                            ),
+                            style: TextStyle(fontSize: 12, color: c.textMid),
                           ),
                         ],
                       ),
@@ -83,17 +76,11 @@ class SubscriptionPage extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: c.success.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(R.md),
-                    border: Border.all(
-                      color: c.success.withValues(alpha: 0.3),
-                    ),
+                    border: Border.all(color: c.success.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        LucideIcons.checkCircle,
-                        size: 20,
-                        color: c.success,
-                      ),
+                      Icon(LucideIcons.checkCircle, size: 20, color: c.success),
                       const SizedBox(width: Gap.sm),
                       Expanded(
                         child: Column(
@@ -138,7 +125,7 @@ class SubscriptionPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Gap.md),
-          
+
           // Empty state - belum ada riwayat
           Container(
             padding: const EdgeInsets.all(24),
@@ -167,11 +154,7 @@ class SubscriptionPage extends StatelessWidget {
                   'Sewa PC untuk pertama kali dan nikmati akses remote\n'
                   'ke PC gaming berkualitas tinggi.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: c.textLow,
-                    height: 1.5,
-                  ),
+                  style: TextStyle(fontSize: 12, color: c.textLow, height: 1.5),
                 ),
                 const SizedBox(height: Gap.lg),
                 SizedBox(
@@ -180,9 +163,7 @@ class SubscriptionPage extends StatelessWidget {
                   child: FilledButton.icon(
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const BillingPage(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const BillingPage()),
                       );
                     },
                     icon: const Icon(LucideIcons.monitor, size: 18),
@@ -207,31 +188,31 @@ class SubscriptionPage extends StatelessWidget {
           ),
           const SizedBox(height: Gap.md),
 
-          _BenefitItem(
+          const _BenefitItem(
             icon: LucideIcons.monitor,
             title: 'Remote Desktop',
             description: 'Akses PC dari mana saja lewat XyDesk',
             active: true,
           ),
-          _BenefitItem(
+          const _BenefitItem(
             icon: LucideIcons.gamepad2,
             title: 'Gaming Mode',
             description: 'Kontrol gaming dengan D-pad & button mapping',
             active: true,
           ),
-          _BenefitItem(
+          const _BenefitItem(
             icon: LucideIcons.volume2,
             title: 'Audio Streaming',
             description: 'Dengar audio dari PC secara real-time',
             active: true,
           ),
-          _BenefitItem(
+          const _BenefitItem(
             icon: LucideIcons.mic,
             title: 'Microphone Passthrough',
             description: 'Gunakan mic HP untuk chat di PC',
             active: true,
           ),
-          _BenefitItem(
+          const _BenefitItem(
             icon: LucideIcons.zap,
             title: 'Low Latency',
             description: 'Streaming <40ms untuk gaming kompetitif',
@@ -259,7 +240,7 @@ class _BenefitItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -306,21 +287,14 @@ class _BenefitItem extends StatelessWidget {
                     ),
                     if (active) ...[
                       const SizedBox(width: 6),
-                      Icon(
-                        LucideIcons.check,
-                        size: 14,
-                        color: c.success,
-                      ),
+                      Icon(LucideIcons.check, size: 14, color: c.success),
                     ],
                   ],
                 ),
                 const SizedBox(height: 3),
                 Text(
                   description,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: c.textMid,
-                  ),
+                  style: TextStyle(fontSize: 11.5, color: c.textMid),
                 ),
               ],
             ),

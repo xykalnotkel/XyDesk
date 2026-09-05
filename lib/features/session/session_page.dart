@@ -56,7 +56,8 @@ class SessionPage extends ConsumerStatefulWidget {
   ConsumerState<SessionPage> createState() => _SessionPageState();
 }
 
-class _SessionPageState extends ConsumerState<SessionPage> with WidgetsBindingObserver {
+class _SessionPageState extends ConsumerState<SessionPage>
+    with WidgetsBindingObserver {
   bool _connecting = true;
   bool _overlayVisible = true;
   bool _panelVisible = false;
@@ -99,7 +100,7 @@ class _SessionPageState extends ConsumerState<SessionPage> with WidgetsBindingOb
 
   /// Total durasi sesi untuk tamu (2 jam = 7200 detik). Null untuk login user.
   static const int _guestSessionTotal = 2 * 60 * 60;
-  
+
   /// Apakah ini sesi tamu (tanpa login).
   bool get _isGuestSession => ref.read(authProvider).isGuest;
 
@@ -108,7 +109,8 @@ class _SessionPageState extends ConsumerState<SessionPage> with WidgetsBindingOb
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final preferences = ref.read(settingsProvider);
-    _transport = widget.initialTransport ??
+    _transport =
+        widget.initialTransport ??
         SessionTransport(jwt: ref.read(authProvider).token);
     _transport.addListener(_onTransportChanged);
     // Kalau transport sudah disediakan dari halaman Connect (pairing sudah
@@ -266,7 +268,8 @@ class _SessionPageState extends ConsumerState<SessionPage> with WidgetsBindingOb
       DevLog.i('sesi', 'Masuk PiP mode', 'Sesi aktif saat app di-background');
     }
     // Saat app di-resume, keluar PiP mode (jika aktif)
-    if (state == AppLifecycleState.resumed && PipController.instance.isInPipMode) {
+    if (state == AppLifecycleState.resumed &&
+        PipController.instance.isInPipMode) {
       PipController.instance.exitPipMode();
     }
   }
@@ -281,14 +284,16 @@ class _SessionPageState extends ConsumerState<SessionPage> with WidgetsBindingOb
   Future<void> _updateDeviceWithHardwareInfo(HostMeta meta) async {
     // Konversi HostDisplay ke DisplayInfo.
     final displays = meta.displays
-        .map((d) => DisplayInfo(
-              index: d.index,
-              name: d.name.isEmpty ? 'Monitor ${d.index + 1}' : d.name,
-              width: d.width,
-              height: d.height,
-              refreshRate: d.refreshRate,
-              isPrimary: d.isPrimary,
-            ))
+        .map(
+          (d) => DisplayInfo(
+            index: d.index,
+            name: d.name.isEmpty ? 'Monitor ${d.index + 1}' : d.name,
+            width: d.width,
+            height: d.height,
+            refreshRate: d.refreshRate,
+            isPrimary: d.isPrimary,
+          ),
+        )
         .toList();
 
     DevLog.i(
@@ -298,7 +303,9 @@ class _SessionPageState extends ConsumerState<SessionPage> with WidgetsBindingOb
     );
 
     // Update device di repo dengan hardware info.
-    await ref.read(deviceRepoProvider.notifier).updateHardwareInfo(
+    await ref
+        .read(deviceRepoProvider.notifier)
+        .updateHardwareInfo(
           widget.deviceId,
           motherboard: meta.motherboard,
           cpu: meta.cpu,

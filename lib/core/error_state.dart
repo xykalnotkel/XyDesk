@@ -61,7 +61,9 @@ class XyDeskError {
     XyDeskErrorType.unknown => LucideIcons.alertCircle,
   };
 
-  Color get color => switch (type) {
+  /// Warna status error. Palet diberikan pemanggil karena `textLow`
+  /// bergantung tema — AppColors tidak punya warna teks yang netral tema.
+  Color color(AppPalette c) => switch (type) {
     XyDeskErrorType.network => AppColors.danger,
     XyDeskErrorType.authentication => AppColors.warning,
     XyDeskErrorType.hostOffline => AppColors.warning,
@@ -69,7 +71,7 @@ class XyDeskError {
     XyDeskErrorType.connectionFailed => AppColors.danger,
     XyDeskErrorType.sessionDisconnected => AppColors.danger,
     XyDeskErrorType.timeout => AppColors.warning,
-    XyDeskErrorType.unknown => AppColors.textLow,
+    XyDeskErrorType.unknown => c.textLow,
   };
 
   /// Factory methods untuk error yang umum terjadi.
@@ -91,7 +93,8 @@ class XyDeskError {
   static XyDeskError hostOfflineError() => const XyDeskError(
     type: XyDeskErrorType.hostOffline,
     message: 'PC tidak online',
-    detail: 'Pastikan XyDesk Host berjalan di PC tujuan dan terhubung ke internet.',
+    detail:
+        'Pastikan XyDesk Host berjalan di PC tujuan dan terhubung ke internet.',
     action: 'Coba lagi',
     retryable: true,
   );
@@ -115,7 +118,8 @@ class XyDeskError {
   static XyDeskError sessionDisconnectedError() => const XyDeskError(
     type: XyDeskErrorType.sessionDisconnected,
     message: 'Sesi terputus',
-    detail: 'Koneksi ke PC terputus. PC mungkin offline atau jaringan bermasalah.',
+    detail:
+        'Koneksi ke PC terputus. PC mungkin offline atau jaringan bermasalah.',
     action: 'Hubungkan ulang',
     retryable: true,
   );
@@ -163,18 +167,14 @@ class ErrorStateWidget extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: error.color.withValues(alpha: 0.12),
+                color: error.color(c).withValues(alpha: 0.12),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: error.color.withValues(alpha: 0.4),
+                  color: error.color(c).withValues(alpha: 0.4),
                   width: 1.5,
                 ),
               ),
-              child: Icon(
-                error.icon,
-                size: 34,
-                color: error.color,
-              ),
+              child: Icon(error.icon, size: 34, color: error.color(c)),
             ),
             const SizedBox(height: 16),
             Text(
@@ -191,11 +191,7 @@ class ErrorStateWidget extends StatelessWidget {
               Text(
                 error.detail!,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
-                  color: c.textMid,
-                ),
+                style: TextStyle(fontSize: 13, height: 1.5, color: c.textMid),
               ),
             const SizedBox(height: 24),
             if (error.retryable && onRetry != null)

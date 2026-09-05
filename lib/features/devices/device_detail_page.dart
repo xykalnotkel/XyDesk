@@ -73,10 +73,15 @@ class DeviceDetailPage extends ConsumerWidget {
           const SizedBox(height: Gap.xl),
 
           // ── Info Dasar ──
-          SectionLabel('Informasi Perangkat', top: 0),
+          const SectionLabel('Informasi Perangkat', top: 0),
           _spec(context, LucideIcons.hash, 'ID', device.prettyId, copy: true),
           _spec(context, LucideIcons.monitor, 'Sistem operasi', device.os),
-          _spec(context, LucideIcons.maximize, 'Resolusi utama', device.resolution),
+          _spec(
+            context,
+            LucideIcons.maximize,
+            'Resolusi utama',
+            device.resolution,
+          ),
           _spec(
             context,
             LucideIcons.clock,
@@ -105,7 +110,7 @@ class DeviceDetailPage extends ConsumerWidget {
               device.storage != null ||
               device.displays.isNotEmpty) ...[
             const SizedBox(height: Gap.xl),
-            SectionLabel('Spesifikasi Hardware'),
+            const SectionLabel('Spesifikasi Hardware'),
 
             if (device.motherboard != null)
               _spec(
@@ -121,7 +126,12 @@ class DeviceDetailPage extends ConsumerWidget {
             if (device.ram != null)
               _spec(context, LucideIcons.memoryStick, 'RAM', device.ram!),
             if (device.storage != null)
-              _spec(context, LucideIcons.hardDrive, 'Penyimpanan', device.storage!),
+              _spec(
+                context,
+                LucideIcons.hardDrive,
+                'Penyimpanan',
+                device.storage!,
+              ),
 
             // ── Daftar Monitor ──
             if (device.displays.isNotEmpty) ...[
@@ -385,10 +395,7 @@ class _ScreenPreview extends ConsumerWidget {
               Positioned(
                 right: 12,
                 top: 12,
-                child: _Chip(
-                  text: _formatTimestamp(context),
-                  color: c.textLow,
-                ),
+                child: _Chip(text: _formatTimestamp(context), color: c.textLow),
               ),
           ],
         ),
@@ -400,7 +407,7 @@ class _ScreenPreview extends ConsumerWidget {
     final now = DateTime.now();
     final lastSeen = DateTime(now.year, now.month, now.day - 1);
     final diff = now.difference(lastSeen);
-    
+
     if (diff.inMinutes < 60) {
       return '${diff.inMinutes}m lalu';
     } else if (diff.inHours < 24) {
@@ -545,7 +552,9 @@ class _DisplayCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                display.isPrimary ? LucideIcons.monitor : LucideIcons.monitorDot,
+                display.isPrimary
+                    ? LucideIcons.monitor
+                    : LucideIcons.monitorDot,
                 size: 16,
                 color: display.isPrimary ? c.accent : c.textLow,
               ),
@@ -562,7 +571,10 @@ class _DisplayCard extends StatelessWidget {
               ),
               if (display.isPrimary)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: c.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(4),

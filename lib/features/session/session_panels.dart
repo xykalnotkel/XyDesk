@@ -1111,15 +1111,15 @@ class _SessionPanel extends StatelessWidget {
               color: isExpired
                   ? c.danger.withValues(alpha: 0.12)
                   : isCritical
-                      ? c.warning.withValues(alpha: 0.12)
-                      : c.raised,
+                  ? c.warning.withValues(alpha: 0.12)
+                  : c.raised,
               borderRadius: BorderRadius.circular(R.md),
               border: Border.all(
                 color: isExpired
                     ? c.danger.withValues(alpha: 0.5)
                     : isCritical
-                        ? c.warning.withValues(alpha: 0.5)
-                        : c.textLow.withValues(alpha: 0.16),
+                    ? c.warning.withValues(alpha: 0.5)
+                    : c.textLow.withValues(alpha: 0.16),
               ),
             ),
             child: Column(
@@ -1131,30 +1131,30 @@ class _SessionPanel extends StatelessWidget {
                       isExpired
                           ? LucideIcons.circleX
                           : isCritical
-                              ? LucideIcons.timer
-                              : LucideIcons.clock,
+                          ? LucideIcons.timer
+                          : LucideIcons.clock,
                       size: 18,
                       color: isExpired
                           ? c.danger
                           : isCritical
-                              ? c.warning
-                              : c.textMid,
+                          ? c.warning
+                          : c.textMid,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       isExpired
                           ? 'Sesi tamu berakhir'
                           : isCritical
-                              ? 'Sesaat lagi berakhir!'
-                              : 'Sesi tamu',
+                          ? 'Sesaat lagi berakhir!'
+                          : 'Sesi tamu',
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
                         color: isExpired
                             ? c.danger
                             : isCritical
-                                ? c.warning
-                                : c.textHi,
+                            ? c.warning
+                            : c.textHi,
                       ),
                     ),
                   ],
@@ -1203,8 +1203,8 @@ class _SessionPanel extends StatelessWidget {
                               color: isExpired
                                   ? c.danger
                                   : isCritical
-                                      ? c.warning
-                                      : c.textLow,
+                                  ? c.warning
+                                  : c.textLow,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -1217,8 +1217,8 @@ class _SessionPanel extends StatelessWidget {
                               color: isExpired
                                   ? c.danger
                                   : isCritical
-                                      ? c.warning
-                                      : c.accent,
+                                  ? c.warning
+                                  : c.accent,
                             ),
                           ),
                         ],
@@ -1229,7 +1229,7 @@ class _SessionPanel extends StatelessWidget {
                 if (isExpired) ...[
                   const SizedBox(height: 10),
                   Text(
-                    'Sesi tamu telah berakhir. Silakan login untuk '\
+                    'Sesi tamu telah berakhir. Silakan login untuk '
                     'melanjutkan.',
                     style: TextStyle(
                       fontSize: 11,
@@ -1240,7 +1240,7 @@ class _SessionPanel extends StatelessWidget {
                 ] else if (isCritical) ...[
                   const SizedBox(height: 10),
                   Text(
-                    'Sesi akan berakhir dalam kurang dari 5 menit. '\
+                    'Sesi akan berakhir dalam kurang dari 5 menit. '
                     'Segera simpan pekerjaanmu.',
                     style: TextStyle(
                       fontSize: 11,
@@ -1272,9 +1272,7 @@ class _SessionPanel extends StatelessWidget {
                   _InfoRow(
                     icon: LucideIcons.clock,
                     title: 'Durasi',
-                    value: transport.live
-                        ? _fmtDurasi(elapsedSec)
-                        : '—',
+                    value: transport.live ? _fmtDurasi(elapsedSec) : '—',
                   ),
                   const _CardGap(),
                   _InfoRow(

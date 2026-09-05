@@ -5,8 +5,8 @@
 class LicenseStats {
   const LicenseStats._();
 
-  static const int total = 504;
-  static const int dart = 110;
+  static const int total = 503;
+  static const int dart = 109;
   static const int rust = 324;
   static const int npm = 59;
   static const int assets = 11;

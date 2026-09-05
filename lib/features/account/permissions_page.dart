@@ -16,8 +16,10 @@ import '../notifications/notification_service.dart';
 enum _PermStatus {
   /// Izin sudah diberikan.
   granted,
+
   /// Izin belum diminta / ditolak.
   denied,
+
   /// Izin belum bisa diminta (fitur tidak tersedia).
   unavailable,
 }
@@ -153,13 +155,6 @@ class _PermissionsPageState extends ConsumerState<PermissionsPage> {
     return 'Gagal mengakses mikrofon: $e';
   }
 
-  /// Buka pengaturan sistem untuk meminta izin mikrofon.
-  Future<void> _openMicSettings() async {
-    // Di Android, kita tidak bisa langsung buka pengaturan izin.
-    // Tapi kita bisa mencoba getUserMedia lagi untuk trigger dialog izin.
-    await _testMicrophone();
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -204,12 +199,12 @@ class _PermissionsPageState extends ConsumerState<PermissionsPage> {
               name: 'Mikrofon',
               status: _micStatus,
               description: 'Untuk mengirim suara HP ke PC saat sesi remote.',
-              onAction: _testingMic
-                  ? null
-                  : () => _testMicrophone(),
+              onAction: _testingMic ? null : () => _testMicrophone(),
               actionLabel: _testingMic
                   ? 'Menguji…'
-                  : (_micStatus == _PermStatus.granted ? 'Tes ulang' : 'Beri izin & tes'),
+                  : (_micStatus == _PermStatus.granted
+                        ? 'Tes ulang'
+                        : 'Beri izin & tes'),
               result: _micTestResult,
             ),
 
@@ -223,7 +218,9 @@ class _PermissionsPageState extends ConsumerState<PermissionsPage> {
                 // Kamera di-trigger saat QR scanner dibuka.
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Izin kamera akan diminta saat membuka pemindai QR.'),
+                    content: Text(
+                      'Izin kamera akan diminta saat membuka pemindai QR.',
+                    ),
                     duration: Duration(seconds: 2),
                   ),
                 );
@@ -236,7 +233,8 @@ class _PermissionsPageState extends ConsumerState<PermissionsPage> {
               icon: LucideIcons.bell,
               name: 'Notifikasi',
               status: _notifEnabled ? _PermStatus.granted : _PermStatus.denied,
-              description: 'Untuk menerima pengumuman rilis dan artikel berita.',
+              description:
+                  'Untuk menerima pengumuman rilis dan artikel berita.',
               onAction: () async {
                 if (_notifEnabled) {
                   // Sudah aktif, buka preferences.
@@ -253,7 +251,7 @@ class _PermissionsPageState extends ConsumerState<PermissionsPage> {
             ),
 
             // ── Jaringan ──
-            _PermissionTile(
+            const _PermissionTile(
               icon: LucideIcons.wifi,
               name: 'Jaringan',
               status: _PermStatus.granted,
@@ -263,7 +261,7 @@ class _PermissionsPageState extends ConsumerState<PermissionsPage> {
             const SizedBox(height: Gap.xxl),
 
             // ── Info lokasi berkas ──
-            SectionLabel('Penyimpanan berkas'),
+            const SectionLabel('Penyimpanan berkas'),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -406,7 +404,11 @@ class _PermissionTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       description,
-                      style: TextStyle(fontSize: 11.5, color: c.textMid, height: 1.4),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: c.textMid,
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
@@ -434,7 +436,9 @@ class _PermissionTile extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    result!.success ? LucideIcons.checkCircle : LucideIcons.xCircle,
+                    result!.success
+                        ? LucideIcons.checkCircle
+                        : LucideIcons.xCircle,
                     size: 16,
                     color: result!.success ? c.successText : c.dangerText,
                   ),
@@ -448,7 +452,9 @@ class _PermissionTile extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: result!.success ? c.successText : c.dangerText,
+                            color: result!.success
+                                ? c.successText
+                                : c.dangerText,
                           ),
                         ),
                         if (result!.message != null) ...[
@@ -485,7 +491,10 @@ class _PermissionTile extends StatelessWidget {
                 ),
                 child: Text(
                   actionLabel!,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),

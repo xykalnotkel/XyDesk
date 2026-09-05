@@ -606,9 +606,7 @@ class _PressableKeyState extends State<_PressableKey> {
           height: 44, // Lebih tinggi untuk touch target yang lebih baik
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: _down
-                ? c.accent.withValues(alpha: 0.45)
-                : widget.background,
+            color: _down ? c.accent.withValues(alpha: 0.45) : widget.background,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: _down ? c.accent : c.textLow.withValues(alpha: 0.18),
