@@ -32,6 +32,15 @@ Kebijakan rilis:
   `AGENT_BOARD.md` aturan #6.
 
 ### Diperbaiki
+- Client Flutter: **`pubspec.lock` basi membuat job "Analisis Statis (Flutter)"
+  merah dan APK tidak pernah terbangun.** `go_router` dihapus dari
+  `pubspec.yaml` pada 3 Sep (`7d178d1`, tidak dipakai lagi di `lib/`),
+  tetapi entrinya tertinggal di `pubspec.lock`. Setiap `flutter pub get`
+  di CI menghapus entri itu sendiri, lalu langkah `git diff --exit-code --
+  pubspec.lock` gagal — job analisis berhenti di situ dan `APK Android per
+  ABI` dilewati. Entri usang itu dibuang; berkas kini identik dengan hasil
+  `pub get` (diverifikasi dari hash blob yang sama dengan yang dihasilkan
+  runner CI).
 - Keamanan web: **password pairing tidak lagi disimpan di peramban.** Riwayat
   koneksi di `web/src/App.tsx` sebelumnya menyimpan ID + password di
   `localStorage` dengan `btoa()` — enkode bolak-balik, bukan enkripsi. Satu
