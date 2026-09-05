@@ -32,6 +32,14 @@ Kebijakan rilis:
   `AGENT_BOARD.md` aturan #6.
 
 ### Diperbaiki
+- Client Flutter: **latar ikon "Sewa PC" (billing) belum benar-benar
+  dibersihkan.** `assets/img/nav/billing.png` masih menyisakan latar
+  buram di empat sudutnya — artefak pembersihan latar yang membuat ikon
+  tampak sebagai kotak pucat di tombol bilah atas, berbeda dengan empat
+  ikon navigasi lain yang sudutnya benar-benar transparan. Latar yang
+  tersambung ke tepi dibuang, dan sisa pinggiran pucat di sekeliling
+  objek dirapikan. Diukur: sudut kini `alpha = 0` dan tidak ada piksel
+  buram yang menyentuh tepi, sama seperti ikon nav lainnya.
 - Client Flutter: **kode klien tidak bisa dikompilasi sejak 3 Sep 2026.**
   `lib/features/session/session_panels.dart` menyambung string dengan garis
   miring terbalik di akhir baris — cara yang tidak dikenal Dart — sehingga
