@@ -266,6 +266,23 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **INFO: Dart/Flutter bisa
+  diverifikasi di mesin Linux biasa, tanpa Android Studio.** Resepnya: unduh
+  Flutter persis versi `env.FLUTTER_VERSION` di `build.yml` (saat ini 3.44.9
+  → Dart 3.12.2) dari
+  `https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_<versi>-stable.tar.xz`,
+  ekstrak, lalu `flutter pub get` → `flutter analyze --fatal-infos
+  --fatal-warnings` → `flutter test`. Empat gerbang yang paling sering
+  membuat merah dan bisa dicek lokal sebelum dispatch: `git diff --exit-code
+  -- pubspec.lock`, `dart format --output=none --set-exit-if-changed lib
+  tool`, larangan `// ignore:` dan `exclude:` di `analysis_options.yaml`,
+  serta `node tool/gen-licenses.mjs --check`. Butuh ruang disk ±5 GB (arsip
+  1,5 GB + hasil ekstrak 2,5 GB) — jangan diekstrak di `/tmp` yang kecil.
+  Alasan catatan ini: selama berhari-hari laporan sesi Client Flutter
+  bertulis "DART tidak bisa diverifikasi di sini", padahal kodenya sejak
+  3 Sep bahkan tidak bisa dikompilasi.
+
+
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **Perubahan perilaku yang tidak
   boleh lewat tanpa diberitahu:** password pairing host kini PEKA-KASUS (lihat
   item Client Flutter & Web di file ini). Build APK/web/shell berikutnya berbeda

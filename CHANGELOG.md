@@ -32,6 +32,37 @@ Kebijakan rilis:
   `AGENT_BOARD.md` aturan #6.
 
 ### Diperbaiki
+- Client Flutter: **kode klien tidak bisa dikompilasi sejak 3 Sep 2026.**
+  `lib/features/session/session_panels.dart` menyambung string dengan garis
+  miring terbalik di akhir baris — cara yang tidak dikenal Dart — sehingga
+  `dart format` gagal mem-parse berkasnya. Akibatnya job "Analisis Statis
+  (Flutter)" selalu merah dan job `APK Android per ABI` dilewati: **tidak
+  ada APK yang terbangun sejak 3 Sep**, tanpa satu pun tanda bahaya di
+  papan. Dua baris itu kini memakai penulisan string bersebelahan yang
+  lazim di Dart.
+- Client Flutter: **tiga error analisis lain ikut beres.** (1)
+  `AppColors.textLow` tidak pernah ada — warna teks bergantung tema dan
+  harus diambil dari palet, jadi `XyDeskError.color` kini menerima
+  `AppPalette` dari pemanggilnya; (2) `copyWith` di model perangkat
+  memakai `gpu` tanpa mendeklarasikannya, sehingga pembaruan informasi
+  hardware tidak bisa dikompilasi; (3) `_pendingNews` dideklarasi dua kali
+  di layanan notifikasi.
+- Client Flutter: **21 info dan warning dibersihkan**, karena CI
+  menjalankan `flutter analyze --fatal-infos --fatal-warnings` — satu info
+  saja sudah cukup menggagalkan build. Yang dibuang: impor tak terpakai,
+  field dan metode mati (`_editingProfileId` hanya ditulis, tidak pernah
+  dibaca), konstruktor yang seharusnya `const`, dan dua interpolasi string
+  yang sia-sia.
+- Client Flutter: **pelanggaran aturan desain di halaman control mapping**
+  — `Divider` dipakai sebagai pemisah, padahal Quiet Surface melarang
+  garis pemisah dan CI menggagalkan build bila menemukannya. Pemisahnya
+  diganti jarak.
+- Client Flutter: **17 berkas dirapikan dengan `dart format`** (Dart
+  3.12.2, versi yang sama dengan runner CI). Sebelumnya berkas-berkas itu
+  tidak pernah diformat sejak ditulis.
+- Dokumentasi: inventaris lisensi diregenerasi setelah `go_router` keluar
+  dari `pubspec.lock` — halaman Legal tidak lagi mencantumkan paket yang
+  tidak dipakai (503 komponen).
 - Client Flutter: **`pubspec.lock` basi membuat job "Analisis Statis (Flutter)"
   merah dan APK tidak pernah terbangun.** `go_router` dihapus dari
   `pubspec.yaml` pada 3 Sep (`7d178d1`, tidak dipakai lagi di `lib/`),
