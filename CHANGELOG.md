@@ -17,6 +17,18 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Diubah
+- Brand: **logo XyDesk diganti ke markah X ungu** (hanya bentuk dan warna;
+  tidak ada perubahan perilaku). 22 berkas ikon dihasilkan ulang dari satu
+  sumber: ikon peluncur Android (5 kerapatan + latar depan adaptif), logo
+  splash native (di situlah warna ungunya tampil apa adanya, di atas latar
+  Paper `#FAFAF9`), ikon aplikasi Flutter, tray + installer Windows, favicon,
+  ikon PWA 192/512, dan ikon iOS. Markah dibalik jadi putih di permukaan
+  gelap (peluncur Android, tray, logo dalam aplikasi, web) karena ungu
+  `#4A18BB` hanya punya rasio kontras ~2:1 di atas latar aplikasi yang
+  gelap — bentuknya tetap, warnanya menyesuaikan permukaan, seperti
+  kelaziman merek yang punya logo untuk latar terang dan gelap.
+
 ### Diperbaiki
 - Client Flutter: **aplikasi bisa terkunci di splash native tanpa batas.**
   Splash Android (`LaunchTheme`) bertahan sampai Flutter menggambar frame
