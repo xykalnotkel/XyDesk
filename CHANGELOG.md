@@ -17,9 +17,17 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+## [6.5.3] - 2026-09-06
+
+> **Build 31.** Rilis perbaikan. Yang paling terasa: aplikasi Android yang
+> berhenti di logo sekarang selalu masuk — penyebabnya splash native
+> menunggu frame pertama Flutter, sementara `main()` menunggu tiga
+> panggilan platform yang bisa saja tidak pernah menjawab. Rilis ini juga
+> mengganti identitas visual ke markah X ungu di seluruh platform.
+
 ### Diubah
 - Brand: **logo XyDesk diganti ke markah X ungu** (hanya bentuk dan warna;
-  tidak ada perubahan perilaku). 22 berkas ikon dihasilkan ulang dari satu
+  tidak ada perubahan perilaku). 27 berkas ikon dihasilkan ulang dari satu
   sumber: ikon peluncur Android (5 kerapatan + latar depan adaptif), logo
   splash native (di situlah warna ungunya tampil apa adanya, di atas latar
   Paper `#FAFAF9`), ikon aplikasi Flutter, tray + installer Windows, favicon,
@@ -42,6 +50,8 @@ Kebijakan rilis:
   Flutter, lalu setiap langkah inisialisasi dibatasi 10 detik dan
   dilewati bila gagal. Penyimpanan lokal yang gagal total tidak lagi
   berujung layar mati: pengguna melihat pesan jujur dan tombol coba lagi.
+
+
 
 ## [6.5.2] - 2026-09-06
 
