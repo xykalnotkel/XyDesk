@@ -17,6 +17,20 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Diperbaiki
+- Client Flutter: **aplikasi bisa terkunci di splash native tanpa batas.**
+  Splash Android (`LaunchTheme`) bertahan sampai Flutter menggambar frame
+  pertamanya, tetapi `main()` menunggu tiga panggilan platform sebelum
+  `runApp`: pembacaan versi, pembacaan kemampuan panel lewat kanal native,
+  dan pembukaan penyimpanan lokal. Satu saja yang tidak pernah menjawab —
+  penyimpanan terkunci, kanal native diam, perangkat dalam keadaan
+  tertentu — dan pengguna menatap logo selamanya, tanpa crash, tanpa galat.
+  Perbaikan sebelumnya (6.5.2) baru menangani notifikasi, jadi celahnya
+  tersisa. Kini frame pertama digambar paling dulu oleh layar boot murni
+  Flutter, lalu setiap langkah inisialisasi dibatasi 10 detik dan
+  dilewati bila gagal. Penyimpanan lokal yang gagal total tidak lagi
+  berujung layar mati: pengguna melihat pesan jujur dan tombol coba lagi.
+
 ## [6.5.2] - 2026-09-06
 
 > **Build 30.** Rilis perbaikan: menutup dua kerusakan yang dari luar tampak
