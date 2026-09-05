@@ -17,6 +17,16 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+## [6.5.1] - 2026-09-06
+
+> **Build 29.** Rilis perbaikan: tidak ada fitur baru, tidak ada perubahan
+> protokol atau format data tersimpan. Isinya menutup kerusakan yang
+> terjadi sejak 3 September 2026 — klien Flutter tidak bisa dikompilasi
+> lagi, sehingga tidak ada APK yang terbangun selama enam hari — serta
+> satu kelemahan keamanan di klien web dan dua kebohongan dokumentasi.
+> Angka PATCH dipilih karena semua perubahan memperbaiki perilaku yang
+> salah, bukan menambah kemampuan.
+
 ### Ditambahkan
 - Dokumentasi tim: **role baru `Operator` (identitas `Operator - XyDesk
   Team`)**, ditetapkan pemilik repo. Role ini mewakili pemilik repo: ia
