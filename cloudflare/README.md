@@ -9,7 +9,7 @@ tanpa kartu kredit, tanpa server sendiri. Pengganti total versi Go/VM.
 |---|---|---|
 | WebSocket persisten | Worker + Durable Object (Hibernation API) | Rp 0 |
 | STUN | `stun.cloudflare.com` | gratis tanpa batas |
-| TURN (NAT ketat) | `turn.cloudflare.com` | 1.000 GB/bulan gratis |
+| TURN (NAT ketat) | multi-penyedia, lihat `src/turn.js` | tergantung penyedia; secret statis tak perlu kartu kredit |
 | TLS | otomatis (custom domain signal.xystudio.my.id) | Rp 0 |
 
 Free tier Workers: **100K request/hari**. Signaling hanya KB per sesi, jadi
@@ -23,6 +23,20 @@ npm install
 npx wrangler login                  # browser, akun Cloudflare gratis (tanpa kartu)
 npx wrangler secret put XYDESK_SECRET   # isi: openssl rand -hex 32
 npx wrangler secret put ADMIN_SECRET    # isi: kata sandi admin /issue
+
+# TURN — boleh lebih dari satu, semuanya dipakai sebagai cadangan.
+# Penyedia termurah dan paling tangguh: secret statis (ExpressTurn atau
+# coturn sendiri). Kredensialnya dihitung di Worker, jadi tetap hidup
+# meski penyedia lain sedang mogok.
+npx wrangler secret put TURN_STATIC_URLS   # mis. turn:free.expressturn.com:3478
+npx wrangler secret put TURN_STATIC_SECRET # shared secret dari penyedia
+# npx wrangler secret put TURN_STATIC_USER # opsional, default: xydesk
+# Penyedia lain (tambahan, bukan pengganti):
+# npx wrangler secret put TURN_KEY_ID      # Cloudflare Realtime
+# npx wrangler secret put TURN_KEY_TOKEN
+# npx wrangler secret put OPENRELAY_API_KEY   # Open Relay Project
+# npx wrangler secret put TURN_REST_URL       # penyedia REST lain
+# npx wrangler secret put TURN_REST_API_KEY
 npx wrangler deploy                    # → https://signal.xystudio.my.id
 ```
 

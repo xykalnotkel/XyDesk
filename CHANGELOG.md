@@ -17,6 +17,21 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Ditambahkan
+- Backend / Edge: **TURN multi-penyedia sebagai cadangan berlapis.** Dulu
+  `/turn-ice` terkunci ke satu penyedia (Cloudflare Realtime) dan menjawab
+  503 bila secret-nya tidak diisi — aplikasi lalu jalan dengan STUN saja,
+  dan dua perangkat di belakang NAT simetris/CGNAT tidak akan pernah
+  tersambung tanpa pesan yang jelas. Kini kredensial dikumpulkan dari
+  **semua** penyedia yang dikonfigurasi dan digabung menjadi satu daftar
+  `iceServers`; WebRTC mencoba semuanya bersamaan, jadi penyedia yang down
+  atau kehabisan kuota tidak mematikan sesi. Tiga bentuk didukung: secret
+  statis (ExpressTurn/coturn — kredensialnya dihitung di Worker dengan
+  HMAC-SHA1, tanpa panggilan jaringan, sehingga selalu tersedia), Cloudflare
+  Realtime, dan REST sederhana (Open Relay Project, Metered, Turnix, dan
+  lain-lain). Balasan kini menyertakan `providers` berisi penyedia mana yang
+  menjawab dan mana yang gagal, supaya TURN yang diam mudah dilihat.
+
 ## [6.5.3] - 2026-09-06
 
 > **Build 31.** Rilis perbaikan. Yang paling terasa: aplikasi Android yang

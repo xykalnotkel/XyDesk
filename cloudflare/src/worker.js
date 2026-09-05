@@ -15,6 +15,7 @@
 import { Hub } from './hub.js';
 import { AuthStore } from './authstore.js';
 import { verifyJwt } from './auth.js';
+import { collectIceServers, TURN_PROVIDERS } from './turn.js';
 
 // Wrangler mewajibkan kelas Durable Object diekspor dari entrypoint.
 export { Hub, AuthStore };
@@ -416,40 +417,37 @@ async function handleTurnIce(request, url, env) {
     return new Response('forbidden', { status: 403 });
   }
 
-  if (!env.TURN_KEY_ID || !env.TURN_KEY_TOKEN) {
+  const requestedTtl = Number(url.searchParams.get('ttl') || 86400);
+  const collected = await collectIceServers(env, { ttl: requestedTtl });
+
+  if (!collected.providers.length) {
+    // Tidak ada satu pun penyedia yang dikonfigurasi. Tanpa TURN, dua
+    // perangkat di belakang NAT simetris tidak akan pernah tersambung —
+    // jadi ini layak diberi pesan yang jelas, bukan daftar kosong.
     return new Response(
       JSON.stringify({
         error: 'turn-not-configured',
-        hint: 'Buat TURN key di dashboard Cloudflare (Realtime → TURN), lalu set secret TURN_KEY_ID & TURN_KEY_TOKEN.',
+        hint:
+          'Isi secret salah satu penyedia TURN. Paling sederhana: penyedia ' +
+          'bersecret statis (ExpressTurn atau coturn) — set TURN_STATIC_URLS ' +
+          'mis. "turn:free.expressturn.com:3478" dan TURN_STATIC_SECRET. ' +
+          'Penyedia lain: TURN_KEY_ID + TURN_KEY_TOKEN (Cloudflare Realtime), ' +
+          'OPENRELAY_API_KEY (Open Relay Project), atau TURN_REST_URL + ' +
+          'TURN_REST_API_KEY (penyedia REST apa pun).',
       }),
       { status: 503, headers: { 'content-type': 'application/json' } },
     );
   }
 
-  const requestedTtl = Number(url.searchParams.get('ttl') || 86400);
-  const ttl = Number.isFinite(requestedTtl)
-    ? Math.max(300, Math.min(86400, Math.floor(requestedTtl)))
-    : 86400;
-  const resp = await fetch(
-    `https://rtc.live.cloudflare.com/v1/turn/keys/${env.TURN_KEY_ID}/credentials/generate-ice-servers`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.TURN_KEY_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ttl }),
-    },
+  return new Response(
+    JSON.stringify({
+      iceServers: collected.iceServers,
+      ttl: collected.ttl,
+      // Diagnostik: penyedia mana yang menjawab dan mana yang gagal. Dipakai
+      // operator untuk melihat TURN yang diam tanpa membongkar log.
+      providers: collected.providers,
+      degraded: collected.iceServers.length === 0,
+    }),
+    { status: 200, headers: { 'content-type': 'application/json' } },
   );
-
-  if (!resp.ok) {
-    return new Response(
-      JSON.stringify({ error: 'turn-upstream-failed', status: resp.status }),
-      { status: 502, headers: { 'content-type': 'application/json' } },
-    );
-  }
-  return new Response(await resp.text(), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
-  });
 }
