@@ -17,17 +17,40 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+## [6.5.2] - 2026-09-06
+
+> **Build 30.** Rilis perbaikan: menutup dua kerusakan yang dari luar tampak
+> seperti "XyDesk mogok" — aplikasi Android yang berhenti di layar
+> peluncuran tanpa pernah masuk, dan engine PC yang tersandung setiap kali
+> jaringan kedip setelah lama menyala. Yang kedua diselesaikan dengan
+> memisahkan identitas perangkat dari token sesi, model yang dipakai produk
+> remote desktop pada umumnya; sekalian menutup lubang lama yang mengunci
+> perangkat selamanya begitu password pairing diganti. Tidak ada perubahan
+> yang memutus aplikasi lama: worker tetap menjawab token teks polos untuk
+> permintaan yang tidak meminta format baru.
+
 ### Ditambahkan
 - Backend / Edge + Desktop Shell: **kredensial penyegaran host** — identitas
   perangkat yang menetap, terpisah dari token sesi. Host menyimpannya di
   berkas identitasnya (bukan di command line) dan menukarnya sendiri menjadi
-  token sesi setiap kali menyambung: tanpa password pairing, tanpa rem
-  klaim, tanpa menunggu jatah percobaan. Token sesi tetap berumur 5 menit —
-  yang berumur panjang cuma identitasnya, persis seperti produk remote
-  desktop pada umumnya. Kredensial berlaku 90 hari dan bisa diperbarui lewat
-  jalur ikat ulang.
+  token sesi setiap kali menyambung: tanpa password pairing, tanpa rem klaim,
+  tanpa menunggu jatah percobaan. Token sesi tetap berumur 5 menit — yang
+  berumur panjang cuma identitasnya, persis seperti produk remote desktop
+  pada umumnya. Kredensial berlaku 90 hari dan bisa diperbarui lewat jalur
+  ikat ulang.
 
 ### Diperbaiki
+- Client Flutter: **aplikasi bisa berhenti di layar peluncuran tanpa
+  batas.** `main()` menunggu inisialisasi layanan notifikasi selesai sebelum
+  menampilkan frame pertama, dan rantai itu — inisialisasi SDK, pembacaan
+  status izin, dan opt-in langganan — **tidak punya satu pun batas waktu**.
+  Satu panggilan SDK yang tidak pernah menjawab (jaringan tersendat, layanan
+  ponsel bermasalah, peluncuran dingin) membuat aplikasi diam di logo: bukan
+  crash, bukan galat, hanya berhenti. Kini notifikasi disiapkan **setelah**
+  frame pertama tampil dan dibatasi 10 detik; kalau gagal, aplikasi tetap
+  terbuka dan statusnya bisa dicoba ulang dari Pengaturan. Pembacaan sesi
+  aman juga diberi batas waktu 10 detik dengan jalur fallback yang sudah ada
+  (pengguna diminta masuk ulang).
 - Backend / Edge: **mengganti password pairing mengunci perangkat
   selamanya.** Server menyimpan hash password pada pemakaian pertama dan
   menolak password yang berbeda, sedangkan `set-password` di host hanya
@@ -36,19 +59,6 @@ Kebijakan rilis:
   mengikat ulang perangkatnya ke password baru dengan menyertakan kredensial
   penyegaran; tanpa kredensial itu, tebakan password yang benar pun tetap
   ditolak (tidak bisa memindahkan ikatan ke password penyerang).
-
-### Diperbaiki
-- Client Flutter: **aplikasi bisa berhenti di layar peluncuran tanpa batas.**
-  `main()` menunggu inisialisasi layanan notifikasi selesai sebelum
-  menampilkan frame pertama, dan rantai itu — inisialisasi SDK, pembacaan
-  status izin, dan opt-in langganan — **tidak punya satu pun batas waktu**.
-  Satu panggilan SDK yang tidak pernah menjawab (jaringan tersendat,
-  layanan ponsel bermasalah, peluncuran dingin) membuat aplikasi diam di
-  logo: bukan crash, bukan galat, hanya berhenti. Kini notifikasi disiapkan
-  **setelah** frame pertama tampil dan dibatasi 10 detik; kalau gagal,
-  aplikasi tetap terbuka dan statusnya bisa dicoba ulang dari Pengaturan.
-  Pembacaan sesi aman juga diberi batas waktu 10 detik dengan jalur
-  fallback yang sudah ada (pengguna diminta masuk ulang).
 
 ## [6.5.1] - 2026-09-06
 
