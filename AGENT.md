@@ -19,7 +19,9 @@
    kerjamu.
 4. Tentukan **SATU role** untuk sesi ini (lihat bagian 2):
    - Kalau operator (pemilik repo) sudah menyebut role/tugas → pakai itu.
-   - Kalau tidak → pilih sendiri role yang paling cocok dengan tugas yang
+   - Role **Operator** (bagian 2.1) adalah pengecualian: ia tidak memilih
+     satu area, ia mewakili pemilik repo.
+   - Selain itu → pilih sendiri role yang paling cocok dengan tugas yang
      diminta, dan **sebutkan pilihanmu di awal**, contoh:
      > "Sesi ini saya ambil role **Web** sebagai *Raka - XySpace Team*.
      > Scope saya hanya `web/` dan `web_deploy/`."
@@ -58,9 +60,49 @@
 | **News & Konten** | `news/`, `web/public/news/` | Artikel berita rilis — WAJIB ikut `docs/NEWS_STYLE.md`: detail lengkap (apa + kenapa), changelog versi pengguna, screenshot asli; penulis `Haekal Saputra` |
 | **CI / Release** | `.github/`, `tool/`, `packaging/` | Workflow, build, release, generator aset |
 | **Docs & Audit** | `docs/`, `README.md`, `ROADMAP.md`, `SETUP.md` | Dokumentasi, audit, sinkronisasi status agar README tidak bohong |
+| **Operator** | Seluruh repo — tidak ada batasan folder | Wakil pemilik repo: koordinasi lintas area (lihat 2.1) |
 
 Kalau tugas dari operator menyentuh dua area besar sekaligus, bilang jujur:
 minta dipecah jadi dua sesi. Jangan diam-diam mengerjakan dua-duanya.
+Satu-satunya pengecualian yang sah adalah role **Operator** (2.1).
+
+### 2.1 Role Operator — wakil pemilik repo
+
+Ditetapkan operator pada 6 Sep 2026. Identitasnya:
+
+```
+git config user.name  "Operator - XyDesk Team"
+git config user.email "operator.xydesk@users.noreply.github.com"
+```
+
+Haknya mengikuti pemilik repo, bukan mengikuti role area biasa:
+
+1. **Boleh lintas area dalam satu sesi.** Aturan "1 sesi = 1 role" (bagian 1)
+   tidak berlaku untuknya — itu justru tugasnya: menyelesaikan pekerjaan
+   yang menyentuh banyak folder sekaligus.
+2. **Tidak perlu antrean izin push.** Commit darinya sah seperti commit
+   operator sendiri (bagian 5). Jejaknya tetap wajib: baris sesi di
+   `AGENT_BOARD.md` dan penanda `Izin: <ID-SESI>` di body setiap commit,
+   supaya audit tetap bisa membaca siapa mengerjakan apa.
+3. **Boleh mengambil alih area yang sedang dikunci** bila operator
+   memerintahkannya langsung, asal baris `LAGI KERJA` milik agent lain di
+   papan ditulis ulang (status `DITINGGALKAN` + alasan) agar tidak ada dua
+   tangan yang mengira pegang kendali.
+
+Yang **tetap butuh restu eksplisit operator di chat** (keputusan operator,
+6 Sep 2026 — aturan papan #1 dan #4 tidak dilonggarkan):
+
+- menaikkan nomor versi (`pubspec.yaml`, `package.json`, `Cargo.toml`);
+- menerbitkan artikel berita atau mengubah isi berita yang sudah live;
+- `workflow_dispatch` Build, Release, dan deploy ke produksi.
+
+Dan yang **tidak pernah longgar untuk role apa pun**, termasuk Operator:
+perubahan berisiko produksi besar (hapus/migrasi data, auth/keamanan,
+harga/lisensi, apa pun yang tidak bisa di-rollback dengan revert biasa)
+wajib konfirmasi khusus operator lebih dulu (bagian 6).
+
+Kalau perintah operator dan keputusan role Operator bertentangan, **kata
+operator yang menang** — role ini wakil, bukan pengganti.
 
 ---
 
@@ -69,6 +111,9 @@ minta dipecah jadi dua sesi. Jangan diam-diam mengerjakan dua-duanya.
 - Setiap agent **membuat nama manusia sendiri** — bebas, tapi wajib
   berformat: `Nama - XySpace Team`.
   Contoh: `Raka - XySpace Team`, `Salsa - XySpace Team`, `Bima - XySpace Team`.
+- **Pengecualian**: role **Operator** memakai `Operator - XyDesk Team`
+  dengan email `operator.xydesk@users.noreply.github.com` (bagian 2.1).
+  Satu identitas, tidak boleh dipakai role lain.
 - Set identitas git **lokal untuk repo ini saja** di awal sesi:
   ```bash
   git config user.name  "Raka - XySpace Team"
@@ -170,7 +215,10 @@ kerja apa.** Aturannya:
 - **Commit merge dianggap sah** (itu tindakan operator menggabungkan PR).
   Commit dengan alamat `users.noreply.github.com` milik operator
   (variabel repo `OPERATOR_LOGIN`) juga dikecualikan — operator tidak
-  perlu izin ke dirinya sendiri.
+  perlu izin ke dirinya sendiri. **Commit dari `Operator - XyDesk Team`
+  dikecualikan dengan alasan yang sama** (bagian 2.1): ia mewakili
+  operator, jadi tidak mengantre `DISETUJUI`. Baris sesinya tetap wajib
+  ada di papan — yang dilewati hanya tahap persetujuan, bukan jejaknya.
 - **CI sudah difilter per area** (`docs/CI.md`): push-mu hanya menjalankan
   job untuk area yang kau sentuh. Area lain tidak ikut membayar waktu
   buildmu — dan sebaliknya. Setelah push, cek run di Actions: job

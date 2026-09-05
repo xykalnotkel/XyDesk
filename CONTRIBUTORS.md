@@ -3,7 +3,8 @@
 Daftar ini **hanya bertambah, tidak pernah berkurang**. Tambahkan namamu di
 baris paling bawah pada commit pertamamu. Dilarang mengubah atau menghapus
 baris milik orang lain. Format nama agent: `Nama - XySpace Team`
-(lihat `AGENT.md` bagian 3).
+(lihat `AGENT.md` bagian 3) — kecuali role Operator, yang memakai
+`Operator - XyDesk Team` (lihat `AGENT.md` bagian 2.1).
 
 | Nama | Role | Aktif sejak |
 |---|---|---|
@@ -17,3 +18,4 @@ baris milik orang lain. Format nama agent: `Nama - XySpace Team`
 | Tara - XySpace Team | Backend / Edge | 2026-09 |
 | Bhre - XySpace Team | CI / Release | 2026-09 |
 | Raka - XySpace Team | News & Konten | 2026-09 |
+| Operator - XyDesk Team | Operator (semua area) | 2026-09 |

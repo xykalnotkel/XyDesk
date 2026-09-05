@@ -17,6 +17,20 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Ditambahkan
+- Dokumentasi tim: **role baru `Operator` (identitas `Operator - XyDesk
+  Team`)**, ditetapkan pemilik repo. Role ini mewakili pemilik repo: ia
+  boleh mengerjakan semua area sekaligus dalam satu sesi (pengecualian
+  dari aturan "1 sesi = 1 role"), tidak perlu mengantre `DISETUJUI` di
+  papan, dan boleh masuk area yang sedang dikunci bila operator
+  memerintahkan langsung. Hak yang sengaja tidak dilonggarkan: menaikkan
+  nomor versi, menerbitkan/mengubah berita, serta dispatch Build, Release,
+  dan deploy tetap minta restu operator di chat; perubahan berisiko
+  produksi besar tetap wajib konfirmasi khusus. Jejaknya tidak hilang —
+  baris sesi di papan dan penanda `Izin: <ID-SESI>` tetap wajib. Rincian
+  hak dan batasnya ada di `AGENT.md` bagian 2.1, pengingatnya di
+  `AGENT_BOARD.md` aturan #6.
+
 ### Diperbaiki
 - Web: **mode founder tidak lagi jatuh ke "tempel ADMIN_TOKEN" saat id_token
   Google sudah lewat.** Founder yang sudah login (OTP atau sesi lama) tetapi

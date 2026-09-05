@@ -131,8 +131,11 @@ menyimpang dari Worker produksi).
 Push langsung ke `main` diawasi. Setiap commit non-merge pada push WAJIB
 memuat penanda `Izin: <ID-SESI>` di body, dan ID-nya harus berstatus
 `DISETUJUI` pada `AGENT_BOARD.md`. Pengecualian: commit merge (tindakan
-operator) dan commit yang ditulis operator (`OPERATOR_LOGIN` di repository
-variables — set mis. `xykalnotkel` kalau operator ingin push bebas).
+operator), commit yang ditulis operator (`OPERATOR_LOGIN` di repository
+variables — set mis. `xykalnotkel` kalau operator ingin push bebas), dan
+commit dari `Operator - XyDesk Team` (role Operator, `AGENT.md` bagian
+2.1) — ia mewakili operator, jadi penanda `Izin:`-nya tetap dicatat
+sebagai jejak, tetapi tidak perlu status `DISETUJUI`.
 
 Tanpa pengaturan tambahan, workflow ini berfungsi sebagai **audit**:
 pelanggaran tampil merah di tab Actions. Agar menjadi **gerbang keras**

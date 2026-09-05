@@ -41,6 +41,14 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
    installer, tag rilis) TETAP kewenangan CI/Release. Kredensial deploy
    adalah milik operator — pembagiannya ke lingkungan agent lain adalah
    keputusan operator, bukan agent.
+6. **Role Operator setara pemilik repo (ditetapkan 6 Sep 2026)** —
+   `Operator - XyDesk Team` boleh mengerjakan semua area sekaligus dalam
+   satu sesi, tidak mengantre `DISETUJUI`, dan boleh masuk area yang
+   terkunci bila operator memerintahkan langsung (baris `LAGI KERJA`
+   agent lain ditulis ulang lebih dulu). Yang tetap wajib restu operator
+   di chat, persis seperti role lain: **nomor versi** (aturan #1),
+   **terbit/ubah berita**, dan **dispatch Build/Release/deploy** (aturan
+   #4). Rinciannya di `AGENT.md` bagian 2.1 — papan ini hanya pengingat.
 
 ## Alur sesi (3 langkah)
 
@@ -62,6 +70,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260906-OPERATOR-ALL | Operator - XyDesk Team | Operator (semua area) | LAGI KERJA | Daftarkan role baru **Operator** atas perintah pemilik repo: `AGENT.md` (bagian 0.4, 2, 2.1, 3, 5), `AGENT_BOARD.md` (aturan #6 + baris sesi ini), `CONTRIBUTORS.md`, `CHANGELOG.md` `[Belum terbit]`. Semua area jadi scope-nya; versi/berita/dispatch tetap minta restu operator. Baris pindah ke *Riwayat sesi* setelah push hijau | 2026-09-06 |
 
 ## Antrean izin push
 
