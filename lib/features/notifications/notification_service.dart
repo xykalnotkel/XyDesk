@@ -57,22 +57,45 @@ class NotificationService extends ChangeNotifier {
   bool get active => _permissionGranted && _optedIn;
   String? get lastError => _lastError;
 
+  /// Batas waktu menyiapkan push. SDK pihak ketiga tidak boleh menahan
+  /// pemanggilnya tanpa akhir: kalau jawabannya tidak kunjung datang,
+  /// layanan ditinggalkan dalam keadaan belum siap dan bisa dicoba lagi
+  /// dari halaman pengaturan.
+  static const _initTimeout = Duration(seconds: 10);
+
   Future<void> initialize() async {
     if (_initialized || !supported) return;
     final inFlight = _initializeFuture;
     if (inFlight != null) {
-      await inFlight;
+      await inFlight.timeout(
+        _initTimeout,
+        onTimeout: () => DevLog.w(
+          'push',
+          'Menunggu inisialisasi sebelumnya kehabisan waktu',
+        ),
+      );
       return;
     }
 
     final future = _initialize();
     _initializeFuture = future;
     try {
-      await future;
+      await future.timeout(_initTimeout, onTimeout: _onInitTimeout);
     } finally {
       // Kegagalan sementara boleh dicoba lagi dari halaman pengaturan.
       if (!_initialized) _initializeFuture = null;
     }
+  }
+
+  void _onInitTimeout() {
+    _lastError =
+        'Layanan notifikasi tidak menjawab. Coba lagi dari Pengaturan.';
+    DevLog.w(
+      'push',
+      'Inisialisasi push melewati batas waktu',
+      '${_initTimeout.inSeconds} dtk — aplikasi tetap jalan tanpa push',
+    );
+    notifyListeners();
   }
 
   Future<void> _initialize() async {

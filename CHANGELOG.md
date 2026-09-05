@@ -17,6 +17,19 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Diperbaiki
+- Client Flutter: **aplikasi bisa berhenti di layar peluncuran tanpa batas.**
+  `main()` menunggu inisialisasi layanan notifikasi selesai sebelum
+  menampilkan frame pertama, dan rantai itu — inisialisasi SDK, pembacaan
+  status izin, dan opt-in langganan — **tidak punya satu pun batas waktu**.
+  Satu panggilan SDK yang tidak pernah menjawab (jaringan tersendat,
+  layanan ponsel bermasalah, peluncuran dingin) membuat aplikasi diam di
+  logo: bukan crash, bukan galat, hanya berhenti. Kini notifikasi disiapkan
+  **setelah** frame pertama tampil dan dibatasi 10 detik; kalau gagal,
+  aplikasi tetap terbuka dan statusnya bisa dicoba ulang dari Pengaturan.
+  Pembacaan sesi aman juga diberi batas waktu 10 detik dengan jalur
+  fallback yang sudah ada (pengguna diminta masuk ulang).
+
 ## [6.5.1] - 2026-09-06
 
 > **Build 29.** Rilis perbaikan: tidak ada fitur baru, tidak ada perubahan

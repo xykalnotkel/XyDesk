@@ -57,14 +57,13 @@ void main() {
       // aplikasi dimulai.
       await DisplayControl.probe();
 
-      // Menyiapkan push tanpa menampilkan dialog izin pada peluncuran awal.
-      await NotificationService.instance.initialize();
-
       final store = await Store.open();
       final sessionVault = SecureSessionVault();
       String? initialToken;
       try {
-        initialToken = await sessionVault.readToken();
+        initialToken = await sessionVault.readToken().timeout(
+          const Duration(seconds: 10),
+        );
       } catch (error, stack) {
         // Secure storage dapat gagal bila OS belum siap/penyimpanan rusak.
         // Aplikasi tetap dibuka, tetapi meminta pengguna masuk kembali.
@@ -81,6 +80,14 @@ void main() {
           child: const XyDeskApp(),
         ),
       );
+
+      // Push disiapkan SETELAH frame pertama tampil, bukan sebelumnya.
+      // Dulu ini ditunggu sebelum `runApp`, sehingga satu panggilan SDK
+      // yang tidak pernah menjawab membuat aplikasi berhenti di layar
+      // peluncuran tanpa batas — tanpa galat, tanpa jejak. Menyiapkannya
+      // di sini membuat aplikasi selalu terbuka; kalau push gagal, status
+      // izinnya tampil di Pengaturan dan bisa dicoba lagi di sana.
+      unawaited(NotificationService.instance.initialize());
     },
     (error, stack) {
       DevLog.fatal('zone', 'Error di luar framework', error, stack);
