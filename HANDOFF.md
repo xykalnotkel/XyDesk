@@ -17,8 +17,11 @@ Papan serah-terima antar sesi agent. **Setiap sesi WAJIB**:
 >
 > ⚠️ **Push tidak memicu actions.** Semua build/compile/deploy/rilis dilakukan
 > manual oleh role CI/Release (Cakra) via `workflow_dispatch` setelah izin
-> operator. Agent lain cukup push kode + dokumen; gerbang audit izin
-> (`verify-push-auth.yml`) tetap berjalan di setiap push.
+> operator. Agent lain cukup push kode + dokumen. **Sejak 5 Sep 2026
+> tidak ada workflow yang berjalan karena push**: gerbang audit izin
+> `verify-push-auth.yml` dihapus operator sendiri (commit `b4ce4a4`), jadi
+> penanda `Izin:` di body commit kini murni kebiasaan tim untuk jejak
+> audit, bukan sesuatu yang diperiksa mesin.
 
 Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>`
 
@@ -336,8 +339,9 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   jalur deploy cepat** (restu operator di chat, kini tertulis di
   `AGENT_BOARD.md` → "Aturan operator"). Web app (Danu) serta worker
   Backend/Edge & berita boleh deploy langsung tanpa menunggu dispatch
-  CI, dengan syarat: push di main + `verify-push-auth` hijau, env
-  produksi benar, verifikasi pasca-deploy tercatat di board + item
+  CI, dengan syarat: perubahan sudah di main (gerbang `verify-push-auth`
+  dihapus operator 5 Sep 2026, jadi tidak ada run yang perlu ditunggu),
+  env produksi benar, verifikasi pasca-deploy tercatat di board + item
   HANDOFF ke CI pada sesi yang sama. Contoh tercatat: deploy WEB8
   wrangler `728f6c21` (md5 bundle live == build). Build/rilis penuh
   (APK/Windows/installer/tag) tetap kewenanganmu. Mohon sinkronkan

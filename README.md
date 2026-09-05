@@ -154,11 +154,13 @@ langsung tahu macetnya di penemuan host, autentikasi, atau NAT.
 
 ## Build dan Release
 
-**Sejak 3 September 2026 push ke `main` TIDAK memicu build.** Satu-satunya
-workflow yang jalan karena push adalah gerbang audit izin
-(`verify-push-auth.yml`). Analisis statis serta build Android, Windows, dan Web
-dijalankan manual (`workflow_dispatch`) oleh role CI/Release setelah izin
-operator. Artefak build tersedia melalui tab **Actions**.
+**Sejak 3 September 2026 push ke `main` TIDAK memicu build.** Analisis
+statis serta build Android, Windows, dan Web dijalankan manual
+(`workflow_dispatch`) oleh role CI/Release setelah izin operator. Sejak
+5 September 2026 bahkan tidak ada workflow yang berjalan karena push:
+gerbang audit izin `verify-push-auth.yml` dihapus operator sendiri, dan
+`main` tidak memakai branch protection. Penanda `Izin: <ID-SESI>` di body
+commit tetap menjadi kebiasaan tim untuk jejak audit. Artefak build tersedia melalui tab **Actions**.
 
 | Target | Artefak Release | Status |
 |---|---|---|

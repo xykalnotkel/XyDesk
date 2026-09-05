@@ -14,12 +14,14 @@ perlu menjalankan Flutter, Android SDK, Rust, atau Visual Studio secara lokal.
 | `.github/workflows/build-desktop.yml` | **manual** (`workflow_dispatch`) | kemasan shell desktop Electron + Next.js |
 | `.github/workflows/deploy-news.yml` | **manual** (`workflow_dispatch`) | deploy Worker berita + migrasi D1 |
 | `.github/workflows/test-lab.yml` | **manual** (`workflow_dispatch`) | uji lab perangkat |
-| `.github/workflows/verify-push-auth.yml` | setiap push ke `main` | audit izin push: commit wajib memuat `Izin: <ID>` yang berstatus `DISETUJUI` di `AGENT_BOARD.md` |
+| ~~`.github/workflows/verify-push-auth.yml`~~ | **dihapus** operator 5 Sep 2026 (`b4ce4a4`) — resep pemulihan ada di bawah | dulu: audit izin push, commit wajib memuat `Izin: <ID>` berstatus `DISETUJUI` di `AGENT_BOARD.md` |
 
 ## Kebijakan pemicu (sejak 3 Sep 2026): push TIDAK memicu actions
 
-Push ke `main` **tidak memicu actions apa pun** (satu-satunya yang jalan
-karena push adalah gerbang audit `verify-push-auth.yml` — bukan build).
+Push ke `main` **tidak memicu actions apa pun**. Dulu ada satu
+pengecualian — gerbang audit `verify-push-auth.yml` — tetapi workflow itu
+dihapus operator pada 5 Sep 2026 (commit `b4ce4a4`), jadi sekarang betul-betul
+nihil: tidak ada workflow yang berjalan karena push.
 Semua jalur — build terfilter maupun penuh, kemasan desktop, deploy
 web/news/signaling, rilis — hanya lewat `workflow_dispatch` dan dijalankan
 oleh role CI/Release (Cakra) setelah izin operator: bump versi → Build →
@@ -126,28 +128,42 @@ test Worker berita pada perubahan `news/`, test JWT/OTP/rate-limit + gofmt +
 (uji Go menjagai aturan token & arah relay server self-host agar tidak
 menyimpang dari Worker produksi).
 
-## Verifikasi izin push (verify-push-auth.yml)
+## Verifikasi izin push — **sedang NONAKTIF**
 
-Push langsung ke `main` diawasi. Setiap commit non-merge pada push WAJIB
-memuat penanda `Izin: <ID-SESI>` di body, dan ID-nya harus berstatus
-`DISETUJUI` pada `AGENT_BOARD.md`. Pengecualian: commit merge (tindakan
-operator), commit yang ditulis operator (`OPERATOR_LOGIN` di repository
-variables — set mis. `xykalnotkel` kalau operator ingin push bebas), dan
+> **Status 6 Sep 2026: workflow `verify-push-auth.yml` dihapus operator
+> sendiri** (commit `b4ce4a4`, 5 Sep 2026) dan branch `main` tidak
+> memakai branch protection. Jadi saat ini **tidak ada satu pun workflow
+> yang berjalan karena push**, dan tidak ada pemeriksaan yang menolak
+> push ke `main`. Bagian di bawah ini disimpan sebagai resep bila gerbang
+> ingin dihidupkan kembali.
+
+Aturan yang tetap berlaku sebagai kebiasaan tim (bukan sebagai gerbang
+mesin): setiap commit non-merge pada push ke `main` WAJIB memuat penanda
+`Izin: <ID-SESI>` di body, dan ID-nya harus punya baris di
+`AGENT_BOARD.md`. Pengecualian: commit merge (tindakan operator), commit
+yang ditulis operator (`OPERATOR_LOGIN` di repository variables), dan
 commit dari `Operator - XyDesk Team` (role Operator, `AGENT.md` bagian
 2.1) — ia mewakili operator, jadi penanda `Izin:`-nya tetap dicatat
 sebagai jejak, tetapi tidak perlu status `DISETUJUI`.
 
-Tanpa pengaturan tambahan, workflow ini berfungsi sebagai **audit**:
-pelanggaran tampil merah di tab Actions. Agar menjadi **gerbang keras**
-(push tanpa izin ditolak), perlu salah satu:
+Untuk menghidupkan kembali pengawasannya, pilih salah satu:
 
-1. branch protection `main` → *Require status checks* → wajibkan
-   `Periksa izin push`; atau
-2. wajibkan PR (tidak ada push langsung) — persetujuan adalah review
-   operator + merge-nya. Commit feature branch tetap diperiksa: tulis
-   `Izin: <ID>` di body commit (biasa) atau — untuk squash merge — di
-   deskripsi/isi PR, karena squash memakai isi PR sebagai body commit.
-   Merge commit sendiri (tindakan operator) dikecualikan.
+1. **Audit (pelanggaran tampil merah)** — pulihkan workflow
+   `verify-push-auth.yml` dari riwayat git (`git show b4ce4a4^:.github/
+   workflows/verify-push-auth.yml`). Tidak perlu pengaturan lain; hasilnya
+   tampil di tab Actions, tetapi push tetap tidak ditolak.
+2. **Gerbang keras (push tanpa izin ditolak)** — selain workflow di atas,
+   pasang salah satu:
+   - branch protection `main` → *Require status checks* → wajibkan
+     `Periksa izin push`; atau
+   - wajibkan PR (tidak ada push langsung) — persetujuan adalah review
+     operator + merge-nya. Commit feature branch tetap diperiksa: tulis
+     `Izin: <ID>` di body commit (biasa) atau — untuk squash merge — di
+     deskripsi/isi PR, karena squash memakai isi PR sebagai body commit.
+     Merge commit sendiri (tindakan operator) dikecualikan.
+
+Keduanya keputusan operator — bukan sesuatu yang bisa dipasang agent
+sendiri, karena menyangkut siapa yang boleh menulis ke `main`.
 
 ## Notifikasi push tanpa izin
 

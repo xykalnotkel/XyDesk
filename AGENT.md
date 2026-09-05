@@ -205,11 +205,15 @@ kerja apa.** Aturannya:
   4. Kamu push. **Setiap commit pada sesi wajib memuat penanda di body:**
      `Izin: SESI-<YYYYMMDD>-<NAMA>-<AREA>` (contoh:
      `Izin: SESI-20260903-CAKRA-CI`).
-  5. Workflow `verify-push-auth.yml` memeriksa setiap push ke `main`:
-     semua commit non-merge harus membawa `Izin:`, dan setiap ID harus
-     berstatus `DISETUJUI` di papan. Pelanggaran tampil merah — dan bila
-     branch protection mewajibkan check ini (atau push lewat PR dengan
-     review), pelanggaran ditolak sistem.
+  5. **Sejak 5 Sep 2026 langkah ini tidak lagi diawasi mesin.**
+     `verify-push-auth.yml` dihapus operator sendiri pada commit `b4ce4a4`,
+     dan branch `main` tidak dipasangi branch protection. Jadi tidak ada
+     workflow yang memeriksa penanda `Izin:` dan tidak ada pemeriksaan
+     yang menolak push. **Aturannya tetap berlaku sebagai kebiasaan tim**,
+     bukan sebagai gerbang: klaim sesi, baris di papan, dan penanda
+     `Izin:` di body commit tetap wajib ditulis, karena itu satu-satunya
+     jejak yang tersisa untuk audit. Operator bisa menghidupkan kembali
+     gerbangnya kapan saja — resepnya ada di `docs/CI.md`.
 - **Kapan pun ragu soal tabrakan: baca `AGENT_BOARD.md` dulu.** Papan lebih
   baru daripada percakapan.
 - **Commit merge dianggap sah** (itu tindakan operator menggabungkan PR).
@@ -259,11 +263,13 @@ kerja apa.** Aturannya:
 - **Lisensi**: proprietary. Jangan menambah dependensi tanpa mencatatnya di
   `docs/THIRD-PARTY-LICENSES.md`, dan hanya yang gratis tanpa kartu kredit
   (aturan #2 ROADMAP).
-- **Izin push per sesi (aturan baru 3 Sep 2026)**: push ke `main` WAJIB
-  lewat alur di bagian 5 — klaim sesi → kerja + CI area hijau → minta
-  izin → `DISETUJUI` di `AGENT_BOARD.md` → push dengan penanda
-  `Izin: <ID-SESI>` di body setiap commit. Push tanpa itu adalah
-  pelanggaran yang terdeteksi `verify-push-auth.yml`. **Kecuali** selain
+- **Izin push per sesi (aturan baru 3 Sep 2026, tanpa pengawas mesin sejak
+  5 Sep 2026)**: push ke `main` WAJIB lewat alur di bagian 5 — klaim sesi
+  → kerja + CI area hijau → minta izin → `DISETUJUI` di `AGENT_BOARD.md`
+  → push dengan penanda `Izin: <ID-SESI>` di body setiap commit.
+  `verify-push-auth.yml` sudah dihapus operator, jadi pelanggaran tidak
+  lagi ditandai merah oleh mesin — yang menilai sekarang hanya papan dan
+  operator. **Kecuali** selain
   izin biasa, perubahan berisiko produksi besar — menghapus/migrasi data,
   mengubah auth/keamanan, mengubah harga/lisensi, atau apa pun yang tidak
   bisa di-rollback dengan revert biasa — tetap wajib konfirmasi khusus ke

@@ -32,6 +32,25 @@ Kebijakan rilis:
   `AGENT_BOARD.md` aturan #6.
 
 ### Diperbaiki
+- Keamanan web: **password pairing tidak lagi disimpan di peramban.** Riwayat
+  koneksi di `web/src/App.tsx` sebelumnya menyimpan ID + password di
+  `localStorage` dengan `btoa()` — enkode bolak-balik, bukan enkripsi. Satu
+  XSS, atau satu peramban bersama di PC sewaan, cukup untuk membaca password
+  yang membuka layar seseorang. Sekarang yang disimpan hanya ID host dan
+  waktu terakhir dipakai; memilih riwayat mengisi ID lalu langsung memfokus
+  kolom password, dan entri lama yang masih membawa password dibersihkan
+  otomatis saat dibaca. Aplikasi Android dan shell desktop tidak terdampak —
+  keduanya memang tidak pernah menyimpan password.
+- Dokumentasi: **enam berkas berhenti mengklaim gerbang audit izin push masih
+  hidup.** `verify-push-auth.yml` dihapus operator sendiri pada 5 Sep 2026
+  (commit `b4ce4a4`) dan `main` tanpa branch protection, tetapi `AGENT.md`,
+  `AGENT_BOARD.md`, `HANDOFF.md`, `README.md`, `CHANGELOG.md`, dan
+  `docs/CI.md` masih menjelaskannya seolah berjalan — padahal sekarang tidak
+  ada satu pun workflow yang berjalan karena push. Penanda `Izin: <ID-SESI>`
+  dan baris sesi di papan ditegaskan kembali sebagai kebiasaan tim untuk
+  jejak audit, bukan sebagai gerbang mesin; resep menghidupkan kembali
+  pengawasannya (audit saja, atau gerbang keras lewat branch protection/PR)
+  ditulis di `docs/CI.md`. Pemasangannya tetap keputusan operator.
 - Web: **mode founder tidak lagi jatuh ke "tempel ADMIN_TOKEN" saat id_token
   Google sudah lewat.** Founder yang sudah login (OTP atau sesi lama) tetapi
   tidak punya id_token segar sebelumnya disuruh menempel token manual; kini

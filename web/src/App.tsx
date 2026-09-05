@@ -1885,11 +1885,13 @@ function formatHostId(raw: string): string {
 }
 
 // ── Riwayat koneksi (maks 5, terbaru di atas) ──
-// Password disimpan ter-encode ringan di localStorage perangkat ini —
-// murni kenyamanan; browser profile pribadi adalah asumsinya.
+// Hanya ID host yang disimpan, TANPA password. Password pairing adalah
+// kunci masuk ke PC seseorang; menyimpannya di localStorage — meski
+// di-encode — berarti satu XSS atau satu peramban bersama (urusan nyata
+// untuk PC sewaan) cukup untuk membukanya. Klik riwayat mengisi ID dan
+// langsung memfokus kolom password.
 interface RecentEntry {
   id: string;
-  pw: string;
   at: number;
 }
 
@@ -1897,23 +1899,32 @@ const RECENTS_KEY = 'xydesk.web.recents';
 
 function loadRecents(): RecentEntry[] {
   try {
-    const raw = JSON.parse(localStorage.getItem(RECENTS_KEY) ?? '[]') as RecentEntry[];
-    return raw.map((r) => ({ ...r, pw: atob(r.pw) })).slice(0, 5);
+    const raw = JSON.parse(localStorage.getItem(RECENTS_KEY) ?? '[]') as Array<
+      RecentEntry & { pw?: string }
+    >;
+    const cleaned = raw
+      .map(({ id, at }) => ({ id: String(id ?? '').replace(/\s/g, ''), at: Number(at) || Date.now() }))
+      .filter((r) => r.id.length > 0)
+      .slice(0, 5);
+    // Migrasi satu arah: entri lama yang masih membawa password ditulis
+    // ulang tanpanya, jadi sisa masa lalu ikut hilang saat dibaca.
+    if (raw.some((r) => typeof r.pw === 'string')) {
+      localStorage.setItem(RECENTS_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch {
     return [];
   }
 }
 
-function saveRecent(id: string, pw: string) {
+function saveRecent(id: string) {
   const cleaned = id.replace(/\s/g, '');
+  if (!cleaned) return;
   const next: RecentEntry[] = [
-    { id: cleaned, pw, at: Date.now() },
+    { id: cleaned, at: Date.now() },
     ...loadRecents().filter((r) => r.id !== cleaned),
   ].slice(0, 5);
-  localStorage.setItem(
-    RECENTS_KEY,
-    JSON.stringify(next.map((r) => ({ ...r, pw: btoa(r.pw) }))),
-  );
+  localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
 }
 
 function clearRecents() {
@@ -2070,7 +2081,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           retryRef.current.wasConnected = true;
           setRetryInfo('');
           setConnectedAt(Date.now());
-          saveRecent(hostId, pin);
+          saveRecent(hostId);
           setRecents(loadRecents());
           window.history.replaceState({}, '', '/connect#session');
           void enterImmersive();
@@ -2322,12 +2333,13 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
                   className="recent-item"
                   onClick={() => {
                     setHostId(formatHostId(r.id));
-                    setPin(r.pw);
+                    setPin('');
                     setRecentsOpen(false);
+                    pinRef.current?.focus();
                   }}
                 >
                   <span className="recent-id">{formatHostId(r.id)}</span>
-                  <span className="recent-pw">password tersimpan</span>
+                  <span className="recent-pw">ketik password</span>
                 </button>
               ))}
               <button

@@ -12,7 +12,12 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 > 2. Operator mengubah status baris itu menjadi `DISETUJUI` pada commit
 >    kecil di `main`.
 > 3. Agent push dengan setiap commit memuat `Izin: <ID-SESI>` di body.
->    Workflow `verify-push-auth.yml` memeriksa ini di setiap push.
+>
+> **Catatan 5 Sep 2026:** `verify-push-auth.yml` dihapus operator sendiri
+> (commit `b4ce4a4`) dan `main` tidak memakai branch protection, jadi tidak
+> ada mesin yang memeriksa langkah 1–3 lagi. Alurnya tetap wajib diikuti
+> sebagai kebiasaan tim — papan dan penanda `Izin:` adalah satu-satunya
+> jejak audit yang tersisa sampai operator menghidupkan gerbangnya lagi.
 
 ## Aturan operator (sejak 3 Sep 2026)
 
@@ -27,13 +32,18 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
    artikel saat rilis.
 4. **Build/kompilasi/kemasan/deploy/rilis = kewenangan role CI/Release
    (Cakra)** — semua lewat `workflow_dispatch` setelah izin operator;
-   push agent lain **tidak boleh memicu actions** (kecuali gerbang audit
-   izin `verify-push-auth.yml`). Agent push kode + dokumen saja.
+   push agent lain **tidak boleh memicu actions**. Dulu ada pengecualian
+   untuk gerbang audit izin `verify-push-auth.yml`, tetapi workflow itu
+   dihapus operator pada 5 Sep 2026 (commit `b4ce4a4`) — sekarang tidak
+   ada satu pun workflow yang jalan karena push. Agent push kode +
+   dokumen saja.
 5. **Jalur deploy cepat (restu operator di chat, 3 Sep 2026)** — untuk
    layanan yang butuh cepat live: **Web app** (Danu) serta **worker
    Backend/Edge dan worker berita** boleh deploy langsung tanpa menunggu
-   dispatch CI/Release. Syarat kumulatif: (a) push sudah di `main` dan
-   `verify-push-auth` hijau; (b) build memakai env produksi yang benar
+   dispatch CI/Release. Syarat kumulatif: (a) perubahan sudah di `main`
+   (gerbang `verify-push-auth` sudah dihapus operator pada 5 Sep 2026,
+   jadi tidak ada run yang perlu ditunggu); (b) build memakai env
+   produksi yang benar
    (mis. `VITE_GOOGLE_CLIENT_ID` untuk web); (c) verifikasi pasca-deploy
    wajib dan tercatat (contoh web: md5 bundle live == build, content-type
    JS benar); (d) dicatat terbuka di baris sesi papan + item HANDOFF ke
@@ -70,7 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260906-OPERATOR-ALL | Operator - XyDesk Team | Operator (semua area) | LAGI KERJA | Daftarkan role baru **Operator** atas perintah pemilik repo: `AGENT.md` (bagian 0.4, 2, 2.1, 3, 5), `AGENT_BOARD.md` (aturan #6 + baris sesi ini), `CONTRIBUTORS.md`, `CHANGELOG.md` `[Belum terbit]`. Semua area jadi scope-nya; versi/berita/dispatch tetap minta restu operator. Baris pindah ke *Riwayat sesi* setelah push hijau | 2026-09-06 |
+| SESI-20260906-OPERATOR-ALL | Operator - XyDesk Team | Operator (semua area) | LAGI KERJA | (1) Daftarkan role baru **Operator** atas perintah pemilik repo. (2) Audit kondisi repo + layanan live, laporan di chat. (3) Enam berkas dokumen berhenti mengklaim gerbang izin push masih hidup (`verify-push-auth.yml` dihapus operator 5 Sep; `main` tanpa branch protection) — aturan `Izin:` ditegaskan sebagai kebiasaan, resep pemulihan ditulis di `docs/CI.md`. (4) Keamanan web: password pairing tidak lagi disimpan di `localStorage` (`web/src/App.tsx`) — riwayat kini hanya menyimpan ID, entri lama dibersihkan saat dibaca. File: `AGENT.md`, `AGENT_BOARD.md`, `HANDOFF.md`, `README.md`, `CHANGELOG.md`, `docs/CI.md`, `web/src/App.tsx` | 2026-09-06 |
 
 ## Antrean izin push
 
