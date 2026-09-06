@@ -84,6 +84,41 @@ declare global {
     line: string;
   }
 
+  /** Identitas pengguna yang boleh dilihat renderer — hasil publicUser() Worker. */
+  interface AuthUserPayload {
+    id: string;
+    email: string;
+    name: string | null;
+    picture: string | null;
+  }
+
+  /**
+   * Status login. SENGAJA tidak punya field token: token sesi hanya hidup di
+   * proses utama (lihat electron/auth.cjs), jadi renderer tidak punya cara
+   * memintanya, apalagi membocorkannya ke DOM atau log.
+   */
+  interface AuthSessionPayload {
+    masuk: boolean;
+    user: AuthUserPayload | null;
+    metode?: 'google' | 'email' | null;
+    /** exp JWT dalam detik epoch; null bila tidak terbaca. */
+    exp: number | null;
+    /** false bila OS tidak menyediakan enkripsi, jadi sesi tidak bertahan restart. */
+    tersimpan: boolean;
+  }
+
+  /** Hasil percobaan login: gagal dilaporkan sebagai data, bukan exception. */
+  interface AuthResultPayload {
+    ok: boolean;
+    sesi?: AuthSessionPayload;
+    /** Kode mesin dari Worker, mis. 'wrong-otp', 'invalid_grant', 'cooldown'. */
+    error?: string;
+    /** Kalimat siap tampil untuk kode di atas. */
+    message?: string;
+    /** Sisa waktu tunggu bila ada: resend_in / retry_in (detik). */
+    detail?: Record<string, unknown> | null;
+  }
+
   interface Window {
     xydesk?: {
       getStatus(): Promise<StatusPayload>;
@@ -104,6 +139,13 @@ declare global {
       restartEngine(): Promise<{ ok: boolean; restarted?: boolean }>;
       /** Tulis baris pendek ke tooltip tray + judul jendela. */
       setHint?(hint: string): Promise<{ ok: boolean }>;
+      // ── Login ──
+      authSession(): Promise<AuthSessionPayload>;
+      /** Buka browser sistem untuk Google; code ditangkap di loopback oleh proses utama. */
+      authGoogle(): Promise<AuthResultPayload>;
+      authEmailRequest(email: string, name?: string): Promise<AuthResultPayload>;
+      authEmailVerify(email: string, otp: string, name?: string): Promise<AuthResultPayload>;
+      authLogout(): Promise<AuthResultPayload>;
     };
   }
 }

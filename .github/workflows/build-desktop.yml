@@ -38,7 +38,14 @@ jobs:
 
       - name: Periksa sintaks proses utama + preload
         working-directory: desktop
-        run: node --check electron/main.cjs && node --check electron/preload.cjs
+        run: node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/auth.cjs
+
+      # Test proses utama (auth: PKCE, server loopback, penerjemahan galat).
+      # Jalan tanpa biner Electron: `electron` di-stub lewat Module._load, dan
+      # server loopback-nya sungguhan (bind 127.0.0.1 port acak).
+      - name: Test proses utama
+        working-directory: desktop
+        run: npm test
 
       - name: Typecheck renderer
         working-directory: desktop

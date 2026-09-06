@@ -21,6 +21,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const net = require('node:net');
+const { registerAuthIpc } = require('./auth.cjs');
 
 // ── Konfigurasi ─────────────────────────────────────────────────────────
 const SIGNALING_HTTP = process.env.XYDESK_SIGNALING_HTTP || 'https://signal.xydesk.my.id';
@@ -676,6 +677,11 @@ if (!gotLock) {
 
   app.whenReady().then(async () => {
     registerIpc();
+    // Login (Google PKCE + email OTP). Sengaja didaftarkan di proses utama:
+    // token sesi tidak pernah diserahkan ke renderer, dan client_secret
+    // Google tidak pernah ada di aplikasi ini sama sekali (penukaran code
+    // dilakukan Worker).
+    registerAuthIpc(addLog);
     if (app.isPackaged) {
       rendererPort = await startRendererServer();
     }

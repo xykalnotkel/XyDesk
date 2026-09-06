@@ -10,6 +10,7 @@
     "dev": "next dev -H 0.0.0.0 -p 3470",
     "build": "next build",
     "typecheck": "tsc --noEmit",
+    "test": "node --test test/",
     "electron": "electron .",
     "package": "npm run build && electron-builder --win --x64 --publish never",
     "package:portable": "npm run build && electron-builder --win portable --x64 --publish never"
