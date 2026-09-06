@@ -12,6 +12,16 @@
 //
 // Pemakaian: npx wrangler d1 execute xydesk-news --remote --file schema.sql
 // lalu:     node migrate.mjs  (setelah wrangler login / token env)
+//
+// ⚠️ SETIAP SQL DI BERKAS INI WAJIB SATU BARIS.
+// `--command` dilewatkan lewat shell dalam tanda kutip ganda, dan bash tidak
+// menerjemahkan `\n` di dalamnya — newline tiba di SQLite sebagai backslash
+// harfiah dan parser menolak: "unrecognized token: \" ... SQLITE_ERROR 7500".
+// Terbukti live 6 Sep 2026 pada langkah pertama yang memakai SQL multi-baris
+// (CREATE TABLE post_aliases); deploy gagal sebelum menyentuh apa pun.
+// Pernyataan lama selamat hanya karena semuanya satu baris. Untuk SQL yang
+// memang perlu panjang dan multi-baris, pakai `schema.sql` lewat `--file`
+// (jalur db:init), bukan `--command` di sini.
 
 import { execSync } from 'node:child_process';
 
@@ -44,12 +54,7 @@ if (!cols[0].results.some((c) => c.name === 'official')) {
 // 3) tabel subscribers
 const tables = run(`SELECT name FROM sqlite_master WHERE type='table' AND name='subscribers'`);
 if (tables[0].results.length === 0) {
-  run(`CREATE TABLE subscribers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    source TEXT NOT NULL DEFAULT 'berita',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )`);
+  run(`CREATE TABLE subscribers (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE NOT NULL, source TEXT NOT NULL DEFAULT 'berita', created_at TEXT NOT NULL DEFAULT (datetime('now')))`);
   console.log('migrasi: tabel subscribers dibuat');
 } else {
   console.log('migrasi: subscribers sudah ada');
@@ -89,11 +94,7 @@ if (!subCols[0].results.some((c) => c.name === 'source')) {
 // p-<hash>. Artinya keduanya disisipkan langsung ke D1, dan notifySubscribers
 // tidak pernah berjalan untuk dua rilis itu. Dicatat di HANDOFF, bukan
 // diperbaiki diam-diam di sini.
-run(`CREATE TABLE IF NOT EXISTS post_aliases (
-    alias TEXT PRIMARY KEY,
-    slug TEXT NOT NULL REFERENCES posts(slug),
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )`);
+run(`CREATE TABLE IF NOT EXISTS post_aliases (alias TEXT PRIMARY KEY, slug TEXT NOT NULL REFERENCES posts(slug), created_at TEXT NOT NULL DEFAULT (datetime('now')))`);
 
 const ALIASES = [
   ['changelog-v6-5-4', 'rilis-654'],
