@@ -310,12 +310,25 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Fix boot Android butuh APK baru untuk sampai ke
-  pengguna.** `lib/main.dart` di `main` sudah benar, tapi aplikasi yang
-  terpasang di HP masih build lama yang berhenti di splash. Butuh: keputusan
-  operator soal nomor versi (aturan #1 — agent tidak boleh memilih), lalu
-  dispatch Build → Release. Sampai itu terjadi, pengguna yang terjebak di splash
-  tidak punya jalan keluar.
+- [x] (dari Operator - XyDesk Team, 2026-09-06) — **Fix boot Android sudah
+  sampai ke pengguna lewat rilis 6.6.0.** Operator memilih nomornya di chat
+  ("Langsung rilis 6.6.0+33"), jadi aturan #1 terpenuhi — agent tidak memilih
+  versi. Rantainya: bump 7 berkas (`9643e07`, `tool/check_version.py` lulus) →
+  Build `34046673006` **12/12 hijau** → Release `34047162255` **5/5** → tag
+  `v6.6.0` menunjuk `9643e07` (SHA benar, pengawal tidak menolak) → 8 aset
+  termasuk `XyDesk-Android-arm64-v8a.apk` 38,5 MB + `armeabi-v7a` 31,3 MB →
+  `update.json` schema 2 build 33 dengan SHA-256 kedua APK. Deploy Web
+  `9643e07` sukses; bundle live `index-2y3GUrl3.js` memuat 6.6.0 dan nol
+  sisa 6.5.4. **Yang tetap terbuka: bukti boot di HP nyata** (lihat item Client
+  Flutter di atas) dan **artikel Berita 6.6.0 yang belum terbit** (lihat News).
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **`update.json` tidak
+  disajikan dari domain mana pun.** Sesi ini sempat menyimpulkan salah bahwa ia
+  404 di `signal.xydesk.my.id/update.json` dan `app.xydesk.my.id/update.json` —
+  keduanya memang menjawab "not found", dan itu BUKAN bug: `release.yml` hanya
+  mengunggahnya sebagai aset GitHub Release (`releases/download/v6.6.0/
+  update.json`). Perlu dipastikan klien membaca dari URL yang benar; kalau ada
+  klien yang mengharapkan ia di domain sendiri, itu akan gagal diam-diam dan
+  pembaruan tidak pernah ditawarkan.
 - [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Empat cabang mati, semuanya tertinggal ~100 ribu
   baris dari `main`**: `feat/nvenc`, `feat/installer-vdd-modern`,
   `fix/video-loopback-fase0`, `audit/perbaikan-2026-09-01`. Isi `feat/nvenc`
@@ -569,6 +582,24 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Backend / Edge
 
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Pilih penyedia TURN, lalu
+  dispatch `Deploy Signaling`.** Perbaikan `turn.js` (paralel + batas 2,5 dtk)
+  sudah di `main`, dan `deploy-signaling.yml` kini meneruskan kedelapan secret
+  TURN (sebelumnya TIDAK meneruskan satu pun — jadi mengisi secret di GitHub
+  tidak berpengaruh apa pun dan kegagalannya diam). Tetapi **belum ada penyedia
+  yang dikonfigurasi**, jadi `/turn-ice` tetap menjawab daftar kosong dan sesi
+  jalan dengan STUN saja. Pilihannya sempit karena `ROADMAP.md` melarang kartu
+  kredit dan VM/VPS — penilaian jujurnya ada di tabel baru di
+  `cloudflare/README.md`. Ringkas: **secret statis (ExpressTurn) paling cocok**
+  karena kredensialnya dihitung di dalam Worker tanpa panggilan jaringan;
+  **Open Relay Project** gratis tanpa kartu tapi kuota gratisnya dilaporkan
+  berbeda-beda antar sumber (500 MB vs 20 GB vs 20 GB setelah kartu) jadi tidak
+  bisa diklaim sebagai angka pasti; **Cloudflare Realtime butuh kartu kredit**
+  sehingga melanggar ROADMAP; **coturn sendiri butuh VPS**. Butuh operator
+  mendaftar dan menaruh API key di GitHub Secrets — agent tidak bisa membuat
+  akun. Setelah terisi, verifikasi: `curl -s -H "X-Admin: $ADMIN_SECRET"
+  https://signal.xydesk.my.id/turn-ice | jq` dan periksa `providers`.
+
 - [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Verifikasi pengirim email produksi.** Dua jalur
   email punya default yang tidak aman untuk produksi:
   `cloudflare/src/authstore.js:203` memakai
@@ -675,6 +706,41 @@ _(kosong)_
   Protokolnya bisa ditambahkan tanpa mengubah kontrak yang ada.
 
 ## Untuk: News & Konten
+
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Artikel Berita rilis 6.6.0
+  BELUM terbit, dan `docs/VERSIONING.md` §4 menyebutnya wajib.** Naskahnya
+  SUDAH SIAP di `BAHAN_ARTIKEL_RILIS_6.6.0.md` (judul, excerpt 126 karakter,
+  empat bagian sesuai §4, changelog lengkap, bagian "yang sedang kami siapkan",
+  plus perintah curl-nya). Dua hal menghalangi penerbitan dan keduanya di luar
+  jangkauan agent: (1) **`ADMIN_TOKEN` tidak tersedia** — ia secret Cloudflare
+  Worker, bukan GitHub Secret, dan tidak ada di berkas kredensial; jalur kedua
+  (`x-admin-google-token`) butuh login founder sementara yang tersedia hanya
+  Client ID + Client Secret tanpa refresh token. (2) **Sampul
+  `web/public/news/covers/changelog-660.jpg` belum ada** — wajib 1424×752
+  seperti `changelog-654.jpg`, dan aset brand punya jalur kanonik
+  (`design/logo-asli.png` → `tool/gen_logo.py`) yang pernah dilanggar agent
+  dengan render manual, jadi pembuatannya diserahkan ke operator.
+  Field `slug` = `changelog-v6-6-0` WAJIB dikirim eksplisit.
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **ENAM rilis punya tautan
+  versi yang 404.** `CHANGELOG_SLUG` di `web/src/version.ts` menurunkan
+  `changelog-v<major>-<minor>-<patch>` dari versi berjalan, dan footer web +
+  layar "Tentang" menautkannya. Terverifikasi live 6 Sep: `changelog-v6-5-4`,
+  `-v6-5-3`, `-v6-5-2`, `-v6-4-0`, `-v6-1-0`, `-v6-0-0` semuanya **404**,
+  sedangkan `-v6-5-1`, `-v6-5-0`, `-v6-3-0`, `-v6-2-2/1/0` **200**. Sebabnya
+  dua: artikelnya terbit dengan slug lain (`rilis-654`, `rilis-653`,
+  `p-8f5aa26aa3bc` untuk 6.4.0, `p-66a4edde0222` untuk 6.1, `p-d5b4512f7d17`
+  untuk 6.0), atau tidak terbit sama sekali (6.5.2). Perlu dicatat: `rilis-65x`
+  TIDAK mungkin lahir dari `POST /api/admin/publish` karena `adminPublish` di
+  `news/src/worker.js` hanya menerima slug berpola `changelog-v\d+-\d+-\d+`
+  dan mengacak sisanya — jadi keduanya disisipkan langsung ke D1, yang juga
+  berarti **notifikasi push/email pelanggan tidak terkirim** untuk rilis itu.
+  Dampaknya terbatas karena kartu di umpan Berita memakai slug asli dari basis
+  data (tetap jalan); yang mati hanya URL kanonik `changelog-vX-Y-Z`. Worker
+  TIDAK punya endpoint update/alias/redirect — hanya `publish` — jadi
+  memperbaikinya butuh salah satu dari: alias di worker (paling bersih, tidak
+  memutus tautan lama yang sudah terlanjur tersebar di notifikasi), `UPDATE
+  posts SET slug=…` langsung di D1 (cepat tapi memutus tautan lama), atau
+  terbit ulang (menduplikasi isi). **Keputusan operator, bukan agent.**
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** artikel per rilis = SATU artikel gabungan dari bahan tiap agent (role CI/Release menyatukan) — jangan menerbitkan artikel rilis yang isinya dikarang sendiri; versi & terbitnya berita = keputusan operator.
 
