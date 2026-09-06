@@ -2,6 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+/// Nama kanal Picture-in-Picture yang didaftarkan `MainActivity.kt`.
+///
+/// Satu konstanta untuk sisi Dart (pendaftaran handler di `main.dart` dan
+/// pemanggilan di [PipController]) supaya namanya tidak bisa menyimpang
+/// diam-diam di dua tempat. Sisi Kotlin punya salinannya sendiri
+/// (`MainActivity.PIP_CHANNEL`) — kalau nama ini berubah, ubah keduanya.
+const pipChannelName = 'com.xystudio.xydesk/pip';
+
 /// Picture-in-Picture controller untuk floating window saat sesi aktif.
 ///
 /// Ketika app di-minimize saat sesi remote desktop berjalan, PiP mode
@@ -24,9 +32,7 @@ class PipController {
     try {
       // Android: Enter picture-in-picture mode
       if (defaultTargetPlatform == TargetPlatform.android) {
-        await const MethodChannel(
-          'com.xystudio.xydesk/pip',
-        ).invokeMethod('enterPipMode');
+        await const MethodChannel(pipChannelName).invokeMethod('enterPipMode');
         _isInPipMode = true;
         onPipModeChanged?.call();
       }
@@ -41,9 +47,7 @@ class PipController {
 
     try {
       if (defaultTargetPlatform == TargetPlatform.android) {
-        await const MethodChannel(
-          'com.xystudio.xydesk/pip',
-        ).invokeMethod('exitPipMode');
+        await const MethodChannel(pipChannelName).invokeMethod('exitPipMode');
         _isInPipMode = false;
         onPipModeChanged?.call();
       }
