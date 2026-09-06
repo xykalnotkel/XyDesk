@@ -15,7 +15,22 @@ Kebijakan rilis:
   commit. Panduan lengkap nadanya ada di [`docs/NEWS_STYLE.md`](docs/NEWS_STYLE.md).
 - File ini otomatis dilampirkan ke GitHub Release oleh `release.yml`.
 
-## [Belum terbit]
+## [6.6.0] - 2026-09-06
+
+> **Build 33.** Rilis perbaikan. Yang paling penting: **aplikasi Android
+> yang berhenti di logo — tanpa crash, tanpa galat, tanpa tombol — kini bisa
+> dibuka.** Penyebabnya pendaftaran kanal Picture-in-Picture terjadi sebelum
+> Flutter siap, jadi aplikasi gagal sebelum gambar pertama sempat digambar dan
+> splash bawaan Android bertahan selamanya. Dua perbaikan sebelumnya (6.5.2 dan
+> 6.5.3) membenahi fungsi yang salah, itulah sebab keluhan yang sama kembali.
+>
+> Rilis ini juga memperbaiki **client web di produksi**: kebijakan keamanannya
+> masih menunjuk alamat lama yang sudah mati, sehingga browser memblokir
+> pairing dan berita — build hijau, deploy hijau, halaman menjawab 200, tapi
+> tidak ada yang berfungsi. Layar Hubungkan tidak bisa lagi terkunci permanen,
+> dan kegagalan koneksi kini dilaporkan apa adanya alih-alih tampil sebagai
+> "sesi berakhir" yang terdengar normal. Kartu artikel Berita disamakan di
+> tiga platform.
 
 ### Diperbaiki
 - Aplikasi Android: **aplikasi tidak bisa dibuka sama sekali — berhenti di
@@ -122,6 +137,13 @@ Kebijakan rilis:
   tidak pernah dibaca CI, dan `tsbuildinfo` membuat working tree kotor hanya
   karena seseorang menjalankan typecheck.
 
+- Berita: **kartu artikel kini tampil sama di HP, web, dan aplikasi desktop.**
+  Sebelumnya kategori ditulis dengan tiga cara berbeda: di web ia menempel di
+  atas sampul, di desktop duduk di badan kartu, dan di aplikasi HP berupa teks
+  kapital di atas judul. Ketiganya kini memakai satu bentuk — chip bundar di
+  atas sampul dengan rasio sampul 16:9 — sehingga satu artikel yang dibuka di
+  mana pun tetap terbaca sebagai artikel yang sama.
+
 ### Ditambahkan
 - Backend / Edge: **TURN multi-penyedia sebagai cadangan berlapis.** Dulu
   `/turn-ice` terkunci ke satu penyedia (Cloudflare Realtime) dan menjawab
@@ -136,14 +158,6 @@ Kebijakan rilis:
   Realtime, dan REST sederhana (Open Relay Project, Metered, Turnix, dan
   lain-lain). Balasan kini menyertakan `providers` berisi penyedia mana yang
   menjawab dan mana yang gagal, supaya TURN yang diam mudah dilihat.
-
-### Diubah
-- Berita: **kartu artikel kini tampil sama di HP, web, dan aplikasi desktop.**
-  Sebelumnya kategori ditulis dengan tiga cara berbeda: di web ia menempel di
-  atas sampul, di desktop duduk di badan kartu, dan di aplikasi HP berupa teks
-  kapital di atas judul. Ketiganya kini memakai satu bentuk — chip bundar di
-  atas sampul dengan rasio sampul 16:9 — sehingga satu artikel yang dibuka di
-  mana pun tetap terbaca sebagai artikel yang sama.
 
 ## [6.5.4] - 2026-09-06
 
