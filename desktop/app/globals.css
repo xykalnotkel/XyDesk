@@ -505,12 +505,19 @@ button.tiny { padding: 3px 9px; font-size: 11.5px; border-radius: 7px; }
   flex-shrink: 0;
 }
 .news-info { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+/* Kategori ditampilkan sebagai chip bundar — sama dengan web dan aplikasi
+   HP, supaya satu artikel tampil sama di mana pun ia dibuka. */
 .news-cat {
+  display: inline-block;
+  align-self: flex-start;
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-deep, var(--accent));
+  background: var(--accent-soft, transparent);
+  padding: 3px 9px;
+  border-radius: 999px;
 }
 .news-info h4 { font-size: 15px; line-height: 1.3; }
 .news-info p {

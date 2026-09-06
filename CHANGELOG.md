@@ -32,6 +32,14 @@ Kebijakan rilis:
   lain-lain). Balasan kini menyertakan `providers` berisi penyedia mana yang
   menjawab dan mana yang gagal, supaya TURN yang diam mudah dilihat.
 
+### Diubah
+- Berita: **kartu artikel kini tampil sama di HP, web, dan aplikasi desktop.**
+  Sebelumnya kategori ditulis dengan tiga cara berbeda: di web ia menempel di
+  atas sampul, di desktop duduk di badan kartu, dan di aplikasi HP berupa teks
+  kapital di atas judul. Ketiganya kini memakai satu bentuk — chip bundar di
+  atas sampul dengan rasio sampul 16:9 — sehingga satu artikel yang dibuka di
+  mana pun tetap terbaca sebagai artikel yang sama.
+
 ## [6.5.4] - 2026-09-06
 
 > **Build 32.** Pindah alamat: seluruh layanan XyDesk kini beralamat di

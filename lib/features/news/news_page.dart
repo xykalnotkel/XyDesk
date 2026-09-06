@@ -236,29 +236,60 @@ class _NewsCard extends ConsumerWidget {
                 top: Radius.circular(R.lg),
               ),
               child: AspectRatio(
-                aspectRatio: 16 / 8.4,
-                child: Image.network(
-                  post.cover,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => ColoredBox(
-                    color: c.overlay,
-                    child: Center(
-                      child: Icon(
-                        LucideIcons.newspaper,
-                        size: 26,
-                        color: c.textLow,
+                aspectRatio: 16 / 9,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      post.cover,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => ColoredBox(
+                        color: c.overlay,
+                        child: Center(
+                          child: Icon(
+                            LucideIcons.newspaper,
+                            size: 26,
+                            color: c.textLow,
+                          ),
+                        ),
+                      ),
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return ColoredBox(
+                          color: c.overlay,
+                          child: const Center(
+                            child: SkeletonBox(width: 22, height: 22),
+                          ),
+                        );
+                      },
+                    ),
+                    // Kategori ditempel di atas sampul — sama seperti kartu di
+                    // web dan desktop, supaya satu artikel tampil sama di mana
+                    // pun ia dibuka.
+                    Positioned(
+                      left: 10,
+                      bottom: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: c.accentSoft,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          post.category.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.9,
+                            color: c.accentDeep,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return ColoredBox(
-                      color: c.overlay,
-                      child: const Center(
-                        child: SkeletonBox(width: 22, height: 22),
-                      ),
-                    );
-                  },
+                  ],
                 ),
               ),
             ),
@@ -267,16 +298,6 @@ class _NewsCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    post.category.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.1,
-                      color: c.accent,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
                   Text(
                     post.title,
                     maxLines: 2,
