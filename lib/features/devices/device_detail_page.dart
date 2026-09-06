@@ -75,12 +75,17 @@ class DeviceDetailPage extends ConsumerWidget {
           // ── Info Dasar ──
           const SectionLabel('Informasi Perangkat', top: 0),
           _spec(context, LucideIcons.hash, 'ID', device.prettyId, copy: true),
-          _spec(context, LucideIcons.monitor, 'Sistem operasi', device.os),
+          _spec(
+            context,
+            LucideIcons.monitor,
+            'Sistem operasi',
+            _orUnknown(device.os),
+          ),
           _spec(
             context,
             LucideIcons.maximize,
             'Resolusi utama',
-            device.resolution,
+            _orUnknown(device.resolution),
           ),
           _spec(
             context,
@@ -103,35 +108,45 @@ class DeviceDetailPage extends ConsumerWidget {
           ),
 
           // ── Spesifikasi Hardware ──
-          if (device.motherboard != null ||
-              device.cpu != null ||
-              device.gpu != null ||
-              device.ram != null ||
-              device.storage != null ||
-              device.displays.isNotEmpty) ...[
+          // Selalu ditampilkan, termasuk saat host belum melaporkan nilainya.
+          // Disembunyikan = pengguna tidak bisa membedakan "host tidak
+          // menjawab" dari "kita tidak pernah bertanya". Baris yang kosong
+          // menulis "Tidak terdeteksi" — jujur, dan jadi penanda bug bila
+          // seharusnya terbaca.
+          ...[
             const SizedBox(height: Gap.xl),
             const SectionLabel('Spesifikasi Hardware'),
 
-            if (device.motherboard != null)
-              _spec(
-                context,
-                LucideIcons.cpu,
-                'Motherboard',
-                device.motherboard!,
-              ),
-            if (device.cpu != null)
-              _spec(context, LucideIcons.cpu, 'Prosesor', device.cpu!),
-            if (device.gpu != null)
-              _spec(context, LucideIcons.gpu, 'Kartu grafis', device.gpu!),
-            if (device.ram != null)
-              _spec(context, LucideIcons.memoryStick, 'RAM', device.ram!),
-            if (device.storage != null)
-              _spec(
-                context,
-                LucideIcons.hardDrive,
-                'Penyimpanan',
-                device.storage!,
-              ),
+            _spec(
+              context,
+              LucideIcons.cpu,
+              'Motherboard',
+              _orUnknown(device.motherboard),
+            ),
+            _spec(
+              context,
+              LucideIcons.cpu,
+              'Prosesor',
+              _orUnknown(device.cpu),
+            ),
+            _spec(
+              context,
+              LucideIcons.gpu,
+              'Kartu grafis',
+              _orUnknown(device.gpu),
+            ),
+            _spec(
+              context,
+              LucideIcons.memoryStick,
+              'RAM',
+              _orUnknown(device.ram),
+            ),
+            _spec(
+              context,
+              LucideIcons.hardDrive,
+              'Penyimpanan',
+              _orUnknown(device.storage),
+            ),
 
             // ── Daftar Monitor ──
             if (device.displays.isNotEmpty) ...[
@@ -639,4 +654,16 @@ class _DisplaySpec extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Nilai spesifikasi yang tidak/belum terbaca dari host.
+///
+/// Ditulis eksplisit supaya layar detail perangkat tidak pernah menampilkan
+/// angka karangan. Host yang tidak melaporkan motherboard lebih baik terlihat
+/// sebagai "Tidak terdeteksi" daripada disembunyikan (pengguna tidak bisa
+/// membedakan "host tidak menjawab" dari "aplikasi tidak bertanya") atau diisi
+/// tebakan yang kelihatan meyakinkan.
+String _orUnknown(String? value) {
+  final v = value?.trim() ?? '';
+  return v.isEmpty ? 'Tidak terdeteksi' : v;
 }

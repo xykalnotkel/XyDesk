@@ -186,7 +186,12 @@ fn meta_json() -> serde_json::Value {
         "mic": {
             "available": xydesk_host::audio::mic_capture_available(),
             "pipeline": xydesk_host::audio::mic_capture_status(),
-        }
+        },
+        // Spesifikasi mesin ini. Client sudah menunggu blok ini sejak lama
+        // (`HostMeta.fromJson` → `hardware.*`); sebelumnya selalu null karena
+        // host tidak pernah membacanya. Nilai yang gagal dibaca dikirim null
+        // supaya UI menulis "Tidak terdeteksi" — bukan angka karangan.
+        "hardware": xydesk_host::hwinfo::hardware_json()
     })
 }
 

@@ -58,6 +58,11 @@ windows = { version = "0.61", features = [
   "Win32_Graphics_Direct3D11",
   "Win32_Graphics_Direct3D",
   "Win32_Graphics_Dxgi_Common",
+  # Spesifikasi mesin untuk client (host/src/hwinfo.rs): registry + SystemInfo
+  "Win32_System_Registry",
+  "Win32_System_SystemInformation",
+  # Kapasitas volume C: (GetDiskFreeSpaceExW)
+  "Win32_Storage_FileSystem",
 ] }
 # HTTP kecil untuk tukar token host (GUI native) — rustls, tanpa OpenSSL.
 ureq = { version = "2", features = ["json"] }

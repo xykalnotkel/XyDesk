@@ -17,7 +17,7 @@ class Device {
     this.status = DeviceStatus.offline,
     this.pingMs,
     this.lastSeen,
-    this.resolution = '1920×1080',
+    this.resolution,
     this.remembered = false,
     this.motherboard,
     this.cpu,
@@ -33,7 +33,12 @@ class Device {
   final DeviceStatus status;
   final int? pingMs;
   final DateTime? lastSeen;
-  final String resolution;
+
+  /// Resolusi monitor utama **menurut host**. Null = host belum pernah
+  /// melaporkannya. Sengaja tidak punya default: nilai bawaan '1920×1080'
+  /// membuat layar detail mengklaim resolusi yang tidak pernah dibaca dari
+  /// mesin mana pun, dan `copyWith` lama menyalinnya tanpa bisa dikoreksi.
+  final String? resolution;
   final bool remembered;
 
   /// Info hardware tambahan — dibaca dari host saat sesi.
@@ -64,6 +69,7 @@ class Device {
     String? ram,
     List<DisplayInfo>? displays,
     String? storage,
+    String? resolution,
   }) => Device(
     id: id,
     name: name ?? this.name,
@@ -72,7 +78,7 @@ class Device {
     status: status ?? this.status,
     pingMs: pingMs ?? this.pingMs,
     lastSeen: lastSeen ?? this.lastSeen,
-    resolution: resolution,
+    resolution: resolution ?? this.resolution,
     remembered: remembered ?? this.remembered,
     motherboard: motherboard ?? this.motherboard,
     cpu: cpu ?? this.cpu,
@@ -111,7 +117,7 @@ class Device {
     lastSeen: j['lastSeen'] == null
         ? null
         : DateTime.tryParse(j['lastSeen'] as String),
-    resolution: j['res'] as String? ?? '1920×1080',
+    resolution: j['res'] as String?,
     remembered: j['remembered'] as bool? ?? false,
     motherboard: j['motherboard'] as String?,
     cpu: j['cpu'] as String?,
@@ -259,10 +265,13 @@ class DeviceRepo extends StateNotifier<List<Device>> {
     DevLog.i('devices', 'Perangkat diganti nama', '$id -> $name');
   }
 
-  /// Update hardware info perangkat (motherboard, CPU, GPU, RAM, storage, displays).
-  /// Dipanggil saat sesi dimulai dan host mengirim meta data.
+  /// Update hardware info perangkat (motherboard, CPU, GPU, RAM, storage,
+  /// displays, resolusi monitor utama). Dipanggil saat sesi dimulai dan host
+  /// mengirim meta data. Semua nilai berasal dari host — tidak ada yang
+  /// disintesis di client.
   Future<void> updateHardwareInfo(
     String id, {
+    String? resolution,
     String? motherboard,
     String? cpu,
     String? gpu,
@@ -281,6 +290,7 @@ class DeviceRepo extends StateNotifier<List<Device>> {
     }
 
     final updated = current.copyWith(
+      resolution: resolution ?? current.resolution,
       motherboard: motherboard ?? current.motherboard,
       cpu: cpu ?? current.cpu,
       gpu: gpu ?? current.gpu,

@@ -9,6 +9,17 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Pindai QR host (mobile_scanner). Kamera tidak dipakai untuk hal lain. -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Mic perangkat dikirim ke host selama sesi (rtc_service.getUserMedia,
+         toggle "Mic" di halaman sesi). Tanpa deklarasi ini Android menolak di
+         tingkat OS: getUserMedia gagal apa pun yang tertulis di UI, dan halaman
+         Izin hanya bisa menebak statusnya dari enumerateDevices. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Rute/volume audio selama sesi WebRTC (dipakai flutter_webrtc untuk
+         memilih perangkat keluaran: speaker, earpiece, headset). -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <!-- Belum dideklarasikan, menunggu implementasinya ada (lihat komentar di
+         atas): BLUETOOTH_CONNECT (rute headset BT di Android 12+) dan
+         FOREGROUND_SERVICE_MEDIA_PROJECTION (host mode Android). -->
     <!-- Tetap memerlukan konfirmasi pengguna melalui installer Android. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 

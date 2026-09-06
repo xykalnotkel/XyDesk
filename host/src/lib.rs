@@ -42,6 +42,9 @@ mod tests {
 pub mod audio;
 pub mod clipboard;
 pub mod control;
+/// Spesifikasi mesin host (CPU/GPU/RAM/motherboard/OS) — dibaca nyata, lihat
+/// aturan kejujuran di dalam modul.
+pub mod hwinfo;
 pub mod identity;
 pub mod input;
 /// FFI libopus vendor (dikompilasi build.rs; dipakai audio.rs di Windows).

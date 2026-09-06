@@ -476,6 +476,15 @@ pub struct DisplayInfo {
     pub name: String,
     pub width: u32,
     pub height: u32,
+    /// Refresh rate nyata dari `EnumDisplaySettingsW`. `None` = tidak
+    /// dilaporkan driver (sebagian driver virtual menulis 0/1 Hz) — client
+    /// menyembunyikan barisnya alih-alih menulis "0 Hz".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refresh_rate: Option<u32>,
+    /// Benar bila monitor ini yang utama (`MONITORINFOF_PRIMARY`). Client
+    /// menempelkan lencana "UTAMA"; sebelumnya tidak pernah muncul karena
+    /// host tidak mengirim tandanya.
+    pub is_primary: bool,
 }
 
 /// Daftar semua monitor aktif (urutan sistem Windows).
@@ -791,6 +800,7 @@ mod windows {
         use windows::Win32::Foundation::LPARAM;
         use windows::Win32::Graphics::Gdi::{
             EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO, MONITORINFOEXW,
+            MONITORINFOF_PRIMARY,
         };
 
         unsafe extern "system" fn collect(
@@ -814,11 +824,16 @@ mod windows {
                 let name = String::from_utf16_lossy(&info.szDevice)
                     .trim_end_matches('\0')
                     .to_string();
+                // Refresh rate dibaca dari mode tampilan perangkat itu, bukan
+                // ditebak dari resolusi (1080p bisa 60, 144, atau 240 Hz).
+                let refresh_rate = crate::hwinfo::refresh_rate_hz(&name);
                 list.push(super::DisplayInfo {
                     index: list.len(),
                     name,
                     width: (rc.right - rc.left).max(0) as u32,
                     height: (rc.bottom - rc.top).max(0) as u32,
+                    refresh_rate,
+                    is_primary: (info.monitorInfo.dwFlags & MONITORINFOF_PRIMARY) != 0,
                 });
             }
             BOOL(1)

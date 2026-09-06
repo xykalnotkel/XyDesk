@@ -296,6 +296,28 @@ class _SessionPageState extends ConsumerState<SessionPage>
         )
         .toList();
 
+    // Resolusi monitor UTAMA menurut host. Bila host tidak melaporkan monitor
+    // sama sekali (width 0 / daftar kosong), nilainya null — layar detail akan
+    // menulis "Tidak terdeteksi", bukan 1920×1080 karangan.
+    DisplayInfo? primary;
+    for (final d in displays) {
+      if (d.isPrimary) {
+        primary = d;
+        break;
+      }
+    }
+    primary ??= displays.isEmpty ? null : displays.first;
+    final String? resolutionLabel;
+    if (primary == null || primary.width == 0 || primary.height == 0) {
+      resolutionLabel = null;
+    } else if (primary.refreshRate != null && primary.refreshRate! > 1) {
+      // 1 Hz dipakai sebagian driver virtual untuk "tidak dilaporkan".
+      resolutionLabel =
+          '${primary.width}×${primary.height} @ ${primary.refreshRate} Hz';
+    } else {
+      resolutionLabel = '${primary.width}×${primary.height}';
+    }
+
     DevLog.i(
       'sesi',
       'Hardware info diterima dari host',
@@ -307,6 +329,7 @@ class _SessionPageState extends ConsumerState<SessionPage>
         .read(deviceRepoProvider.notifier)
         .updateHardwareInfo(
           widget.deviceId,
+          resolution: resolutionLabel,
           motherboard: meta.motherboard,
           cpu: meta.cpu,
           gpu: meta.gpu,
