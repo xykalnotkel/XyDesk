@@ -194,3 +194,129 @@ test('daftar penyedia terdokumentasi dan punya penanganan', () => {
     assert.ok(['static', 'cloudflare', 'rest'].includes(p.kind), `kind tak dikenal: ${p.kind}`);
   }
 });
+
+// ── Paralel + batas waktu per penyedia ─────────────────────────────────────
+//
+// Sebelumnya penyedia dipanggil berurutan di dalam `for` + `await` dan tidak
+// ada satu pun batas waktu. Client membatasi `/turn-ice` pada 5 detik
+// (`lib/webrtc/rtc_service.dart`) dan gagal secara diam-diam, jadi satu
+// penyedia REST yang lambat membuat seluruh permintaan lewat batas: client
+// jatuh ke STUN saja tanpa pesan, dan dua perangkat di belakang NAT
+// simetris/CGNAT tidak pernah tersambung. Tiga uji di bawah mengunci
+// perbaikannya.
+
+const ENV_JARINGAN = {
+  TURN_STATIC_URLS: 'turn:statis:3478',
+  TURN_STATIC_SECRET: SECRET,
+  TURN_KEY_ID: 'kid',
+  TURN_KEY_TOKEN: 'ktoken',
+  OPENRELAY_API_KEY: 'orel',
+};
+
+function tidur(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+test('penyedia dipanggil bersamaan, bukan berurutan', async () => {
+  const TUNDA = 150;
+  await denganFetch(
+    async () => {
+      await tidur(TUNDA);
+      return new Response(JSON.stringify([{ urls: 'turn:x:3478', username: 'u', credential: 'c' }]), {
+        status: 200,
+      });
+    },
+    async () => {
+      const mulai = Date.now();
+      const r = await collectIceServers(ENV_JARINGAN, { ttl: 3600 });
+      const lewat = Date.now() - mulai;
+
+      assert.equal(r.providers.filter((p) => p.ok).length, 3);
+      // Dua penyedia jaringan (cloudflare + openrelay) masing-masing menunda
+      // 150 ms. Berurutan = >= 300 ms; bersamaan = jauh di bawah itu.
+      assert.ok(
+        lewat < TUNDA * 2,
+        `waktu total ${lewat} ms — penyedia tampaknya masih dipanggil berurutan`,
+      );
+    },
+  );
+});
+
+test('penyedia yang melewati batas waktu dilaporkan gagal, yang lain tetap jalan', async () => {
+  await denganFetch(
+    async (url, options) => {
+      if (String(url).includes('openrelayproject')) {
+        // Menghormati signal abort, seperti fetch sungguhan.
+        return new Promise((_, reject) => {
+          const signal = options?.signal;
+          if (signal) {
+            if (signal.aborted) return reject(new Error('aborted'));
+            signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+          }
+          // Tidak pernah selesai dengan sendirinya.
+        });
+      }
+      return new Response(JSON.stringify({ iceServers: [{ urls: 'turn:cf:3478', username: 'a', credential: 'b' }] }), {
+        status: 200,
+      });
+    },
+    async () => {
+      // `AbortSignal.timeout()` di Node memasang timer yang di-unref, jadi
+      // tanpa penahan ini event loop bisa selesai lebih dulu dan uji dibatalkan
+      // ("Promise resolution is still pending"). Di runtime Workers hal ini
+      // tidak berlaku — penahan ini murni kebutuhan Node.
+      const penahan = setTimeout(() => {}, 3000);
+      try {
+        const r = await collectIceServers(ENV_JARINGAN, { ttl: 3600, timeoutMs: 40 });
+
+        const lambat = r.providers.find((p) => p.id === 'openrelay');
+        assert.equal(lambat.ok, false, 'penyedia lambat harus dilaporkan gagal');
+        assert.match(lambat.error, /abort/i);
+
+        // Yang penting: kegagalan satu penyedia TIDAK mematikan yang lain.
+        // Penyedia statis tidak butuh jaringan sama sekali, jadi ia selalu
+        // hidup — inilah alasan jenis penyedia itu paling berharga sebagai dasar.
+        assert.ok(r.providers.find((p) => p.id === 'statis').ok);
+        assert.ok(r.providers.find((p) => p.id === 'cloudflare').ok);
+        assert.ok(r.iceServers.length >= 2);
+      } finally {
+        clearTimeout(penahan);
+      }
+    },
+  );
+});
+
+test('signal batas waktu diteruskan ke fetch', async () => {
+  let signalDiterima = 0;
+  await denganFetch(
+    async (_url, options) => {
+      if (options?.signal) signalDiterima += 1;
+      return new Response(JSON.stringify([]), { status: 200 });
+    },
+    async () => {
+      await collectIceServers(ENV_JARINGAN, { ttl: 3600, timeoutMs: 500 });
+      // Dua penyedia jaringan dipanggil; keduanya harus menerima signal.
+      assert.equal(signalDiterima, 2);
+    },
+  );
+});
+
+test('urutan keluaran mengikuti deklarasi, bukan urutan selesai', async () => {
+  await denganFetch(
+    async (url) => {
+      // Cloudflare dibuat paling lambat supaya urutan selesai terbalik dari
+      // urutan deklarasi. Balasan tetap harus deterministik.
+      if (String(url).includes('rtc.live.cloudflare.com')) await tidur(60);
+      return new Response(JSON.stringify([{ urls: 'turn:x:3478', username: 'u', credential: 'c' }]), {
+        status: 200,
+      });
+    },
+    async () => {
+      const r = await collectIceServers(ENV_JARINGAN, { ttl: 3600 });
+      assert.deepEqual(
+        r.providers.map((p) => p.id),
+        ['statis', 'cloudflare', 'openrelay'],
+      );
+    },
+  );
+});

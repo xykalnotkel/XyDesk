@@ -74,6 +74,21 @@ class SignalMessage {
   );
 }
 
+/// Kegagalan menyambung ke server signaling, dengan pesan siap tampil.
+///
+/// Dibedakan dari galat umum supaya [RtcService] bisa menampilkan sebab yang
+/// sebenarnya ("server tidak menjawab") alih-alih pesan generik
+/// ("Koneksi WebRTC gagal dimulai") yang tidak memberi tahu pengguna apa yang
+/// harus dilakukan.
+class SignalingException implements Exception {
+  const SignalingException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'SignalingException: $message';
+}
+
 /// Klien signaling untuk app XyDesk (role=client).
 ///
 /// Membungkus WebSocket ke server Go. Callback dipicu oleh pesan masuk;
@@ -81,9 +96,18 @@ class SignalMessage {
 class SignalingClient {
   SignalingClient({required this.deviceId});
 
+  /// Batas waktu handshake WebSocket.
+  ///
+  /// Tanpa ini, handshake yang tidak pernah selesai (DNS hitam, TLS ditahan
+  /// proxy, server diam) membuat UI menggantung sampai watchdog 20 detik di
+  /// `RtcService` — terlalu lama untuk kegagalan yang sebenarnya sudah
+  /// terjadi di detik pertama.
+  static const handshakeTimeout = Duration(seconds: 10);
+
   final String deviceId;
   WebSocketChannel? _ch;
   StreamSubscription? _sub;
+  bool _open = false;
 
   /// Panggil saat server mengirim `pair-response` (host menjawab pairing).
   void Function(bool accepted, String? from)? onPairResponse;
@@ -94,7 +118,14 @@ class SignalingClient {
   /// Panggil saat koneksi terputus.
   void Function()? onDisconnected;
 
-  bool get isConnected => _ch != null;
+  /// Benar hanya setelah handshake WebSocket selesai.
+  ///
+  /// Sebelumnya ini `_ch != null`, yang diisi tepat setelah
+  /// `WebSocketChannel.connect(...)` — panggilan itu lazy dan langsung
+  /// kembali, jadi properti ini mengklaim "tersambung" bahkan sebelum soket
+  /// terbuka, dan tetap mengklaimnya setelah handshake gagal. Setiap UI yang
+  /// membacanya melaporkan status yang salah.
+  bool get isConnected => _open;
 
   Future<void> connect(String url, String token) async {
     // Token dilewatkan via query (?token=) — server Go menerima ini, jadi
@@ -103,6 +134,7 @@ class SignalingClient {
     final wsUrl = '$url?id=$deviceId&role=client&token=$token';
     final ch = WebSocketChannel.connect(Uri.parse(wsUrl));
     _ch = ch;
+    _open = false;
 
     _sub = ch.stream.listen(
       (data) {
@@ -117,9 +149,42 @@ class SignalingClient {
             onMessage?.call(m);
         }
       },
-      onDone: () => onDisconnected?.call(),
-      onError: (_) => onDisconnected?.call(),
+      onDone: () {
+        _open = false;
+        onDisconnected?.call();
+      },
+      onError: (_) {
+        _open = false;
+        onDisconnected?.call();
+      },
     );
+
+    // Tunggu handshake SEBELUM mengklaim tersambung atau mengirim apa pun.
+    //
+    // Pesan yang dikirim sebelum soket terbuka hanya di-buffer; kalau soket
+    // kemudian gagal, `hello` dan `pair` hilang tanpa jejak dan pengguna
+    // menatap "MENGHUBUNGI HOST…" sampai watchdog menyerah. Menunggu di sini
+    // mengubah kegagalan diam-diam itu menjadi pesan yang jelas.
+    try {
+      await ch.ready.timeout(handshakeTimeout);
+    } catch (error) {
+      _open = false;
+      // Batalkan langganan lebih dulu: kalau tidak, penutupan soket ikut
+      // memicu `onDisconnected` dan satu kegagalan dilaporkan dua kali dengan
+      // pesan berbeda — mana yang sampai ke UI jadi tidak bisa ditebak.
+      await _sub?.cancel();
+      _sub = null;
+      unawaited(_ch?.sink.close());
+      _ch = null;
+      throw SignalingException(
+        error is TimeoutException
+            ? 'Server signaling tidak menjawab dalam '
+                  '${handshakeTimeout.inSeconds} detik. Periksa koneksi internet.'
+            : 'Tidak dapat menghubungi server signaling.',
+      );
+    }
+
+    _open = true;
 
     // daftar sebagai client
     _send(SignalMessage(type: 'hello', to: deviceId, reason: 'client'));
@@ -156,9 +221,23 @@ class SignalingClient {
 
   void sendBye(String peerId) => _send(SignalMessage(type: 'bye', to: peerId));
 
-  void _send(SignalMessage m) => _ch?.sink.add(jsonEncode(m.toJson()));
+  void _send(SignalMessage m) {
+    final sink = _ch?.sink;
+    if (sink == null) return;
+    try {
+      sink.add(jsonEncode(m.toJson()));
+    } catch (_) {
+      // Soket sudah mati. Melempar dari dalam sini hanya berakhir di
+      // `runZonedGuarded` — tercatat di log, tidak terlihat pengguna, dan
+      // layar tetap menggantung. Lebih jujur menandai putus dan membiarkan
+      // `RtcService` menampilkan galat.
+      _open = false;
+      onDisconnected?.call();
+    }
+  }
 
   Future<void> close() async {
+    _open = false;
     await _sub?.cancel();
     await _ch?.sink.close();
     _ch = null;

@@ -31,6 +31,20 @@
 const DEFAULT_TTL = 86400;
 const MIN_TTL = 300;
 
+/// Batas waktu untuk SATU penyedia.
+///
+/// Penyedia dipanggil paralel, jadi angka ini juga menjadi batas waktu total
+/// `/turn-ice` — bukan jumlah seluruh penyedia seperti sebelumnya.
+///
+/// Kenapa harus ada: client membatasi `/turn-ice` pada 5 detik
+/// (`lib/webrtc/rtc_service.dart`) dan — ini bagian yang menyakitkan — gagal
+/// secara DIAM-DIAM (`catch (_) => const []`). Jadi sebelum perbaikan ini, satu
+/// penyedia REST yang lambat menahan seluruh permintaan lewat batas 5 detik,
+/// client jatuh ke STUN saja tanpa pesan apa pun, dan dua perangkat di belakang
+/// NAT simetris/CGNAT tidak pernah tersambung. 2,5 detik menyisakan jarak yang
+/// cukup untuk sisa perjalanan pulang-pergi.
+const PER_PROVIDER_TIMEOUT_MS = 2500;
+
 // Hasil disimpan sebentar: kredensial TURN berlaku berjam-jam, dan tidak ada
 // gunanya memanggil penyedia untuk setiap klien yang menyambung.
 const CACHE_TTL = 3600;
@@ -125,9 +139,22 @@ function configured(provider, env) {
   }
 }
 
-async function fetchProvider(provider, env, ttl, now, fetchImpl) {
+/// `AbortSignal` yang kedaluwarsa setelah [ms], tanpa bergantung pada
+/// ketersediaan `AbortSignal.timeout` di runtime yang menjalankan Worker ini.
+function timeoutSignal(ms) {
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    return AbortSignal.timeout(ms);
+  }
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
+
+async function fetchProvider(provider, env, ttl, now, fetchImpl, timeoutMs) {
   const cached = readCache(provider.id, ttl, now);
   if (cached) return { ...cached, cached: true };
+
+  const signal = timeoutSignal(timeoutMs);
 
   let value;
   if (provider.kind === 'static') {
@@ -154,6 +181,7 @@ async function fetchProvider(provider, env, ttl, now, fetchImpl) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ ttl }),
+        signal,
       },
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -161,7 +189,10 @@ async function fetchProvider(provider, env, ttl, now, fetchImpl) {
   } else {
     const url = provider.url || String(env[provider.urlVar]);
     const sep = url.includes('?') ? '&' : '?';
-    const res = await fetchImpl(`${url}${sep}apiKey=${encodeURIComponent(String(env[provider.secretVar]))}`);
+    const res = await fetchImpl(
+      `${url}${sep}apiKey=${encodeURIComponent(String(env[provider.secretVar]))}`,
+      { signal },
+    );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     value = normalize(await res.json());
   }
@@ -191,38 +222,70 @@ export async function collectIceServers(env, options = {}) {
   const ttl = Number.isFinite(requested)
     ? Math.max(MIN_TTL, Math.min(DEFAULT_TTL, Math.floor(requested)))
     : DEFAULT_TTL;
+  const timeoutMs = Number.isFinite(Number(options.timeoutMs))
+    ? Number(options.timeoutMs)
+    : PER_PROVIDER_TIMEOUT_MS;
 
+  // Semua penyedia yang terkonfigurasi dipanggil BERSAMAAN. Sebelumnya
+  // berurutan (`for` + `await`) tanpa batas waktu, jadi waktu tempuhnya adalah
+  // JUMLAH seluruh penyedia dan satu penyedia lambat menahan semuanya —
+  // client keburu menyerah di 5 detik lalu jatuh ke STUN saja tanpa pesan.
+  const aktif = TURN_PROVIDERS.filter((provider) => configured(provider, env));
+  const hasil = await Promise.all(
+    aktif.map(async (provider) => {
+      const started = Date.now();
+      try {
+        const result = await fetchProvider(
+          provider,
+          env,
+          ttl,
+          now,
+          fetchImpl,
+          timeoutMs,
+        );
+        return { provider, ok: true, result, ms: Date.now() - started };
+      } catch (error) {
+        return {
+          provider,
+          ok: false,
+          error: String(error && error.message ? error.message : error),
+          ms: Date.now() - started,
+        };
+      }
+    }),
+  );
+
+  // Penggabungan mengikuti urutan deklarasi `TURN_PROVIDERS`, bukan urutan
+  // selesai — supaya `iceServers` dan `providers` deterministik dan dua
+  // balasan yang sama tetap terlihat sama saat dibandingkan.
   const providers = [];
   const iceServers = [];
   const seen = new Set();
 
-  for (const provider of TURN_PROVIDERS) {
-    if (!configured(provider, env)) continue;
-    const started = Date.now();
-    try {
-      const result = await fetchProvider(provider, env, ttl, now, fetchImpl);
-      for (const server of result.iceServers || []) {
-        const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-        const key = urls.join('|');
-        if (seen.has(key)) continue; // penyedia boleh tumpang tindih
-        seen.add(key);
-        iceServers.push(server);
-      }
+  for (const item of hasil) {
+    if (!item.ok) {
       providers.push({
-        id: provider.id,
-        ok: true,
-        servers: (result.iceServers || []).length,
-        cached: Boolean(result.cached),
-        ms: Date.now() - started,
-      });
-    } catch (error) {
-      providers.push({
-        id: provider.id,
+        id: item.provider.id,
         ok: false,
-        error: String(error && error.message ? error.message : error),
-        ms: Date.now() - started,
+        error: item.error,
+        ms: item.ms,
       });
+      continue;
     }
+    for (const server of item.result.iceServers || []) {
+      const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+      const key = urls.join('|');
+      if (seen.has(key)) continue; // penyedia boleh tumpang tindih
+      seen.add(key);
+      iceServers.push(server);
+    }
+    providers.push({
+      id: item.provider.id,
+      ok: true,
+      servers: (item.result.iceServers || []).length,
+      cached: Boolean(item.result.cached),
+      ms: item.ms,
+    });
   }
 
   return { iceServers, providers, ttl };

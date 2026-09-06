@@ -353,7 +353,16 @@ class RtcService {
     await _renderer.initialize();
     await _audioRenderer.initialize();
     _emit(RtcPhase.pairing);
-    await sig.connect(signalingUrl, token);
+    try {
+      await sig.connect(signalingUrl, token);
+    } on SignalingException catch (e) {
+      // Sebab yang sebenarnya ("server signaling tidak menjawab dalam 10
+      // detik") lebih berguna daripada pesan generik yang dihasilkan
+      // penangkap di `SessionTransport.start`. Watchdog sengaja tidak
+      // dinyalakan: kegagalannya sudah pasti, tidak ada yang perlu ditunggu.
+      _fail(e.message);
+      return;
+    }
     sig.sendPair(hostId, pin);
 
     // Watchdog: kalau host tidak menjawab atau jawaban tidak pernah sampai,
