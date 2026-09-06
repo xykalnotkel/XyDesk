@@ -43,5 +43,20 @@ CREATE TABLE IF NOT EXISTS subscribers (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Alias slug artikel.
+--
+-- Footer web dan layar "Tentang" menautkan versi berjalan ke slug kanonik
+-- `changelog-vX-Y-Z` (CHANGELOG_SLUG di web/src/version.ts), tetapi sebagian
+-- rilis terlanjur terbit dengan slug lain atau disisipkan langsung ke D1 di
+-- luar endpoint publish. Mengganti slug artikelnya akan memutus tautan yang
+-- sudah terlanjur tersebar lewat push/email, jadi keduanya dipetakan di sini.
+-- Barisnya diisi news/migrate.mjs, bukan berkas ini — tabelnya boleh dibuat
+-- ulang kapan pun, tapi isinya adalah data produksi.
+CREATE TABLE IF NOT EXISTS post_aliases (
+  alias TEXT PRIMARY KEY,
+  slug TEXT NOT NULL REFERENCES posts(slug),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_posts_published ON posts(published, created_at DESC);

@@ -72,3 +72,47 @@ if (!subCols[0].results.some((c) => c.name === 'source')) {
 } else {
   console.log('migrasi: source sudah ada');
 }
+
+// 5) alias slug changelog rilis.
+//
+// Footer web dan layar "Tentang" menautkan versi berjalan ke slug kanonik
+// `changelog-vX-Y-Z` (CHANGELOG_SLUG di web/src/version.ts). Enam rilis
+// tautannya 404 — terverifikasi live 6 Sep 2026 — karena artikelnya terbit
+// dengan slug lain, atau tidak terbit sama sekali.
+//
+// Sengaja TIDAK memakai `UPDATE posts SET slug = …`: slug lama sudah terlanjur
+// tersebar lewat notifikasi push dan email, jadi menggantinya memutus tautan
+// yang sudah dikirim ke pelanggan. Alias membuat dua-duanya hidup.
+//
+// `rilis-65x` tidak mungkin lahir dari POST /api/admin/publish — adminPublish
+// hanya menerima slug berpola changelog-v\d+-\d+-\d+ dan mengacak sisanya jadi
+// p-<hash>. Artinya keduanya disisipkan langsung ke D1, dan notifySubscribers
+// tidak pernah berjalan untuk dua rilis itu. Dicatat di HANDOFF, bukan
+// diperbaiki diam-diam di sini.
+run(`CREATE TABLE IF NOT EXISTS post_aliases (
+    alias TEXT PRIMARY KEY,
+    slug TEXT NOT NULL REFERENCES posts(slug),
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`);
+
+const ALIASES = [
+  ['changelog-v6-5-4', 'rilis-654'],
+  ['changelog-v6-5-3', 'rilis-653'],
+  ['changelog-v6-4-0', 'p-8f5aa26aa3bc'],
+  ['changelog-v6-1-0', 'p-66a4edde0222'],
+  ['changelog-v6-0-0', 'p-d5b4512f7d17'],
+  // changelog-v6-5-2 SENGAJA tidak dipetakan: rilis 6.5.2 tidak punya artikel
+  // sama sekali, jadi tidak ada yang bisa dituju. Memetakannya ke artikel 6.5.3
+  // akan menyajikan isi yang salah untuk versi yang benar. Dibiarkan 404 dan
+  // dicatat jujur di HANDOFF area News.
+];
+
+for (const [alias, target] of ALIASES) {
+  const ada = run(`SELECT 1 AS ok FROM posts WHERE slug = '${target}'`);
+  if (!ada[0].results.length) {
+    console.log(`migrasi: alias ${alias} DILEWATI — artikel '${target}' tidak ada`);
+    continue;
+  }
+  run(`INSERT OR IGNORE INTO post_aliases (alias, slug) VALUES ('${alias}', '${target}')`);
+  console.log(`migrasi: alias ${alias} -> ${target}`);
+}

@@ -41,19 +41,26 @@ export default {
       if (path === '/api/admin/publish' && request.method === 'POST') {
         return adminPublish(env, request, await readJson(request));
       }
+      // Slug dipetakan ke bentuk kanoniknya SEKALI di pintu masuk, bukan di
+      // tiap handler — kalau tidak, alias hanya berlaku untuk detail artikel
+      // sementara like, komentar, dan halaman berbagi tetap 404.
       let m = path.match(/^\/api\/news\/([a-z0-9-]+)$/);
-      if (m && request.method === 'GET') return postDetail(env, m[1], url);
+      if (m && request.method === 'GET') {
+        return postDetail(env, await canonicalSlug(env, m[1]), url);
+      }
       m = path.match(/^\/api\/news\/([a-z0-9-]+)\/like$/);
       if (m && request.method === 'POST') {
-        return likePost(env, m[1], await readJson(request));
+        return likePost(env, await canonicalSlug(env, m[1]), await readJson(request));
       }
       m = path.match(/^\/api\/news\/([a-z0-9-]+)\/comments$/);
-      if (m && request.method === 'GET') return listComments(env, m[1]);
+      if (m && request.method === 'GET') {
+        return listComments(env, await canonicalSlug(env, m[1]));
+      }
       if (m && request.method === 'POST') {
-        return addComment(env, m[1], await readJson(request), request);
+        return addComment(env, await canonicalSlug(env, m[1]), await readJson(request), request);
       }
       m = path.match(/^\/n\/([a-z0-9-]+)$/);
-      if (m) return sharePage(env, m[1], url);
+      if (m) return sharePage(env, await canonicalSlug(env, m[1]), url);
       return json({ error: 'not-found' }, 404);
     } catch (e) {
       return json({ error: String((e && e.message) || e) }, 500);
@@ -74,6 +81,44 @@ async function readJson(request) {
     return await request.json();
   } catch {
     return {};
+  }
+}
+
+/// Petakan slug ke bentuk kanoniknya lewat tabel `post_aliases`.
+///
+/// Footer web dan layar "Tentang" menautkan versi berjalan ke
+/// `changelog-v<major>-<minor>-<patch>` (`CHANGELOG_SLUG` di
+/// `web/src/version.ts`), tetapi sebagian rilis terlanjur terbit dengan slug
+/// lain — `rilis-654`, `rilis-653`, `p-8f5aa26aa3bc`, `p-66a4edde0222`,
+/// `p-d5b4512f7d17` — dan `rilis-65x` bahkan tidak mungkin lahir dari endpoint
+/// publish, karena `adminPublish` hanya menerima slug berpola
+/// `changelog-v\d+-\d+-\d+` dan mengacak sisanya. Jadi keduanya disisipkan
+/// langsung ke D1, yang sekaligus berarti `notifySubscribers` tidak pernah
+/// berjalan untuk rilis itu.
+///
+/// Mengganti slug artikelnya akan memutus tautan yang sudah terlanjur tersebar
+/// lewat push dan email, jadi keduanya dipetakan di sini dan dua-duanya tetap
+/// hidup: URL kanonik untuk tautan versi, URL lama untuk yang sudah terkirim.
+///
+/// **Gagal-tertutup, dan itu disengaja.** `migrate.mjs` mencatat kejadian
+/// nyata: kolom `official` sempat dipakai Worker sebelum ada di database
+/// produksi, SELECT-nya gagal, dan akibatnya SELURUH endpoint detail berita
+/// membalas 500 — bukan satu fitur yang mati, tapi seluruh halaman berita.
+/// Tabel alias baru ada di produksi setelah migrasi berjalan, jadi kueri yang
+/// gagal harus dibaca sebagai "tidak ada alias", bukan sebagai galat. Slug
+/// dikembalikan apa adanya dan `postDetail` yang memutuskan 404-nya.
+async function canonicalSlug(env, slug) {
+  try {
+    const ada = await env.DB.prepare('SELECT 1 AS ok FROM posts WHERE slug = ?')
+      .bind(slug)
+      .first();
+    if (ada) return slug;
+    const alias = await env.DB.prepare('SELECT slug FROM post_aliases WHERE alias = ?')
+      .bind(slug)
+      .first();
+    return alias?.slug || slug;
+  } catch {
+    return slug;
   }
 }
 

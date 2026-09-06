@@ -720,7 +720,17 @@ _(kosong)_
   seperti `changelog-654.jpg`, dan aset brand punya jalur kanonik
   (`design/logo-asli.png` → `tool/gen_logo.py`) yang pernah dilanggar agent
   dengan render manual, jadi pembuatannya diserahkan ke operator.
-  Field `slug` = `changelog-v6-6-0` WAJIB dikirim eksplisit.
+  Field `slug` = `changelog-v6-6-0` WAJIB dikirim eksplisit. **Update 6 Sep:**
+  operator konfirmasi tidak punya ADMIN_TOKEN, dan sampulnya SUDAH dibuat
+  (`web/public/news/covers/changelog-660.jpg`, 1424×752, artwork abstrak ungu
+  sealiran keluarga sampul berita — bukan komposit logo, karena semua sampul
+  yang ada memang artwork tanpa teks). Jadi yang tersisa benar-benar hanya
+  penerbitannya: insert langsung ke D1 `xydesk-news` dengan parameter ter-bind
+  (bukan string concat), kolom `published=1`, dan verifikasi
+  `curl -o /dev/null -w '%{http_code}'
+  https://news.xydesk.my.id/api/news/changelog-v6-6-0` harus 200. Konsekuensi
+  jalur D1 yang harus dikatakan jujur: notifikasi pelanggan tidak terkirim,
+  sama seperti `rilis-654`/`rilis-653`.
 - [ ] (dari Operator - XyDesk Team, 2026-09-06) — **ENAM rilis punya tautan
   versi yang 404.** `CHANGELOG_SLUG` di `web/src/version.ts` menurunkan
   `changelog-v<major>-<minor>-<patch>` dari versi berjalan, dan footer web +
