@@ -27,10 +27,6 @@
 
 use serde_json::{json, Value};
 
-/// Batas aman satu nilai registry (wchar). Nama prosesor/motherboard nyata
-/// tidak pernah sepanjang ini; bila terpotong, hasilnya `null` (jujur).
-const REG_BUF_WCHARS: usize = 1024;
-
 // ── Pemformat murni (diuji di semua platform) ────────────────────────────────
 
 /// Label RAM dari byte total, dibulatkan ke GB desimal seperti stiker pabrik
@@ -42,24 +38,34 @@ pub fn ram_label(total_bytes: u64) -> Option<String> {
         return None;
     }
     let gib = total_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-    // Modul memori dijual dalam pangkat dua (8/16/32/64/128). Pembulatan ke
-    // pangkat dua terdekat mengembalikan angka stiker dari angka terukur, yang
-    // selalu sedikit lebih kecil karena firmware memotong sebagian RAM.
-    let nominal = nearest_power_of_two(gib);
-    if nominal > 0 && (gib / nominal as f64) > 0.85 {
-        Some(format!("{nominal} GB ({gib:.1} GiB terukur)"))
-    } else {
-        Some(format!("{gib:.1} GiB"))
+    match nominal_ram_gb(gib) {
+        // Angka stiker + angka terukur: pengguna mengenali mesinnya ("32 GB")
+        // sekaligus melihat bukti bahwa nilainya dibaca, bukan ditebak.
+        Some(nominal) => Some(format!("{nominal} GB ({gib:.1} GiB terukur)")),
+        // Ukuran tidak dikenal → laporkan terukur apa adanya. Lebih jujur
+        // daripada membulatkan ke pangkat dua terdekat: mesin 8+4 GB terbaca
+        // ~12 GiB dan membulatkannya jadi "16 GB" adalah karangan.
+        None => Some(format!("{gib:.1} GiB")),
     }
 }
 
-/// Pangkat dua terdekat dari `v` (0 untuk v < 1).
-fn nearest_power_of_two(v: f64) -> u64 {
-    if v < 1.0 {
-        return 0;
-    }
-    let exp = v.log2().round() as u32;
-    1u64 << exp.min(20)
+/// Total kapasitas modul yang umum dijual (GB desimal).
+///
+/// Sengaja bukan hanya pangkat dua: konfigurasi campuran (8+4, 16+8, 3x16)
+/// nyata ada di PC sewaan, dan menebak "pangkat dua terdekat" akan melaporkan
+/// kapasitas yang tidak pernah terpasang.
+const COMMON_RAM_GB: [u64; 14] = [2, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256];
+
+/// Cocokkan kapasitas terukur (GiB) dengan ukuran stiker (GB).
+///
+/// Firmware selalu memotong sedikit, jadi nilai terukur sedikit DI BAWAH
+/// stiker. Toleransi 10%: lebih longgar membuat 12 GiB cocok ke 16 GB
+/// (karangan), lebih ketat membuat 31.9 GiB tidak dikenali sebagai 32 GB.
+fn nominal_ram_gb(gib: f64) -> Option<u64> {
+    COMMON_RAM_GB.iter().copied().find(|nominal| {
+        let n = *nominal as f64;
+        gib <= n && gib >= n * 0.90
+    })
 }
 
 /// Label prosesor: nama dari registry + jumlah inti/logis dari `GetSystemInfo`.
@@ -68,11 +74,20 @@ fn nearest_power_of_two(v: f64) -> u64 {
 /// `None` bila keduanya kosong.
 pub fn cpu_label(name: Option<&str>, cores: u32, logical: u32) -> Option<String> {
     let name = name.map(str::trim).filter(|s| !s.is_empty());
-    match (name, cores, logical) {
-        (Some(n), c, l) if c > 0 && l > 0 => Some(format!("{n} — {c} inti / {l} thread")),
-        (Some(n), _, _) => Some(n.to_string()),
-        (None, c, l) if c > 0 && l > 0 => Some(format!("{c} inti / {l} thread")),
+    // Jumlah inti fisik butuh CPUID; tanpa itu `cores` 0 dan yang tersisa
+    // tetap dilaporkan (thread saja) alih-alih dibuang menjadi None.
+    let jumlah = match (cores, logical) {
+        (c, l) if c > 0 && l > 0 && c != l => Some(format!("{c} inti / {l} thread")),
+        (c, l) if c > 0 && l > 0 => Some(format!("{c} inti")),
+        (0, l) if l > 0 => Some(format!("{l} thread")),
+        (c, 0) if c > 0 => Some(format!("{c} inti")),
         _ => None,
+    };
+    match (name, jumlah) {
+        (Some(n), Some(j)) => Some(format!("{n} — {j}")),
+        (Some(n), None) => Some(n.to_string()),
+        (None, Some(j)) => Some(j),
+        (None, None) => None,
     }
 }
 
@@ -82,7 +97,11 @@ pub fn cpu_label(name: Option<&str>, cores: u32, logical: u32) -> Option<String>
 /// perilaku Microsoft, bukan bug kita. Build >= 22000 = Windows 11, jadi
 /// namanya dikoreksi dari nomor build. Apa pun yang tidak dikenali dilaporkan
 /// apa adanya, tanpa ditebak.
-pub fn windows_label(product_name: Option<&str>, display_version: Option<&str>, build: u32) -> Option<String> {
+pub fn windows_label(
+    product_name: Option<&str>,
+    display_version: Option<&str>,
+    build: u32,
+) -> Option<String> {
     let name = product_name.map(str::trim).filter(|s| !s.is_empty())?;
     let name = if build >= 22000 {
         name.replacen("Windows 10", "Windows 11", 1)
@@ -134,7 +153,12 @@ pub fn gpu_label(names: &[String]) -> Option<String> {
     }
     match uniq.len() {
         0 => None,
-        _ => Some(uniq.iter().map(|s| s.trim()).collect::<Vec<_>>().join(" + ")),
+        _ => Some(
+            uniq.iter()
+                .map(|s| s.trim())
+                .collect::<Vec<_>>()
+                .join(" + "),
+        ),
     }
 }
 
@@ -200,9 +224,13 @@ pub fn refresh_rate_hz(device_name: &str) -> Option<u32> {
 
 #[cfg(target_os = "windows")]
 mod windows_probe {
-    use super::{
-        capacity_label, cpu_label, gpu_label, ram_label, windows_label, Probe, REG_BUF_WCHARS,
-    };
+    use super::{capacity_label, cpu_label, gpu_label, ram_label, windows_label, Probe};
+
+    /// Batas aman satu nilai registry (wchar). Nama prosesor/motherboard nyata
+    /// tidak pernah sepanjang ini; bila terpotong, hasilnya `null` (jujur).
+    /// Tinggal di modul ini karena hanya Windows yang membaca registry — di
+    /// platform lain konstanta ini akan jadi dead code dan clippy menolaknya.
+    const REG_BUF_WCHARS: usize = 1024;
     use windows::core::PCWSTR;
     use windows::Win32::Graphics::Gdi::{EnumDisplaySettingsW, DEVMODEW};
 
@@ -281,7 +309,10 @@ mod windows_probe {
 
     /// Refresh rate sebuah perangkat GDI (`\\.\DISPLAY1`) dalam Hz.
     pub(super) fn refresh_rate_hz(device_name: &str) -> Option<u32> {
-        let wide: Vec<u16> = device_name.encode_utf16().chain(std::iter::once(0)).collect();
+        let wide: Vec<u16> = device_name
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
         let mut dm: DEVMODEW = unsafe { std::mem::zeroed() };
         dm.dmSize = std::mem::size_of::<DEVMODEW>() as u16;
         unsafe {
@@ -405,13 +436,36 @@ mod tests {
     }
 
     #[test]
+    fn ram_label_konfigurasi_campuran_tidak_dibulatkan_ke_pangkat_dua() {
+        // PC sewaan sering 8+4 GB. Terbaca ~11.9 GiB: stikernya 12 GB.
+        // Membulatkan ke pangkat dua terdekat akan mengklaim 16 GB.
+        let bytes = (11.9f64 * 1024.0 * 1024.0 * 1024.0) as u64;
+        let label = ram_label(bytes).unwrap();
+        assert!(label.starts_with("12 GB"), "label salah: {label}");
+        assert!(!label.contains("16 GB"), "mengarang 16 GB: {label}");
+        // Ukuran yang tidak ada di daftar stiker dilaporkan terukur apa adanya.
+        let odd = (13.5f64 * 1024.0 * 1024.0 * 1024.0) as u64;
+        let label_odd = ram_label(odd).unwrap();
+        assert!(
+            label_odd.contains("GiB"),
+            "harus nilai terukur: {label_odd}"
+        );
+        assert!(!label_odd.contains("16 GB"), "mengarang: {label_odd}");
+    }
+
+    #[test]
     fn cpu_label_menggabungkan_nama_dan_jumlah_thread() {
         let got = cpu_label(Some("AMD Ryzen 7 5800X"), 8, 16).unwrap();
         assert_eq!(got, "AMD Ryzen 7 5800X — 8 inti / 16 thread");
         // Nama saja (GetSystemInfo gagal) tetap berguna, tanpa angka karangan.
-        assert_eq!(cpu_label(Some("Intel Core i5"), 0, 0).unwrap(), "Intel Core i5");
-        // Jumlah saja (registry gagal).
-        assert_eq!(cpu_label(None, 0, 4).unwrap(), "4 inti / 4 thread");
+        assert_eq!(
+            cpu_label(Some("Intel Core i5"), 0, 0).unwrap(),
+            "Intel Core i5"
+        );
+        // Jumlah saja (registry gagal). Inti fisik = logis ditulis "4 inti";
+        // inti fisik tak diketahui (butuh CPUID) ditulis "4 thread", bukan None.
+        assert_eq!(cpu_label(None, 4, 4).unwrap(), "4 inti");
+        assert_eq!(cpu_label(None, 0, 4).unwrap(), "4 thread");
         // Keduanya gagal → null, bukan "Unknown CPU".
         assert_eq!(cpu_label(None, 0, 0), None);
         assert_eq!(cpu_label(Some("   "), 0, 0), None);
@@ -474,7 +528,15 @@ mod tests {
         }
         // Bentuk JSON-nya harus selalu punya kunci yang client harapkan.
         let v = hardware_json();
-        for key in ["hostname", "os", "motherboard", "cpu", "gpu", "ram", "storage"] {
+        for key in [
+            "hostname",
+            "os",
+            "motherboard",
+            "cpu",
+            "gpu",
+            "ram",
+            "storage",
+        ] {
             assert!(v.get(key).is_some(), "kunci {key} hilang dari hardware");
         }
     }

@@ -126,12 +126,7 @@ class DeviceDetailPage extends ConsumerWidget {
               'Motherboard',
               _orUnknown(device.motherboard),
             ),
-            _spec(
-              context,
-              LucideIcons.cpu,
-              'Prosesor',
-              _orUnknown(device.cpu),
-            ),
+            _spec(context, LucideIcons.cpu, 'Prosesor', _orUnknown(device.cpu)),
             _spec(
               context,
               LucideIcons.gpu,
