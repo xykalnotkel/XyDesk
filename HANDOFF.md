@@ -46,19 +46,33 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   toolchain Flutter tidak ada di lingkungannya** — perubahan Dart di sana hanya
   bisa diverifikasi lewat CI, dan menambah logika timer tanpa bisa menjalankan
   `flutter test` lebih berisiko daripada meninggalkannya tercatat.
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Jalankan `flutter analyze --fatal-infos
-  --fatal-warnings` + `flutter test` untuk sesi audit 6 Sep** — sesi itu
-  mengubah `lib/main.dart`, `lib/core/pip_controller.dart`,
+- [x] (dari Operator - XyDesk Team, 2026-09-06) — **Verifikasi kompilator untuk
+  perubahan Dart sesi audit 6 Sep — TERPENUHI lewat CI.** Sesi itu mengubah
+  `lib/main.dart`, `lib/core/pip_controller.dart`,
   `lib/webrtc/signaling_client.dart`, `lib/webrtc/rtc_service.dart` dan menambah
-  `test/core/bootstrap_order_test.dart` TANPA bisa mengompilasi (tidak ada
-  Flutter di lingkungannya). Yang sudah diverifikasi di sana: sintaks kelima
-  berkas bersih lewat Dart SDK 3.13.3 (`dart format --output=none` mem-parse
-  semua tanpa galat), dan logika test barunya dijalankan ulang sebagai skrip
-  Python terhadap berkas asli (semua assertion lolos). Yang BELUM: resolusi tipe,
-  `ch.ready` pada `web_socket_channel` 3.x, dan 54 test lama. Perhatikan juga
-  CI memakai Dart 3.12.2 (Flutter 3.44.9) sedangkan SDK pemeriksa 3.13.3 —
-  formatter-nya berbeda, jadi JANGAN menjalankan `dart format` dari SDK lain ke
-  `lib/`: 4 dari 8 berkas yang tidak tersentuh ikut "berubah" di 3.13.3.
+  `test/core/bootstrap_order_test.dart` tanpa bisa mengompilasi di
+  lingkungannya (tidak ada Flutter), jadi awalnya hanya diverifikasi sintaks
+  lewat Dart SDK 3.13.3 dan logika test-nya dijalankan ulang sebagai skrip.
+  Run Build `34044474570` (Flutter 3.44.9 / Dart 3.12.2, sama dengan runner)
+  menutup sisanya: job *Analisis Statis (Flutter)* hijau penuh termasuk
+  `Cek format`, `Analisis statis tanpa toleransi diagnostic`
+  (`--fatal-infos --fatal-warnings`), `Uji unit Dart` — jadi
+  `bootstrap_order_test.dart` benar-benar dijalankan Flutter, bukan cuma
+  disimulasikan — plus `Verifikasi inventaris lisensi`, `Audit ilustrasi
+  transparan`, dan `Verifikasi aturan seamless`. `APK Android per ABI` juga
+  hijau, jadi APK berisi perbaikan boot sudah terbangun. Pelajaran yang tetap
+  berlaku: CI memakai Dart 3.12.2 sedangkan SDK pemeriksa di sandbox 3.13.3 dan
+  formatter-nya berbeda — JANGAN menjalankan `dart format` dari SDK lain ke
+  `lib/` (4 dari 8 berkas yang tidak tersentuh ikut "berubah" di 3.13.3).
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Bukti sejati perbaikan boot
+  tetap butuh perangkat nyata.** CI membuktikan kode itu diformat, dikompilasi,
+  dianalisis, dan diuji — TIDAK membuktikan aplikasi terbuka di HP. Jalur yang
+  gagal (`setMethodCallHandler` sebelum binding siap) adalah galat runtime yang
+  tidak bisa dilihat `flutter analyze` maupun `flutter test`; simetri itu berlaku
+  juga untuk pembuktiannya, jadi yang bisa memastikan hanya memasang APK dari run
+  Build `34044474570` di HP yang sebelumnya terjebak di splash lalu melihat
+  apakah aplikasi masuk. Commit `e358ab4` sudah menulis catatan jujur yang sama
+  ("bukti sejati tetap perangkat nyata") dan itu masih benar.
 - [x] (dari Galih - XySpace Team, 2026-09-03) — **Dikerjakan Galih atas arahan
   operator di chat (lintas area; aturan 1 sesi = 1 role dilonggarkan untuk ini):**
   `pair` sekarang mengirim `name` + `platform`. Berkas:
