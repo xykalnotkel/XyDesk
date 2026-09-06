@@ -336,6 +336,9 @@ impl FrameSource {
 impl Drop for FrameSource {
     fn drop(&mut self) {
         self.alive.store(false, Ordering::Release);
+        // Jaring pengaman: jalur yang tidak melewati `pump_video` (mis. sesi
+        // gagal sebelum Connected) tetap tidak meninggalkan capture armed.
+        disarm_capture();
     }
 }
 
@@ -348,17 +351,40 @@ pub fn spawn_frame_source() -> FrameSource {
         let (tx, rx) = mpsc::sync_channel::<EncodedFrame>(2);
         let alive = Arc::new(AtomicBool::new(true));
         let alive_thr = alive.clone();
+        let alive_watch = alive.clone();
         std::thread::spawn(move || {
             let mut current = wanted_display();
+            // Throttle peringatan "semua backend gagal" (lihat watchdog).
+            let mut log_semua_gagal = std::time::Instant::now()
+                .checked_sub(std::time::Duration::from_secs(30))
+                .unwrap_or_else(std::time::Instant::now);
             loop {
                 // Konsumen (loop video) sudah berhenti — sesi selesai. Jangan
                 // capture lagi; thread ini keluar dengan bersih.
                 if !alive_thr.load(Ordering::Relaxed) {
                     break;
                 }
-                if let Err(e) = windows::start_monitor(tx.clone(), current) {
-                    eprintln!("[xydesk-host] capture layar (monitor {current}) gagal: {e}");
+                // Belum ada penonton: tidur, jangan buka sesi capture. Ini
+                // yang menahan border kuning WGC sampai transport Connected.
+                if !capture_armed() {
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                    continue;
                 }
+                let backend = BACKEND.load(Ordering::Relaxed);
+                let frame_sebelum = frames_captured();
+                let mulai = std::time::Instant::now();
+                let hasil = match backend {
+                    BACKEND_GDI => windows::start_gdi_monitor(tx.clone(), current),
+                    _ => windows::start_monitor(tx.clone(), current),
+                };
+                let gagal = hasil.err();
+                if let Some(e) = &gagal {
+                    eprintln!(
+                        "[xydesk-host] capture {} (monitor {current}) gagal: {e}",
+                        label_backend(backend)
+                    );
+                }
+                let dihasilkan = frames_captured().saturating_sub(frame_sebelum);
                 // Ada permintaan pindah monitor? Respawn dengan indeks baru.
                 let next = SWITCH_TO.swap(usize::MAX, Ordering::Relaxed);
                 if next != usize::MAX {
@@ -382,6 +408,53 @@ pub fn spawn_frame_source() -> FrameSource {
                     println!("[xydesk-host] capture di-respawn: keyframe diminta");
                     continue;
                 }
+                // ── Watchdog: backend yang terbukti tidak mengirim frame ──
+                //
+                // `start_monitor` bisa kembali tanpa satu frame pun: WGC membuka
+                // sesi (border kuning terlihat, jadi dari luar tampak "capture
+                // jalan") tapi `on_frame_arrived` tidak pernah dipanggil —
+                // dilaporkan terjadi pada mesin ber-HDR dan pada sebagian
+                // driver. Tanpa escalation host mengulang backend mati itu
+                // selamanya dan layar client hitam permanen.
+                if dihasilkan == 0 && capture_armed() {
+                    let lama = mulai.elapsed();
+                    // Gagal seketika (error) tidak perlu menunggu grace: tidak
+                    // ada gunanya memberi waktu kepada backend yang melempar
+                    // error, dan menunggunya memperlama layar hitam.
+                    if gagal.is_some() || lama >= NO_FRAME_GRACE {
+                        match backend_berikutnya(backend) {
+                            Some(next) => {
+                                eprintln!(
+                                    "[xydesk-host] PERINGATAN: backend {} tidak mengirim satu frame pun selama {:.1} detik — pindah ke {}",
+                                    label_backend(backend),
+                                    lama.as_secs_f64(),
+                                    label_backend(next)
+                                );
+                                BACKEND.store(next, Ordering::Relaxed);
+                                continue;
+                            }
+                            None => {
+                                // Semua backend sudah dicoba. Jangan banjiri log:
+                                // satu peringatan per 30 detik cukup, dan
+                                // percobaan tetap berjalan (transien seperti
+                                // secure desktop/UAC bisa pulih sendiri).
+                                let sekarang = std::time::Instant::now();
+                                if sekarang
+                                    .checked_duration_since(log_semua_gagal)
+                                    .map(|d| d.as_secs() >= 30)
+                                    .unwrap_or(true)
+                                {
+                                    eprintln!(
+                                        "[xydesk-host] PERINGATAN: tidak ada backend capture yang mengirim frame ({:.1} detik, armed) — layar client akan hitam",
+                                        lama.as_secs_f64()
+                                    );
+                                    log_semua_gagal = sekarang;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Tanpa permintaan apa pun, capture berakhir karena dua sebab:
                 // (1) konsumen berhenti (sesi selesai) — berhenti bersih;
                 // (2) capture ditutup OS (secure desktop, monitor lepas,
@@ -392,6 +465,53 @@ pub fn spawn_frame_source() -> FrameSource {
                     break;
                 }
                 std::thread::sleep(std::time::Duration::from_millis(500));
+            }
+        });
+        // Watchdog log per detik. Terpisah dari thread capture karena thread
+        // capture terblokir di dalam backend (WGC/GDI) dan tidak bisa melapor —
+        // persis sebabnya sesi yang macet dulu terlihat "baik-baik saja":
+        // tidak ada log sama sekali, bukan log yang menyebut masalah.
+        std::thread::spawn(move || {
+            let mut terakhir = frames_captured();
+            let mut nol_beruntun = 0u32;
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                if !alive_watch.load(Ordering::Relaxed) {
+                    break;
+                }
+                if !capture_armed() {
+                    // Belum/tidak ada penonton: nol frame itu normal.
+                    nol_beruntun = 0;
+                    terakhir = frames_captured();
+                    continue;
+                }
+                let total = frames_captured();
+                let fps = total.saturating_sub(terakhir);
+                terakhir = total;
+                if fps == 0 {
+                    nol_beruntun += 1;
+                    eprintln!(
+                        "[xydesk-host] PERINGATAN: capture {} armed tapi 0 frame selama {} detik (total {} frame)",
+                        backend_label(),
+                        nol_beruntun,
+                        total
+                    );
+                } else {
+                    if nol_beruntun > 0 {
+                        println!(
+                            "[xydesk-host] capture pulih: {} frame/detik setelah {} detik kosong",
+                            fps, nol_beruntun
+                        );
+                    }
+                    nol_beruntun = 0;
+                    println!(
+                        "[xydesk-host] capture {} | {} fps | total {} frame | encoder {}",
+                        backend_label(),
+                        fps,
+                        total,
+                        encoder_label()
+                    );
+                }
             }
         });
         FrameSource { rx, alive }
@@ -507,6 +627,117 @@ static WANTED_MONITOR: std::sync::atomic::AtomicUsize = std::sync::atomic::Atomi
 /// baru). `usize::MAX` = tidak ada permintaan.
 static SWITCH_TO: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(usize::MAX);
 
+// ── Backend capture: rantai dengan watchdog yang mengukur dirinya sendiri ──
+
+/// Windows Graphics Capture API. Backend awal: paling cepat, lintas GPU, dan
+/// satu-satunya yang menangani fullscreen exclusive dengan benar. Kelemahannya:
+/// border kuning (Win10; bisa dimatikan di Win11) dan — yang dilaporkan di
+/// lapangan — sesi terbuka tapi `on_frame_arrived` tidak pernah dipanggil.
+pub const BACKEND_WGC: u8 = 0;
+
+/// GDI BitBlt. Lambat (satu BitBlt + GetDIBits per frame, tanpa notifikasi
+/// perubahan) tapi **selalu ada**: tidak butuh Windows 10 1903+, tidak butuh
+/// GPU, tidak menggambar border, dan tetap bekerja di sesi RDP — relevan untuk
+/// PC/server sewaan yang diakses tanpa monitor fisik.
+pub const BACKEND_GDI: u8 = 1;
+
+/// Backend yang sedang dipakai. Diubah watchdog bila backend aktif terbukti
+/// tidak mengirim frame — jadi nilainya hasil pengukuran, bukan preferensi.
+static BACKEND: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(BACKEND_WGC);
+
+/// Nama backend untuk log, control API, dan UI.
+pub fn label_backend(id: u8) -> &'static str {
+    match id {
+        BACKEND_GDI => "gdi-bitblt",
+        _ => "windows-graphics-capture",
+    }
+}
+
+/// Backend yang sedang aktif (label).
+pub fn backend_label() -> &'static str {
+    label_backend(BACKEND.load(std::sync::atomic::Ordering::Relaxed))
+}
+
+/// Capture hanya boleh berjalan bila ada penonton.
+///
+/// Di-set saat transport benar-benar `Connected` ([`crate::video::pump_video`]),
+/// dilucuti saat sesi berakhir. Alasannya: sesi capture WGC yang dibuka lebih
+/// awal memunculkan border kuning padahal belum ada yang menonton, dan
+/// capture+encode tanpa penonton membuang GPU/CPU.
+static ARMED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Izinkan capture mulai (dipanggil saat Connected).
+pub fn arm_capture() {
+    ARMED.store(true, std::sync::atomic::Ordering::Release);
+}
+
+/// Hentikan capture karena tidak ada penonton lagi.
+pub fn disarm_capture() {
+    ARMED.store(false, std::sync::atomic::Ordering::Release);
+}
+
+/// Benar bila capture sedang diizinkan berjalan.
+pub fn capture_armed() -> bool {
+    ARMED.load(std::sync::atomic::Ordering::Acquire)
+}
+
+/// Total frame yang benar-benar ditangkap (semua backend, sejak proses mulai).
+///
+/// Inilah angka yang membedakan dua keadaan yang gejalanya sama-sama "layar
+/// hitam": capture tidak pernah dimulai (counter tidak naik karena belum armed)
+/// versus capture berjalan tapi sumbernya tidak mengirim frame (counter juga
+/// tidak naik, padahal armed). Watchdog membaca selisihnya per detik.
+#[cfg(target_os = "windows")]
+static FRAMES_TOTAL: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Catat satu frame tertangkap. Dipanggil setiap backend tepat sebelum frame
+/// ter-encode diserahkan ke channel — bukan saat frame mentah diterima, supaya
+/// angka ini berarti "ada yang sampai ke client".
+///
+/// Hanya jalur Windows: di platform lain sumber frame-nya pola uji dan tidak
+/// ikut rantai backend, jadi tanpa cfg fungsi ini dead code dan clippy
+/// `-D warnings` menolaknya.
+#[cfg(target_os = "windows")]
+fn catat_frame() {
+    FRAMES_TOTAL.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Total frame tertangkap (untuk control API / UI).
+///
+/// Selalu 0 di platform non-Windows: sumber frame di sana pola uji dan tidak
+/// ikut rantai backend. Mengembalikan angka nyata hanya dari jalur yang benar-
+/// benar menangkap layar menjaga arti angka ini jujur.
+pub fn frames_captured() -> u64 {
+    #[cfg(target_os = "windows")]
+    {
+        FRAMES_TOTAL.load(std::sync::atomic::Ordering::Relaxed)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        0
+    }
+}
+
+/// Backend berikutnya bila backend aktif terbukti tidak mengirim frame.
+/// `None` = sudah yang terakhir; tidak ada tempat mundur lagi.
+#[cfg(target_os = "windows")]
+fn backend_berikutnya(now: u8) -> Option<u8> {
+    match now {
+        BACKEND_WGC => Some(BACKEND_GDI),
+        _ => None,
+    }
+}
+
+/// Berapa lama sebuah backend boleh tidak mengirim frame sebelum watchdog
+/// menyimpulkan backend itu mati dan pindah ke berikutnya.
+///
+/// Dua detik cukup longgar untuk WGC yang frame pertamanya bisa tertunda saat
+/// encoder NVENC dibangun, dan cukup pendek supaya layar hitam tidak bertahan
+/// lama. Dipakai bersama syarat `armed` — sebelum Connected, nol frame adalah
+/// keadaan normal, bukan kegagalan.
+#[cfg(target_os = "windows")]
+const NO_FRAME_GRACE: std::time::Duration = std::time::Duration::from_secs(2);
+
 /// Pilih monitor. Berlaku langsung bila ada sesi berjalan (capture di-respawn);
 /// selain itu menjadi pilihan sesi berikutnya.
 pub fn select_display(index: usize) -> bool {
@@ -611,6 +842,11 @@ mod windows {
         encode_us_sum: u128,
         encode_us_max: u128,
         encode_count: u64,
+        /// Kapan log statistik terakhir dicetak (log berbasis waktu, lihat
+        /// `on_frame_arrived`).
+        log_terakhir: std::time::Instant,
+        /// Jumlah frame saat log terakhir dicetak — untuk fps per interval.
+        frame_log_terakhir: u64,
     }
 
     impl GraphicsCaptureApiHandler for ScreenCapturer {
@@ -634,6 +870,8 @@ mod windows {
                 encode_us_sum: 0,
                 encode_us_max: 0,
                 encode_count: 0,
+                log_terakhir: std::time::Instant::now(),
+                frame_log_terakhir: 0,
             })
         }
 
@@ -736,16 +974,32 @@ mod windows {
             self.encode_count += 1;
 
             self.frames = self.frames.wrapping_add(1);
-            if self.frames.is_multiple_of(300) {
-                let avg_ms = self.encode_us_sum as f64 / self.encode_count as f64 / 1000.0;
+            // Log berbasis WAKTU, bukan jumlah frame. Yang lama (tiap 300
+            // frame) tidak pernah tercetak di mesin yang bermasalah — justru
+            // karena frame tidak pernah mencapai 300 — jadi log diam tepat saat
+            // paling dibutuhkan. Interval 5 detik: liveness per detik sudah
+            // dilapor watchdog, yang di sini khusus budget encode.
+            if self.log_terakhir.elapsed() >= std::time::Duration::from_secs(5) {
+                let avg_ms = self.encode_us_sum as f64 / self.encode_count.max(1) as f64 / 1000.0;
                 let max_ms = self.encode_us_max as f64 / 1000.0;
                 println!(
-                    "[xydesk-host] capture {}x{} frame ke-{} | encode avg {avg_ms:.2} ms, max {max_ms:.2} ms",
-                    width, height, self.frames
+                    "[xydesk-host] capture {}x{} | {} frame/5dtk | encode avg {avg_ms:.2} ms, max {max_ms:.2} ms | total {}",
+                    width,
+                    height,
+                    self.frames - self.frame_log_terakhir,
+                    self.frames
                 );
+                self.log_terakhir = std::time::Instant::now();
+                self.frame_log_terakhir = self.frames;
+                self.encode_us_sum = 0;
+                self.encode_us_max = 0;
+                self.encode_count = 0;
             }
             // Kirim; bila channel penuh, buang frame terbaru (try_send) —
             // frame usang tidak boleh mengantre (latency > kelengkapan).
+            // Hitung sebagai frame tertangkap HANYA bila encode berhasil —
+            // angka ini yang dibaca watchdog untuk memutuskan backend mati.
+            super::catat_frame();
             match self.sender.try_send(super::EncodedFrame {
                 data: encoded,
                 captured_at,
@@ -768,6 +1022,140 @@ mod windows {
         fn on_closed(&mut self) -> Result<(), Self::Error> {
             Ok(())
         }
+    }
+
+    /// Capture layar lewat GDI BitBlt — backend cadangan (`BACKEND_GDI`).
+    ///
+    /// Memblok thread pemanggil seperti `start_monitor` dan berhenti pada syarat
+    /// yang sama (pindah monitor, bitrate berubah, keyframe diminta, capture
+    /// dilucuti, konsumen selesai) supaya perpindahan itu berlaku identik di
+    /// backend mana pun.
+    ///
+    /// Pembagian tugasnya sengaja: primitif capture (BitBlt/GetDIBits, handle
+    /// GDI, buffer BGRA) ada di [`crate::gdi`] yang tidak bergantung pada
+    /// webrtc/openh264 sehingga bisa di-type-check untuk target Windows di
+    /// Linux lewat `tool/wincheck`. Encode, simpanan IDR penyelamat layar hitam,
+    /// pace, dan pengiriman tetap di sini — identik dengan jalur WGC, karena
+    /// client tidak boleh bisa membedakan backend dari perilakunya.
+    pub fn start_gdi_monitor(
+        tx: mpsc::SyncSender<super::EncodedFrame>,
+        monitor: usize,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        /// Target fps backend ini. BitBlt + GetDIBits di 1080p butuh beberapa
+        /// ms dan encode software bisa lebih dari 20 ms; 30 fps target yang
+        /// realistis tanpa menghabiskan CPU. Fps nyata dilapor watchdog.
+        const TARGET_FPS: u64 = 30;
+
+        let displays = super::list_displays();
+        let info = displays.get(monitor).ok_or_else(|| {
+            format!(
+                "monitor {monitor} tidak tersedia (terdeteksi {} monitor)",
+                displays.len()
+            )
+        })?;
+        let w = info.width as usize;
+        let h = info.height as usize;
+        let mut cap = crate::gdi::GdiCapture::baru(&info.name, w, h)?;
+
+        // Resolusi sudah diketahui di depan (beda dari WGC yang baru tahu di
+        // frame pertama), jadi NVENC bisa dicoba sekali di sini.
+        let mut encoder = EncoderKind::Soft(Box::new(Encoder::with_api_config(
+            openh264::OpenH264API::from_source(),
+            super::prod_encoder_config(),
+        )?));
+        super::NVENC_ACTIVE.store(false, std::sync::atomic::Ordering::Relaxed);
+        if w % 2 == 0 && h % 2 == 0 {
+            match crate::nvenc::NvEnc::new(w as u32, h as u32, super::target_bitrate_bps()) {
+                Ok(enc) => {
+                    println!(
+                        "[xydesk-host] GDI: NVENC aktif: H264 hardware {w}x{h} @ {} kbps CBR",
+                        super::target_bitrate_bps() / 1000
+                    );
+                    super::NVENC_ACTIVE.store(true, std::sync::atomic::Ordering::Relaxed);
+                    encoder = EncoderKind::Nvenc(enc);
+                }
+                Err(e) => eprintln!(
+                    "[xydesk-host] GDI: NVENC tidak tersedia, pakai openh264 (software): {e}"
+                ),
+            }
+        }
+
+        let mut nv12: Vec<u8> = Vec::new();
+        let interval = std::time::Duration::from_millis(1000 / TARGET_FPS);
+        let mut detik_terakhir = std::time::Instant::now();
+        let mut frame_detik = 0u64;
+        let mut enc_sum: u128 = 0;
+        let mut enc_max: u128 = 0;
+        let mut enc_n: u64 = 0;
+
+        println!(
+            "[xydesk-host] capture gdi-bitblt mulai {w}x{h} (monitor {monitor}, target {TARGET_FPS} fps)"
+        );
+        loop {
+            // Awal pipeline latensi — sebelum piksel diambil, sama seperti WGC.
+            let captured_at = std::time::Instant::now();
+            // Syarat berhenti identik dengan jalur WGC: perpindahan monitor,
+            // bitrate, dan keyframe harus berlaku sama di backend mana pun.
+            if super::SWITCH_TO.load(std::sync::atomic::Ordering::Relaxed) != usize::MAX
+                || super::BITRATE_DIRTY.load(std::sync::atomic::Ordering::Relaxed)
+                || super::peek_keyframe_request()
+                || !super::capture_armed()
+            {
+                break;
+            }
+            let (rgba, fw, fh) = match cap.grab() {
+                Ok(frame) => frame,
+                Err(e) => {
+                    eprintln!("[xydesk-host] GDI tidak bisa mengambil frame: {e}");
+                    break;
+                }
+            };
+            let t0 = std::time::Instant::now();
+            let encoded = match encoder.encode(rgba, fw, fh, &mut nv12) {
+                Ok(data) => data,
+                Err(e) => {
+                    eprintln!("[xydesk-host] GDI: encode frame gagal: {e}");
+                    break;
+                }
+            };
+            let encode_us = t0.elapsed().as_micros();
+            enc_sum += encode_us;
+            enc_max = enc_max.max(encode_us);
+            enc_n += 1;
+            frame_detik += 1;
+            super::catat_frame();
+            match tx.try_send(super::EncodedFrame {
+                data: encoded,
+                captured_at,
+                encode_us: encode_us as u64,
+            }) {
+                // Konsumen berhenti — sesi selesai.
+                Err(mpsc::TrySendError::Disconnected(_)) => break,
+                // Channel penuh: buang frame usang (latency > kelengkapan).
+                Ok(()) | Err(mpsc::TrySendError::Full(_)) => {}
+            }
+
+            if detik_terakhir.elapsed() >= std::time::Duration::from_secs(1) {
+                let avg = enc_sum as f64 / enc_n.max(1) as f64 / 1000.0;
+                let max = enc_max as f64 / 1000.0;
+                println!(
+                    "[xydesk-host] capture gdi-bitblt {w}x{h} | {frame_detik} fps | encode avg {avg:.2} ms, max {max:.2} ms"
+                );
+                detik_terakhir = std::time::Instant::now();
+                frame_detik = 0;
+                enc_sum = 0;
+                enc_max = 0;
+                enc_n = 0;
+            }
+
+            // Pace: BitBlt lebih cepat dari target hanya membakar CPU.
+            let dipakai = captured_at.elapsed();
+            if dipakai < interval {
+                std::thread::sleep(interval - dipakai);
+            }
+        }
+        println!("[xydesk-host] capture gdi-bitblt berhenti (monitor {monitor})");
+        Ok(())
     }
 
     /// Mulai capture layar primer. Fungsi memblok thread yang memanggilnya

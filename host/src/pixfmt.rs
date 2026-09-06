@@ -73,6 +73,34 @@ pub fn rgba_to_nv12(rgba: &[u8], width: usize, height: usize, out: &mut Vec<u8>)
     }
 }
 
+/// BGRA (baris rapat) → RGBA, ditulis ke `out` yang dipakai ulang.
+///
+/// `GetDIBits` GDI dengan `biBitCount = 32` dan `BI_RGB` menghasilkan byte
+/// B,G,R,A — kebalikan dari yang diharapkan encoder dan dari yang diberikan
+/// Windows Graphics Capture API (RGBA). Menukar B↔R di sini, sekali per frame,
+/// jauh lebih murah daripada memperbaiki warna di sisi client, dan membuat
+/// kedua backend menyerahkan buffer yang identik ke `EncoderKind::encode`.
+///
+/// Byte sisa yang tidak membentuk piksel utuh dibuang, bukan diisi nol: frame
+/// sedikit terpotong lebih baik daripada warna bergeser satu piksel.
+pub fn bgra_to_rgba(bgra: &[u8], out: &mut Vec<u8>) {
+    let n = bgra.len() / 4 * 4;
+    // Ukuran hanya disesuaikan saat berubah: frame berikutnya memakai buffer
+    // yang sama, jadi tidak ada memset 8 MB per frame.
+    if out.len() != n {
+        out.clear();
+        out.resize(n, 0);
+    }
+    // Indeks eksplisit, bukan chunks_exact_mut(4): clippy menuntut `as_chunks`
+    // untuk ukuran konstan, dan API itu masih terlalu baru untuk dipatok.
+    for i in (0..n).step_by(4) {
+        out[i] = bgra[i + 2];
+        out[i + 1] = bgra[i + 1];
+        out[i + 2] = bgra[i];
+        out[i + 3] = bgra[i + 3];
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,6 +210,30 @@ mod tests {
         assert_eq!(out.len(), 6, "mengecil ke 2x2x3/2");
         rgba_to_nv12(&frame_solid(4, 4, [0, 0, 0]), 4, 4, &mut out);
         assert_eq!(out.len(), 24, "membesar ke 4x4x3/2");
+    }
+
+    #[test]
+    fn bgra_ke_rgba_menukar_merah_dan_biru() {
+        let mut out = Vec::new();
+        bgra_to_rgba(&[0x10, 0x20, 0x30, 0xFF], &mut out);
+        assert_eq!(out, vec![0x30, 0x20, 0x10, 0xFF]);
+    }
+
+    #[test]
+    fn bgra_ke_rgba_buffer_dipakai_ulang_tanpa_sisa() {
+        // Buffer dipakai ulang antar frame: harus menyusut ke panjang masukan,
+        // bukan menyisakan byte frame lama yang lebih besar.
+        let mut out = vec![9u8; 64];
+        bgra_to_rgba(&[1, 2, 3, 4, 5, 6, 7, 8], &mut out);
+        assert_eq!(out.len(), 8, "sisa buffer lama tidak dibuang");
+        assert_eq!(out, vec![3, 2, 1, 4, 7, 6, 5, 8]);
+    }
+
+    #[test]
+    fn bgra_ke_rgba_byte_sisa_dibuang_bukan_diisi_nol() {
+        let mut out = Vec::new();
+        bgra_to_rgba(&[1, 2, 3, 4, 5], &mut out);
+        assert_eq!(out, vec![3, 2, 1, 4], "byte ke-5 mengarang piksel");
     }
 
     #[test]

@@ -42,6 +42,9 @@ mod tests {
 pub mod audio;
 pub mod clipboard;
 pub mod control;
+/// Primitif capture GDI BitBlt (piksel mentah saja; encode ada di `screen`).
+/// Dipisah supaya bisa di-type-check untuk Windows lewat `tool/wincheck`.
+pub mod gdi;
 /// Spesifikasi mesin host (CPU/GPU/RAM/motherboard/OS) — dibaca nyata, lihat
 /// aturan kejujuran di dalam modul.
 pub mod hwinfo;

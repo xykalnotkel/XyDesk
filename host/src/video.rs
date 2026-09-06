@@ -139,11 +139,20 @@ pub async fn pump_video(
             // Sesi berakhir; tugas lain (slot, pairing) sudah dibersihkan
             // oleh handler state di main.rs. Berhenti di sini supaya task
             // streaming tidak menggantung selamanya.
+            // Capture ikut dilucuti: tanpa penonton, BitBlt/WGC yang terus
+            // berjalan hanya membakar GPU/CPU dan menahan border capture.
+            screen::disarm_capture();
             break;
         }
         let connected = state == RTCPeerConnectionState::Connected;
 
         if connected && !prev_connected {
+            // Capture baru diizinkan mulai SEKARANG, bukan saat sesi dibuat.
+            // Membuka sesi capture lebih awal memunculkan border kuning Windows
+            // Graphics Capture padahal belum ada yang menonton — dan itu juga
+            // sebabnya pengguna melihat border sebelum koneksi benar-benar
+            // tersambung. Lihat `screen::arm_capture`.
+            screen::arm_capture();
             // Transisi baru ke Connected: minta IDR segar (SPS/PPS + slice).
             screen::request_keyframe();
             println!("[xydesk-host] koneksi Connected — keyframe segar diminta");

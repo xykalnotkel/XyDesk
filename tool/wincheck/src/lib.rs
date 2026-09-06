@@ -16,8 +16,16 @@
 //! HRESULT gagal saat runtime → TIDAK tertangkap; itu urusan job Windows dan
 //! uji di mesin sungguhan.
 
+#[path = "../../../host/src/pixfmt.rs"]
+pub mod pixfmt;
+
 #[path = "../../../host/src/hwinfo.rs"]
 pub mod hwinfo;
+
+/// Primitif capture GDI: seluruh kode `unsafe` Win32-nya terperiksa di sini.
+/// `screen.rs` (pemanggilnya) tidak bisa ikut karena menarik webrtc + openh264.
+#[path = "../../../host/src/gdi.rs"]
+pub mod gdi;
 
 /// Cermin ekspresi `screen.rs::list_displays` untuk menandai monitor utama.
 ///
