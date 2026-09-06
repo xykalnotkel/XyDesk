@@ -16,6 +16,11 @@ routes = [
 # Origin, jadi pembatasan ini tidak mengganggu Android/desktop.
 [vars]
 CORS_ORIGINS = "https://app.xydesk.my.id"
+# Client ID OAuth tipe "Desktop app" untuk shell Electron. Client ID bukan
+# rahasia (ia ikut terkirim di URL browser pengguna), jadi aman sebagai var.
+# Pasangannya, GOOGLE_DESKTOP_CLIENT_SECRET, adalah secret wrangler dan
+# SENGAJA tidak ada di repo ini — repo publik.
+GOOGLE_DESKTOP_CLIENT_ID = "335906355717-r2em6iirn8uv39qo6ol9iti8ijcv0et8.apps.googleusercontent.com"
 
 # ── Durable Object: hub global (registri host + relay SDP/ICE) ──
 [durable_objects]

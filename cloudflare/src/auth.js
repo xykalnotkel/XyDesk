@@ -172,8 +172,13 @@ export async function verifyGoogleIdToken(env, idToken) {
 
   const claims = JSON.parse(new TextDecoder().decode(b64urlDecode(parts[1])));
   const now = Math.floor(Date.now() / 1000);
-  const allowedAud = String(env.GOOGLE_CLIENT_ID)
-    .split(',')
+  // Dua sumber: GOOGLE_CLIENT_ID (web + Android, disimpan sebagai secret yang
+  // tidak bisa dibaca kembali) dan GOOGLE_DESKTOP_CLIENT_ID (var publik untuk
+  // aplikasi Electron). Dipisah deliberately: menambahkan client desktop ke
+  // secret lama berarti menimpanya tanpa tahu isinya, dan itu bisa mematikan
+  // login web/Android yang sedang dipakai.
+  const allowedAud = [env.GOOGLE_CLIENT_ID, env.GOOGLE_DESKTOP_CLIENT_ID]
+    .flatMap((v) => String(v || '').split(','))
     .map((v) => v.trim())
     .filter(Boolean);
   if (!allowedAud.includes(claims.aud)) return { ok: false, status: 401, error: 'bad-audience' };
@@ -195,4 +200,63 @@ export async function verifyGoogleIdToken(env, idToken) {
     picture: claims.picture || null,
     sub: String(claims.sub),
   };
+}
+
+// ── Google OAuth untuk aplikasi terpasang (desktop Electron) ───────────────
+// Client Desktop Google TIDAK mengizinkan aliran implicit `id_token` yang
+// dipakai web: yang tersedia hanya authorization code + PKCE dengan redirect
+// loopback. Jadi desktop membuka browser sistem, menangkap `code` di
+// http://localhost:<port>, lalu mengirim code itu ke sini.
+//
+// Penukaran dilakukan DI WORKER, bukan di aplikasi desktop, dengan dua alasan:
+// client_secret tidak pernah ikut terdistribusi ke installer pengguna (repo ini
+// publik), dan satu jalur verifikasi klaim dipakai bersama web/Android.
+export async function exchangeGoogleCode(env, params) {
+  const clientId = env.GOOGLE_DESKTOP_CLIENT_ID;
+  const clientSecret = env.GOOGLE_DESKTOP_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    return { ok: false, status: 503, error: 'google-desktop-not-configured' };
+  }
+  const code = params && params.code;
+  const codeVerifier = params && (params.codeVerifier || params.code_verifier);
+  if (!code || typeof code !== 'string') return { ok: false, status: 400, error: 'missing-code' };
+  if (!codeVerifier || typeof codeVerifier !== 'string') {
+    return { ok: false, status: 400, error: 'missing-code-verifier' };
+  }
+  // Client Desktop hanya boleh diarahkan ke loopback. Menerima https di sini
+  // berarti membuka pintu bagi code yang dicuri dari domain lain.
+  const redirectUri = String((params && (params.redirectUri || params.redirect_uri)) || 'http://localhost');
+  if (!/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/.*)?$/.test(redirectUri)) {
+    return { ok: false, status: 400, error: 'bad-redirect-uri' };
+  }
+
+  let res;
+  try {
+    res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        code_verifier: codeVerifier,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+  } catch {
+    return { ok: false, status: 502, error: 'token-endpoint-unreachable' };
+  }
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    return { ok: false, status: 502, error: 'token-endpoint-bad-response' };
+  }
+  if (!res.ok || !body.id_token) {
+    // Pesan Google diteruskan apa adanya (invalid_grant, dsb.) supaya desktop
+    // bisa menjelaskan kegagalannya, bukan sekadar "gagal".
+    return { ok: false, status: 401, error: String(body.error || 'code-exchange-failed') };
+  }
+  return { ok: true, idToken: body.id_token };
 }

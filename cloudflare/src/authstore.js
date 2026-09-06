@@ -7,8 +7,7 @@
 
 import {
   signJwt, verifyJwt, validateEmail, generateOtp, hashOtp, timingSafeEqual,
-  verifyGoogleIdToken, authConstants,
-} from './auth.js';
+  verifyGoogleIdToken, authConstants, exchangeGoogleCode } from './auth.js';
 import { otpEmailHtml, otpEmailText } from './email_otp.js';
 
 const { OTP_TTL, OTP_RESEND_COOLDOWN, OTP_MAX_ATTEMPTS } = authConstants;
@@ -79,6 +78,9 @@ export class AuthStore {
     }
     if (path === '/auth/google' && request.method === 'POST') {
       return this.google(request);
+    }
+    if (path === '/auth/google/desktop' && request.method === 'POST') {
+      return this.googleDesktop(request);
     }
     if (path === '/auth/guest' && request.method === 'POST') {
       return this.guest(request);
@@ -281,6 +283,29 @@ export class AuthStore {
     } catch {
       return json({ error: 'bad-json' }, 400);
     }
+    return this.googleWithIdToken(id_token);
+  }
+
+  /// Login Google untuk aplikasi desktop (Electron).
+  ///
+  /// Client mengirim `code` + `code_verifier` hasil redirect loopback; Worker
+  /// yang menukarnya ke Google sehingga client_secret tidak pernah masuk
+  /// installer. Setelah id_token diperoleh, sisanya identik dengan web/Android
+  /// (`googleWithIdToken`) — satu akun Google harus jadi satu akun XyDesk di
+  /// platform mana pun.
+  async googleDesktop(request) {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'bad-json' }, 400);
+    }
+    const r = await exchangeGoogleCode(this.env, body);
+    if (!r.ok) return json({ error: r.error }, r.status);
+    return this.googleWithIdToken(r.idToken);
+  }
+
+  async googleWithIdToken(id_token) {
     const r = await verifyGoogleIdToken(this.env, id_token);
     if (!r.ok) return json({ error: r.error }, r.status);
 

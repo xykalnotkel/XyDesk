@@ -9,6 +9,9 @@
 //   POST /auth/request-otp { email }                        -> kirim OTP
 //   POST /auth/verify-otp  { email, otp }                   -> { token } (JWT)
 //   POST /auth/google      { id_token }                     -> { token } (JWT)
+//   POST /auth/google/desktop { code, code_verifier, redirect_uri } -> { token }
+//        utk aplikasi terpasang (Electron): PKCE ditukar di sini supaya
+//        client_secret tidak pernah ikut terdistribusi ke installer.
 //   GET  /auth/me          (Bearer JWT)                     -> { user }
 //
 // Auth signaling: token HMAC-SHA256 berumur 5 menit (format ts.purpose.sig).
