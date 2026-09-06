@@ -17,6 +17,111 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Diperbaiki
+- Aplikasi Android: **aplikasi tidak bisa dibuka sama sekali — berhenti di
+  splash tanpa crash, tanpa galat, tanpa tombol.** `main()` mendaftarkan
+  handler kanal Picture-in-Picture SEBELUM `WidgetsFlutterBinding
+  .ensureInitialized()`. `MethodChannel.setMethodCallHandler` menyentuh binary
+  messenger yang belum ada, jadi ia melempar — di debug sebagai `FlutterError`
+  (assert Flutter sendiri berbunyi "Cannot set the method call handler before
+  the binary messenger has been initialized"), di release sebagai "Null check
+  operator used on a null value" karena assert-nya hilang dan
+  `_findBinaryMessenger()` menyentuh `ServicesBinding.instance` yang null.
+  Lemparan itu terjadi DI LUAR `runZonedGuarded` dan SEBELUM `runApp`, jadi
+  frame pertama tidak pernah digambar dan splash native `LaunchTheme` bertahan
+  selamanya. Perbaikan 6.5.3 (`e358ab4`, "gambar frame pertama sebelum
+  panggilan platform apa pun") membenahi `bootstrap()` tapi tidak melihat
+  `main()` yang memanggilnya. Kini binding disiapkan di baris pertama `main()`,
+  pendaftaran kanal dipindah ke `registerPipChannel()` yang dibungkus
+  try/catch (PiP fitur opsional — tidak berhak mengunci aplikasi), dan
+  `runApp(XyDeskBootScreen)` dinaikkan sebelum `DevLog.install()`. Urutannya
+  dijaga `test/core/bootstrap_order_test.dart`, karena `flutter analyze` dan
+  `flutter test` tidak pernah menjalankan `main()` — itulah sebabnya build APK
+  hijau sementara aplikasinya mati.
+- Web: **client tamu tidak bisa menyambung dan tab Berita tidak bisa dimuat.**
+  Rilis 6.5.4 memindahkan seluruh layanan ke `xydesk.my.id` (49 berkas, 127
+  kemunculan) tetapi melewatkan `web_deploy/static/_headers`, yang memegang
+  Content-Security-Policy produksi. Bundle live sudah memanggil
+  `signal.xydesk.my.id` dan `news.xydesk.my.id`, sementara `connect-src` masih
+  mengizinkan domain lama yang DNS-nya sudah mati — browser memblokir keduanya.
+  Build hijau, deploy hijau, halaman menjawab 200; yang rusak hanya terlihat di
+  dalam browser. Kini dijaga `web/test/csp.test.js` yang membandingkan CSP
+  terhadap origin yang benar-benar dipanggil kode, dijalankan CI di job Web.
+- Web: **layar Hubungkan bisa terkunci permanen.** `App.tsx` menonaktifkan
+  tombol Konek selama fase `pairing`/`negotiating`, dan `web/src/rtc.ts` tidak
+  punya satu pun `setTimeout` — jadi host yang tidak pernah menjawab membuat
+  fase tidak pernah berubah dan tombol tidak pernah aktif lagi; satu-satunya
+  jalan keluar adalah memuat ulang halaman. Aplikasi HP sudah menutup lubang
+  ini dengan watchdog 20 detik. Kini web punya watchdog yang sama (20 detik,
+  angka identik supaya dua platform gagal bersamaan dengan pesan serupa).
+- Web: **tidak ada cara mengatakan "gagal".** `RtcPhase` web tidak punya fase
+  `error` — hanya `ended` ("Sesi berakhir"), yang terdengar seperti akhir normal
+  padahal tidak ada sesi yang pernah dimulai. Kegagalan handshake WebSocket,
+  server signaling yang tidak terjangkau, dan ICE yang gagal setelah seluruh
+  percobaan pemulihan semuanya jatuh ke label yang sama dan tidak memberi tahu
+  pengguna apa yang harus diperbaiki. Kini ada fase `error` + `lastError`
+  (cermin `RtcService.lastError` di Flutter), soket yang putus saat sesi
+  berjalan dibedakan dari akhir yang rapi, dan penolakan pairing menyertakan
+  petunjuk huruf besar/kecil seperti di aplikasi HP.
+- Aplikasi: **status koneksi signaling pernah berbohong.**
+  `SignalingClient.isConnected` bernilai `_ch != null`, yang diisi tepat setelah
+  `WebSocketChannel.connect(...)` — panggilan itu lazy dan langsung kembali,
+  jadi properti ini mengklaim "tersambung" sebelum soket terbuka dan tetap
+  mengklaimnya setelah handshake gagal. Kini menunggu `channel.ready` (batas 10
+  detik) sebelum mengklaim apa pun atau mengirim `hello`/`pair`. Sebelumnya
+  kedua pesan itu hanya di-buffer dan bisa hilang tanpa jejak bila soket gagal,
+  meninggalkan pengguna menatap "MENGHUBUNGI HOST…" sampai watchdog menyerah.
+  `_send` juga tidak lagi melempar dari dalam callback (yang hanya berakhir di
+  log, tak terlihat pengguna) — kegagalan kirim kini menandai putus dan
+  memicu pesan galat yang sebenarnya.
+- Web: **`robots.txt` masih menunjuk sitemap di domain lama** yang sudah mati,
+  jadi mesin pencari kehilangan peta situs setelah migrasi 6.5.4.
+- Installer Windows: `AppPublisherURL` masih domain lama (muncul di dialog
+  installer). `news/seed.sql` masih memuat 7 URL sampul artikel di domain lama
+  — menjalankan seed ulang akan menghasilkan semua sampul mati. `SETUP.md`
+  masih menyebut zona lama, dan `news/README.md` masih menyebut pengirim email
+  di domain lama (kini merujuk secret `EMAIL_FROM`, satu-satunya tempat nilai
+  yang benar bisa dipastikan).
+
+### Diubah
+- Backend / Edge: **kredensial TURN kini diambil bersamaan, bukan beranting,
+  dan setiap penyedia punya batas waktu 2,5 detik.** Sebelumnya
+  `collectIceServers` memanggil penyedia satu per satu di dalam `for` + `await`
+  tanpa satu pun batas waktu, jadi waktu tempuhnya adalah JUMLAH seluruh
+  penyedia. Karena client membatasi `/turn-ice` pada 5 detik dan gagal secara
+  diam-diam (`catch (_) => const []`), satu penyedia REST yang lambat membuat
+  seluruh permintaan lewat batas: client jatuh ke STUN saja tanpa pesan apa
+  pun, dan dua perangkat di belakang NAT simetris/CGNAT tidak pernah tersambung
+  — persis kegagalan yang ingin ditutup fitur multi-penyedia ini. Penyedia yang
+  melewati batas waktu kini dilaporkan di `providers` dengan `ok: false`, dan
+  yang lain tetap jalan. Urutan keluaran tetap mengikuti deklarasi
+  `TURN_PROVIDERS` (bukan urutan selesai) supaya balasan deterministik.
+- Desktop: **warna aksen shell Windows disamakan dengan aplikasi dan web.**
+  `desktop/app/globals.css` masih memakai `#6142d6` (ungu pra-rebrand)
+  sementara Flutter dan web sudah pindah ke `#7c3aed` pada design pass Sep 2026,
+  dan `--accent-deep` / `--accent-2` tidak ada sama sekali. Akibatnya setiap
+  aksen, tombol aktif, dan pil nav di Windows warnanya berbeda dari HP dan web.
+  `--warning` / `--danger` ikut disamakan ke varian teks untuk latar terang.
+- Web: **warna status disamakan dengan aplikasi** (`--success` `#167347`,
+  `--warning` `#855400`, `--danger` `#a52a36`). Sebelumnya web memakai
+  `#15803d` / `#b45309` / `#b91c1c`, yang bukan warna dasar aplikasi maupun
+  varian terangnya — murni hanyut. Warna permukaan web (`--bg`, `--overlay`,
+  `--input`) SENGAJA tidak disamakan: itu keputusan design pass Sep 2026 dan
+  sekarang tercatat terbuka di `docs/DESIGN.md`, bukan dikubur.
+- Dokumentasi: **`docs/DESIGN.md` akhirnya ada.** `lib/core/tokens.dart:6`
+  merujuk berkas ini sejak awal ("Semua nilai di sini cocok dengan
+  `docs/DESIGN.md`") tetapi berkasnya tidak pernah dibuat — jadi tiga platform
+  menyimpan token sendiri-sendiri tanpa rujukan bersama, dan itulah akar
+  penyimpangan warna di atas. Isinya sekarang: hukum visual, tabel token kanonik
+  untuk tiga platform, penjelasan kenapa warna status punya dua varian, dan
+  bagian "Penyimpangan yang disengaja" supaya selisih yang memang keputusan
+  desain tidak "dirapikan" orang berikutnya yang mengiranya kelupaan.
+- Repo: `.wrangler/` (state + cache lokal Miniflare, 10 berkas biner) dan
+  `desktop/tsconfig.tsbuildinfo` dikeluarkan dari git dan dimasukkan
+  `.gitignore`. Keduanya artefak mesin lokal: isinya berbeda di setiap mesin,
+  tidak pernah dibaca CI, dan `tsbuildinfo` membuat working tree kotor hanya
+  karena seseorang menjalankan typecheck.
+
 ### Ditambahkan
 - Backend / Edge: **TURN multi-penyedia sebagai cadangan berlapis.** Dulu
   `/turn-ice` terkunci ke satu penyedia (Cloudflare Realtime) dan menjawab

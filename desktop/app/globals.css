@@ -2,6 +2,16 @@
    kontras kuat, ungu hanya aksen. Token identik dengan palet terang di
    lib/core/tokens.dart (sumber kebenaran desain). */
 
+/* Token desain — SALINAN dari lib/core/tokens.dart (tema "Paper").
+   Sumber kebenaran tunggal ada di docs/DESIGN.md. Kalau token aplikasi
+   berubah, ubah berkas itu lalu salin ke sini dan ke web/src/style.css.
+
+   Sebelumnya shell desktop tertinggal rebrand Sep 2026: --accent masih
+   #6142d6 (ungu lama) sementara Flutter dan web sudah #7c3aed, dan
+   --accent-deep / --accent-2 tidak ada sama sekali. Akibatnya setiap aksen,
+   tombol aktif, dan pil nav di Windows warnanya beda dari HP dan web.
+   --warning / --danger juga memakai warna status mentah, bukan varian teks
+   untuk latar terang yang dipakai aplikasi. */
 :root {
   --bg: #fafaf9;
   --raised: #ffffff;
@@ -9,14 +19,16 @@
   --input: #f2f2f0;
   --line: #e7e7e4;
   --ink: #18181b;
-  --accent: #6142d6;
-  --accent-soft: rgba(97, 66, 214, 0.1);
+  --accent: #7c3aed;
+  --accent-deep: #5b21b6;
+  --accent-2: #a78bfa;
+  --accent-soft: rgba(124, 58, 237, 0.12);
   --text-hi: #18181b;
   --text-mid: #52525b;
   --text-low: #9a9aa2;
   --success: #167347;
-  --warning: #b45309;
-  --danger: #b91c1c;
+  --warning: #855400;
+  --danger: #a52a36;
   --radius: 14px;
   --radius-sm: 10px;
   --sidebar-w: 224px;

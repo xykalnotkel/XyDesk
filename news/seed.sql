@@ -19,7 +19,7 @@ Mulai versi 2.4, engine punya control API lokal di 127.0.0.1 dengan token acak p
 Yang penting: keputusan arsitektur tidak berubah. Capture DXGI dan encode tetap di Rust. Electron hanya cangkang — desktopCapturer Chromium jauh di atas target latency 40 ms, jadi media tidak boleh lewat sana.
 
 Aksi yang tersedia dari panel: password acak baru, password kustom, dan akhiri sesi. Stop-session semantiknya sama dengan bye dari client — koneksi ditutup dan peer wajib pairing ulang.',
-  'https://app.xystudio.my.id/news/covers/desktop-shell.jpg',
+  'https://app.xydesk.my.id/news/covers/desktop-shell.jpg',
   'rilis',
   'Haekal Saputra',
   1
@@ -33,7 +33,7 @@ Aksi yang tersedia dari panel: password acak baru, password kustom, dan akhiri s
 Implementasi NVENC di host kini terkabel ke jalur capture: frame pertama menentukan resolusi, NVENC diinisialisasi bila dimensi genap dan driver NVIDIA tersedia, dan konversi RGBA ke NV12 (BT.601 full-range) dilakukan sebelum encode. Kalau NVENC gagal — tidak ada GPU, driver lama — jalur fallback openh264 tetap berjalan tanpa crash.
 
 Panel host menampilkan status encoder langsung: badge NVENC menyala kalau hardware aktif. Yang belum berubah: angka glass-to-glass di jaringan nyata masih harus dibuktikan di lab. Targetnya tetap 40 ms di LAN, dan kami tidak akan klaim "cocok untuk game" sebelum fotonya ada.',
-  'https://app.xystudio.my.id/news/covers/nvenc.jpg',
+  'https://app.xydesk.my.id/news/covers/nvenc.jpg',
   'teknik',
   'Haekal Saputra',
   1
@@ -47,7 +47,7 @@ Panel host menampilkan status encoder langsung: badge NVENC menyala kalau hardwa
 Protokol kami (docs/LATENCY.md): host menampilkan jam milidetik di layar, client memotret layar host dan layar HP berjejer, lalu selisih jam di kedua frame dibaca langsung. Sepuluh pasang foto, ambil median. Kalau ada encode hardware, decoder hardware, dan jaringan LAN yang sehat, angka di bawah 40 ms harusnya tercapai — tapi sampai fotonya ada, itu tetap dugaan.
 
 Status hari ini: loop capture-encode-RTP-terima sudah terbukti di test loopback otomatis, benchmark encode sudah punya angka (30 ms openh264 di 640x360), dan angka end-to-end masih kosong. Begitu lab Windows jalan, hasilnya akan dipublikasikan di sini — apapun hasilnya.',
-  'https://app.xystudio.my.id/news/covers/latency.jpg',
+  'https://app.xydesk.my.id/news/covers/latency.jpg',
   'teknik',
   'Haekal Saputra',
   1
@@ -57,7 +57,7 @@ Status hari ini: loop capture-encode-RTP-terima sudah terbukti di test loopback 
   'XyDesk 2.5 — monokrom, berita di mana-mana, lisensi terbuka',
   'Tampilan baru dominan hitam-putih dengan aksen ungu, berita yang sama di Android/Desktop/Web, logo X tanpa glow, dan kode sumber berlisensi Apache 2.0.',
   'Versi 2.5 adalah rilis "beres-beres": tampilan, konsistensi, dan keterbukaan.\n\nTampilan. Semua platform kini memakai bahasa visual yang sama — dominan hitam-putih dengan ungu hanya sebagai aksen kecil. Logo X yang selama ini dipakai di sampul berita menjadi logo resmi, tanpa glow dan tanpa bayangan. Splash Android mengikuti tema terang, ikon navigasi mengikuti warna tema.\n\nBerita. Satu umpan berita yang sama tampil di Android, Desktop, dan Web — lengkap dengan like, komentar, dan bagikan. Di web, setiap berita punya meta OpenGraph sendiri sehingga tautan yang dibagikan ke WhatsApp atau X tampil dengan judul, ringkasan, dan sampul yang benar. Perbaikan penting: sebelumnya berita di web gagal dimuat ("Failed to fetch") karena aturan Content-Security-Policy belum mengizinkan domain berita — sekarang sudah diizinkan dan diverifikasi live.\n\nLisensi. Kode sumber XyDesk kini berlisensi Apache 2.0. Daftar lisensi perangkat lunak pihak ketiga (Flutter, Electron, Lucide, Inter, dan lain-lain) bisa dibaca di halaman Legal di semua platform.\n\nVersi: Android 2.5.0 (build 19), Web 2.5.0, Desktop 2.5.0. Setiap rilis berikutnya akan selalu punya catatan seperti ini di Berita.',
-  'https://app.xystudio.my.id/news/covers/v25.jpg',
+  'https://app.xydesk.my.id/news/covers/v25.jpg',
   'rilis',
   'Haekal Saputra',
   1
@@ -123,7 +123,7 @@ YANG MASIH BELUM
 Layar sesi, HUD, mouse dan keyboard virtual belum terbukti mengendalikan host sungguhan. Audio dan multi-monitor belum diuji di perangkat keras. Push notifikasi belum dibuktikan. Latency di jaringan nyata belum terukur.
 
 Empat hal itu adalah pekerjaan berikutnya, dan tidak satu pun bisa diselesaikan dari editor kode. Semuanya butuh PC Windows sungguhan dan HP di tangan. Sampai itu terjadi, tombol unduh tetap mati.',
-  'https://app.xystudio.my.id/news/covers/changelog-620.jpg',
+  'https://app.xydesk.my.id/news/covers/changelog-620.jpg',
   'rilis',
   'Haekal Saputra',
   1
@@ -164,7 +164,7 @@ Tombol unduh masih ditutup. XyDesk belum masuk masa uji coba terbuka. Halaman Un
 CATATAN VERSI
 
 Aplikasi Android, host Windows, aplikasi desktop, dan web sama-sama di versi 6.2.1. Tidak ada perubahan pada jalur video maupun suara, jadi kualitas dan kecepatan sesi sama seperti 6.2.0.',
-  'https://app.xystudio.my.id/news/covers/changelog-621.jpg',
+  'https://app.xydesk.my.id/news/covers/changelog-621.jpg',
   'rilis',
   'Haekal Saputra',
   1
@@ -220,7 +220,7 @@ Daftar lisensi yang panjang tidak lagi ikut terunduh saat kamu membuka halaman d
 UNDUHAN
 
 Tombol unduh masih ditutup. XyDesk belum masuk masa uji coba terbuka.',
-  'https://app.xystudio.my.id/news/covers/changelog-622.jpg',
+  'https://app.xydesk.my.id/news/covers/changelog-622.jpg',
   'rilis',
   'Haekal Saputra',
   1

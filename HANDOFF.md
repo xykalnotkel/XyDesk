@@ -29,6 +29,36 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Client Flutter
 
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Pendeteksi "sudah connected tapi belum ada frame
+  video"** di `lib/webrtc/rtc_service.dart` — watchdog yang ada sekarang
+  dimatikan begitu `RTCPeerConnectionStateConnected` tiba
+  (`_emit` membatalkan `_watchdog` untuk semua fase selain pairing/negotiating),
+  padahal fase itu dipicu oleh transport ICE/DTLS, BUKAN oleh frame video
+  pertama. Kalau track video tidak pernah sampai, pengguna menatap layar hitam
+  yang mengklaim tersambung dan tidak ada batas waktunya. Repo ini pernah kena
+  persis bug ini (README: "koneksi sukses tapi layar kosong") tapi jaringnya
+  hanya di sisi host (`host/tests/loopback.rs`). Bahan sudah ada:
+  `SessionStats.hasVideo` dan `resolutionLabel` = 'Belum ada gambar' — tinggal
+  dijadikan pemicu, bukan cuma label. Usulan: setelah `connected`, timer 10
+  detik; bila `hasVideo` masih false, tampilkan banner jujur + tawarkan
+  `selectDisplay`/retry, JANGAN meruntuhkan sesi (transport-nya hidup, bisa jadi
+  hanya monitor sumbernya salah). **Tidak dikerjakan di sesi audit ini karena
+  toolchain Flutter tidak ada di lingkungannya** — perubahan Dart di sana hanya
+  bisa diverifikasi lewat CI, dan menambah logika timer tanpa bisa menjalankan
+  `flutter test` lebih berisiko daripada meninggalkannya tercatat.
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Jalankan `flutter analyze --fatal-infos
+  --fatal-warnings` + `flutter test` untuk sesi audit 6 Sep** — sesi itu
+  mengubah `lib/main.dart`, `lib/core/pip_controller.dart`,
+  `lib/webrtc/signaling_client.dart`, `lib/webrtc/rtc_service.dart` dan menambah
+  `test/core/bootstrap_order_test.dart` TANPA bisa mengompilasi (tidak ada
+  Flutter di lingkungannya). Yang sudah diverifikasi di sana: sintaks kelima
+  berkas bersih lewat Dart SDK 3.13.3 (`dart format --output=none` mem-parse
+  semua tanpa galat), dan logika test barunya dijalankan ulang sebagai skrip
+  Python terhadap berkas asli (semua assertion lolos). Yang BELUM: resolusi tipe,
+  `ch.ready` pada `web_socket_channel` 3.x, dan 54 test lama. Perhatikan juga
+  CI memakai Dart 3.12.2 (Flutter 3.44.9) sedangkan SDK pemeriksa 3.13.3 —
+  formatter-nya berbeda, jadi JANGAN menjalankan `dart format` dari SDK lain ke
+  `lib/`: 4 dari 8 berkas yang tidak tersentuh ikut "berubah" di 3.13.3.
 - [x] (dari Galih - XySpace Team, 2026-09-03) — **Dikerjakan Galih atas arahan
   operator di chat (lintas area; aturan 1 sesi = 1 role dilonggarkan untuk ini):**
   `pair` sekarang mengirim `name` + `platform`. Berkas:
@@ -266,6 +296,26 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Fix boot Android butuh APK baru untuk sampai ke
+  pengguna.** `lib/main.dart` di `main` sudah benar, tapi aplikasi yang
+  terpasang di HP masih build lama yang berhenti di splash. Butuh: keputusan
+  operator soal nomor versi (aturan #1 — agent tidak boleh memilih), lalu
+  dispatch Build → Release. Sampai itu terjadi, pengguna yang terjebak di splash
+  tidak punya jalan keluar.
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Empat cabang mati, semuanya tertinggal ~100 ribu
+  baris dari `main`**: `feat/nvenc`, `feat/installer-vdd-modern`,
+  `fix/video-loopback-fase0`, `audit/perbaikan-2026-09-01`. Isi `feat/nvenc`
+  SUDAH ada di `main` (`host/src/nvenc.rs` 428 baris + `nvenc_types.rs` 2296
+  baris + `nvenc_config.rs` 353 baris, dipakai `screen.rs:568` dengan fallback
+  openh264) — cabangnya sisa sejarah, bukan pekerjaan aktif. Hapus atau rebase;
+  kalau dibiarkan, agent berikutnya akan mengira hardware encode belum
+  dikerjakan padahal sudah.
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **`desktop/tsconfig.tsbuildinfo` dan
+  `web_deploy/.wrangler/` dikeluarkan dari git di sesi ini** (`git rm --cached`
+  + entri `.gitignore`). Bukan penghapusan dari disk — hanya dari indeks.
+  Efeknya ke CI: tidak ada, karena deploy memakai artefak build, bukan isi git.
+  Perlu diperhatikan kalau ada skrip yang mengandaikan berkas itu ada di
+  checkout segar.
 - [ ] (dari Operator - XyDesk Team, 2026-09-06) — **INFO: Dart/Flutter bisa
   diverifikasi di mesin Linux biasa, tanpa Android Studio.** Resepnya: unduh
   Flutter persis versi `env.FLUTTER_VERSION` di `build.yml` (saat ini 3.44.9
@@ -505,6 +555,26 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Backend / Edge
 
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Verifikasi pengirim email produksi.** Dua jalur
+  email punya default yang tidak aman untuk produksi:
+  `cloudflare/src/authstore.js:203` memakai
+  `env.RESEND_FROM || 'XyDesk <onboarding@resend.dev>'` — `onboarding@resend.dev`
+  adalah pengirim uji Resend yang HANYA bisa mengirim ke alamat terverifikasi
+  milik akun sendiri, jadi kalau secret itu kosong OTP email tidak akan pernah
+  sampai ke pengguna sungguhan (dan gagalnya tidak berbunyi).
+  `news/src/worker.js:438` lebih jujur: `if (!env.RESEND_API_KEY ||
+  !env.EMAIL_FROM) return` — diam-diam melewati pengiriman. Keduanya perlu
+  dipastikan secret-nya terpasang. **Catatan: `news/README.md` dulu menyebut
+  `news@mail.xystudio.my.id`, domain yang dilepas di rilis 6.5.4** — dokumen itu
+  sudah diperbaiki agar merujuk secret, tapi nilai sebenarnya hanya bisa
+  dipastikan dari Worker, bukan dari repo.
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **`collectIceServers` masih belum punya secret TURN
+  terpasang** (sudah tercatat di sesi `SESI-20260906-OPERATOR-TURN`). Sesi audit
+  ini membuat pengambilannya paralel + berbatas waktu 2,5 detik per penyedia,
+  tapi itu tidak mengubah kenyataan: tanpa satu pun secret, `/turn-ice` tetap
+  menjawab 503 dan klien tetap jalan STUN saja. Prioritas penyedia ber-secret
+  statis (ExpressTurn/coturn) — hanya jenis itu yang tidak butuh panggilan
+  jaringan, jadi selalu hidup walau penyedia lain mogok.
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **`signaling/` (hub Go)
   MENGHAPUS field asing saat relay, jadi label perangkat tidak sampai ke host
   lewat hub dev.** `hub.go` `relay(from, toID, msg Message)` men-serialize
@@ -722,6 +792,35 @@ _(kosong)_
 
 ## Untuk: Docs & Audit
 
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **`docs/DESIGN.md` dibuat di sesi ini** (sebelumnya
+  dirujuk `lib/core/tokens.dart:6` tapi tidak pernah ada). Tiga keputusan di
+  dalamnya sengaja TIDAK diambil oleh agent dan butuh mata operator:
+  (1) skala radius Flutter 8/12/16/20 vs CSS 10/14/20 — menyamakannya mengubah
+  bentuk setiap kartu dan tombol di web + desktop; (2) web & desktop masih
+  memakai garis pemisah (`--line`, ±282 pemakaian di web, ±51 di desktop)
+  padahal hukum "Quiet Surface" melarangnya — menghapusnya adalah perombakan
+  visual, bukan perbaikan token; (3) navigasi tidak sama jumlahnya (HP 4 item
+  dengan "Akun", desktop 5 item dengan "Profil"+"Pengaturan" terpisah, web 2).
+  Ketiganya tercatat di bagian "Penyimpangan yang disengaja" supaya tidak
+  "dirapikan" orang berikutnya yang mengira kelupaan.
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Permukaan web sengaja dibiarkan berbeda dari
+  aplikasi.** `web/src/style.css` memakai `--bg: #ffffff` / `--overlay: #f5f3ff`
+  / `--input: #ffffff` sementara aplikasi `#FAFAF9` / `#FFFFFF` / `#F2F2F0`.
+  Berkas itu sendiri mencatat alasannya ("design pass 2026-09"), jadi sesi audit
+  ini TIDAK menimpanya — hanya warna status yang disamakan karena itu murni
+  hanyut (bukan warna dasar aplikasi maupun varian terangnya). Konsekuensinya
+  harus dikatakan jujur ke operator: **web dan aplikasi tidak terlihat persis
+  sama.** Kalau itu tidak diinginkan, samakan ke nilai Paper di `docs/DESIGN.md`
+  lalu hapus catatan penyimpangannya.
+- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Laporan audit lengkap ada di
+  `docs/AUDIT-2026-09-06.md`** (paritas UI/UX tiga platform, diagnosis stuck,
+  dan keputusan C++ dengan bukti). Kesimpulan bagian C: **jangan menambah C++.**
+  C sudah ada dan jalan (`host/build.rs` mengompilasi libopus 1.5.2 dari
+  `host/vendor/opus/` lewat crate `cc`); NVENC sudah selesai di Rust murni via
+  FFI dinamis; satu-satunya kebutuhan C++ nyata (driver IddCx) sudah diputuskan
+  untuk tidak ditulis karena butuh EV code-signing berbayar — installer memakai
+  `ge9/IddSampleDriver` (MIT+CC0). Yang kurang bukan bahasa baru melainkan
+  angka latency glass-to-glass yang belum pernah diukur.
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **Catat batas gerbang host di
   `docs/CI.md`.** `host-test` menjalankan `cargo fmt/clippy/test` di ubuntu, jadi
   SEMUA kode di balik `cfg(target_os = "windows")` (DXGI, WASAPI, SendInput,

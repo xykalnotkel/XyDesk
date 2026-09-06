@@ -92,7 +92,13 @@ curl -X POST "https://news.xydesk.my.id/api/admin/publish" \
 
 Saat terbit, worker **otomatis** (asinkron, `waitUntil`):
 1. Kirim push OneSignal ke semua pengguna opt-in (judul + gambar sampul).
-2. Kirim email Resend ke seluruh `subscribers` (dari `news@mail.xystudio.my.id`).
+2. Kirim email Resend ke seluruh `subscribers`. Pengirimnya dibaca dari secret
+   `EMAIL_FROM` (`news/src/worker.js`), bukan ditulis di kode — kalau secret itu
+   kosong, pengiriman dilewati sama sekali (`if (!env.RESEND_API_KEY ||
+   !env.EMAIL_FROM) return`). Dokumen ini dulu menyebut
+   `news@mail.xystudio.my.id`; domain itu dilepas pada rilis 6.5.4, jadi nilai
+   `EMAIL_FROM` yang benar hanya bisa dipastikan dari secret Worker yang
+   terpasang, bukan dari repo.
 
 Secret Worker (via `wrangler secret put`): `ADMIN_TOKEN`, `ONESIGNAL_APP_ID`,
 `ONESIGNAL_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`.

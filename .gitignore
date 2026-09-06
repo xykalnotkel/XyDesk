@@ -65,3 +65,18 @@ ios/Runner/GoogleService-Info.plist
 /ios/
 /web_deploy/site/
 .flutter-plugins
+
+# ── Artefak tooling yang pernah ter-commit tanpa sengaja ──
+# `.wrangler/` adalah state + cache lokal Miniflare (sqlite) milik wrangler dev.
+# 10 berkas biner sempat masuk git; isinya berbeda di setiap mesin dan tidak
+# pernah dibaca CI (deploy memakai `web_deploy/site/` hasil build).
+.wrangler/
+**/.wrangler/
+
+# Info build inkremental TypeScript. Sempat ter-commit dan berubah setiap kali
+# `tsc -b`/`npm run typecheck` dijalankan, jadi ia membuat working tree kotor
+# hanya karena seseorang memeriksa kode.
+*.tsbuildinfo
+
+# Output build web — CI mengunggahnya sebagai artefak, bukan dari git.
+/web/dist/
