@@ -587,7 +587,7 @@ class _DevLogScreenState extends State<DevLogScreen> {
       appBar: AppBar(
         title: const Text('Log pengembang'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, size: 20),
+          icon: const Icon(LucideIcons.arrowLeft, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -599,7 +599,7 @@ class _DevLogScreenState extends State<DevLogScreen> {
                 isLabelVisible: errors > 0,
                 label: Text('$errors'),
                 backgroundColor: const Color(0xFFD9646E),
-                child: const Icon(Icons.bug_report_outlined, size: 19),
+                child: const Icon(LucideIcons.bug, size: 19),
               ),
               onPressed: () => _copy(
                 DevLog.exportErrors(),
@@ -611,12 +611,12 @@ class _DevLogScreenState extends State<DevLogScreen> {
           ),
           IconButton(
             tooltip: 'Salin semua',
-            icon: const Icon(Icons.copy_rounded, size: 18),
+            icon: const Icon(LucideIcons.copy, size: 18),
             onPressed: () => _copy(DevLog.export(), 'Semua log disalin'),
           ),
           IconButton(
             tooltip: 'Bersihkan',
-            icon: const Icon(Icons.delete_outline_rounded, size: 19),
+            icon: const Icon(LucideIcons.trash2, size: 19),
             onPressed: () => setState(DevLog.clear),
           ),
           const SizedBox(width: 4),

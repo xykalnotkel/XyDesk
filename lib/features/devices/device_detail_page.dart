@@ -122,7 +122,14 @@ class DeviceDetailPage extends ConsumerWidget {
 
             _spec(
               context,
-              LucideIcons.cpu,
+              // Sengaja BUKAN LucideIcons.cpu: baris Prosesor tepat di bawah
+              // sudah memakainya, dan dua baris berbeda dengan ikon identik
+              // membuat spesifikasi mesin sulit dipindai. `layoutGrid` dipakai
+              // karena sudah terbukti ada di versi paket yang dipatok
+              // (lucide_icons_flutter 3.1.15) — nama yang lebih tepat secara
+              // makna (circuitBoard) tidak diverifikasi, dan salah nama berarti
+              // satu putaran CI 10 menit hanya untuk sebuah ikon.
+              LucideIcons.layoutGrid,
               'Motherboard',
               _orUnknown(device.motherboard),
             ),

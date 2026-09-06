@@ -505,7 +505,6 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                   children: [
                     _PillAction(
                       icon: LucideIcons.heart,
-                      iconFilled: _liked,
                       label: '$_likeCount',
                       onTap: _toggleLike,
                       active: _liked,
@@ -829,14 +828,12 @@ class _PillAction extends StatelessWidget {
     required this.label,
     required this.onTap,
     required this.active,
-    this.iconFilled = false,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   final bool active;
-  final bool iconFilled;
 
   @override
   Widget build(BuildContext context) {
@@ -857,10 +854,11 @@ class _PillAction extends StatelessWidget {
                 duration: const Duration(milliseconds: 160),
                 curve: Curves.easeOutBack,
                 child: Icon(
-                  // Hati kosong berubah jadi hati penuh saat disukai. Dulu
-                  // parameter iconFilled ada tapi tidak pernah dipakai, jadi
-                  // tombolnya tidak pernah kelihatan aktif.
-                  iconFilled && active ? Icons.favorite : icon,
+                  // Lucide hanya punya satu bentuk hati (stroke, tanpa varian
+                  // filled), jadi keadaan "disukai" dinyatakan lewat warna
+                  // aksen + animasi skala 1.12 di bawah — bukan lewat glyph
+                  // Material yang berat dan berbeda dari seluruh UI.
+                  icon,
                   size: 15,
                   color: active ? c.accent : c.textMid,
                 ),
