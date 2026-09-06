@@ -84,6 +84,7 @@ class HostMeta {
     this.gpu,
     this.ram,
     this.storage,
+    this.hardwareReported = false,
   });
 
   final List<HostDisplay> displays;
@@ -98,6 +99,14 @@ class HostMeta {
   final String? ram;
   final String? storage;
 
+  /// Benar bila host mengirim blok `hardware` sama sekali.
+  ///
+  /// Membedakan dua keadaan yang sama-sama menghasilkan null: host versi lama
+  /// (sebelum 6.7.0) tidak punya pembaca spesifikasi, sedangkan host baru
+  /// mencoba membaca dan gagal untuk nilai tertentu. Yang pertama tidak boleh
+  /// ditampilkan sebagai "Tidak terdeteksi" — itu menuduh mesin pengguna.
+  final bool hardwareReported;
+
   factory HostMeta.fromJson(Map<String, dynamic> j) => HostMeta(
     displays: [
       for (final d in j['displays'] as List? ?? [])
@@ -111,6 +120,7 @@ class HostMeta {
     gpu: j['hardware']?['gpu'] as String?,
     ram: j['hardware']?['ram'] as String?,
     storage: j['hardware']?['storage'] as String?,
+    hardwareReported: j['hardware'] is Map,
   );
 }
 

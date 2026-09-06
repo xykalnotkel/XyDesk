@@ -24,6 +24,7 @@ class Device {
     this.ram,
     this.displays = const [],
     this.storage,
+    this.specsReported = false,
   });
 
   final String id;
@@ -48,6 +49,11 @@ class Device {
   final List<DisplayInfo> displays;
   final String? storage;
 
+  /// Benar bila host pernah melaporkan blok spesifikasinya. False = host versi
+  /// lama; layar detail menyembunyikan seksi hardware alih-alih menulis
+  /// "Tidak terdeteksi" untuk mesin yang tidak pernah ditanya.
+  final bool specsReported;
+
   bool get isOnline => status == DeviceStatus.online;
 
   /// ID diformat "123 456 789" agar mudah dibaca.
@@ -70,6 +76,7 @@ class Device {
     List<DisplayInfo>? displays,
     String? storage,
     String? resolution,
+    bool? specsReported,
   }) => Device(
     id: id,
     name: name ?? this.name,
@@ -85,6 +92,7 @@ class Device {
     ram: ram ?? this.ram,
     displays: displays ?? this.displays,
     storage: storage ?? this.storage,
+    specsReported: specsReported ?? this.specsReported,
   );
 
   Map<String, dynamic> toJson() => {
@@ -102,6 +110,7 @@ class Device {
     'ram': ram,
     'displays': displays.map((d) => d.toJson()).toList(),
     'storage': storage,
+    'specsReported': specsReported,
   };
 
   factory Device.fromJson(Map<String, dynamic> j) => Device(
@@ -117,7 +126,13 @@ class Device {
     lastSeen: j['lastSeen'] == null
         ? null
         : DateTime.tryParse(j['lastSeen'] as String),
-    resolution: j['res'] as String?,
+    // Migrasi kejujuran: data tersimpan dari versi lama bisa berisi default
+    // karangan '1920x1080' yang tidak pernah dibaca dari mesin mana pun. Bila
+    // host belum pernah melaporkan spesifikasinya, klaim itu tidak dipertahankan
+    // — lebih baik kosong dan terisi nyata saat sesi berikutnya.
+    resolution: (j['specsReported'] as bool? ?? false)
+        ? j['res'] as String?
+        : null,
     remembered: j['remembered'] as bool? ?? false,
     motherboard: j['motherboard'] as String?,
     cpu: j['cpu'] as String?,
@@ -128,6 +143,7 @@ class Device {
             .toList() ??
         [],
     storage: j['storage'] as String?,
+    specsReported: j['specsReported'] as bool? ?? false,
   );
 }
 
@@ -271,6 +287,7 @@ class DeviceRepo extends StateNotifier<List<Device>> {
   /// disintesis di client.
   Future<void> updateHardwareInfo(
     String id, {
+    bool? specsReported,
     String? resolution,
     String? motherboard,
     String? cpu,
@@ -291,6 +308,7 @@ class DeviceRepo extends StateNotifier<List<Device>> {
 
     final updated = current.copyWith(
       resolution: resolution ?? current.resolution,
+      specsReported: specsReported ?? current.specsReported,
       motherboard: motherboard ?? current.motherboard,
       cpu: cpu ?? current.cpu,
       gpu: gpu ?? current.gpu,

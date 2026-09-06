@@ -108,12 +108,15 @@ class DeviceDetailPage extends ConsumerWidget {
           ),
 
           // ── Spesifikasi Hardware ──
-          // Selalu ditampilkan, termasuk saat host belum melaporkan nilainya.
-          // Disembunyikan = pengguna tidak bisa membedakan "host tidak
-          // menjawab" dari "kita tidak pernah bertanya". Baris yang kosong
-          // menulis "Tidak terdeteksi" — jujur, dan jadi penanda bug bila
-          // seharusnya terbaca.
-          ...[
+          // Ditampilkan bila host MELAPORKAN spesifikasinya (host >= 6.7.0)
+          // atau sudah ada data monitor tersimpan. Di dalam seksi, semua baris
+          // selalu muncul: host yang gagal membaca satu nilai menulis "Tidak
+          // terdeteksi", dan itu informasi — bukan lubang yang disembunyikan.
+          //
+          // Host versi lama tidak pernah ditanya, jadi seksinya tidak muncul
+          // sama sekali; menulis "Tidak terdeteksi" di situ akan menuduh mesin
+          // pengguna atas keterbatasan aplikasi.
+          if (device.specsReported || device.displays.isNotEmpty) ...[
             const SizedBox(height: Gap.xl),
             const SectionLabel('Spesifikasi Hardware'),
 

@@ -329,6 +329,7 @@ class _SessionPageState extends ConsumerState<SessionPage>
         .read(deviceRepoProvider.notifier)
         .updateHardwareInfo(
           widget.deviceId,
+          specsReported: meta.hardwareReported,
           resolution: resolutionLabel,
           motherboard: meta.motherboard,
           cpu: meta.cpu,
