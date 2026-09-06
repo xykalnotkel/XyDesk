@@ -564,6 +564,16 @@ jobs:
       - name: Pasang dependensi
         working-directory: web
         run: npm ci
+      # CSP produksi (`web_deploy/static/_headers`) diperiksa terhadap origin
+      # yang benar-benar dipanggil kode. Rilis 6.5.4 memindahkan domain tapi
+      # melewatkan berkas ini: bundle live memanggil `signal.xydesk.my.id`
+      # sementara `connect-src` masih mengizinkan `signal.xystudio.my.id` yang
+      # DNS-nya sudah mati. Build hijau, deploy hijau, halaman 200 — yang
+      # rusak hanya terlihat di dalam browser, jadi tidak ada langkah lain
+      # yang bisa menangkapnya.
+      - name: Uji CSP & sisa domain (web)
+        working-directory: web
+        run: npm test
       - name: Build Web Release
         working-directory: web
         env:

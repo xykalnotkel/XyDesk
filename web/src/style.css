@@ -62,9 +62,22 @@
   --text-hi: #18181b;
   --text-mid: #52525b;
   --text-low: #9a9aa2;
-  --success: #15803d;
-  --warning: #b45309;
-  --danger: #b91c1c;
+  /* Warna status = varian teks untuk latar terang dari lib/core/tokens.dart
+     (successTextLight / warningTextLight / dangerTextLight). Sebelumnya web
+     memakai #15803d / #b45309 / #b91c1c, yang bukan warna dasar aplikasi
+     (#4FA97A dst., dirancang untuk Graphite) MAUPUN varian terangnya — jadi
+     murni hanyut, bukan keputusan desain. tokens.dart menjelaskan kenapa
+     varian terpisah itu ada: warna dasar terlalu rendah kontrasnya bila
+     dipakai sebagai teks di Paper.
+
+     CATATAN: --bg / --overlay / --input di berkas ini SENGAJA berbeda dari
+     aplikasi (putih + overlay bernada lavender). Itu keputusan design pass
+     Sep 2026, bukan kelupaan — jadi tidak disamakan diam-diam di sini.
+     Penyimpangannya dicatat terbuka di docs/DESIGN.md untuk diputuskan
+     operator, bukan dikubur. */
+  --success: #167347;
+  --warning: #855400;
+  --danger: #a52a36;
   --radius: 14px;
   --radius-sm: 10px;
   --radius-lg: 20px;

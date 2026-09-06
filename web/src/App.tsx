@@ -2022,6 +2022,10 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     if (audioRef.current) audioRef.current.volume = prefs.volume;
   }, [prefs]);
   const [retryInfo, setRetryInfo] = useState('');
+  /// Pesan kegagalan dari `RtcSession.lastError` — hanya diisi saat fase
+  /// `error`. Dipisah dari `labels` karena isinya dinamis (beda sebab, beda
+  /// pesan), sedangkan `labels` adalah peta statis.
+  const [fasePesan, setFasePesan] = useState<string | null>(null);
   // Jejak jari untuk mode trackpad: posisi terakhir per pointer, penanda
   // "sudah bergerak" (pembeda tap vs geser), dan stempel waktu turun.
   const touchRef = useRef({
@@ -2062,6 +2066,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const connect = async (isRetry = false) => {
     localStorage.setItem(LAST_HOST_KEY, hostId);
     setPhase('pairing');
+    setFasePesan(null);
     if (!isRetry) {
       retryRef.current.tries = 0;
       retryRef.current.wasConnected = false;
@@ -2076,6 +2081,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       sessionRef.current = session;
       session.onPhase = (next) => {
         setPhase(next);
+        setFasePesan(next === 'error' ? session.lastError : null);
         if (next === 'connected') {
           retryRef.current.tries = 0;
           retryRef.current.wasConnected = true;
@@ -2127,8 +2133,17 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
         }
       };
       await session.start(jwt, hostId, pin);
-    } catch {
-      setPhase('ended');
+    } catch (err) {
+      // `ensureToken()` atau `signalToken()` gagal = server tidak terjangkau.
+      // Sebelumnya ini jatuh ke `ended` ("Sesi berakhir") — terdengar seperti
+      // akhir normal, padahal tidak ada sesi yang pernah dimulai, dan tombol
+      // Konek tidak memberi tahu apa yang harus diperbaiki.
+      setPhase('error');
+      setFasePesan(
+        'Tidak dapat menghubungi server XyDesk. Periksa koneksi internet, ' +
+          'lalu coba lagi.',
+      );
+      console.warn('[xydesk] connect gagal:', err);
     }
   };
 
@@ -2144,6 +2159,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     setConnectedAt(null);
     setHudToast('');
     setPhase('');
+    setFasePesan(null);
     if (window.location.hash === '#session') {
       window.history.replaceState({}, '', '/connect');
     }
@@ -2288,6 +2304,9 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     'host-busy':
       'Perangkat sedang dipakai sesi lain. Koneksi ini ditolak — tunggu sesi selesai lalu coba lagi.',
     ended: 'Sesi berakhir',
+    /// Cadangan bila `fasePesan` kosong. Isi aslinya dinamis dan datang dari
+    /// `RtcSession.lastError`.
+    error: 'Koneksi gagal. Coba lagi.',
   };
 
   return (
@@ -2389,7 +2408,11 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
               {showPw ? <EyeOffIcon /> : <EyeIcon />}
             </button>
           </div>
-          {phase && <p className="status-text">{labels[phase] ?? phase}</p>}
+          {phase && (
+            <p className="status-text">
+              {(phase === 'error' && fasePesan) || labels[phase] || phase}
+            </p>
+          )}
           {retryInfo && <p className="status-text">{retryInfo}</p>}
           <button className="connect-cta" disabled={!canConnect} onClick={() => void connect()}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
           <p className="microcopy">Sesi tamu berlaku dua jam dan tidak menyimpan identitas.</p>

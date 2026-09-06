@@ -11,7 +11,34 @@ export type RtcPhase =
   | 'rejected'
   | 'peer-offline'
   | 'host-busy'
-  | 'ended';
+  | 'ended'
+  /// Kegagalan nyata: signaling tidak terjangkau, host tidak menjawab sampai
+  /// batas waktu, atau ICE gagal setelah semua percobaan pemulihan.
+  ///
+  /// Cermin dari `RtcPhase.error` di `lib/webrtc/rtc_service.dart`. Tanpa fase
+  /// ini web tidak punya cara mengatakan "gagal" — yang ada hanya `ended`
+  /// ("Sesi berakhir"), yang terdengar seperti akhir normal padahal bukan, dan
+  /// layar menggantung tanpa tombol yang bisa diklik lagi.
+  ///
+  /// Pesan yang bisa ditampilkan ada di [`RtcSession.lastError`].
+  | 'error';
+
+/// Batas waktu pairing/negosiasi — SAMA DENGAN `lib/webrtc/rtc_service.dart`
+/// (watchdog 20 detik) supaya dua platform gagal pada saat yang sama dengan
+/// pesan yang sama.
+const WATCHDOG_MS = 20_000;
+
+/// Pesan saat ICE gagal setelah seluruh percobaan pemulihan habis.
+///
+/// Sengaja menyebut TURN, karena inilah sebab yang paling sering: dua
+/// perangkat di belakang NAT simetris/CGNAT tidak bisa saling sapa langsung
+/// dan hanya tersambung lewat penengah. Kalau TURN tidak terkonfigurasi di
+/// server, sesi akan selalu berakhir di sini.
+const PESAN_ICE_GAGAL =
+  'Koneksi langsung gagal ditembus setelah beberapa percobaan. ' +
+  'Ini biasanya terjadi bila kedua perangkat berada di jaringan yang ' +
+  'membatasi (NAT simetris / CGNAT) dan server relay (TURN) tidak tersedia. ' +
+  'Coba jaringan lain, atau minta operator mengisi secret TURN.';
 
 interface SignalMessage {
   type: string;
@@ -202,6 +229,13 @@ export class RtcSession {
   private recovering = false;
   private audioTransceiver?: RTCRtpTransceiver;
   private micStream?: MediaStream;
+  private watchdog?: ReturnType<typeof setTimeout>;
+  private phase: RtcPhase | '' = '';
+  private wsFailed = false;
+
+  /// Pesan kegagalan terakhir, siap ditampilkan ke pengguna. `null` bila tidak
+  /// ada kesalahan. Padanan `RtcService.lastError` di sisi Flutter.
+  lastError: string | null = null;
 
   onPhase: (phase: RtcPhase) => void = () => {};
   onTrack: (stream: MediaStream) => void = () => {};
@@ -221,12 +255,63 @@ export class RtcSession {
   private lastFrames = -1;
   private lastAtMs = 0;
 
+  /// Satu-satunya jalan mengubah fase. Menangani watchdog secara terpusat
+  /// supaya tidak ada transisi yang lupa mematikan atau menyalakannya.
+  ///
+  /// Watchdog diperlukan karena `App.tsx` menonaktifkan tombol Konek selama
+  /// fase `pairing`/`negotiating`. Tanpa batas waktu, host yang tidak pernah
+  /// menjawab membuat tombol mati selamanya — pengguna tidak punya jalan
+  /// keluar selain memuat ulang halaman. Flutter sudah menutup lubang ini
+  /// (watchdog 20 detik di `rtc_service.dart`); web belum.
+  private setPhase(next: RtcPhase, message?: string) {
+    this.phase = next;
+    if (message !== undefined) this.lastError = message;
+
+    const menggantung = next === 'pairing' || next === 'negotiating';
+    if (menggantung) {
+      this.armWatchdog();
+    } else {
+      this.clearWatchdog();
+      // Fase terminal yang bukan `error` berarti bukan kegagalan — bersihkan
+      // pesan lama supaya UI tidak menampilkan sisa galat dari percobaan lalu.
+      if (next !== 'error') this.lastError = null;
+    }
+    this.onPhase(next);
+  }
+
+  private armWatchdog() {
+    this.clearWatchdog();
+    this.watchdog = setTimeout(() => {
+      this.watchdog = undefined;
+      if (this.stopped) return;
+      if (this.phase !== 'pairing' && this.phase !== 'negotiating') return;
+      const tahap = this.phase === 'pairing' ? 'merespons pairing' : 'menyelesaikan negosiasi';
+      this.setPhase(
+        'error',
+        `Host tidak ${tahap} dalam ${WATCHDOG_MS / 1000} detik. ` +
+          'Periksa XyDesk Host di PC masih berjalan, lalu coba lagi.',
+      );
+    }, WATCHDOG_MS);
+  }
+
+  private clearWatchdog() {
+    if (this.watchdog === undefined) return;
+    clearTimeout(this.watchdog);
+    this.watchdog = undefined;
+  }
+
+  /// Gagal dengan pesan yang bisa ditampilkan. Padanan `_fail()` di Flutter.
+  private fail(message: string) {
+    this.setPhase('error', message);
+  }
+
   async start(jwt: string, hostId: string, pin: string) {
     this.hostId = hostId.replace(/[\s-]/g, '');
     this.deviceId = `web-${Date.now() % 1000000}`;
+    this.wsFailed = false;
     this.token = await signalToken(jwt, this.deviceId);
 
-    this.onPhase('pairing');
+    this.setPhase('pairing');
     const ws = new WebSocket(
       `${WS_URL}?id=${this.deviceId}&role=client&token=${encodeURIComponent(this.token)}`,
     );
@@ -242,8 +327,28 @@ export class RtcSession {
         platform: 'web',
       });
     };
-    ws.onclose = () => {
-      if (!this.stopped) this.onPhase('ended');
+    ws.onerror = () => {
+      // Browser hanya memberi tahu "gagal", tanpa sebab — bisa DNS, TLS,
+      // jaringan mati, atau CSP yang memblokir origin. `onclose` menyusul
+      // segera setelah ini, jadi pesan di sana yang berbicara ke pengguna.
+      this.wsFailed = true;
+    };
+    ws.onclose = (ev) => {
+      if (this.stopped) return;
+      if (this.phase === 'connected') {
+        // Sesi sedang berjalan lalu soket putus — itu kegagalan, bukan akhir
+        // yang rapi (akhir yang rapi lewat pesan `bye`).
+        this.fail('Koneksi signaling terputus saat sesi berjalan.');
+        return;
+      }
+      if (this.wsFailed || ev.code !== 1000) {
+        this.fail(
+          'Tidak dapat menghubungi server signaling. ' +
+            'Periksa koneksi internet, lalu coba lagi.',
+        );
+        return;
+      }
+      this.setPhase('ended');
     };
     ws.onmessage = (ev) => void this.handle(JSON.parse(ev.data as string));
   }
@@ -255,8 +360,17 @@ export class RtcSession {
   private async handle(m: SignalMessage) {
     switch (m.type) {
       case 'pair-response':
-        if (!m.accepted) return this.onPhase('rejected');
-        this.onPhase('negotiating');
+        if (!m.accepted) {
+          // Host sengaja TIDAK mengirim sebab penolakan (biar respons pairing
+          // tidak jadi oracle password). Dugaan paling umum disalin dari sisi
+          // Flutter: sejak 3 Sep 2026 host membandingkan password PEKA-KASUS.
+          return this.setPhase(
+            'rejected',
+            'Password ditolak host. Periksa huruf besar/kecil dan spasi di ujung ' +
+              '— ketik ulang, jangan salin dari catatan yang sudah terkapitalisasi.',
+          );
+        }
+        this.setPhase('negotiating');
         return this.negotiate();
       case 'answer':
         if (m.sdp) {
@@ -278,10 +392,10 @@ export class RtcSession {
       case 'bye':
         return this.stop();
       case 'error':
-        if (m.error === 'peer-offline') this.onPhase('peer-offline');
+        if (m.error === 'peer-offline') this.setPhase('peer-offline');
         // Host sibuk: sesi lain sedang berjalan — koneksi kedua ditolak
         // meski password benar (host melayani satu sesi pada satu waktu).
-        if (m.error === 'host-sibuk') this.onPhase('host-busy');
+        if (m.error === 'host-sibuk') this.setPhase('host-busy');
         return;
     }
   }
@@ -356,11 +470,13 @@ export class RtcSession {
       if (pc.connectionState === 'connected') {
         this.recoveryAttempt = 0;
         this.recovering = false;
-        this.onPhase('connected');
+        this.setPhase('connected');
       } else if (pc.connectionState === 'failed') {
         void this.recoverConnection();
       } else if (pc.connectionState === 'closed') {
-        this.onPhase('ended');
+        // Ditutup tanpa pesan `bye` = kegagalan, bukan akhir yang rapi.
+        // Cermin dari `rtc_service.dart`: `if (!_stopped) _fail(...)`.
+        if (!this.stopped) this.fail('Koneksi peer ditutup paksa.');
       }
     };
 
@@ -377,12 +493,12 @@ export class RtcSession {
     const pc = this.pc;
     if (!pc || this.stopped || this.recovering) return;
     if (this.recoveryAttempt >= 2) {
-      this.onPhase('ended');
+      this.fail(PESAN_ICE_GAGAL);
       return;
     }
     this.recovering = true;
     this.recoveryAttempt += 1;
-    this.onPhase('negotiating');
+    this.setPhase('negotiating');
     try {
       // Percobaan pertama merotasi kandidat direct/STUN/TURN. Percobaan kedua
       // memaksa TURN relay, termasuk TURN TCP/TLS bila server menyediakannya.
@@ -401,7 +517,7 @@ export class RtcSession {
         sdp: { type: 'offer', sdp: offer.sdp ?? '' },
       });
     } catch {
-      if (this.recoveryAttempt >= 2) this.onPhase('ended');
+      if (this.recoveryAttempt >= 2) this.fail(PESAN_ICE_GAGAL);
     } finally {
       this.recovering = false;
     }
@@ -535,6 +651,6 @@ export class RtcSession {
     this.input?.close();
     this.pc?.close();
     this.ws?.close();
-    this.onPhase('ended');
+    this.setPhase('ended');
   }
 }
