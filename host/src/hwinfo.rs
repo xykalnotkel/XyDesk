@@ -232,11 +232,16 @@ mod windows_probe {
     /// platform lain konstanta ini akan jadi dead code dan clippy menolaknya.
     const REG_BUF_WCHARS: usize = 1024;
     use windows::core::PCWSTR;
-    use windows::Win32::Graphics::Gdi::{EnumDisplaySettingsW, DEVMODEW};
+    use windows::Win32::Graphics::Gdi::{
+        EnumDisplaySettingsW, DEVMODEW, ENUM_DISPLAY_SETTINGS_MODE,
+    };
 
-    /// `ENUM_CURRENT_SETTINGS` = -1 sebagai u32. Ditulis literal supaya tidak
-    /// bergantung pada nama/tipe konstanta yang pernah pindah antar versi crate.
-    const MODE_CURRENT_SETTINGS: u32 = 0xFFFF_FFFF;
+    /// Mode "pengaturan saat ini" untuk `EnumDisplaySettingsW` (= -1).
+    /// Crate `windows` 0.61 membungkus parameternya dalam newtype, jadi u32
+    /// telak ditolak kompilator; nilainya ditulis literal agar tidak bergantung
+    /// pada nama konstanta yang pernah pindah antar versi.
+    const MODE_CURRENT_SETTINGS: ENUM_DISPLAY_SETTINGS_MODE =
+        ENUM_DISPLAY_SETTINGS_MODE(0xFFFF_FFFF);
     use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
     use windows::Win32::System::Registry::{RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_REG_SZ};
     use windows::Win32::System::SystemInformation::{
@@ -244,11 +249,9 @@ mod windows_probe {
     };
 
     pub(super) fn probe() -> Probe {
-        let mut p = Probe::default();
-
         // Nama mesin: variabel lingkungan diisi Windows saat login — cukup dan
         // tidak butuh API tambahan.
-        p.hostname = std::env::var("COMPUTERNAME").ok().filter(|s| !s.is_empty());
+        let hostname = std::env::var("COMPUTERNAME").ok().filter(|s| !s.is_empty());
 
         // ── OS: registry CurrentVersion (diisi sistem, bukan tebakan) ──
         let cv = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
@@ -257,13 +260,13 @@ mod windows_probe {
         let build = reg_string(cv, "CurrentBuildNumber")
             .and_then(|s| s.trim().parse::<u32>().ok())
             .unwrap_or(0);
-        p.os = windows_label(product.as_deref(), dispver.as_deref(), build);
+        let os = windows_label(product.as_deref(), dispver.as_deref(), build);
 
         // ── Motherboard: BIOS menuliskan identitas papan saat boot ──
         let bios = r"HARDWARE\DESCRIPTION\System\BIOS";
         let maker = reg_string(bios, "BaseBoardManufacturer");
         let model = reg_string(bios, "BaseBoardProduct");
-        p.motherboard = match (maker, model) {
+        let motherboard = match (maker, model) {
             (Some(a), Some(b)) => Some(format!("{} {}", a.trim(), b.trim())),
             (Some(a), None) => Some(a),
             (None, Some(b)) => Some(b),
@@ -282,7 +285,7 @@ mod windows_probe {
         let logical = si.dwNumberOfProcessors;
         // Jumlah inti fisik tidak tersedia tanpa CPUID; `logical` saja lebih
         // jujur daripada menebak "cores = logical / 2".
-        p.cpu = cpu_label(cpu_name.as_deref(), 0, logical);
+        let cpu = cpu_label(cpu_name.as_deref(), 0, logical);
 
         // ── RAM: GlobalMemoryStatusEx ──
         let mut ms = MEMORYSTATUSEX {
@@ -295,16 +298,29 @@ mod windows_probe {
         unsafe {
             let _ = GlobalMemoryStatusEx(&mut ms);
         }
-        p.ram = ram_label(ms.ullTotalRam);
+        // Nama field Win32 yang benar `ullTotalPhys` (bukan ullTotalRam).
+        let ram = ram_label(ms.ullTotalPhys);
 
         // ── GPU: adapter yang benar-benar men-drive desktop ──
-        p.gpu = gpu_label(&gpu_names());
+        let gpu = gpu_label(&gpu_names());
 
         // ── Penyimpanan: volume C: (bukan model disk — itu butuh IOCTL dan
         //    akan dikarang kalau ditebak) ──
-        p.storage = volume_c_label();
+        let storage = volume_c_label();
 
-        p
+        // Struct literal, bukan Default + reassign: clippy menolak pola itu
+        // (field_reassign_with_default) dan literal membuat jelas bahwa setiap
+        // field memang diisi dari pembacaan nyata — tidak ada yang tersisa
+        // memakai nilai bawaan.
+        Probe {
+            hostname,
+            os,
+            motherboard,
+            cpu,
+            gpu,
+            ram,
+            storage,
+        }
     }
 
     /// Refresh rate sebuah perangkat GDI (`\\.\DISPLAY1`) dalam Hz.
@@ -366,10 +382,10 @@ mod windows_probe {
             let _ = GetDiskFreeSpaceExW(
                 PCWSTR(path.as_ptr()),
                 None,
-                // Koersi &mut -> *const tidak terjadi di dalam Some(...), jadi
+                // Koersi &mut -> *mut tidak terjadi di dalam Some(...), jadi
                 // ditulis eksplisit.
-                Some(&mut total as *mut u64 as *const u64),
-                Some(&mut free as *mut u64 as *const u64),
+                Some(&mut total as *mut u64),
+                Some(&mut free as *mut u64),
             );
         }
         capacity_label(total, free)

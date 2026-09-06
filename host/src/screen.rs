@@ -800,8 +800,12 @@ mod windows {
         use windows::Win32::Foundation::LPARAM;
         use windows::Win32::Graphics::Gdi::{
             EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO, MONITORINFOEXW,
-            MONITORINFOF_PRIMARY,
         };
+
+        // MONITORINFOF_PRIMARY = 0x1 (Win32). Ditulis literal karena crate
+        // `windows` 0.61 tidak mengekspor konstanta itu di bawah Gdi; nilai
+        // bitnya stabil sejak Windows 95 dan didokumentasikan Win32.
+        const MONITORINFOF_PRIMARY_BIT: u32 = 0x1;
 
         unsafe extern "system" fn collect(
             hmonitor: HMONITOR,
@@ -833,7 +837,7 @@ mod windows {
                     width: (rc.right - rc.left).max(0) as u32,
                     height: (rc.bottom - rc.top).max(0) as u32,
                     refresh_rate,
-                    is_primary: (info.monitorInfo.dwFlags & MONITORINFOF_PRIMARY) != 0,
+                    is_primary: (info.monitorInfo.dwFlags & MONITORINFOF_PRIMARY_BIT) != 0,
                 });
             }
             BOOL(1)
