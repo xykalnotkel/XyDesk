@@ -1,6 +1,6 @@
 {
   "name": "xydesk-desktop",
-  "version": "6.6.0",
+  "version": "6.6.1",
   "private": true,
   "description": "XyDesk Desktop — shell Electron + Next.js untuk host Windows. Engine streaming (capture/encode/WebRTC) tetap Rust di xydesk-host.exe; proses ini TIDAK menyentuh media.",
   "author": "XyStudio",

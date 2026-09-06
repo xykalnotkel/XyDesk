@@ -41,6 +41,10 @@ let lastEngineError = null; // pesan gagal terakhir — dipakai UI "Engine belum
 let restartAttempt = 0;
 let watchdogTimer = null;
 let engineStarting = false; // jaga-jaga: jangan spawn engine dua kali sekaligus
+// Kegagalan kredensial yang meminta jeda atau tindakan pengguna. Bentuknya
+// { until: number|null, reason: string }; `until` null = permanen (hanya
+// perintah pengguna yang boleh mencoba lagi). Lihat CredentialError.
+let credentialBlock = null;
 let tray = null; // ikon tray — host selalu aktif walau jendela ditutup
 let isQuitting = false; // pembeda tutup-jendela (sembunyi) vs keluar beneran
 let trayNoticeShown = false;
@@ -157,6 +161,61 @@ async function postHostToken(body) {
   return { status: res.status, text, json };
 }
 
+// ── Kegagalan kredensial host ───────────────────────────────────────────
+//
+// Tidak semua kegagalan token boleh dicoba ulang secepat mungkin. Server
+// merem klaim: lima kali salah mengunci satu ID selama 15 menit
+// (`device-locked`), dan `claim-mismatch` tidak akan pernah sembuh dengan
+// mencoba lagi — password pairing di PC ini berbeda dari yang terkunci di
+// server. Backoff 2-30 detik yang benar untuk engine crash justru
+// menghabiskan jatah klaim itu dalam beberapa menit, sehingga perangkat
+// terkunci berulang tanpa satu pun pesan yang sampai ke pengguna. Gejala di
+// lapangan: host hidup, tidak pernah terdaftar, web menjawab "ID tidak
+// ditemukan", dan UI hanya berkata "engine belum siap".
+//
+// Karena itu kegagalan kredensial membawa dua informasi tambahan: apakah
+// mencoba ulang masuk akal, dan bila ya, kapan.
+class CredentialError extends Error {
+  constructor(message, { retryInMs = null, permanent = false } = {}) {
+    super(message);
+    this.name = 'CredentialError';
+    this.retryInMs = retryInMs;
+    this.permanent = permanent;
+  }
+}
+
+// Terjemahkan jawaban /host-token menjadi pesan yang bisa ditindak pengguna.
+// `res` = bentuk keluaran postHostToken ({ status, text, json }).
+function credentialError(id, res, prefix = '') {
+  const error = (res.json && res.json.error) || '';
+  const retryIn = Number((res.json && res.json.retry_in) || 0);
+
+  if (error === 'claim-mismatch') {
+    return new CredentialError(
+      `Password pairing di PC ini tidak cocok dengan yang terkunci di server untuk ID ${id}. ` +
+        'Server akan menolaknya terus sampai identitas perangkat diganti: keluar dari XyDesk ' +
+        'lewat ikon tray, hapus berkas %USERPROFILE%\\.xydesk\\device_id, lalu buka XyDesk lagi ' +
+        '(ID baru dibuat, dan perangkat lain harus memakai ID baru itu).',
+      { permanent: true },
+    );
+  }
+
+  if (error === 'device-locked' || error === 'rate-limited') {
+    const tungguMs = Math.max(retryIn * 1000, 60_000);
+    return new CredentialError(
+      `Server mengunci percobaan klaim ID ${id} selama ${Math.ceil(tungguMs / 60_000)} menit ` +
+        '(terlalu banyak klaim gagal). XyDesk menunggu dan tidak mencoba ulang.',
+      { retryInMs: tungguMs },
+    );
+  }
+
+  return new CredentialError(
+    `${prefix}Server menolak permintaan token host (HTTP ${res.status}` +
+      `${error ? `, ${error}` : ''}).`,
+    { retryInMs: 60_000 },
+  );
+}
+
 // Tukar identitas perangkat → token signaling host berumur pendek. Dari
 // proses utama (Node), tanpa CORS — sama seperti GUI native dulu (ureq di
 // Rust). Urutan: kredensial penyegaran dulu, klaim dengan password hanya
@@ -172,7 +231,7 @@ async function fetchHostToken(id, claim) {
       if (res.status === 401) {
         addLog('[shell] kredensial penyegaran ditolak — minta ulang dengan password pairing');
         clearRefresh();
-      } else if (!res.ok) {
+      } else if (res.status !== 200) {
         addLog(`[shell] penyegaran ditolak (HTTP ${res.status}) — coba klaim dengan password`);
       }
     } catch (e) {
@@ -194,13 +253,13 @@ async function fetchHostToken(id, claim) {
       addLog('[shell] perangkat terikat ulang ke password pairing yang baru');
       return rebound.json.token;
     }
-    throw new Error(
-      `Ikat ulang ditolak (HTTP ${rebound.status}). Password pairing tidak bisa diperbarui.`,
-    );
+    throw credentialError(id, rebound, 'Password pairing tidak bisa diperbarui: ikat ulang ditolak. ');
   }
 
   if (claimed.status !== 200) {
-    throw new Error(`Server menolak token (HTTP ${claimed.status}).`);
+    // Bukan kegagalan sementara yang boleh dipukul ulang tiap 2 detik:
+    // bawa alasan server apa adanya + kapan boleh mencoba lagi.
+    throw credentialError(id, claimed);
   }
   const token = (claimed.json && claimed.json.token) || claimed.text;
   if (!token) throw new Error('Server mengembalikan token kosong.');
@@ -284,6 +343,21 @@ async function startEngine() {
   } catch (e) {
     addLog(`[shell] ${e.message}`);
     lastEngineError = String(e && e.message ? e.message : e);
+    if (e instanceof CredentialError) {
+      // Jangan dipukul ulang dengan backoff engine-crash: server merem klaim,
+      // dan tiap percobaan yang gagal memakan jatah ID ini. Permanen = hanya
+      // perintah pengguna (engine:restart) yang mencoba lagi.
+      credentialBlock = {
+        until: e.permanent ? null : Date.now() + (e.retryInMs || 60_000),
+        reason: e.message,
+      };
+      addLog(
+        e.permanent
+          ? '[shell] berhenti mencoba — butuh tindakan pengguna (lihat pesan di atas)'
+          : `[shell] menunggu ${Math.round((e.retryInMs || 60_000) / 1000)} dtk sebelum meminta token lagi`,
+      );
+      return;
+    }
     scheduleRestart();
   } finally {
     engineStarting = false;
@@ -306,6 +380,15 @@ function startWatchdog() {
     if (engine && engine.exitCode === null) return; // hidup — tidak usah
     if (engineStarting) return; // sedang start — jangan tumpuk
     if (watchdogTimer) return; // restart sudah terjadwal — hormati backoff
+    if (credentialBlock) {
+      // Kegagalan kredensial: menunggu jeda yang diminta server, atau (bila
+      // permanen) tindakan pengguna. Memukul /host-token tiap 2,5 detik
+      // justru memperpanjang kunci di sisi server.
+      if (credentialBlock.until === null) return;
+      if (Date.now() < credentialBlock.until) return;
+      addLog('[shell] masa tunggu kredensial berakhir — minta token lagi');
+      credentialBlock = null;
+    }
     startEngine().catch(() => {});
   }, WATCHDOG_MS);
 }
@@ -347,6 +430,12 @@ function registerIpc() {
         deviceId: identity ? identity.deviceId : null,
         password: identity ? identity.password : null,
         lastError: lastEngineError,
+        // Kegagalan kredensial punya makna khusus: mencoba ulang tidak akan
+        // menolong sampai pengguna bertindak (atau masa tunggu server lewat).
+        // UI boleh menampilkannya apa adanya; `until` null = permanen.
+        credentialBlock: credentialBlock
+          ? { reason: credentialBlock.reason, until: credentialBlock.until }
+          : null,
       };
     }
   });
@@ -408,8 +497,15 @@ function registerIpc() {
   ipcMain.handle('engine:restart', () => {
     const wasAlive = engine && engine.exitCode === null;
     if (wasAlive) engine.kill();
+    // Perintah pengguna = coba lagi sekarang, walau server tadi menyuruh
+    // menunggu atau menolak permanen. Tanpa ini, satu-satunya jalan keluar
+    // dari kegagalan kredensial adalah menutup aplikasi.
+    const wasBlocked = credentialBlock !== null;
+    credentialBlock = null;
+    lastEngineError = null;
+    restartAttempt = 0;
     scheduleRestart();
-    return { ok: true, restarted: wasAlive };
+    return { ok: true, restarted: wasAlive, wasBlocked };
   });
 }
 

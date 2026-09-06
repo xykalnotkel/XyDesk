@@ -15,6 +15,79 @@ Kebijakan rilis:
   commit. Panduan lengkap nadanya ada di [`docs/NEWS_STYLE.md`](docs/NEWS_STYLE.md).
 - File ini otomatis dilampirkan ke GitHub Release oleh `release.yml`.
 
+## [6.6.1] - 2026-09-06
+
+> **Build 34.** Rilis perbaikan. Isinya satu penyakit yang membuat host
+> tampak "hidup tapi tidak bisa dipakai": layar klien hitam selama layar PC
+> yang dikendalikan sedang diam. Ditutup bersama kegagalan kredensial
+> perangkat yang selama ini ditelan diam-diam sambil menghabiskan jatah klaim
+> di server.
+
+### Diperbaiki
+
+- **Layar hitam di web dan HP saat layar PC host sedang diam.** Gejalanya
+  menipu: log host menulis `pairing DITERIMA`, `menerima offer`, sampai
+  `koneksi Connected` — lalu tidak ada apa-apa lagi, klien menyerah, dan host
+  melepas slot setelah masa tenggang 15 detik. Penyebabnya berlapis tiga.
+  (1) Frame tidak ditulis sebelum transport `Connected`, dan itu benar; tapi
+  artinya IDR pertama, satu-satunya yang membawa SPS/PPS, ikut terbuang.
+  (2) Sebagai gantinya host meminta keyframe segar saat `Connected`, dan
+  permintaan itu dilayani dengan membangun ulang encoder di antara dua frame.
+  (3) Di Windows, Graphics Capture hanya menyerahkan frame bila layar berubah,
+  dan handler capture hanya memeriksa permintaan pindah monitor dan bitrate —
+  keyframe tidak pernah diperiksa. Layar yang diam menghasilkan deadlock:
+  tidak ada frame -> tidak ada respawn -> tidak ada IDR -> decoder klien tidak
+  pernah bisa mulai -> layar hitam, `framesDecoded` tetap 0 sementara paket
+  kontrol mengalir normal. Perbaikannya dua lapis: handler capture kini ikut
+  memeriksa permintaan keyframe (memakai `peek`, tidak mengambil — hak
+  konsumsi tetap di thread capture), dan `pump_video` menyimpan IDR terakhir
+  yang masih muda (TTL 30 detik) lalu mengirimnya ulang tiap 200 ms selama
+  maksimal 5 detik sambil menunggu IDR hidup. Gambar muncul segera setelah
+  `Connected`, walau layar PC tidak berubah sama sekali.
+- **Shell desktop berhenti memukul `/host-token` saat kredensial ditolak.**
+  Backoff 2-30 detik yang benar untuk engine crash dipakai juga untuk
+  kegagalan token, padahal server merem klaim: lima kali gagal mengunci satu
+  ID selama 15 menit. Host yang identitasnya tertolak masuk lingkaran
+  "coba - gagal - terkunci - coba lagi" tanpa satu pun pesan ke pengguna; yang
+  terlihat hanya "Engine belum siap". Kegagalan kredensial kini membawa alasan
+  server apa adanya (`claim-mismatch`, `device-locked`, `rate-limited`) ke
+  halaman Home, menunggu selama yang diminta server, dan berhenti total bila
+  jawabannya permanen — lengkap dengan langkah pemulihan yang bisa dikerjakan
+  pengguna. Tombol restart engine di UI menghapus blokade itu kapan saja.
+- **`res.ok` yang tidak pernah ada** di jalur penyegaran token shell: jawaban
+  `postHostToken` berbentuk `{ status, text, json }`, jadi `!res.ok` selalu
+  benar dan cabang log-nya menyala untuk setiap jawaban, termasuk yang
+  berhasil. Diganti `res.status !== 200`.
+
+### Diperiksa
+
+- `cargo fmt --check`, `cargo clippy --all-targets -D warnings`, dan
+  `cargo test --all-targets` hijau di Linux: 97 unit + 4 test binary utama +
+  1 uji integrasi loopback. Tujuh test baru menutup kontrak yang tadi bocor:
+  pemindaian IDR Annex-B (termasuk input pendek yang tidak boleh panik),
+  simpanan IDR yang tidak boleh ditimpa P-frame, penolakan IDR basi, `peek`
+  yang tidak boleh mengonsumsi bendera keyframe, IDR dari sumber frame yang
+  harus tersimpan, dan statistik latensi yang tidak boleh dipalsukan frame
+  penyelamatan.
+- `node --check desktop/electron/main.cjs` bersih.
+- Kode `cfg(windows)` (handler capture dan jalur encode) tidak bisa dijalankan
+  di Linux; ia diverifikasi job Windows CI (MSVC x64 + arm64). Perilaku runtime
+  DXGI/WASAPI tetap butuh PC sungguhan.
+
+### Dampak bagi pengguna
+
+- Tidak ada yang perlu dilakukan: host yang layarnya sedang diam kini tetap
+  menampilkan gambar di web maupun HP segera setelah tersambung.
+- Perangkat yang ID-nya sudah terlanjur terkunci di server karena password
+  pairing berganti TIDAK pulih sendiri lewat rilis ini. Pemulihannya masih
+  manual (keluar dari tray, hapus `%USERPROFILE%\.xydesk\device_id`, buka
+  lagi — ID baru dibuat). Yang berubah adalah kejujurannya: sebabnya kini
+  tertulis di layar, bukan hilang di dalam log. Tombol pemulihan di UI
+  menyusul.
+- Audio host yang gagal dengan `AUDCLNT_E_UNSUPPORTED_FORMAT` (0x88890008) —
+  format 48 kHz stereo dipaksa ke perangkat yang mix format-nya berbeda —
+  BELUM diperbaiki di rilis ini. Video tidak terpengaruh.
+
 ## [6.6.0] - 2026-09-06
 
 > **Build 33.** Rilis perbaikan. Yang paling penting: **aplikasi Android

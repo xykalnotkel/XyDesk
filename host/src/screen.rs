@@ -60,6 +60,102 @@ pub fn take_keyframe_request() -> bool {
     REQUEST_KEYFRAME.swap(false, std::sync::atomic::Ordering::Relaxed)
 }
 
+/// Lihat permintaan keyframe TANPA mengambilnya.
+///
+/// Dibutuhkan handler capture Windows: ia harus menghentikan diri supaya thread
+/// di atasnya membangun ulang encoder (frame pertama encoder baru = IDR),
+/// sedangkan hak mengonsumsi bendera tetap milik thread itu
+/// ([`take_keyframe_request`]). Tanpa pemeriksaan ini, permintaan keyframe saat
+/// koneksi baru `Connected` tidak pernah dilayani selama layar tidak berubah —
+/// handler capture hanya berjalan bila ada frame, thread capture terblokir di
+/// dalam `start_monitor`, dan decoder klien tidak pernah mendapat SPS/PPS.
+/// Gejala di lapangan: layar hitam walau sesi `Connected`.
+pub fn peek_keyframe_request() -> bool {
+    REQUEST_KEYFRAME.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Umur maksimum IDR simpanan yang masih boleh dikirim ke klien.
+///
+/// Simpanan ini biasanya berumur 1-3 detik (capture menghasilkan IDR begitu
+/// sesi mulai, sebelum transport `Connected`). Bila yang tersimpan ternyata
+/// sisa sesi lama — monitor sudah diganti, resolusi berbeda, atau layar PC
+/// sudah berubah total — mengirimnya berarti menampilkan gambar basi seolah
+/// siaran langsung. Lebih baik jujur: tidak ada simpanan, tunggu IDR hidup.
+pub const KEYFRAME_CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// IDR terakhir (SPS/PPS + slice) yang dihasilkan encoder, beserta waktu
+/// penyimpanannya.
+///
+/// Simpanan inilah yang membuat penyelamatan layar hitam di
+/// [`crate::video::pump_video`] mungkin: host selalu punya satu IDR untuk
+/// diberikan kepada decoder klien segera setelah transport `Connected`, walau
+/// sumber frame sedang tidak menghasilkan apa pun karena layarnya diam.
+static LAST_KEYFRAME: std::sync::Mutex<Option<(std::time::Instant, Vec<u8>)>> =
+    std::sync::Mutex::new(None);
+
+/// Simpan `data` sebagai IDR terakhir bila ia memang memuat IDR.
+///
+/// Dipanggil dari satu tempat per jalur encode (Windows: `EncoderKind::encode`;
+/// pola uji: `TestPatternEncoder::encode_next`) supaya tidak ada bitstream yang
+/// lolos tanpa diperiksa.
+pub fn remember_keyframe(data: &[u8]) {
+    simpan_idr_pada(data, std::time::Instant::now());
+}
+
+/// Simpan IDR dengan waktu penyimpanan eksplisit — dipisah dari
+/// [`remember_keyframe`] supaya kelayakan kedaluwarsa bisa diuji tanpa menunggu
+/// [`KEYFRAME_CACHE_TTL`] detik.
+fn simpan_idr_pada(data: &[u8], at: std::time::Instant) {
+    if annexb_has_idr(data) {
+        *crate::recover_lock(&LAST_KEYFRAME) = Some((at, data.to_vec()));
+    }
+}
+
+/// IDR terakhir yang tersimpan, bila masih cukup muda
+/// ([`KEYFRAME_CACHE_TTL`]). `None` bila tidak ada atau sudah basi.
+pub fn last_keyframe() -> Option<Vec<u8>> {
+    let slot = crate::recover_lock(&LAST_KEYFRAME);
+    let (at, data) = slot.as_ref()?;
+    (at.elapsed() <= KEYFRAME_CACHE_TTL).then(|| data.clone())
+}
+
+/// Benar bila bitstream H264 Annex-B memuat NAL IDR (tipe 5) atau SPS (tipe 7).
+///
+/// SPS ikut dihitung karena encoder kita memakai `SpsPpsStrategy::ConstantId`:
+/// parameter set ditempelkan pada IDR, dan kehadirannya menandakan awal urutan
+/// yang bisa didecode dari nol. Pemindaian berhenti pada kecocokan pertama —
+/// ini keputusan ya/tidak, bukan parser NAL penuh.
+pub fn annexb_has_idr(data: &[u8]) -> bool {
+    let n = data.len();
+    let mut i = 0usize;
+    while i + 2 < n {
+        let payload = if data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1 {
+            Some(i + 3) // start code 3 byte
+        } else if i + 3 < n
+            && data[i] == 0
+            && data[i + 1] == 0
+            && data[i + 2] == 0
+            && data[i + 3] == 1
+        {
+            Some(i + 4) // start code 4 byte
+        } else {
+            None
+        };
+        match payload {
+            Some(p) if p < n => {
+                let nal = data[p] & 0x1f;
+                if nal == 5 || nal == 7 {
+                    return true;
+                }
+                i = p;
+            }
+            Some(_) => return false, // start code terpotong di ujung buffer
+            None => i += 1,
+        }
+    }
+    false
+}
+
 /// Bitrate target aktif dalam bps.
 pub fn target_bitrate_bps() -> u32 {
     TARGET_BPS.load(std::sync::atomic::Ordering::Relaxed)
@@ -177,7 +273,12 @@ impl TestPatternEncoder {
     pub fn encode_next(&mut self, width: usize, height: usize) -> Result<Vec<u8>, openh264::Error> {
         let yuv = self.make_pattern(width, height, self.frame_index);
         self.frame_index = self.frame_index.wrapping_add(1);
-        Ok(self.encoder.encode(&yuv)?.to_vec())
+        let data = self.encoder.encode(&yuv)?.to_vec();
+        // Jalur non-Windows ikut menyimpan IDR-nya: `tests/loopback.rs`
+        // menjalankan `pump_video` produksi, termasuk penyelamatan layar hitam
+        // yang membaca `last_keyframe`.
+        remember_keyframe(&data);
+        Ok(data)
     }
 
     fn make_pattern(&self, width: usize, height: usize, frame: u64) -> YUVBuffer {
@@ -455,7 +556,7 @@ mod windows {
             height: usize,
             nv12: &mut Vec<u8>,
         ) -> Result<Vec<u8>, String> {
-            match self {
+            let out = match self {
                 EncoderKind::Nvenc(enc) => {
                     crate::pixfmt::rgba_to_nv12(rgba_tight, width, height, nv12);
                     enc.encode(nv12)
@@ -467,7 +568,15 @@ mod windows {
                         .map(|b| b.to_vec())
                         .map_err(|e| format!("openh264: {e}"))
                 }
+            };
+            // Satu tempat untuk kedua encoder: IDR disimpan sebagai penyelamat
+            // layar hitam (lihat `remember_keyframe`). Frame yang dihasilkan
+            // SEBELUM transport Connected dibuang `pump_video`, jadi tanpa
+            // simpanan ini decoder klien bisa tidak pernah mendapat SPS/PPS.
+            if let Ok(data) = &out {
+                super::remember_keyframe(data);
             }
+            out
         }
     }
 
@@ -526,11 +635,19 @@ mod windows {
         ) -> Result<(), Self::Error> {
             // Awal pipeline latensi: detik frame ditangkap (jam monotonik).
             let captured_at = std::time::Instant::now();
-            // Permintaan pindah monitor ATAU bitrate baru: hentikan handler
-            // ini — thread capture di atasnya akan respawn (monitor baru,
-            // atau monitor sama dengan encoder bitrate baru).
+            // Permintaan pindah monitor, bitrate baru, ATAU keyframe yang belum
+            // dilayani: hentikan handler ini — thread capture di atasnya akan
+            // respawn (monitor baru, encoder dengan bitrate baru, atau encoder
+            // baru yang frame pertamanya IDR membawa SPS/PPS).
+            //
+            // Keyframe diperiksa DI SINI karena hanya handler ini yang tahu
+            // capture masih hidup: thread capture terblokir di dalam
+            // `start_monitor` dan baru melihat bendera itu sesudah capture
+            // berhenti. Pemeriksaan memakai `peek` (bukan `take`) supaya hak
+            // mengonsumsi bendera tetap di thread capture.
             if super::SWITCH_TO.load(std::sync::atomic::Ordering::Relaxed) != usize::MAX
                 || super::BITRATE_DIRTY.load(std::sync::atomic::Ordering::Relaxed)
+                || super::peek_keyframe_request()
             {
                 capture_control.stop();
                 return Ok(());
@@ -732,6 +849,11 @@ pub mod test_support {
     /// lock ini test paralel saling menimpa dan hasil baca-ulang jadi acak.
     /// Setiap test memegang lock ini seumur test.
     pub static BITRATE_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Serialisasi test yang menyentuh simpanan IDR global (`LAST_KEYFRAME`).
+    /// Simpanan itu dibaca `video::pump_video` untuk penyelamatan layar hitam;
+    /// dua test yang menulisnya paralel akan membuat hasil baca acak.
+    pub static KEYFRAME_LOCK: Mutex<()> = Mutex::new(());
 }
 
 #[cfg(test)]
@@ -807,5 +929,117 @@ mod tests {
             }
             last = Some(f.captured_at);
         }
+        drop(rx); // hentikan thread capture: test lain juga memakai sumber frame
+    }
+
+    #[test]
+    fn annexb_menemukan_idr_dan_sps() {
+        // Start code 3 byte + NAL tipe 5 (IDR slice).
+        assert!(annexb_has_idr(&[0, 0, 1, 0x65, 0xaa, 0xbb]));
+        // Start code 4 byte + NAL tipe 7 (SPS) — encoder kita menempelkan
+        // parameter set pada IDR (SpsPpsStrategy::ConstantId).
+        assert!(annexb_has_idr(&[0, 0, 0, 1, 0x67, 0x42, 0x00, 0x1f]));
+        // Access unit lengkap: SPS + PPS + IDR.
+        assert!(annexb_has_idr(&[
+            0, 0, 0, 1, 0x67, 1, 0, 0, 1, 0x68, 1, 0, 0, 1, 0x65, 9
+        ]));
+        // IDR yang muncul SETELAH beberapa P-frame tetap ketemu.
+        assert!(annexb_has_idr(&[
+            0, 0, 1, 0x41, 0x9a, 0x24, 0, 0, 1, 0x65, 0x01
+        ]));
+    }
+
+    #[test]
+    fn annexb_tanpa_idr_ditolak_dan_tidak_panik() {
+        // P-frame (NAL tipe 1) — bukan awal urutan yang bisa didecode.
+        assert!(!annexb_has_idr(&[0, 0, 1, 0x41, 0x9a, 0x24]));
+        // Bukan Annex-B sama sekali.
+        assert!(!annexb_has_idr(&[0xff, 0xff, 0xff, 0xff]));
+        // Input pendek / start code terpotong: tidak boleh panik.
+        assert!(!annexb_has_idr(&[]));
+        assert!(!annexb_has_idr(&[0, 0]));
+        assert!(!annexb_has_idr(&[0, 0, 1]));
+        assert!(!annexb_has_idr(&[0, 0, 0, 1]));
+    }
+
+    #[test]
+    fn hanya_idr_yang_menimpa_simpanan_keyframe() {
+        let _g = test_support::KEYFRAME_LOCK.lock().unwrap();
+        let idr = vec![0u8, 0, 0, 1, 0x67, 0x42, 0x00, 0x1f, 0, 0, 1, 0x65, 0x11];
+        remember_keyframe(&idr);
+        assert_eq!(last_keyframe().as_deref(), Some(idr.as_slice()));
+        // P-frame tidak boleh menimpa: simpanan inilah yang dipakai decoder
+        // klien untuk memulai saat layar host sedang diam.
+        remember_keyframe(&[0u8, 0, 1, 0x41, 0x9a, 0x24]);
+        assert_eq!(
+            last_keyframe().as_deref(),
+            Some(idr.as_slice()),
+            "P-frame menimpa IDR tersimpan"
+        );
+    }
+
+    #[test]
+    fn idr_basi_tidak_dipakai() {
+        // Kontrak `last_keyframe`: hanya IDR yang cukup muda yang boleh dikirim
+        // ke klien. Simpanan sisa sesi lama bisa berasal dari monitor atau
+        // resolusi yang berbeda — menampilkannya berarti menyajikan gambar basi
+        // seolah siaran langsung.
+        let _g = test_support::KEYFRAME_LOCK.lock().unwrap();
+        let idr = vec![0u8, 0, 1, 0x65, 0x22, 0x33];
+        simpan_idr_pada(&idr, std::time::Instant::now());
+        assert_eq!(last_keyframe().as_deref(), Some(idr.as_slice()));
+
+        // Uptime mesin yang lebih pendek dari TTL tidak bisa membuat Instant di
+        // masa lalu; bagian ini otomatis terlewat di mesin seperti itu.
+        let lewat = KEYFRAME_CACHE_TTL + std::time::Duration::from_secs(1);
+        if let Some(basi) = std::time::Instant::now().checked_sub(lewat) {
+            simpan_idr_pada(&idr, basi);
+            assert_eq!(last_keyframe(), None, "IDR basi masih dipakai");
+        }
+    }
+
+    #[test]
+    fn idr_dari_sumber_frame_tersimpan_untuk_penyelamatan() {
+        // Kontrak yang diandalkan `video::pump_video`: begitu sumber frame
+        // menghasilkan IDR, host menyimpannya. Tanpa ini, penyelamatan layar
+        // hitam tidak punya bahan pada sesi pertama.
+        let _g = test_support::KEYFRAME_LOCK.lock().unwrap();
+        let rx = spawn_frame_source();
+        let mut idr: Option<Vec<u8>> = None;
+        for _ in 0..300 {
+            let f = rx
+                .recv_timeout(std::time::Duration::from_secs(3))
+                .expect("frame harus tiba dari sumber pola uji");
+            if annexb_has_idr(&f.data) {
+                idr = Some(f.data.clone());
+                break;
+            }
+        }
+        drop(rx);
+        let idr = idr.expect("sumber frame harus menghasilkan IDR dalam 300 frame");
+        assert_eq!(
+            last_keyframe().as_deref(),
+            Some(idr.as_slice()),
+            "IDR dari sumber frame tidak tersimpan"
+        );
+    }
+
+    #[test]
+    fn permintaan_keyframe_bisa_dilihat_tanpa_diambil() {
+        // Handler capture Windows memakai `peek` (tidak boleh mengonsumsi),
+        // thread capture memakai `take`. Kalau `peek` ikut mengambil, thread
+        // capture tidak pernah melihat permintaan itu dan encoder tidak pernah
+        // dibangun ulang — layar hitam lagi.
+        let _g = test_support::KEYFRAME_LOCK.lock().unwrap();
+        let _ = take_keyframe_request(); // mulai dari keadaan bersih
+        assert!(!peek_keyframe_request());
+        request_keyframe();
+        assert!(peek_keyframe_request(), "peek tidak melihat permintaan");
+        assert!(
+            peek_keyframe_request(),
+            "peek tidak boleh mengonsumsi bendera"
+        );
+        assert!(take_keyframe_request(), "take harus melihat permintaan");
+        assert!(!peek_keyframe_request(), "take harus membersihkan bendera");
     }
 }

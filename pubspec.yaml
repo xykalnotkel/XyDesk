@@ -1,7 +1,7 @@
 name: xydesk
 description: "XyDesk — remote desktop low-latency untuk gaming dan kerja."
 publish_to: 'none'
-version: 6.6.0+33
+version: 6.6.1+34
 
 environment:
   sdk: ^3.8.0
