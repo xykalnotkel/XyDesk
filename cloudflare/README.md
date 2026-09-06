@@ -10,7 +10,7 @@ tanpa kartu kredit, tanpa server sendiri. Pengganti total versi Go/VM.
 | WebSocket persisten | Worker + Durable Object (Hibernation API) | Rp 0 |
 | STUN | `stun.cloudflare.com` | gratis tanpa batas |
 | TURN (NAT ketat) | multi-penyedia, lihat `src/turn.js` | tergantung penyedia; secret statis tak perlu kartu kredit |
-| TLS | otomatis (custom domain signal.xystudio.my.id) | Rp 0 |
+| TLS | otomatis (custom domain signal.xydesk.my.id) | Rp 0 |
 
 Free tier Workers: **100K request/hari**. Signaling hanya KB per sesi, jadi
 cukup untuk pemakaian personal + komunitas kecil. Media TIDAK lewat sini
@@ -37,7 +37,7 @@ npx wrangler secret put TURN_STATIC_SECRET # shared secret dari penyedia
 # npx wrangler secret put OPENRELAY_API_KEY   # Open Relay Project
 # npx wrangler secret put TURN_REST_URL       # penyedia REST lain
 # npx wrangler secret put TURN_REST_API_KEY
-npx wrangler deploy                    # → https://signal.xystudio.my.id
+npx wrangler deploy                    # → https://signal.xydesk.my.id
 ```
 
 ## Terbitkan token host
@@ -46,7 +46,7 @@ Gunakan Node.js 24 Active LTS. Wrangler 4.123 membutuhkan minimal Node.js 22.
 
 ```bash
 curl -H "X-Admin: $ADMIN_SECRET" \
-  "https://signal.xystudio.my.id/issue?purpose=gaming-pc-01"
+  "https://signal.xydesk.my.id/issue?purpose=gaming-pc-01"
 # → 1786843937.gaming-pc-01.<sig>   (berlaku 5 menit, role host)
 ```
 

@@ -37,16 +37,16 @@ latency end-to-end.
 | Keyboard virtual (modifier sticky) | Selesai |
 | Glyph HUD (mouse, gulir, arah, switch) | Selesai |
 | CI/CD GitHub Actions | Selesai |
-| Web landing, download, legal, blog, dan client tamu | Deploy otomatis — `app.xystudio.my.id` |
-| Signaling server (Cloudflare Workers + DO) | Live — `signal.xystudio.my.id` |
+| Web landing, download, legal, blog, dan client tamu | Deploy otomatis — `app.xydesk.my.id` |
+| Signaling server (Cloudflare Workers + DO) | Live — `signal.xydesk.my.id` |
 | Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker; JWT dan OTP punya test otomatis |
 | Gerbang signaling | Role terikat HMAC, relay client-host divalidasi, daftar host global ditutup |
 | TURN (kredensial Cloudflare ber-TTL) | Selesai |
 | Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Loop RTP terbukti di test loopback; capture DXGI nyata menunggu verifikasi lab Windows |
 | Control API lokal host (HTTP 127.0.0.1 + token) | Selesai — status, password, stop-session untuk shell desktop; 8 test otomatis |
 | Desktop shell (Electron + Next.js, engine tetap Rust) | Selesai — sidebar Home/Connect/News/Profile/Settings; installer Windows dibangun CI |
-| News (Web + Android + Desktop) | Live — Worker publik + D1 di `news.xystudio.my.id`; like, komentar, berbagi sosial + OpenGraph per konten |
-| OpenGraph web per konten | Live — renderer worker di `web_deploy/worker/` (crawler dapat meta berita), CSP mengizinkan `news.xystudio.my.id` |
+| News (Web + Android + Desktop) | Live — Worker publik + D1 di `news.xydesk.my.id`; like, komentar, berbagi sosial + OpenGraph per konten |
+| OpenGraph web per konten | Live — renderer worker di `web_deploy/worker/` (crawler dapat meta berita), CSP mengizinkan `news.xydesk.my.id` |
 | Tema aplikasi Android | Terang (Paper) saja — mode gelap dihapus agar satu set kontras teruji |
 | Identitas visual | Logo asli XyDesk dipakai di semua platform — satu sumber `design/logo-asli.png`, semua ukuran lahir dari `tool/gen_logo.py` |
 | Push notifikasi | Jalan — jalur server REST OneSignal teruji; rilis & berita baru memicu push (dan email Resend untuk pelanggan berita) |
@@ -176,8 +176,8 @@ commit tetap menjadi kebiasaan tim untuk jejak audit. Artefak build tersedia mel
 | Web | `XyDesk-Web.zip` | Bundle web client (Vite + React) |
 
 Bundle Web dari Build `main` yang sukses dideploy ke Cloudflare
-Workers Static Assets di `https://app.xystudio.my.id`; frontend ini tetap
-berkomunikasi dengan Worker API/signaling di `https://signal.xystudio.my.id`.
+Workers Static Assets di `https://app.xydesk.my.id`; frontend ini tetap
+berkomunikasi dengan Worker API/signaling di `https://signal.xydesk.my.id`.
 
 GitHub Release tidak dibuat pada setiap push. Release baru hanya berjalan
 setelah workflow Build sukses dan nilai `version` di `pubspec.yaml` berubah.

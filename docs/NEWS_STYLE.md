@@ -8,7 +8,7 @@
 > bermakna bagi orang yang pegang kodenya.
 
 Dokumen ini wajib dibaca sebelum menekan tombol terbit di
-`news.xystudio.my.id`. Alurnya ada di [`news/README.md`](../news/README.md);
+`news.xydesk.my.id`. Alurnya ada di [`news/README.md`](../news/README.md);
 dokumen ini mengatur **isinya**.
 
 ---
@@ -107,11 +107,11 @@ Aturan lama "satu sampul per artikel" sudah tidak berlaku. Mulai sekarang:
 3. Simpan screenshot di `web/public/news/shots/` dengan nama jelas:
    `<versi>-<apa>.jpg` (contoh: `6.3.0-panel-koneksi-baru.jpg`,
    `6.3.0-login-sebelum.jpg`, `6.3.0-login-sesudah.jpg`).
-   Ter-deploy otomatis ke `app.xystudio.my.id/news/shots/<file>.jpg`.
+   Ter-deploy otomatis ke `app.xydesk.my.id/news/shots/<file>.jpg`.
 4. Sintaks gambar di badan berita — satu baris sendiri, di antara paragraf:
 
    ```text
-   ![Panel koneksi yang baru — daftar perangkat kini muncul duluan](https://app.xystudio.my.id/news/shots/6.3.0-panel-koneksi-baru.jpg)
+   ![Panel koneksi yang baru — daftar perangkat kini muncul duluan](https://app.xydesk.my.id/news/shots/6.3.0-panel-koneksi-baru.jpg)
    ```
 
    Teks di dalam `[...]` adalah keterangan gambar dan wajib diisi —
@@ -119,7 +119,7 @@ Aturan lama "satu sampul per artikel" sudah tidak berlaku. Mulai sekarang:
 
 > **Status dukungan (kini, per 3 Sep 2026):** sintaks `![...](...)` di atas
 > SUDAH dirender jadi gambar di aplikasi Android (Flutter), web, dan desktop
-> shell — hanya URL dari domain sendiri (`app.xystudio.my.id`) yang
+> shell — hanya URL dari domain sendiri (`app.xydesk.my.id`) yang
 > dirender, baris lain tetap paragraf biasa. Halaman berbagi `/n/<slug>`
 > hanya memuat metadata (judul, ringkasan, sampul), jadi tidak menampilkan
 > teks mentah. Berita rilis sudah bisa memakai blok gambar.
@@ -208,7 +208,7 @@ akan merasa dikasih brosur, bukan kabar.
 > Dulu susunan disimpan di HP masing-masing — itu keputusan awal kami yang
 > ternyata merepotkan, jadi kami pindahkan ke akun.
 >
-> ![Layar pengaturan kontrol — tombol simpan susunan yang baru](https://app.xystudio.my.id/news/shots/6.3.0-preset-kontrol.jpg)
+> ![Layar pengaturan kontrol — tombol simpan susunan yang baru](https://app.xydesk.my.id/news/shots/6.3.0-preset-kontrol.jpg)
 >
 > **Semua perubahan di versi 6.3.0:**
 > - Susunan kontrol tersimpan di akun, ikut ke semua perangkatmu.
@@ -230,14 +230,14 @@ jujur semua perubahan.
 Salin, isi, kirim. Jangan diedit strukturnya.
 
 ```bash
-curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
+curl -X POST "https://news.xydesk.my.id/api/admin/publish" \
   -H "Content-Type: application/json" \
   -H "x-admin-token: <ADMIN_TOKEN>" \
   -d '{
     "title": "<MANFAAT UTAMA, 40-70 karakter>",
     "excerpt": "<1-2 kalimat, maks 150 karakter, berisi dampak>",
     "content": "<PEMBUKA: apa yang kerasa berubah>\n\n<PER PERUBAHAN: apa + kenapa + ![keterangan](url screenshot) bila visual>\n\n<CHANGELOG: Semua perubahan di versi X.Y.Z: daftar lengkap bahasa pengguna>\n\n<PENUTUP: yang sedang kami siapkan>",
-    "cover": "https://app.xystudio.my.id/news/covers/<file>.jpg",
+    "cover": "https://app.xydesk.my.id/news/covers/<file>.jpg",
     "category": "rilis",
     "author": "Haekal Saputra"
   }'

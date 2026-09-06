@@ -77,7 +77,7 @@ interface NewsDetailRoute {
 type AuthStep = 'closed' | 'login' | 'otp';
 
 // Blok gambar di badan berita: baris sendiri berbentuk
-// ![keterangan](https://app.xystudio.my.id/news/shots/....jpg).
+// ![keterangan](https://app.xydesk.my.id/news/shots/....jpg).
 // Hanya gambar dari domain sendiri yang dirender — sesuai docs/NEWS_STYLE.md;
 // baris lain tetap tampil sebagai paragraf biasa.
 const NEWS_IMAGE_BLOCK = /^!\[([^\]]*)\]\((https:\/\/app\.xystudio\.my\.id\/[^\s)]+)\)$/;

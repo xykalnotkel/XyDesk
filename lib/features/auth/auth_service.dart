@@ -13,7 +13,7 @@ import 'package:http/http.dart' as http;
 abstract final class AuthConfig {
   static const baseUrl = String.fromEnvironment(
     'XYDESK_API_URL',
-    defaultValue: 'https://signal.xystudio.my.id',
+    defaultValue: 'https://signal.xydesk.my.id',
   );
 
   // OAuth client ID bukan secret, tetapi tetap dipasok dari konfigurasi build

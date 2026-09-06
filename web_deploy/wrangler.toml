@@ -5,9 +5,9 @@ compatibility_date = "2026-08-17"
 workers_dev = true
 preview_urls = true
 
-# Domain aplikasi. Backend tetap di https://signal.xystudio.my.id.
+# Domain aplikasi. Backend tetap di https://signal.xydesk.my.id.
 routes = [
-  { pattern = "app.xystudio.my.id", custom_domain = true }
+  { pattern = "app.xydesk.my.id", custom_domain = true }
 ]
 
 [assets]

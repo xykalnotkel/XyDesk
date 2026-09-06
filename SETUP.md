@@ -7,9 +7,9 @@ Panduan menjalankan seluruh sistem XyDesk lewat **GitHub Actions**
 
 | Item | Status |
 |---|---|
-| Signaling Worker live | `https://signal.xystudio.my.id` (custom domain) |
+| Signaling Worker live | `https://signal.xydesk.my.id` (custom domain) |
 | Worker secrets (XYDESK_SECRET, ADMIN_SECRET) | terpasang |
-| Custom domain | `signal.xystudio.my.id` -> worker (zona `xystudio.my.id`) |
+| Custom domain | `signal.xydesk.my.id` -> worker (zona `xystudio.my.id`) |
 | Endpoint TURN `/turn-ice` | jadi (butuh TURN key di dashboard) |
 | Endpoint `/signal-token` (JWT -> token signaling) | jadi |
 | Host WebRTC (webrtc-rs) | implementasi tersedia |
@@ -71,7 +71,7 @@ Terbitkan token untuk host (pakai ADMIN_SECRET):
 
 ```bash
 curl -H "X-Admin: <ADMIN_SECRET>" \
-  "https://signal.xystudio.my.id/issue?purpose=gaming-pc-01"
+  "https://signal.xydesk.my.id/issue?purpose=gaming-pc-01"
 ```
 
 Client app tidak memakai `/issue`: setelah pengguna login, app menukar JWT

@@ -1,9 +1,9 @@
 // Klien News untuk shell desktop — API publik yang sama dengan web/Android:
-// https://news.xystudio.my.id (Worker + D1). Renderer boleh memanggil
+// https://news.xydesk.my.id (Worker + D1). Renderer boleh memanggil
 // langsung karena CORS terbuka dan data publik.
 
-export const NEWS_BASE = 'https://news.xystudio.my.id';
-export const NEWS_SHARE_BASE = 'https://news.xystudio.my.id/n';
+export const NEWS_BASE = 'https://news.xydesk.my.id';
+export const NEWS_SHARE_BASE = 'https://news.xydesk.my.id/n';
 
 export interface NewsPost {
   slug: string;

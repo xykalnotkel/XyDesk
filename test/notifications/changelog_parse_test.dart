@@ -43,7 +43,7 @@ void main() {
     const body = '''
 ## [6.3.0]
 
-![banner](https://app.xystudio.my.id/banner.jpg)
+![banner](https://app.xydesk.my.id/banner.jpg)
 - Lihat [detail rilis](https://github.com/x) untuk informasi.
 | Kolom | Nilai |
 | a | b |

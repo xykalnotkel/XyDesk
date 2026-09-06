@@ -521,7 +521,7 @@ jobs:
 
             Installer Windows sudah memuat aplikasi dan engine Host sekaligus —
             tidak ada berkas terpisah yang perlu diunduh. Client web tersedia
-            online di https://app.xystudio.my.id
+            online di https://app.xydesk.my.id
 
             XyDesk memverifikasi APK menggunakan metadata `update.json`,
             checksum SHA-256, package ID, dan sertifikat signing sebelum installer dibuka.

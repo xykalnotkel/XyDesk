@@ -11,11 +11,11 @@ import assert from 'node:assert/strict';
 
 import { corsResponse } from '../src/worker.js';
 
-const APP = 'https://app.xystudio.my.id';
+const APP = 'https://app.xydesk.my.id';
 
 function cors(origin, env) {
   const headers = origin ? { Origin: origin } : {};
-  const request = new Request('https://signal.xystudio.my.id/auth/me', { headers });
+  const request = new Request('https://signal.xydesk.my.id/auth/me', { headers });
   return corsResponse(new Response('{}', { status: 200 }), request, env);
 }
 
@@ -51,11 +51,11 @@ test('permintaan tanpa header Origin tidak pernah diberi akses', () => {
 });
 
 test('beberapa origin dipisah koma, spasi diabaikan', () => {
-  const env = { CORS_ORIGINS: ` ${APP} , https://news.xystudio.my.id ` };
+  const env = { CORS_ORIGINS: ` ${APP} , https://news.xydesk.my.id ` };
   assert.equal(cors(APP, env).headers.get('Access-Control-Allow-Origin'), APP);
   assert.equal(
-    cors('https://news.xystudio.my.id', env).headers.get('Access-Control-Allow-Origin'),
-    'https://news.xystudio.my.id'
+    cors('https://news.xydesk.my.id', env).headers.get('Access-Control-Allow-Origin'),
+    'https://news.xydesk.my.id'
   );
 });
 
@@ -84,7 +84,7 @@ test('header CORS lain tidak bergantung pada konfigurasi', () => {
 test('badan dan status respons tetap utuh setelah dibungkus CORS', async () => {
   const res = corsResponse(
     new Response('{"ok":true}', { status: 201 }),
-    new Request('https://signal.xystudio.my.id/auth/me', { headers: { Origin: APP } }),
+    new Request('https://signal.xydesk.my.id/auth/me', { headers: { Origin: APP } }),
     { CORS_ORIGINS: APP }
   );
   assert.equal(res.status, 201);

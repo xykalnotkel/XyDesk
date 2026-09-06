@@ -95,10 +95,10 @@ dengan TURN, stabil 30 menit tanpa re-buffer.
 - Tampilan semua platform: dominan hitam-putih, ungu hanya aksen. Logo X resmi
   tanpa glow/bayangan (sumber: `design/x-white.png` & `design/x-black.png`).
 - Berita satu umpan (Worker `news/` + D1) untuk Android, Desktop, Web —
-  like/komentar/bagikan; halaman share `news.xystudio.my.id/n/<slug>` dan
+  like/komentar/bagikan; halaman share `news.xydesk.my.id/n/<slug>` dan
   renderer OpenGraph baru di web (`web_deploy/worker/`) memberi meta per konten.
 - Perbaikan bug: berita web gagal dimuat ("Failed to fetch") karena CSP belum
-  mengizinkan `news.xystudio.my.id` — sudah ditambahkan di `_headers`.
+  mengizinkan `news.xydesk.my.id` — sudah ditambahkan di `_headers`.
 - Lisensi proyek: **proprietary** (file `LICENSE` — EULA, larangan clone);
   daftar lengkap lisensi pihak ketiga di `docs/LEGAL.md` + Legal di
   semua platform. (Sebelumnya sempat tercatat Apache-2.0 — dicabut.)
@@ -199,7 +199,7 @@ Detail lengkap: `docs/DESKTOP_SHELL.md`.
 | Signaling | **Cloudflare Worker + Durable Object** (`cloudflare/`, sudah jadi) | Rp 0 |
 | STUN | `stun.cloudflare.com` (publik) | Rp 0 tanpa batas |
 | TURN | `turn.cloudflare.com` | 1.000 GB/bln gratis |
-| TLS | otomatis (custom domain signal.xystudio.my.id) | Rp 0 |
+| TLS | otomatis (custom domain signal.xydesk.my.id) | Rp 0 |
 | Auth | Firebase **Spark** / Supabase free / HMAC self-host | Rp 0 |
 | Encode | NVENC/AMF/QuickSync (GPU onboard) | Rp 0 |
 | Libraries | flutter_webrtc, webrtc-rs, str0m — MIT/Apache | Rp 0 |

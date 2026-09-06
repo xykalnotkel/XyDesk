@@ -23,8 +23,8 @@ const path = require('node:path');
 const net = require('node:net');
 
 // ── Konfigurasi ─────────────────────────────────────────────────────────
-const SIGNALING_HTTP = process.env.XYDESK_SIGNALING_HTTP || 'https://signal.xystudio.my.id';
-const SIGNALING_WS = process.env.XYDESK_SIGNALING_WS || 'wss://signal.xystudio.my.id/ws';
+const SIGNALING_HTTP = process.env.XYDESK_SIGNALING_HTTP || 'https://signal.xydesk.my.id';
+const SIGNALING_WS = process.env.XYDESK_SIGNALING_WS || 'wss://signal.xydesk.my.id/ws';
 const WATCHDOG_MS = 2500;
 const RESTART_BACKOFF_BASE_MS = 2000;
 const RESTART_BACKOFF_MAX_MS = 30000;

@@ -7,7 +7,13 @@ compatibility_date = "2026-08-17"
 # Browser produksi yang boleh memanggil API. Klien native tidak mengirim
 # Origin, jadi pembatasan ini tidak mengganggu Android/desktop.
 [vars]
-CORS_ORIGINS = "https://app.xystudio.my.id"
+CORS_ORIGINS = "https://app.xydesk.my.id"
+
+# Domain signaling. Dulunya dipasang manual dari dashboard, jadi tidak
+# tercatat di berkas ini; kini ditulis di sini supaya bisa dideploy ulang.
+routes = [
+  { pattern = "signal.xydesk.my.id", custom_domain = true },
+]
 
 # ── Durable Object: hub global (registri host + relay SDP/ICE) ──
 [durable_objects]

@@ -1,4 +1,4 @@
-//! Tab Berita — feed publik dari news.xystudio.my.id (sama dengan web/desktop).
+//! Tab Berita — feed publik dari news.xydesk.my.id (sama dengan web/desktop).
 //!
 //! Keadaan dimuat jujur: skeleton saat memuat, pesan galat + tombol coba lagi
 //! saat jaringan gagal, dan empty state per kategori. Tidak ada konten dummy.

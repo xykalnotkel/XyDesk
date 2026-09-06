@@ -132,7 +132,7 @@ fn release_slot(
 #[derive(Parser, Debug)]
 #[command(name = "xydesk-host", about = "XyDesk host — stream layar ke client")]
 struct Args {
-    /// URL signaling server (mis. wss://signal.xystudio.my.id/ws)
+    /// URL signaling server (mis. wss://signal.xydesk.my.id/ws)
     #[arg(long, default_value = "ws://localhost:8787/ws")]
     url: String,
     /// DeviceId host ini (opsional — otomatis digenerasi & disimpan bila kosong)

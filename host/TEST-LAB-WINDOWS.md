@@ -25,9 +25,9 @@ cd host
 cargo build --release --bin xydesk-host
 
 # Token signaling host: ditukar dari ID (9 digit, TANPA spasi) + password pairing
-$resp = Invoke-WebRequest -Method POST -Uri 'https://signal.xystudio.my.id/host-token' `
+$resp = Invoke-WebRequest -Method POST -Uri 'https://signal.xydesk.my.id/host-token' `
   -ContentType 'application/json' -Body '{"id":"123456789","claim":"PASSWORDPAIRING"}'
-& .\target\release\xydesk-host.exe --url wss://signal.xystudio.my.id/ws `
+& .\target\release\xydesk-host.exe --url wss://signal.xydesk.my.id/ws `
   --token $resp.Content --control-port 45123
 ```
 

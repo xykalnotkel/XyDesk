@@ -248,8 +248,8 @@ tidak otomatis tampil di halaman Releases.
 Setelah workflow Build pada `main` sukses, workflow Web mengambil artefak
 `XyDesk-Web` dari run yang sama dan memublikasikannya tanpa build ulang ke
 Cloudflare Workers Static Assets. Produksi menggunakan
-`https://app.xystudio.my.id`; API, autentikasi, dan signaling tetap terpisah di
-`https://signal.xystudio.my.id`.
+`https://app.xydesk.my.id`; API, autentikasi, dan signaling tetap terpisah di
+`https://signal.xydesk.my.id`.
 
 Konfigurasi publik berada di `web_deploy/wrangler.toml`. Deployment membutuhkan
 GitHub Actions Secrets `CLOUDFLARE_ACCOUNT_ID` dan `CLOUDFLARE_API_TOKEN`.

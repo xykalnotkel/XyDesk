@@ -176,5 +176,5 @@ jobs:
           {
             echo "## Flutter Web production"
             echo ""
-            echo "https://app.xystudio.my.id"
+            echo "https://app.xydesk.my.id"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -424,7 +424,7 @@ async function sendPush(env, post) {
         id: post.title,
         en: post.excerpt || post.title,
       },
-      url: `https://news.xystudio.my.id/n/${post.slug}`,
+      url: `https://news.xydesk.my.id/n/${post.slug}`,
       chrome_web_image: post.cover || undefined,
       big_picture: post.cover || undefined,
       name: 'news',
@@ -451,16 +451,16 @@ async function sendEmails(env, post) {
           subject: `XyDesk: ${post.title}`,
           html: `<div style="font-family:sans-serif;max-width:560px;margin:auto">
   <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:#0d0716;border-radius:14px 14px 0 0">
-    <img src="https://app.xystudio.my.id/logo.png" alt="XyDesk" width="34" height="34" style="border-radius:8px;display:block;border:0" />
+    <img src="https://app.xydesk.my.id/logo.png" alt="XyDesk" width="34" height="34" style="border-radius:8px;display:block;border:0" />
     <span style="color:#a78bfa;font-size:13px;font-weight:600">XyDesk News</span>
   </div>
   <div style="padding:22px;border:1px solid #e9e5f2;border-top:0;border-radius:0 0 14px 14px">
     <h2 style="margin:0 0 10px;color:#160f2b">${post.title}</h2>
     <p style="color:#5b5570">${post.excerpt || ''}</p>
-    <a href="https://news.xystudio.my.id/n/${post.slug}" style="display:inline-block;background:#7c3aed;color:#fff;padding:11px 20px;border-radius:10px;text-decoration:none;font-weight:600">Baca di XyDesk</a>
+    <a href="https://news.xydesk.my.id/n/${post.slug}" style="display:inline-block;background:#7c3aed;color:#fff;padding:11px 20px;border-radius:10px;text-decoration:none;font-weight:600">Baca di XyDesk</a>
     <p style="color:#9a94ad;font-size:12px;margin:20px 0 0">Kamu menerima email ini karena berlangganan berita XyDesk.</p>
     <div style="display:flex;align-items:center;gap:12px;margin-top:20px;padding-top:18px;border-top:1px solid #e9e5f2">
-      <img src="https://app.xystudio.my.id/team/founder.jpg" alt="Haekal Saputra" width="34" height="34" style="border-radius:50%;object-fit:cover;display:block" />
+      <img src="https://app.xydesk.my.id/team/founder.jpg" alt="Haekal Saputra" width="34" height="34" style="border-radius:50%;object-fit:cover;display:block" />
       <div style="font-size:13px;color:#160f2b"><strong>Haekal Saputra</strong><br /><span style="color:#9a94ad">Founder, XySpace — via XyDesk News</span></div>
     </div>
   </div>
@@ -484,9 +484,9 @@ async function sharePage(env, slug, url) {
   if (!p) {
     return new Response('Tidak ditemukan.', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
   }
-  const web = env.WEB_APP || 'https://app.xystudio.my.id';
+  const web = env.WEB_APP || 'https://app.xydesk.my.id';
   const target = `${web}/news/${p.slug}`;
-  const shareUrl = `https://news.xystudio.my.id/n/${p.slug}`;
+  const shareUrl = `https://news.xydesk.my.id/n/${p.slug}`;
   const html = `<!doctype html>
 <html lang="id">
 <head>

@@ -5,7 +5,7 @@ compatibility_date = "2026-08-31"
 # Pola route (bukan Workers Custom Domains) — sama dengan pola yang dipakai
 # Worker signaling. DNS record A proxied 192.0.2.1 dibuat terpisah.
 routes = [
-  { pattern = "news.xystudio.my.id/*", zone_name = "xystudio.my.id" }
+  { pattern = "news.xydesk.my.id/*", zone_name = "xydesk.my.id" }
 ]
 
 [[d1_databases]]
@@ -15,4 +15,4 @@ database_id = "7ffccd9e-3432-47bf-b3e7-7492cbe56ea2"
 
 [vars]
 # Aplikasi web yang jadi target redirect halaman berbagi.
-WEB_APP = "https://app.xystudio.my.id"
+WEB_APP = "https://app.xydesk.my.id"

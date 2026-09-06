@@ -1,4 +1,4 @@
-# XyDesk News — Worker + D1 (news.xystudio.my.id)
+# XyDesk News — Worker + D1 (news.xydesk.my.id)
 
 Umpan berita publik untuk Android, Desktop, dan Web. Terpisah total dari
 Worker signaling.
@@ -35,14 +35,14 @@ Terbitkan lewat endpoint admin —
 menebak urutan dan tidak membocorkan judul di URL:
 
 ```bash
-curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
+curl -X POST "https://news.xydesk.my.id/api/admin/publish" \
   -H "Content-Type: application/json" \
   -H "x-admin-token: <ADMIN_TOKEN>" \
   -d '{
     "title": "Judul rilis",
     "excerpt": "Ringkasan 1-2 kalimat untuk kartu + OG",
     "content": "Isi panjang — paragraf dipisah baris kosong.",
-    "cover": "https://app.xystudio.my.id/news/covers/<file>.jpg",
+    "cover": "https://app.xydesk.my.id/news/covers/<file>.jpg",
     "category": "rilis|teknik|umum",
     "author": "Haekal Saputra"
   }'
@@ -58,14 +58,14 @@ curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
 > worker:
 >
 > ```bash
-> curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
+> curl -X POST "https://news.xydesk.my.id/api/admin/publish" \
 >   -H "Content-Type: application/json" \
 >   -H "x-admin-token: <ADMIN_TOKEN>" \
 >   -d '{
 >     "title": "Judul rilis",
 >     "excerpt": "Ringkasan 1-2 kalimat untuk kartu + OG",
 >     "content": "Isi panjang — paragraf dipisah baris kosong.",
->     "cover": "https://app.xystudio.my.id/news/covers/<file>.jpg",
+>     "cover": "https://app.xydesk.my.id/news/covers/<file>.jpg",
 >     "category": "rilis",
 >     "author": "Haekal Saputra",
 >     "slug": "changelog-v6-4-1"
@@ -84,7 +84,7 @@ Admin (publish artikel & badge resmi komentar) menerima **dua** bukti:
    header ini sudah dibuka.
 
 ```bash
-curl -X POST "https://news.xystudio.my.id/api/admin/publish" \
+curl -X POST "https://news.xydesk.my.id/api/admin/publish" \
   -H "Content-Type: application/json" \
   -H "x-admin-google-token: <ID_TOKEN_GOOGLE>" \
   -d '{"title":"Judul rilis","content":"Isi rilis lengkap.","slug":"changelog-v6-4-1"}'
@@ -104,7 +104,7 @@ OAuth web; bisa daftar pisah-koma bila Android ikut) dan `FOUNDER_EMAIL`
 ## Sampul berita
 
 Sampul (1424×752) disimpan di `web/public/news/covers/` dan ikut ter-deploy
-ke `app.xystudio.my.id/news/covers/<file>.jpg` — jangan pakai URL luar.
+ke `app.xydesk.my.id/news/covers/<file>.jpg` — jangan pakai URL luar.
 
 ## Skema
 

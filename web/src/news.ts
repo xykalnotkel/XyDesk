@@ -1,17 +1,17 @@
 // Klien News XyDesk — API publik di Worker terpisah (D1).
-// https://news.xystudio.my.id — berita publik tanpa akun.
+// https://news.xydesk.my.id — berita publik tanpa akun.
 //
 // Halaman berbagi (untuk crawler sosial + WhatsApp/Telegram/X):
-//   https://news.xystudio.my.id/n/:slug  → OpenGraph + redirect ke halaman ini.
-// Aplikasi web sendiri membaca: https://news.xystudio.my.id/api/news/...
+//   https://news.xydesk.my.id/n/:slug  → OpenGraph + redirect ke halaman ini.
+// Aplikasi web sendiri membaca: https://news.xydesk.my.id/api/news/...
 //
 // Rilis 6.0: balasan komentar (parentId), username acak per perangkat
 // (tanpa kolom nama), langganan email berita.
 
 import { ApiError } from './api';
 
-export const NEWS_BASE = 'https://news.xystudio.my.id';
-export const NEWS_SHARE_BASE = 'https://news.xystudio.my.id/n';
+export const NEWS_BASE = 'https://news.xydesk.my.id';
+export const NEWS_SHARE_BASE = 'https://news.xydesk.my.id/n';
 
 export interface NewsPost {
   slug: string;

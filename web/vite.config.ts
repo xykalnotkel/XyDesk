@@ -31,7 +31,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'https://signal.xystudio.my.id',
+        target: 'https://signal.xydesk.my.id',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },

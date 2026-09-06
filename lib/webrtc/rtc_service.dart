@@ -461,7 +461,7 @@ class RtcService {
   }
 
   /// Turunkan base URL HTTP dari URL WebSocket signaling:
-  /// `wss://signal.xystudio.my.id/ws` -> `https://signal.xystudio.my.id`.
+  /// `wss://signal.xydesk.my.id/ws` -> `https://signal.xydesk.my.id`.
   static String _deriveBase(String signalingUrl) {
     var s = signalingUrl;
     if (s.startsWith('wss://')) {

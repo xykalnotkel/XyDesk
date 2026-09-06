@@ -1,6 +1,6 @@
 name: Deploy News (Cloudflare Workers + D1)
 
-# Deploy Worker berita publik (news.xystudio.my.id) — TERPISAH dari Worker
+# Deploy Worker berita publik (news.xydesk.my.id) — TERPISAH dari Worker
 # signaling agar deploy berita tidak pernah menyentuh jalur signaling
 # produksi. Migrasi skema D1 dijalankan dulu (idempoten).
 

@@ -66,7 +66,7 @@ dan jauh lebih sederhana daripada push-event.
    → `{deviceId, password}`.
 2. Tukar `id + password` → token signaling lewat `POST /host-token`
    (dari Node — tidak ada CORS, sama seperti GUI native dulu).
-3. Spawn engine: `--url wss://signal.xystudio.my.id/ws --token TOKEN
+3. Spawn engine: `--url wss://signal.xydesk.my.id/ws --token TOKEN
    --control-port <port-bebas>`; port dipilih proses utama agar tidak bentrok.
 4. Parse baris `[control]` dari stdout → token + port control.
 5. Renderer meminta status lewat IPC (`window.xydesk.getStatus()`);
@@ -106,7 +106,7 @@ data contoh dengan banner "Mode pratinjau".
   Kolom password kustom TIDAK mengkapital otomatis (`autoCapitalize="none"`)
   karena host membandingkan secara peka-kasus; ada peringatan kalau password
   yang dipilih tidak punya huruf kecil sama sekali (lihat `host/README.md`).
-- **News** — feed publik `news.xystudio.my.id` (like, komentar, salin tautan berbagi).
+- **News** — feed publik `news.xydesk.my.id` (like, komentar, salin tautan berbagi).
 - **Profile** — identitas perangkat, versi, tautan eksternal.
 - **Settings** (pojok kiri bawah) — mulai dengan Windows (nyata lewat
   `app.setLoginItemSettings`), mulai ulang engine, monitor sumber

@@ -42,7 +42,7 @@ Terbitkan token:
 
 ```bash
 # Cloudflare (produksi): endpoint operator /issue (header X-Admin).
-curl -H "X-Admin: $ADMIN_SECRET" "https://signal.xystudio.my.id/issue?purpose=gaming-pc-01"
+curl -H "X-Admin: $ADMIN_SECRET" "https://signal.xydesk.my.id/issue?purpose=gaming-pc-01"
 
 # Server Go (self-host): flag -issue, role dipilih eksplisit.
 XYDESK_SECRET=... ./signaling -issue gaming-pc-01 -role host

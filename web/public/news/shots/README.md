@@ -2,7 +2,7 @@
 
 Folder ini wadah screenshot ASLI yang menyertai artikel berita — diwajibkan
 `docs/NEWS_STYLE.md` bagian 3. Ter-deploy ke
-`https://app.xystudio.my.id/news/shots/<file>.jpg`.
+`https://app.xydesk.my.id/news/shots/<file>.jpg`.
 
 Aturan singkat:
 
@@ -21,5 +21,5 @@ Aturan singkat:
 Sintaks pemakaian di badan berita (baris sendiri):
 
 ```
-![Keterangan yang menjelaskan gambar](https://app.xystudio.my.id/news/shots/6.3.0-panel-koneksi-baru.jpg)
+![Keterangan yang menjelaskan gambar](https://app.xydesk.my.id/news/shots/6.3.0-panel-koneksi-baru.jpg)
 ```

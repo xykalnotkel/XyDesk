@@ -9,8 +9,8 @@
 // edge-to-edge yang lambat dan rapuh. Kalau binding tidak tersedia
 // (lingkungan dev), fallback ke API publik berita.
 
-const NEWS_API = 'https://news.xystudio.my.id';
-const SITE = 'https://app.xystudio.my.id';
+const NEWS_API = 'https://news.xydesk.my.id';
+const SITE = 'https://app.xydesk.my.id';
 
 const BOT_PATTERNS = [
   /facebookexternalhit/i,

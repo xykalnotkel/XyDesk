@@ -4,7 +4,7 @@
 // Di produksi frontend dan backend berbeda origin, jadi semua panggilan
 // memakai BASE absolut. Saat dev, Vite mem-proxy /api ke Worker produksi.
 
-const PROD_BASE = (import.meta.env.VITE_SIGNAL_API as string | undefined) ?? 'https://signal.xystudio.my.id';
+const PROD_BASE = (import.meta.env.VITE_SIGNAL_API as string | undefined) ?? 'https://signal.xydesk.my.id';
 export const API_BASE = import.meta.env.DEV ? '/api' : PROD_BASE;
 export const WS_URL =
   (import.meta.env.VITE_SIGNAL_WS as string | undefined) ??

@@ -12,7 +12,7 @@
 /// Foto pendiri XySpace — dipakai untuk penulis artikel & komentar resmi.
 /// Web memuat `/team/founder.jpg` dari domain ini; Flutter mengambil lewat
 /// URL penuh karena tidak punya jaminan path relatif terhadap lokasi deploy.
-const newsFounderAvatar = 'https://app.xystudio.my.id/team/founder.jpg';
+const newsFounderAvatar = 'https://app.xydesk.my.id/team/founder.jpg';
 
 /// Foto profil komentator — DiceBear `adventurer` SVG dari nama penulis
 /// (gratis, tanpa kunci API, tanpa backend): nama sama = wajah sama, di

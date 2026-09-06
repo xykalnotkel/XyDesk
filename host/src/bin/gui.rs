@@ -42,8 +42,8 @@ mod win {
         WM_TIMER, WNDCLASSW, WS_CAPTION, WS_MINIMIZEBOX, WS_SYSMENU, WS_VISIBLE,
     };
 
-    const SIGNALING_HTTP: &str = "https://signal.xystudio.my.id";
-    const SIGNALING_WS: &str = "wss://signal.xystudio.my.id/ws";
+    const SIGNALING_HTTP: &str = "https://signal.xydesk.my.id";
+    const SIGNALING_WS: &str = "wss://signal.xydesk.my.id/ws";
 
     // ── Palet Quiet Surface (COLORREF = 0x00BBGGRR) ──
     const BG: u32 = 0x00120A0B; // #0B0A12
@@ -350,7 +350,7 @@ mod win {
                         TEXT_MID,
                         28,
                         336,
-                        "Masukkan ID + password di XyDesk Android / app.xystudio.my.id",
+                        "Masukkan ID + password di XyDesk Android / app.xydesk.my.id",
                     );
                 }
 

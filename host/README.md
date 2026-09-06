@@ -78,7 +78,7 @@ kontrol ditolak) — dipakai CLI `--set-password` dan control API `set-password`
 
 ```bash
 xydesk-host \
-  --url wss://signal.xystudio.my.id/ws \
+  --url wss://signal.xydesk.my.id/ws \
   --token <TOKEN>        # dari /issue
 # --id opsional: otomatis digenerasi & disimpan bila tidak diberikan
 ```

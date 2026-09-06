@@ -17,7 +17,7 @@ Buat kamu yang pakai XyDesk sebagai tamu (tanpa login), sekarang ada penghitung 
 Sebelumnya, tamu tidak tahu berapa lama sesi mereka berjalan — tiba-tiba putus tanpa peringatan. Ini bikin frustrasi, apalagi kalau kamu sedang di tengah kerjaan penting. Sekarang kamu punya kendali penuh atas waktu.
 
 **Screenshot:**  
-![Card countdown sesi tamu - Total 2 jam, Sisa 1 jam 45 menit](https://app.xystudio.my.id/news/shots/<versi>-countdown-sesi-tamu.jpg)
+![Card countdown sesi tamu - Total 2 jam, Sisa 1 jam 45 menit](https://app.xydesk.my.id/news/shots/<versi>-countdown-sesi-tamu.jpg)
 
 ---
 
@@ -30,8 +30,8 @@ Sekarang kamu bisa buat, simpan, dan kelola beberapa profil pengaturan kontrol �
 Keluhan paling sering: pengaturan kontrol tidak ikut saat ganti perangkat. Kamu harus mengatur ulang dari nol setiap kali login di HP lain. Kami pindahkan penyimpanan ke akun, bukan perangkat. Satu kali atur, pakai di mana saja.
 
 **Screenshot:**  
-![Halaman Control Mapping - daftar profil dengan badge DEFAULT](https://app.xystudio.my.id/news/shots/<versi>-control-mapping-list.jpg)  
-![Detail profil Gaming - mapping WASD + mouse](https://app.xystudio.my.id/news/shots/<versi>-control-mapping-gaming.jpg)
+![Halaman Control Mapping - daftar profil dengan badge DEFAULT](https://app.xydesk.my.id/news/shots/<versi>-control-mapping-list.jpg)  
+![Detail profil Gaming - mapping WASD + mouse](https://app.xydesk.my.id/news/shots/<versi>-control-mapping-gaming.jpg)
 
 ---
 
@@ -44,7 +44,7 @@ Tombol keyboard virtual sekarang lebih besar (44px), dengan animasi tekan yang l
 Keyboard virtual sebelumnya terlalu kecil untuk jari, terutama saat mode landscape. Tombol sering terlewat atau salah pencet. Kami besarkan touch target, perhalus animasi, dan perkuat visual feedback. Sekarang enak dipencet seperti keyboard HP sungguhan.
 
 **Screenshot:**  
-![Keyboard virtual split mode - tombol lebih besar dengan aksen ungu saat ditekan](https://app.xystudio.my.id/news/shots/<versi>-keyboard-virtual-responsif.jpg)
+![Keyboard virtual split mode - tombol lebih besar dengan aksen ungu saat ditekan](https://app.xydesk.my.id/news/shots/<versi>-keyboard-virtual-responsif.jpg)
 
 ---
 
@@ -57,8 +57,8 @@ Saat kamu login dengan Google, foto profil Google kamu sekarang otomatis muncul 
 Banyak user bertanya kenapa foto Google mereka tidak muncul di aplikasi. Kami sengaja memakai DiceBear di awal supaya avatar konsisten tanpa bergantung jaringan, tapi ternyata user lebih suka foto asli. Sekarang prioritasnya: foto Google → preset DiceBear → URL custom → inisial.
 
 **Screenshot:**  
-![Topbar dengan foto profil Google asli](https://app.xystudio.my.id/news/shots/<versi>-profile-google-topbar.jpg)  
-![Header halaman Akun dengan foto profil](https://app.xystudio.my.id/news/shots/<versi>-profile-google-account.jpg)
+![Topbar dengan foto profil Google asli](https://app.xydesk.my.id/news/shots/<versi>-profile-google-topbar.jpg)  
+![Header halaman Akun dengan foto profil](https://app.xydesk.my.id/news/shots/<versi>-profile-google-account.jpg)
 
 ---
 
@@ -71,7 +71,7 @@ Saat kamu masuk sebagai tamu, sekarang dapat nama manusia Indonesia yang natural
 Nama "tamu-a3f8" terlihat seperti nomor seri, bukan manusia. Kami ingin sesi tamu terasa lebih personal, apalagi kalau kamu berkomentar di berita atau berinteraksi dengan fitur lain. 64 nama depan × 31 nama belakang = 1.984 kombinasi nama yang terdengar natural.
 
 **Screenshot:**  
-![Header akun tamu dengan nama "Aditya Pratama"](https://app.xystudio.my.id/news/shots/<versi>-guest-identity-nama-manusia.jpg)
+![Header akun tamu dengan nama "Aditya Pratama"](https://app.xydesk.my.id/news/shots/<versi>-guest-identity-nama-manusia.jpg)
 
 ---
 
@@ -84,7 +84,7 @@ Tombol baru di bar atas (di samping notifikasi) membuka halaman Langganan. Sekar
 Langganan adalah fitur yang sering diakses, tapi sebelumnya tersembunyi di dalam halaman Akun. Kami angkat ke topbar supaya satu ketukan langsung sampai. Ikonnya transparan dan cocok di tema terang maupun gelap.
 
 **Screenshot:**  
-![Topbar dengan tombol avatar di sebelah notifikasi](https://app.xystudio.my.id/news/shots/<versi>-tombol-langganan-topbar.jpg)
+![Topbar dengan tombol avatar di sebelah notifikasi](https://app.xydesk.my.id/news/shots/<versi>-tombol-langganan-topbar.jpg)
 
 ---
 
@@ -110,7 +110,7 @@ Halaman "Pusat Update" sekarang menampilkan catatan rilis lengkap dari GitHub Re
 Sebelumnya, halaman pembaruan hanya menampilkan "Versi 6.3.0 - perbaikan bug dan peningkatan performa" yang terlalu umum. User berhak tahu apa saja yang berubah, bukan cuma rangkuman. Sekarang kamu bisa baca changelog lengkap langsung di aplikasi.
 
 **Screenshot:**  
-![Halaman Pusat Update dengan catatan rilis lengkap](https://app.xystudio.my.id/news/shots/<versi>-changelog-lengkap.jpg)
+![Halaman Pusat Update dengan catatan rilis lengkap](https://app.xydesk.my.id/news/shots/<versi>-changelog-lengkap.jpg)
 
 ---
 

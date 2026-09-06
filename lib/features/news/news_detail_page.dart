@@ -1,6 +1,6 @@
 //! Detail berita — konten penuh, like, komentar, dan berbagi.
 //!
-//! Berbagi memakai tautan `news.xystudio.my.id/n/:slug` yang merender
+//! Berbagi memakai tautan `news.xydesk.my.id/n/:slug` yang merender
 //! OpenGraph untuk crawler sosial (WhatsApp/Telegram/X/Facebook), lalu
 //! mengarahkan manusia ke halaman web penuh.
 
@@ -20,7 +20,7 @@ import '../../widgets/brand_icons.dart';
 
 /// Blok gambar di badan berita: baris sendiri berbentuk
 /// `![keterangan](url)`. Hanya gambar dari domain sendiri
-/// (`app.xystudio.my.id`) yang dirender — sesuai `docs/NEWS_STYLE.md`;
+/// (`app.xydesk.my.id`) yang dirender — sesuai `docs/NEWS_STYLE.md`;
 /// baris lain tetap tampil sebagai paragraf biasa. Meniru web
 /// (`NEWS_IMAGE_BLOCK` di `web/src/App.tsx`).
 final _newsImageBlock = RegExp(
@@ -304,7 +304,7 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
   }
 
   /// Satu blok isi berita. Baris gambar `![keterangan](url)` — hanya URL
-  /// domain sendiri (`app.xystudio.my.id`) — dirender sebagai gambar
+  /// domain sendiri (`app.xydesk.my.id`) — dirender sebagai gambar
   /// berbingkai + keterangan; baris lain tetap paragraf biasa. Meniru web.
   Widget _newsContentBlock(BuildContext context, String para) {
     final c = context.c;

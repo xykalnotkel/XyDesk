@@ -1,6 +1,6 @@
 //! Klien News XyDesk — API publik di Worker terpisah (D1).
 //!
-//! `https://news.xystudio.my.id` — sama dengan yang dipakai web & desktop.
+//! `https://news.xydesk.my.id` — sama dengan yang dipakai web & desktop.
 //! Berita publik tanpa akun; like idempoten per sidik jari perangkat,
 //! komentar dibatasi lajunya di server.
 
@@ -13,8 +13,8 @@ import 'package:http/http.dart' as http;
 import '../../core/devlog.dart';
 import '../../core/store.dart';
 
-const newsBase = 'https://news.xystudio.my.id';
-const newsShareBase = 'https://news.xystudio.my.id/n';
+const newsBase = 'https://news.xydesk.my.id';
+const newsShareBase = 'https://news.xydesk.my.id/n';
 
 class NewsPost {
   const NewsPost({

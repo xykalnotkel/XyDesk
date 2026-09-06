@@ -45,7 +45,7 @@ Konfigurasi publik ditanam saat build:
 
 ```bash
 flutter build apk --release \
-  --dart-define=XYDESK_API_URL=https://signal.xystudio.my.id \
+  --dart-define=XYDESK_API_URL=https://signal.xydesk.my.id \
   --dart-define=GOOGLE_CLIENT_ID=<web-oauth-client-id>
 ```
 

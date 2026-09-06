@@ -36,7 +36,7 @@ import {
 const DEMO = typeof window !== 'undefined' && !window.xydesk;
 
 // Blok gambar di badan berita: baris sendiri berbentuk
-// ![keterangan](https://app.xystudio.my.id/news/shots/....jpg).
+// ![keterangan](https://app.xydesk.my.id/news/shots/....jpg).
 // Hanya gambar dari domain sendiri yang dirender — sesuai docs/NEWS_STYLE.md;
 // baris lain tetap tampil sebagai paragraf biasa. Pola sama dengan web client.
 const NEWS_IMAGE_BLOCK = /^!\[([^\]]*)\]\((https:\/\/app\.xystudio\.my\.id\/[^\s)]+)\)$/;
@@ -46,7 +46,7 @@ const DEMO_STATUS: StatusPayload = {
   engine: true,
   deviceId: '123456789',
   password: 'KopiPagi2026',
-  signalingUrl: 'wss://signal.xystudio.my.id/ws',
+  signalingUrl: 'wss://signal.xydesk.my.id/ws',
   uptimeMs: 1800000,
   session: {
     clientId: 'klien-demo',
@@ -79,7 +79,7 @@ const DEMO_LOGS: LogEntry[] = [
   { t: Date.now() - 5000, line: '[shell] identitas host 123456789' },
   { t: Date.now() - 4500, line: '[shell] mulai engine (port control 43210)' },
   { t: Date.now() - 4200, line: '[engine] [control] http://127.0.0.1:43210 token=…' },
-  { t: Date.now() - 3800, line: '[engine] terhubung ke wss://signal.xystudio.my.id/ws' },
+  { t: Date.now() - 3800, line: '[engine] terhubung ke wss://signal.xydesk.my.id/ws' },
   { t: Date.now() - 2000, line: '[engine] NVENC aktif: H264 hardware 1920x1080 @ 8000 kbps CBR' },
   { t: Date.now() - 1500, line: '[engine] pairing DITERIMA dari klien-demo' },
   { t: Date.now() - 1000, line: '[engine] track video siap — streaming' },
@@ -655,7 +655,7 @@ function NewsPage() {
             </button>
             <a
               className="btn-ghost-link"
-              href="https://app.xystudio.my.id/news"
+              href="https://app.xydesk.my.id/news"
               target="_blank"
               rel="noreferrer"
             >
@@ -949,7 +949,7 @@ function ProfilePage({ status, info }: { status: StatusPayload | null; info: Inf
           <a className="btn-ghost-link" href="https://github.com/xykalnotkel/XyDesk" target="_blank" rel="noreferrer">
             <ExternalLink size={14} /> GitHub
           </a>
-          <a className="btn-ghost-link" href="https://app.xystudio.my.id/news" target="_blank" rel="noreferrer">
+          <a className="btn-ghost-link" href="https://app.xydesk.my.id/news" target="_blank" rel="noreferrer">
             <ExternalLink size={14} /> Berita di Web
           </a>
         </div>

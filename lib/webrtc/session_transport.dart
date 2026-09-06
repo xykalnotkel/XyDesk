@@ -38,7 +38,7 @@ class TransportState {
 abstract final class SignalingConfig {
   static const wsUrl = String.fromEnvironment(
     'XYDESK_SIGNALING_URL',
-    defaultValue: 'wss://signal.xystudio.my.id/ws',
+    defaultValue: 'wss://signal.xydesk.my.id/ws',
   );
 }
 

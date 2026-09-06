@@ -13,7 +13,7 @@ desktop/
 ├── app/                # renderer Next.js (App Router, static export)
 │   ├── layout.tsx
 │   ├── page.tsx        # sidebar: Home/Connect/News/Profile/Settings
-│   ├── news.ts         # klien API berita publik (news.xystudio.my.id)
+│   ├── news.ts         # klien API berita publik (news.xydesk.my.id)
 │   └── globals.css     # token Quiet Surface (sama dengan lib/core/tokens.dart)
 ├── global.d.ts         # tipe kontrak IPC
 ├── next.config.mjs     # output: 'export'

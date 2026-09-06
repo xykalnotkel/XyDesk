@@ -26,7 +26,7 @@ export default {
     const path = url.pathname;
 
     // Browser mengirim preflight sebelum request ber-JSON/Authorization
-    // (client web di app.xystudio.my.id berbeda origin dari Worker ini).
+    // (client web di app.xydesk.my.id berbeda origin dari Worker ini).
     if (
       request.method === 'OPTIONS' &&
       (path.startsWith('/auth/') || path === '/signal-token' || path === '/turn-ice' || path === '/host-token')
@@ -93,7 +93,7 @@ export default {
 
 // ── CORS untuk aplikasi Web ─────────────────────────────────────────────
 // CORS_ORIGINS berisi daftar origin dipisah koma, misalnya
-// "https://app.xystudio.my.id". Tulis `*` secara EKSPLISIT bila memang mau
+// "https://app.xydesk.my.id". Tulis `*` secara EKSPLISIT bila memang mau
 // membuka API untuk semua origin.
 //
 // Nilai bawaan saat variabel tidak terisi adalah KOSONG (= tolak semua

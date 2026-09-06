@@ -143,7 +143,7 @@ class HostModeController extends StateNotifier<HostModeState> {
           );
       final process = await Process.start(executable.path, [
         '--url',
-        'wss://signal.xystudio.my.id/ws',
+        'wss://signal.xydesk.my.id/ws',
         '--id',
         id,
         '--name',
@@ -370,7 +370,7 @@ class _HostModePageState extends ConsumerState<HostModePage> {
           title: 'Connect Web',
           subtitle: 'Kendalikan PC ini dari browser atau iPhone',
           onTap: () => launchUrl(
-            Uri.parse('https://app.xystudio.my.id/connect'),
+            Uri.parse('https://app.xydesk.my.id/connect'),
             mode: LaunchMode.externalApplication,
           ),
         ),

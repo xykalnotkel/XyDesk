@@ -32,6 +32,23 @@ Kebijakan rilis:
   lain-lain). Balasan kini menyertakan `providers` berisi penyedia mana yang
   menjawab dan mana yang gagal, supaya TURN yang diam mudah dilihat.
 
+## [6.5.4] - 2026-09-06
+
+> **Build 32.** Pindah alamat: seluruh layanan XyDesk kini beralamat di
+> `xydesk.my.id` — aplikasi web (`app`), signaling (`signal`), dan berita
+> (`news`). Tidak ada perubahan fitur. **Perlu perhatian: aplikasi yang
+> terpasang sebelum rilis ini masih memanggil `xystudio.my.id`, jadi pembaruan
+> ke 6.5.4 wajib** — dan karena kode lama tidak akan pernah berubah, pemasangan
+> ulang (bukan sekadar pembaruan) mungkin diperlukan kalau pembaruan ditolak.
+
+### Diubah
+- Infrastruktur: **domain seluruh layanan diganti** dari `xystudio.my.id` ke
+  `xydesk.my.id` di 49 berkas (127 kemunculan): klien Flutter, shell desktop,
+  engine Rust, aplikasi web, worker signaling, worker berita, peta situs,
+  konfigurasi CORS, dan tiga workflow CI. Catatan riwayat (`HANDOFF.md`,
+  `CHANGELOG.md`, papan) sengaja dibiarkan memakai nama lama karena isinya
+  adalah catatan masa lalu, bukan konfigurasi berjalan.
+
 ## [6.5.3] - 2026-09-06
 
 > **Build 31.** Rilis perbaikan. Yang paling terasa: aplikasi Android yang

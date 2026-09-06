@@ -33,7 +33,7 @@ function envWith(storage) {
   const store = new AuthStore({ storage }, { XYDESK_SECRET: SECRET, AUTH_SECRET: SECRET });
   return {
     XYDESK_SECRET: SECRET,
-    CORS_ORIGINS: 'https://app.xystudio.my.id',
+    CORS_ORIGINS: 'https://app.xydesk.my.id',
     AUTH_STORE: {
       idFromName: () => 'auth',
       get: () => store,
