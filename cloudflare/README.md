@@ -40,6 +40,59 @@ npx wrangler secret put TURN_STATIC_SECRET # shared secret dari penyedia
 npx wrangler deploy                    # → https://signal.xydesk.my.id
 ```
 
+### Dua jalur memasang secret — dan satu bug yang membuat TURN tidak pernah hidup
+
+Jalur kanonik adalah **workflow `Deploy Signaling`** (`.github/workflows/
+deploy-signaling.yml`, `workflow_dispatch`) yang membaca GitHub Secrets. Perintah
+`wrangler` di atas adalah jalur alternatif untuk pengerjaan lokal.
+
+Perlu dicatat karena ini nyata terjadi: workflow itu **tidak pernah meneruskan
+secret TURN sama sekali** — ia hanya memasang `XYDESK_SECRET`, `ADMIN_SECRET`,
+`AUTH_SECRET`, `RESEND_API_KEY`, dan `GOOGLE_CLIENT_ID`. Jadi mengisi
+`OPENRELAY_API_KEY` di GitHub Secrets tidak berpengaruh apa pun; worker tetap
+tidak melihatnya dan `/turn-ice` tetap menjawab daftar kosong. Kegagalannya
+diam, karena TURN yang kosong memang keadaan sah (worker dirancang jalan dengan
+STUN saja). Kini kedelapan secret TURN diteruskan, dan yang kosong dilewati
+dengan catatan alih-alih menggagalkan deploy.
+
+Satu hal yang sengaja dibuat keras: **secret TURN berpasangan**. `configured()`
+di `src/turn.js` menuntut keduanya, jadi mengisi `TURN_STATIC_URLS` tanpa
+`TURN_STATIC_SECRET` (atau sebaliknya) membuat penyedia itu dilewati TANPA
+PESAN — persis kelas kegagalan diam yang coba dihabiskan. Workflow menolaknya
+sebelum deploy.
+
+### Memilih penyedia TURN tanpa kartu kredit
+
+`ROADMAP.md` mengikat: semua gratis, tanpa kartu kredit, tanpa VM/VPS. Itu
+menyisakan pilihan sempit dan tidak semuanya enak:
+
+| Penyedia | Secret | Penilaian jujur |
+|---|---|---|
+| **ExpressTurn** | `TURN_STATIC_URLS` + `TURN_STATIC_SECRET` | Paling cocok dengan aturan repo. Kredensial dihitung **di dalam Worker** dengan HMAC-SHA1 — tanpa panggilan jaringan, jadi tetap hidup walau penyedia REST lain mogok, dan tidak menambah waktu tempuh `/turn-ice`. Punya tier gratis; angka pastinya perlu dicek saat mendaftar, tidak diverifikasi dari repo ini. |
+| **Open Relay Project** (metered.ca) | `OPENRELAY_API_KEY` | REST, jadi menambah satu panggilan jaringan (kini dibatasi 2,5 detik). Pendaftaran gratis tanpa kartu, tetapi **kuota gratisnya dilaporkan berbeda-beda dan sumbernya saling bertentangan**: halaman harga Metered menyebut 500 MB/bulan, halaman Open Relay menyebut 20 GB/bulan, dan daftar pihak ketiga menyebut 20 GB baru terbuka setelah kartu ditambahkan. Anggap kecil sampai terbukti sendiri. |
+| **coturn sendiri** | `TURN_STATIC_URLS` + `TURN_STATIC_SECRET` | Paling tangguh dan tanpa kuota, tetapi butuh VPS — bertentangan dengan "tanpa VM/VPS". Hanya masuk akal bila suatu saat sudah ada mesin yang memang berjalan. |
+| **Cloudflare Realtime** | `TURN_KEY_ID` + `TURN_KEY_TOKEN` | **Butuh kartu kredit**, jadi melanggar ROADMAP. Didukung kodenya, jangan dipakai kecuali aturannya berubah. |
+| **REST lain** (Metered, Turnix) | `TURN_REST_URL` + `TURN_REST_API_KEY` | Jalur umum untuk penyedia apa pun yang memberi kredensial lewat HTTP. |
+
+Rekomendasi: isi **secret statis dulu** (satu penyedia cukup untuk mulai), lalu
+tambahkan Open Relay sebagai cadangan bila kuota statisnya terasa sempit.
+Multi-penyedia memang dirancang untuk itu — WebRTC mencoba semuanya bersamaan.
+
+### Verifikasi setelah deploy
+
+`/turn-ice` dilindungi header `X-Admin` (isi `ADMIN_SECRET`); tanpa itu ia
+menjawab 403, dan 403 di sini berarti "kamu tidak membawa kuncinya", bukan
+"TURN-nya rusak".
+
+```bash
+curl -s -H "X-Admin: $ADMIN_SECRET" https://signal.xydesk.my.id/turn-ice | jq
+```
+
+Balasannya punya `iceServers` (yang dipakai client) dan `providers` — daftar
+penyedia mana yang menjawab, mana yang gagal, dan berapa ms masing-masing.
+`providers` ada justru untuk ini: TURN yang diam tidak bisa dibedakan dari TURN
+yang tidak dikonfigurasi tanpa melihat sisi servernya.
+
 ## Terbitkan token host
 
 Gunakan Node.js 24 Active LTS. Wrangler 4.123 membutuhkan minimal Node.js 22.

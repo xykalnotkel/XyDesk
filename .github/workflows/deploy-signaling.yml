@@ -9,6 +9,17 @@ name: Deploy Signaling (Cloudflare Workers)
 #   AUTH_SECRET           → kunci JWT/OTP terpisah
 #   RESEND_API_KEY        → pengiriman email OTP
 # Variable repo: GOOGLE_CLIENT_ID dan RESEND_FROM
+#
+# Secret TURN — SEMUANYA OPSIONAL (lihat cloudflare/src/turn.js dan
+# cloudflare/README.md). Worker berjalan tanpa TURN (STUN saja) dan /turn-ice
+# menjawab daftar kosong bila tidak ada penyedia terkonfigurasi:
+#   TURN_STATIC_URLS    + TURN_STATIC_SECRET  → ExpressTurn / coturn sendiri
+#   TURN_STATIC_USER                          → opsional, default "xydesk"
+#   TURN_KEY_ID         + TURN_KEY_TOKEN      → Cloudflare Realtime (butuh kartu)
+#   OPENRELAY_API_KEY                         → Open Relay Project (metered.ca)
+#   TURN_REST_URL       + TURN_REST_API_KEY   → penyedia REST lain
+# Satu penyedia butuh SEPASANG secret; mengisi separuhnya membuat penyedia itu
+# dilewati dalam diam, jadi workflow ini menolaknya keras.
 
 on:
   # Manual hanya (kebijakan 3 Sep 2026): deploy = setelah Build yang
@@ -50,6 +61,15 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
           RESEND_FROM: ${{ vars.RESEND_FROM }}
+          # TURN — semuanya opsional; lihat komentar di kepala berkas ini.
+          TURN_STATIC_URLS: ${{ secrets.TURN_STATIC_URLS }}
+          TURN_STATIC_SECRET: ${{ secrets.TURN_STATIC_SECRET }}
+          TURN_STATIC_USER: ${{ secrets.TURN_STATIC_USER }}
+          TURN_KEY_ID: ${{ secrets.TURN_KEY_ID }}
+          TURN_KEY_TOKEN: ${{ secrets.TURN_KEY_TOKEN }}
+          OPENRELAY_API_KEY: ${{ secrets.OPENRELAY_API_KEY }}
+          TURN_REST_URL: ${{ secrets.TURN_REST_URL }}
+          TURN_REST_API_KEY: ${{ secrets.TURN_REST_API_KEY }}
         run: |
           # Rahasia dipasang dari GitHub Secrets, tidak pernah dari source.
           set_secret() {
@@ -61,10 +81,70 @@ jobs:
             fi
             printf '%s' "$value" | npx wrangler secret put "$name"
           }
+
+          # TURN berbeda dari secret di atas: kosong itu SAH, karena worker
+          # memang dirancang jalan tanpa TURN (STUN saja). Yang tidak sah
+          # adalah separuh terisi — `configured()` di turn.js menuntut
+          # sepasang, jadi penyedia yang cuma punya satu secret dilewati
+          # TANPA PESAN dan pengguna tetap tidak dapat relay. Kelas kegagalan
+          # diam itulah yang diperbaiki rilis 6.6.0, jadi di sini ditolak.
+          require_pair() {
+            label="$1"; a_name="$2"; a="$3"; b_name="$4"; b="$5"
+            if [ -n "$a" ] && [ -z "$b" ]; then
+              echo "::error::$label: $a_name terisi tetapi $b_name kosong — penyedia akan dilewati dalam diam"
+              exit 1
+            fi
+            if [ -z "$a" ] && [ -n "$b" ]; then
+              echo "::error::$label: $b_name terisi tetapi $a_name kosong — penyedia akan dilewati dalam diam"
+              exit 1
+            fi
+          }
+          require_pair "TURN statis" TURN_STATIC_URLS "$TURN_STATIC_URLS" \
+                       TURN_STATIC_SECRET "$TURN_STATIC_SECRET"
+          require_pair "Cloudflare Realtime" TURN_KEY_ID "$TURN_KEY_ID" \
+                       TURN_KEY_TOKEN "$TURN_KEY_TOKEN"
+          require_pair "TURN REST" TURN_REST_URL "$TURN_REST_URL" \
+                       TURN_REST_API_KEY "$TURN_REST_API_KEY"
+
+          set_secret_optional() {
+            name="$1"
+            value="$2"
+            if [ -z "$value" ]; then
+              echo "::notice::$name kosong — penyedia TURN itu tidak diaktifkan"
+              return 0
+            fi
+            printf '%s' "$value" | npx wrangler secret put "$name"
+            echo "  aktif: $name"
+          }
+
           set_secret XYDESK_SECRET "$XYDESK_SECRET"
           set_secret ADMIN_SECRET "$ADMIN_SECRET"
           set_secret AUTH_SECRET "$AUTH_SECRET"
           set_secret RESEND_API_KEY "$RESEND_API_KEY"
           set_secret GOOGLE_CLIENT_ID "$GOOGLE_CLIENT_ID"
+
+          echo "Memasang secret TURN (yang kosong dilewati)…"
+          set_secret_optional TURN_STATIC_URLS "$TURN_STATIC_URLS"
+          set_secret_optional TURN_STATIC_SECRET "$TURN_STATIC_SECRET"
+          set_secret_optional TURN_STATIC_USER "$TURN_STATIC_USER"
+          set_secret_optional TURN_KEY_ID "$TURN_KEY_ID"
+          set_secret_optional TURN_KEY_TOKEN "$TURN_KEY_TOKEN"
+          set_secret_optional OPENRELAY_API_KEY "$OPENRELAY_API_KEY"
+          set_secret_optional TURN_REST_URL "$TURN_REST_URL"
+          set_secret_optional TURN_REST_API_KEY "$TURN_REST_API_KEY"
+
           # Sender address adalah konfigurasi publik/Worker var, bukan secret.
           npx wrangler deploy --var RESEND_FROM:"$RESEND_FROM"
+
+          # Ringkasan tanpa membocorkan nilai: berapa penyedia yang hidup.
+          # Penyedia "statis" dihitung di Worker tanpa jaringan, jadi ia satu-
+          # satunya yang bisa diandalkan bila penyedia REST sedang mogok.
+          aktif=0
+          [ -n "$TURN_STATIC_URLS" ] && [ -n "$TURN_STATIC_SECRET" ] && aktif=$((aktif+1))
+          [ -n "$TURN_KEY_ID" ] && [ -n "$TURN_KEY_TOKEN" ] && aktif=$((aktif+1))
+          [ -n "$OPENRELAY_API_KEY" ] && aktif=$((aktif+1))
+          [ -n "$TURN_REST_URL" ] && [ -n "$TURN_REST_API_KEY" ] && aktif=$((aktif+1))
+          echo "Penyedia TURN aktif: $aktif"
+          if [ "$aktif" -eq 0 ]; then
+            echo "::warning::NOL penyedia TURN terkonfigurasi — /turn-ice akan menjawab daftar kosong dan sesi jalan dengan STUN saja. Dua perangkat di balik NAT simetris/CGNAT tidak akan tersambung. Isi minimal TURN_STATIC_URLS + TURN_STATIC_SECRET (lihat cloudflare/README.md)."
+          fi
