@@ -28,9 +28,13 @@ npx wrangler secret put ADMIN_SECRET    # isi: kata sandi admin /issue
 # Penyedia termurah dan paling tangguh: secret statis (ExpressTurn atau
 # coturn sendiri). Kredensialnya dihitung di Worker, jadi tetap hidup
 # meski penyedia lain sedang mogok.
-npx wrangler secret put TURN_STATIC_URLS   # mis. turn:free.expressturn.com:3478
+npx wrangler secret put TURN_STATIC_URLS   # mis. turn:free.expressturn.com:3478 (HMAC)
 npx wrangler secret put TURN_STATIC_SECRET # shared secret dari penyedia
 # npx wrangler secret put TURN_STATIC_USER # opsional, default: xydesk
+# ATAU langsung long-term (ExpressTurn free tier pakai ini):
+npx wrangler secret put TURN_DIRECT_URLS      # turn:free.expressturn.com:3478
+npx wrangler secret put TURN_DIRECT_USERNAME  # 000000002101739639
+npx wrangler secret put TURN_DIRECT_CREDENTIAL # 6Zu9oT8nwW083jfwdvjCB4KAqJA=
 # Penyedia lain (tambahan, bukan pengganti):
 # npx wrangler secret put TURN_KEY_ID      # Cloudflare Realtime
 # npx wrangler secret put TURN_KEY_TOKEN

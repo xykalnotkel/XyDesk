@@ -80,6 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260907-OPERATOR-TURN-HARDEN | Operator - XyDesk Team | Backend / Edge | LAGI KERJA | Hardening TURN: workflow deploy-signaling support TURN_DIRECT_*, sinkron GitHub Secrets, ADMIN_SECRET baru, README | 2026-09-07 |
 
 ## Antrean izin push
 

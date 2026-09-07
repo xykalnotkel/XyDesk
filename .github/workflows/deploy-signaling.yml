@@ -13,12 +13,13 @@ name: Deploy Signaling (Cloudflare Workers)
 # Secret TURN — SEMUANYA OPSIONAL (lihat cloudflare/src/turn.js dan
 # cloudflare/README.md). Worker berjalan tanpa TURN (STUN saja) dan /turn-ice
 # menjawab daftar kosong bila tidak ada penyedia terkonfigurasi:
-#   TURN_STATIC_URLS    + TURN_STATIC_SECRET  → ExpressTurn / coturn sendiri
+#   TURN_STATIC_URLS    + TURN_STATIC_SECRET  → ExpressTurn / coturn sendiri (HMAC)
 #   TURN_STATIC_USER                          → opsional, default "xydesk"
+#   TURN_DIRECT_URLS + USERNAME + CREDENTIAL  → ExpressTurn free long-term (langsung)
 #   TURN_KEY_ID         + TURN_KEY_TOKEN      → Cloudflare Realtime (butuh kartu)
 #   OPENRELAY_API_KEY                         → Open Relay Project (metered.ca)
 #   TURN_REST_URL       + TURN_REST_API_KEY   → penyedia REST lain
-# Satu penyedia butuh SEPASANG secret; mengisi separuhnya membuat penyedia itu
+# Satu penyedia butuh SEPASANG/TRIPLET secret; mengisi separuhnya membuat penyedia itu
 # dilewati dalam diam, jadi workflow ini menolaknya keras.
 
 on:
@@ -65,6 +66,9 @@ jobs:
           TURN_STATIC_URLS: ${{ secrets.TURN_STATIC_URLS }}
           TURN_STATIC_SECRET: ${{ secrets.TURN_STATIC_SECRET }}
           TURN_STATIC_USER: ${{ secrets.TURN_STATIC_USER }}
+          TURN_DIRECT_URLS: ${{ secrets.TURN_DIRECT_URLS }}
+          TURN_DIRECT_USERNAME: ${{ secrets.TURN_DIRECT_USERNAME }}
+          TURN_DIRECT_CREDENTIAL: ${{ secrets.TURN_DIRECT_CREDENTIAL }}
           TURN_KEY_ID: ${{ secrets.TURN_KEY_ID }}
           TURN_KEY_TOKEN: ${{ secrets.TURN_KEY_TOKEN }}
           OPENRELAY_API_KEY: ${{ secrets.OPENRELAY_API_KEY }}
@@ -101,6 +105,13 @@ jobs:
           }
           require_pair "TURN statis" TURN_STATIC_URLS "$TURN_STATIC_URLS" \
                        TURN_STATIC_SECRET "$TURN_STATIC_SECRET"
+          # TURN direct butuh triplet
+          if [ -n "$TURN_DIRECT_URLS" ] || [ -n "$TURN_DIRECT_USERNAME" ] || [ -n "$TURN_DIRECT_CREDENTIAL" ]; then
+            if [ -z "$TURN_DIRECT_URLS" ] || [ -z "$TURN_DIRECT_USERNAME" ] || [ -z "$TURN_DIRECT_CREDENTIAL" ]; then
+              echo "::error::TURN direct: butuh TURN_DIRECT_URLS + TURN_DIRECT_USERNAME + TURN_DIRECT_CREDENTIAL se-triplet"
+              exit 1
+            fi
+          fi
           require_pair "Cloudflare Realtime" TURN_KEY_ID "$TURN_KEY_ID" \
                        TURN_KEY_TOKEN "$TURN_KEY_TOKEN"
           require_pair "TURN REST" TURN_REST_URL "$TURN_REST_URL" \
@@ -127,6 +138,9 @@ jobs:
           set_secret_optional TURN_STATIC_URLS "$TURN_STATIC_URLS"
           set_secret_optional TURN_STATIC_SECRET "$TURN_STATIC_SECRET"
           set_secret_optional TURN_STATIC_USER "$TURN_STATIC_USER"
+          set_secret_optional TURN_DIRECT_URLS "$TURN_DIRECT_URLS"
+          set_secret_optional TURN_DIRECT_USERNAME "$TURN_DIRECT_USERNAME"
+          set_secret_optional TURN_DIRECT_CREDENTIAL "$TURN_DIRECT_CREDENTIAL"
           set_secret_optional TURN_KEY_ID "$TURN_KEY_ID"
           set_secret_optional TURN_KEY_TOKEN "$TURN_KEY_TOKEN"
           set_secret_optional OPENRELAY_API_KEY "$OPENRELAY_API_KEY"
@@ -141,6 +155,7 @@ jobs:
           # satunya yang bisa diandalkan bila penyedia REST sedang mogok.
           aktif=0
           [ -n "$TURN_STATIC_URLS" ] && [ -n "$TURN_STATIC_SECRET" ] && aktif=$((aktif+1))
+          [ -n "$TURN_DIRECT_URLS" ] && [ -n "$TURN_DIRECT_USERNAME" ] && [ -n "$TURN_DIRECT_CREDENTIAL" ] && aktif=$((aktif+1))
           [ -n "$TURN_KEY_ID" ] && [ -n "$TURN_KEY_TOKEN" ] && aktif=$((aktif+1))
           [ -n "$OPENRELAY_API_KEY" ] && aktif=$((aktif+1))
           [ -n "$TURN_REST_URL" ] && [ -n "$TURN_REST_API_KEY" ] && aktif=$((aktif+1))
