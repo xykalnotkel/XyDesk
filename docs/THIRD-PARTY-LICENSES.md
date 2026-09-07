@@ -10,16 +10,16 @@ bersama aplikasi, beserta lisensinya — diambil langsung dari lockfile dan
 teks lisensi paket yang benar-benar terpasang, bukan dari daftar ketik
 tangan yang bisa ketinggalan zaman.
 
-**Total komponen: 503**
-(Dart/Flutter 109 · Rust 324 · npm 59 · aset & layanan 11)
+**Total komponen: 509**
+(Dart/Flutter 115 · Rust 324 · npm 59 · aset & layanan 11)
 
 ## Ringkasan lisensi
 
 | Lisensi | Jumlah komponen |
 |---|---|
-| tidak dinyatakan | 326 |
+| tidak dinyatakan | 324 |
 | BSD-3-Clause | 90 |
-| MIT | 42 |
+| MIT | 50 |
 | Apache-2.0 | 19 |
 | LGPL-3.0-or-later | 8 |
 | ISC | 4 |
@@ -137,7 +137,7 @@ Login opsional dengan akun Google.
 
 ---
 
-## 2. Paket Dart / Flutter (109)
+## 2. Paket Dart / Flutter (115)
 
 Termasuk dependensi transitif yang ikut ter-bundle di APK.
 
@@ -211,6 +211,12 @@ Termasuk dependensi transitif yang ikut ter-bundle di APK.
 | `path_provider_linux` | 2.2.1 | BSD-3-Clause |
 | `path_provider_platform_interface` | 2.1.2 | BSD-3-Clause |
 | `path_provider_windows` | 2.3.0 | BSD-3-Clause |
+| `permission_handler` | 11.4.0 | MIT |
+| `permission_handler_android` | 12.1.0 | MIT |
+| `permission_handler_apple` | 9.6.1 | MIT |
+| `permission_handler_html` | 0.1.4+1 | MIT |
+| `permission_handler_platform_interface` | 4.4.1 | MIT |
+| `permission_handler_windows` | 0.2.2 | MIT |
 | `petitparser` | 7.0.2 | MIT |
 | `platform` | 3.1.6 | BSD-3-Clause |
 | `plugin_platform_interface` | 2.1.8 | BSD-3-Clause |
@@ -626,7 +632,7 @@ Hanya dependensi runtime; alat build (`dev`) tidak ikut terkirim ke pengguna.
 | `@next/swc-win32-x64-msvc` | 15.1.6 | MIT |
 | `@swc/counter` | 0.1.3 | Apache-2.0 |
 | `@swc/helpers` | 0.5.15 | Apache-2.0 |
-| `busboy` | 1.6.0 | tidak dinyatakan |
+| `busboy` | 1.6.0 | MIT |
 | `caniuse-lite` | 1.0.30001810 | CC-BY-4.0 |
 | `client-only` | 0.0.1 | MIT |
 | `color` | 4.2.3 | MIT |
@@ -651,7 +657,7 @@ Hanya dependensi runtime; alat build (`dev`) tidak ikut terkirim ke pengguna.
 | `sharp` | 0.33.5 | Apache-2.0 |
 | `simple-swizzle` | 0.2.4 | MIT |
 | `source-map-js` | 1.2.1 | BSD-3-Clause |
-| `streamsearch` | 1.1.0 | tidak dinyatakan |
+| `streamsearch` | 1.1.0 | MIT |
 | `styled-jsx` | 5.1.6 | MIT |
 | `tslib` | 2.8.1 | 0BSD |
 
