@@ -47,7 +47,7 @@
       }
     ],
     "win": {
-      "icon": "electron/tray.ico",
+      "icon": "assets/icon.ico",
       "target": [
         "nsis",
         "portable"
