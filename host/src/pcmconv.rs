@@ -145,11 +145,7 @@ pub fn konversi(
     dst: Sampel,
 ) -> Vec<u8> {
     let mut buf = decode(bytes, src.sampel);
-    let frames = if src.channels > 0 {
-        buf.len() / src.channels
-    } else {
-        0
-    };
+    let frames = buf.len().checked_div(src.channels).unwrap_or(0);
     buf = remix(&buf, src.channels, dst_channels, frames);
     buf = resample(&buf, dst_channels, src.rate, dst_rate);
     encode(&buf, dst)
