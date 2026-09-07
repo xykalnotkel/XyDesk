@@ -42,6 +42,10 @@ mod tests {
 pub mod audio;
 pub mod clipboard;
 pub mod control;
+/// Primitif capture DXGI Desktop Duplication (piksel mentah saja; encode ada
+/// di `screen`). Dipisah supaya bisa di-type-check untuk Windows lewat
+/// `tool/wincheck`.
+pub mod dxgi;
 /// Primitif capture GDI BitBlt (piksel mentah saja; encode ada di `screen`).
 /// Dipisah supaya bisa di-type-check untuk Windows lewat `tool/wincheck`.
 pub mod gdi;

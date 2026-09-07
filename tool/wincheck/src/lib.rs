@@ -24,6 +24,9 @@ pub mod hwinfo;
 
 /// Primitif capture GDI: seluruh kode `unsafe` Win32-nya terperiksa di sini.
 /// `screen.rs` (pemanggilnya) tidak bisa ikut karena menarik webrtc + openh264.
+#[path = "../../../host/src/dxgi.rs"]
+pub mod dxgi;
+
 #[path = "../../../host/src/gdi.rs"]
 pub mod gdi;
 

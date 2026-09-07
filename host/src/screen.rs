@@ -375,6 +375,7 @@ pub fn spawn_frame_source() -> FrameSource {
                 let mulai = std::time::Instant::now();
                 let hasil = match backend {
                     BACKEND_GDI => windows::start_gdi_monitor(tx.clone(), current),
+                    BACKEND_DXGI => windows::start_dxgi_monitor(tx.clone(), current),
                     _ => windows::start_monitor(tx.clone(), current),
                 };
                 let gagal = hasil.err();
@@ -641,14 +642,23 @@ pub const BACKEND_WGC: u8 = 0;
 /// PC/server sewaan yang diakses tanpa monitor fisik.
 pub const BACKEND_GDI: u8 = 1;
 
+/// DXGI Desktop Duplication — backend utama sejak 6.7.0. Membaca framebuffer
+/// langsung dari output DXGI: tanpa border kuning WGC, tanpa round-trip GDI,
+/// dan satu-satunya jalur yang konsisten 60 fps di GPU modern. Kelemahannya
+/// dikenal (GPU hibrida bisa memberi frame hitam bila duplikasi dibuat dari
+/// adapter yang salah), jadi pemilihan output dicocokkan lewat nama perangkat
+/// dan watchdog tetap siap menurunkan ke WGC lalu GDI.
+pub const BACKEND_DXGI: u8 = 2;
+
 /// Backend yang sedang dipakai. Diubah watchdog bila backend aktif terbukti
 /// tidak mengirim frame — jadi nilainya hasil pengukuran, bukan preferensi.
-static BACKEND: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(BACKEND_WGC);
+static BACKEND: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(BACKEND_DXGI);
 
 /// Nama backend untuk log, control API, dan UI.
 pub fn label_backend(id: u8) -> &'static str {
     match id {
         BACKEND_GDI => "gdi-bitblt",
+        BACKEND_DXGI => "dxgi-duplication",
         _ => "windows-graphics-capture",
     }
 }
@@ -723,6 +733,7 @@ pub fn frames_captured() -> u64 {
 #[cfg(target_os = "windows")]
 fn backend_berikutnya(now: u8) -> Option<u8> {
     match now {
+        BACKEND_DXGI => Some(BACKEND_WGC),
         BACKEND_WGC => Some(BACKEND_GDI),
         _ => None,
     }
@@ -1155,6 +1166,128 @@ mod windows {
             }
         }
         println!("[xydesk-host] capture gdi-bitblt berhenti (monitor {monitor})");
+        Ok(())
+    }
+
+    /// Capture layar lewat DXGI Desktop Duplication — backend utama
+    /// (`BACKEND_DXGI`) sejak 6.7.0.
+    ///
+    /// Syarat berhenti, pilihan encoder, statistik, dan pengiriman IDENTIK
+    /// dengan jalur WGC/GDI: client tidak boleh bisa membedakan backend dari
+    /// perilakunya. Bedanya hanya sumber piksel — [`crate::dxgi::DxgiCapture`]
+    /// memberi frame saat layar berubah, jadi `Ok(false)` berarti "tidak ada
+    /// perubahan", bukan kegagalan, dan loop cukup menunggu giliran berikut.
+    /// `Err` (mis. `access-lost` saat ganti resolusi) memutus loop supaya
+    /// supervisor respawn dan watchdog bisa eskalasi ke WGC lalu GDI.
+    pub fn start_dxgi_monitor(
+        tx: mpsc::SyncSender<super::EncodedFrame>,
+        monitor: usize,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        /// Desktop Duplication memberi notifikasi perubahan, jadi 60 fps
+        /// realistis tanpa polling buta — beda dari GDI yang di-pace 30.
+        const TARGET_FPS: u64 = 60;
+
+        let displays = super::list_displays();
+        let info = displays.get(monitor).ok_or_else(|| {
+            format!(
+                "monitor {monitor} tidak tersedia (terdeteksi {} monitor)",
+                displays.len()
+            )
+        })?;
+        // Resolusi dibaca dari sesi duplikasi, bukan dari DEVMODE: yang akan
+        // benar-benar datang adalah piksel sebesar mode output DXGI.
+        let mut cap = crate::dxgi::DxgiCapture::baru(&info.name)?;
+        let w = cap.width();
+        let h = cap.height();
+
+        let mut encoder = EncoderKind::Soft(Box::new(Encoder::with_api_config(
+            openh264::OpenH264API::from_source(),
+            super::prod_encoder_config(),
+        )?));
+        super::NVENC_ACTIVE.store(false, std::sync::atomic::Ordering::Relaxed);
+        if w % 2 == 0 && h % 2 == 0 {
+            match crate::nvenc::NvEnc::new(w as u32, h as u32, super::target_bitrate_bps()) {
+                Ok(enc) => {
+                    println!(
+                        "[xydesk-host] DXGI: NVENC aktif: H264 hardware {w}x{h} @ {} kbps CBR",
+                        super::target_bitrate_bps() / 1000
+                    );
+                    super::NVENC_ACTIVE.store(true, std::sync::atomic::Ordering::Relaxed);
+                    encoder = EncoderKind::Nvenc(enc);
+                }
+                Err(e) => eprintln!(
+                    "[xydesk-host] DXGI: NVENC tidak tersedia, pakai openh264 (software): {e}"
+                ),
+            }
+        }
+
+        let mut nv12: Vec<u8> = Vec::new();
+        let tunggu_ms = (1000 / TARGET_FPS) as u32;
+        let mut detik_terakhir = std::time::Instant::now();
+        let mut frame_detik = 0u64;
+        let mut enc_sum: u128 = 0;
+        let mut enc_max: u128 = 0;
+        let mut enc_n: u64 = 0;
+
+        println!(
+            "[xydesk-host] capture dxgi-duplication mulai {w}x{h} (monitor {monitor}, target {TARGET_FPS} fps)"
+        );
+        loop {
+            // Awal pipeline latensi — sebelum piksel diambil, sama seperti
+            // backend lain, supaya angka latensi bisa dibandingkan antar-backend.
+            let captured_at = std::time::Instant::now();
+            if super::SWITCH_TO.load(std::sync::atomic::Ordering::Relaxed) != usize::MAX
+                || super::BITRATE_DIRTY.load(std::sync::atomic::Ordering::Relaxed)
+                || super::peek_keyframe_request()
+                || !super::capture_armed()
+            {
+                break;
+            }
+            match cap.grab(tunggu_ms) {
+                Ok(true) => {}
+                Ok(false) => continue,
+                Err(e) => {
+                    eprintln!("[xydesk-host] DXGI tidak bisa mengambil frame: {e}");
+                    break;
+                }
+            }
+            let t0 = std::time::Instant::now();
+            let encoded = match encoder.encode(cap.pixels(), w, h, &mut nv12) {
+                Ok(data) => data,
+                Err(e) => {
+                    eprintln!("[xydesk-host] DXGI: encode frame gagal: {e}");
+                    break;
+                }
+            };
+            let encode_us = t0.elapsed().as_micros();
+            enc_sum += encode_us;
+            enc_max = enc_max.max(encode_us);
+            enc_n += 1;
+            frame_detik += 1;
+            super::catat_frame();
+            match tx.try_send(super::EncodedFrame {
+                data: encoded,
+                captured_at,
+                encode_us: encode_us as u64,
+            }) {
+                Err(mpsc::TrySendError::Disconnected(_)) => break,
+                Ok(()) | Err(mpsc::TrySendError::Full(_)) => {}
+            }
+
+            if detik_terakhir.elapsed() >= std::time::Duration::from_secs(1) {
+                let avg = enc_sum as f64 / enc_n.max(1) as f64 / 1000.0;
+                let max = enc_max as f64 / 1000.0;
+                println!(
+                    "[xydesk-host] capture dxgi-duplication {w}x{h} | {frame_detik} fps | encode avg {avg:.2} ms, max {max:.2} ms"
+                );
+                detik_terakhir = std::time::Instant::now();
+                frame_detik = 0;
+                enc_sum = 0;
+                enc_max = 0;
+                enc_n = 0;
+            }
+        }
+        println!("[xydesk-host] capture dxgi-duplication berhenti (monitor {monitor})");
         Ok(())
     }
 
