@@ -354,6 +354,12 @@ pub fn spawn_frame_source() -> FrameSource {
         let alive_watch = alive.clone();
         std::thread::spawn(move || {
             let mut current = wanted_display();
+            // Deteksi RDP — penyebab #1 hitam di lab GitHub Actions
+            if is_rdp_session() {
+                eprintln!("[xydesk-host] RDP session terdeteksi (SM_REMOTESESSION=1) — DXGI tidak akan jalan, GDI fallback GetDC(0) aktif. Tutup RDP = lock = hitam, pakai tscon /dest:console untuk disconnect tanpa lock.");
+            }
+            // Virtual display driver — seperti AnyDesk/RustDesk
+            crate::virtual_display::ensure_display();
             // Throttle peringatan "semua backend gagal" (lihat watchdog).
             let mut log_semua_gagal = std::time::Instant::now()
                 .checked_sub(std::time::Duration::from_secs(30))
@@ -445,10 +451,15 @@ pub fn spawn_frame_source() -> FrameSource {
                                     .map(|d| d.as_secs() >= 30)
                                     .unwrap_or(true)
                                 {
-                                    eprintln!(
-                                        "[xydesk-host] PERINGATAN: tidak ada backend capture yang mengirim frame ({:.1} detik, armed) — layar client akan hitam",
-                                        lama.as_secs_f64()
-                                    );
+                                    if is_rdp_session() {
+                                        eprintln!(
+                                            "[xydesk-host] PERINGATAN: tidak ada backend capture yang mengirim frame ({:.1} detik, armed) — RDP session terdeteksi! DXGI tidak jalan di RDP, tutup RDP = lock = hitam. Jalankan tscon $env:SESSIONNAME /dest:console lalu konek via XyDesk. Layar client akan hitam sampai ada desktop aktif"
+                                        );
+                                    } else {
+                                        eprintln!(
+                                            "[xydesk-host] PERINGATAN: tidak ada backend capture yang mengirim frame ({:.1} detik, armed) — layar client akan hitam"
+                                        );
+                                    }
                                     log_semua_gagal = sekarang;
                                 }
                             }
@@ -491,12 +502,21 @@ pub fn spawn_frame_source() -> FrameSource {
                 terakhir = total;
                 if fps == 0 {
                     nol_beruntun += 1;
-                    eprintln!(
-                        "[xydesk-host] PERINGATAN: capture {} armed tapi 0 frame selama {} detik (total {} frame)",
-                        backend_label(),
-                        nol_beruntun,
-                        total
-                    );
+                    if is_rdp_session() && nol_beruntun == 3 {
+                        eprintln!(
+                            "[xydesk-host] PERINGATAN: capture {} armed tapi 0 frame selama {} detik (total {} frame) — RDP terdeteksi, kemungkinan sesi terkunci setelah tutup RDP. Pakai tscon /dest:console",
+                            backend_label(),
+                            nol_beruntun,
+                            total
+                        );
+                    } else {
+                        eprintln!(
+                            "[xydesk-host] PERINGATAN: capture {} armed tapi 0 frame selama {} detik (total {} frame)",
+                            backend_label(),
+                            nol_beruntun,
+                            total
+                        );
+                    }
                 } else {
                     if nol_beruntun > 0 {
                         println!(
@@ -725,6 +745,25 @@ pub fn frames_captured() -> u64 {
     #[cfg(not(target_os = "windows"))]
     {
         0
+    }
+}
+
+/// Deteksi apakah host berjalan di sesi RDP — penyebab #1 hitam di lab Actions.
+/// Di RDP, DXGI tidak jalan, dan tutup RDP = lock = BitBlt hitam. Dipakai untuk
+/// log diagnostic dan UI warning.
+pub fn is_rdp_session() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        unsafe {
+            // SM_REMOTESESSION = 0x1000 (4096)
+            windows::Win32::Graphics::Gdi::GetSystemMetrics(
+                windows::Win32::Graphics::Gdi::SYSTEM_METRICS_INDEX(0x1000),
+            ) != 0
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        false
     }
 }
 
@@ -1058,15 +1097,30 @@ mod windows {
         const TARGET_FPS: u64 = 30;
 
         let displays = super::list_displays();
-        let info = displays.get(monitor).ok_or_else(|| {
-            format!(
-                "monitor {monitor} tidak tersedia (terdeteksi {} monitor)",
-                displays.len()
-            )
-        })?;
-        let w = info.width as usize;
-        let h = info.height as usize;
-        let mut cap = crate::gdi::GdiCapture::baru(&info.name, w, h)?;
+        // VM headless / RDP: list_displays bisa kosong. Jangan gagal keras —
+        // fallback ke virtual screen (GetDC(0)) biar tetap ada gambar, bukan
+        // hitam permanen. Ini yang bikin keluhan "tersambung tapi hitam" di
+        // GPU VM (Paperspace/RunPod) yang tidak punya monitor fisik.
+        let (name, w, h) = if let Some(info) = displays.get(monitor) {
+            (info.name.clone(), info.width as usize, info.height as usize)
+        } else if let Some(first) = displays.first() {
+            eprintln!(
+                "[xydesk-host] GDI: monitor {monitor} tidak ada (hanya {}), fallback ke #0 {}x{}",
+                displays.len(),
+                first.width,
+                first.height
+            );
+            (first.name.clone(), first.width as usize, first.height as usize)
+        } else {
+            // Tidak ada monitor sama sekali — VM tanpa display
+            eprintln!("[xydesk-host] GDI: tidak ada monitor terdeteksi (VM headless?) — pakai virtual screen GetDC(0)");
+            // width/height 0 akan trigger fallback GetSystemMetrics di gdi.rs
+            (String::new(), 0, 0)
+        };
+        let mut cap = crate::gdi::GdiCapture::baru(&name, w, h)?;
+        // Kalau fallback, width/height aktual dibaca dari handle (virtual screen)
+        let w = if w == 0 { cap.width() } else { w };
+        let h = if h == 0 { cap.height() } else { h };
 
         // Resolusi sudah diketahui di depan (beda dari WGC yang baru tahu di
         // frame pertama), jadi NVENC bisa dicoba sekali di sini.
@@ -1188,15 +1242,24 @@ mod windows {
         const TARGET_FPS: u64 = 60;
 
         let displays = super::list_displays();
-        let info = displays.get(monitor).ok_or_else(|| {
-            format!(
-                "monitor {monitor} tidak tersedia (terdeteksi {} monitor)",
-                displays.len()
-            )
-        })?;
+        // VM tanpa monitor: fallback ke nama kosong — DxgiCapture akan coba
+        // output pertama yang ada (GPU VM) atau error yang trigger watchdog ke WGC/GDI.
+        let name = if let Some(info) = displays.get(monitor) {
+            info.name.clone()
+        } else if let Some(first) = displays.first() {
+            eprintln!(
+                "[xydesk-host] DXGI: monitor {monitor} tidak ada (hanya {}), fallback ke #0 {}",
+                displays.len(),
+                first.name
+            );
+            first.name.clone()
+        } else {
+            eprintln!("[xydesk-host] DXGI: tidak ada monitor terdeteksi — coba output pertama (VM?)");
+            String::new()
+        };
         // Resolusi dibaca dari sesi duplikasi, bukan dari DEVMODE: yang akan
         // benar-benar datang adalah piksel sebesar mode output DXGI.
-        let mut cap = crate::dxgi::DxgiCapture::baru(&info.name)?;
+        let mut cap = crate::dxgi::DxgiCapture::baru(&name)?;
         let w = cap.width();
         let h = cap.height();
 

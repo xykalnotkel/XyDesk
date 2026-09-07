@@ -13,13 +13,12 @@
 //! dikenal dan sudah diantisipasi: pada mesin GPU hibrida, duplikasi harus
 //! dibuat dari adapter yang sama dengan display-nya, dan bila tidak, frame
 //! datang hitam. Karena itu pemilihan output dicocokkan lewat NAMA perangkat
-//! (`\\.\DISPLAYn`) yang dipakai seluruh aplikasi, bukan lewat urutan enum,
+//! (`\\.\\DISPLAYn`) yang dipakai seluruh aplikasi, bukan lewat urutan enum,
 //! dan kegagalan di sini tidak fatal — watchdog `screen` akan menurunkan ke
 //! WGC lalu GDI.
 
 #[cfg(target_os = "windows")]
-#[cfg(target_os = "windows")]
-use windows::core::Interface; // menyediakan .cast() antar-interface COM
+use windows::core::Interface;
 #[cfg(target_os = "windows")]
 use windows::Win32::Foundation::HMODULE;
 #[cfg(target_os = "windows")]
@@ -52,21 +51,23 @@ pub struct DxgiCapture {
 #[cfg(target_os = "windows")]
 impl DxgiCapture {
     /// Buka sesi duplikasi untuk perangkat bernama `nama_perangkat`
-    /// (mis. `\\.\DISPLAY1`) — nama yang sama dengan yang dilaporkan
+    /// (mis. `\\.\\DISPLAY1`) — nama yang sama dengan yang dilaporkan
     /// `screen::list_displays`, jadi pilihan monitor konsisten di seluruh
     /// aplikasi dan tidak bergantung pada urutan enum adapter.
+    ///
+    /// Untuk VM / RDP tanpa monitor fisik, kalau nama tidak ketemu, fallback
+    /// ke output pertama yang tersedia (adapter 0, output 0) — itu sering
+    /// jadi satu-satunya display di GPU VM (mis. NVIDIA vGPU, Paperspace).
     pub fn baru(nama_perangkat: &str) -> Result<Self, String> {
         unsafe {
             let mut device: Option<ID3D11Device> = None;
             let mut context: Option<ID3D11DeviceContext> = None;
-            // BGRA_SUPPORT wajib: tekstur hasil duplikasi berformat BGRA.
-            // Daftar feature level kosong = biar runtime memilih yang terbaik.
             D3D11CreateDevice(
                 None,
                 D3D_DRIVER_TYPE_HARDWARE,
                 HMODULE::default(),
                 D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-                None, // feature level: biar runtime memilih yang terbaik
+                None,
                 D3D11_SDK_VERSION,
                 Some(&mut device),
                 None,
@@ -79,6 +80,10 @@ impl DxgiCapture {
             let factory: IDXGIFactory1 =
                 CreateDXGIFactory1().map_err(|e| format!("dxgi factory: {e}"))?;
 
+            // Simpan kandidat fallback (output pertama) untuk VM headless
+            let mut fallback: Option<(IDXGIOutputDuplication, usize, usize)> = None;
+            let mut exact: Option<(IDXGIOutputDuplication, usize, usize)> = None;
+
             let mut ai = 0u32;
             while let Ok(adapter) = factory.EnumAdapters1(ai) {
                 let mut oi = 0u32;
@@ -87,59 +92,77 @@ impl DxgiCapture {
                     let desc = output.GetDesc().map_err(|e| format!("desc output: {e}"))?;
                     let nama = String::from_utf16_lossy(&desc.DeviceName);
                     let nama = nama.trim_matches('\0');
-                    if nama != nama_perangkat {
-                        continue;
-                    }
-                    let output1 = output
-                        .cast::<windows::Win32::Graphics::Dxgi::IDXGIOutput1>()
-                        .map_err(|e| format!("output1: {e}"))?;
-                    let dupl = output1
-                        .DuplicateOutput(&device)
-                        .map_err(|e| format!("duplikasi output {nama}: {e}"))?;
+                    let output1 = match output.cast::<windows::Win32::Graphics::Dxgi::IDXGIOutput1>() {
+                        Ok(o) => o,
+                        Err(_) => continue,
+                    };
+                    let dupl = match output1.DuplicateOutput(&device) {
+                        Ok(d) => d,
+                        Err(_) => continue,
+                    };
                     let ddesc = dupl.GetDesc();
                     let width = ddesc.ModeDesc.Width as usize;
                     let height = ddesc.ModeDesc.Height as usize;
                     if width == 0 || height == 0 {
-                        return Err(format!("output {nama}: resolusi nol"));
+                        continue;
                     }
-
-                    // Tekstur staging sekali di depan: CopyResource + Map per
-                    // frame jauh lebih murah daripada membuat tekstur baru.
-                    let td = D3D11_TEXTURE2D_DESC {
-                        Width: width as u32,
-                        Height: height as u32,
-                        MipLevels: 1,
-                        ArraySize: 1,
-                        Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                        SampleDesc: DXGI_SAMPLE_DESC {
-                            Count: 1,
-                            Quality: 0,
-                        },
-                        Usage: D3D11_USAGE_STAGING,
-                        BindFlags: 0,
-                        CPUAccessFlags: D3D11_CPU_ACCESS_READ.0 as u32,
-                        MiscFlags: 0,
-                    };
-                    let mut staging: Option<ID3D11Texture2D> = None;
-                    device
-                        .CreateTexture2D(&td, None, Some(&mut staging))
-                        .map_err(|e| format!("staging: {e}"))?;
-                    let staging = staging.ok_or("staging: kosong")?;
-
-                    return Ok(Self {
-                        dupl,
-                        context,
-                        staging,
-                        buf: vec![0u8; width * height * 4],
-                        width,
-                        height,
-                    });
+                    if nama == nama_perangkat {
+                        exact = Some((dupl, width, height));
+                        break;
+                    }
+                    if fallback.is_none() {
+                        fallback = Some((dupl, width, height));
+                    }
+                }
+                if exact.is_some() {
+                    break;
                 }
                 ai += 1;
             }
-            Err(format!(
-                "output {nama_perangkat} tidak ditemukan di adapter DXGI"
-            ))
+
+            let (dupl, width, height) = if let Some(e) = exact {
+                e
+            } else if let Some(f) = fallback {
+                eprintln!(
+                    "[xydesk-host] DXGI: output {nama_perangkat} tidak ketemu — fallback ke output pertama {}x{} (VM/RDP?)",
+                    f.1, f.2
+                );
+                f
+            } else {
+                return Err(format!(
+                    "output {nama_perangkat} tidak ditemukan di adapter DXGI (tidak ada output sama sekali — VM tanpa display?)"
+                ));
+            };
+
+            let td = D3D11_TEXTURE2D_DESC {
+                Width: width as u32,
+                Height: height as u32,
+                MipLevels: 1,
+                ArraySize: 1,
+                Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                SampleDesc: DXGI_SAMPLE_DESC {
+                    Count: 1,
+                    Quality: 0,
+                },
+                Usage: D3D11_USAGE_STAGING,
+                BindFlags: 0,
+                CPUAccessFlags: D3D11_CPU_ACCESS_READ.0 as u32,
+                MiscFlags: 0,
+            };
+            let mut staging: Option<ID3D11Texture2D> = None;
+            device
+                .CreateTexture2D(&td, None, Some(&mut staging))
+                .map_err(|e| format!("staging: {e}"))?;
+            let staging = staging.ok_or("staging: kosong")?;
+
+            Ok(Self {
+                dupl,
+                context,
+                staging,
+                buf: vec![0u8; width * height * 4],
+                width,
+                height,
+            })
         }
     }
 
@@ -157,12 +180,6 @@ impl DxgiCapture {
     }
 
     /// Ambil frame berikutnya dari output.
-    ///
-    /// `Ok(true)`  = buffer diperbarui dengan frame baru.
-    /// `Ok(false)` = tidak ada perubahan layar sampai batas tunggu (normal
-    ///               untuk Desktop Duplication; pemanggil cukup mencoba lagi).
-    /// `Err("access-lost")` = sesi duplikasi mati (ganti resolusi, ganti
-    ///               monitor, kunci sesi) — pemanggil harus respawn/escalate.
     pub fn grab(&mut self, tunggu_ms: u32) -> Result<bool, String> {
         unsafe {
             let mut info = DXGI_OUTDUPL_FRAME_INFO::default();
@@ -172,12 +189,10 @@ impl DxgiCapture {
                     return Ok(false);
                 }
                 if e.code() == DXGI_ERROR_ACCESS_LOST {
-                    return Err("access-lost".to_string());
+                    return Err("access-lost (resolusi ganti / sesi terkunci / RDP disconnect)".to_string());
                 }
                 return Err(format!("acquire: {e}"));
             }
-            // Frame sudah di tangan walaupun salinannya gagal: lepas dulu
-            // supaya antrean duplikasi tidak macet.
             let hasil = self.salin_ke_staging(res.as_ref());
             let _ = self.dupl.ReleaseFrame();
             hasil
@@ -196,17 +211,32 @@ impl DxgiCapture {
             let src = mapped.pData as *const u8;
             let row = mapped.RowPitch as usize;
             let rapat = self.width * 4;
-            // RowPitch bisa lebih lebar dari baris nyata (padding GPU), jadi
-            // disalin per baris, bukan satu memcpy besar.
             if src.is_null() || row < rapat {
                 self.context.Unmap(&self.staging, 0);
-                return Err("map: pointer baris tidak sah".to_string());
+                return Err("map: pointer baris tidak sah (GPU reset?)".to_string());
             }
             for y in 0..self.height {
                 self.buf[y * rapat..(y + 1) * rapat]
                     .copy_from_slice(std::slice::from_raw_parts(src.add(y * row), rapat));
             }
             self.context.Unmap(&self.staging, 0);
+        }
+        // Deteksi frame hitam total di DXGI juga — di VM GPU kadang duplikasi
+        // berhasil tapi frame hitam karena adapter salah.
+        if self.buf.iter().take(400).all(|&b| b == 0) {
+            static mut LAST_WARN: Option<std::time::Instant> = None;
+            let now = std::time::Instant::now();
+            let should = unsafe {
+                if let Some(last) = LAST_WARN {
+                    now.duration_since(last).as_secs() >= 5
+                } else {
+                    true
+                }
+            };
+            if should {
+                eprintln!("[xydesk-host] DXGI: frame hitam total terdeteksi — mungkin GPU hibrida / VM tanpa output");
+                unsafe { LAST_WARN = Some(now); }
+            }
         }
         Ok(true)
     }

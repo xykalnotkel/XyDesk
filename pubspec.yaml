@@ -1,7 +1,7 @@
 name: xydesk
 description: "XyDesk — remote desktop low-latency untuk gaming dan kerja."
 publish_to: 'none'
-version: 6.7.0+35
+version: 6.7.5+40
 
 environment:
   sdk: ^3.8.0
@@ -46,6 +46,7 @@ flutter:
 
   assets:
     - assets/img/
+    - assets/img/nav/
     - assets/libraryicons/
 
   # Inter di-bundle langsung (bukan diunduh runtime) supaya tampilan

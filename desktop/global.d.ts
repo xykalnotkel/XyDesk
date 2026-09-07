@@ -66,6 +66,22 @@ declare global {
     captureBackend?: string;
     /** Total frame sejak engine mulai — bukti backend benar menghasilkan piksel. */
     framesCaptured?: number;
+    /** Benar bila host jalan di RDP session — penyebab #1 hitam di lab Actions */
+    isRdpSession?: boolean;
+    /** Status virtual display driver seperti AnyDesk */
+    virtualDisplay?: {
+      needed: boolean;
+      installed: boolean;
+      isAdmin: boolean;
+    };
+    /** Status virtual mic driver — biar denyut di Recording */
+    virtualMic?: {
+      needed: boolean;
+      installed: boolean;
+      hasVirtualInput: boolean;
+      hasVirtualOutput: boolean;
+      renderTarget: string;
+    };
     lastError?: string | null;
   }
 
@@ -133,8 +149,10 @@ declare global {
         index?: number;
         /** aksi `audio-volume`, 0.0-1.0 */
         volume?: number;
-        /** aksi `video-bitrate`, Mbps */
+        /** aksi `video-bitrate`, Mbps — 0=Auto */
         bitrateMbps?: number;
+        /** aksi `video-quality`: auto/medium/high/ultra */
+        quality?: string;
       }): Promise<ActionPayload>;
       getLogs(): Promise<LogEntry[]>;
       getInfo(): Promise<InfoPayload>;

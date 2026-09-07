@@ -576,11 +576,30 @@ class _AppShellState extends ConsumerState<AppShell> {
 /// Ikon AI 3D untuk navigasi bawah/rail. Aktif memakai versi warna ungu
 /// glossy; nonaktif memakai versi "off" (abu-abu). Gambar sudah dibersihkan
 /// latar putihnya (transparan) sehingga cocok di atas tema terang.
+/// Fallback: Lucide icon yang sesuai (bukan circle ring) — jadi kalau asset
+/// gagal load di APK lama, tetap jelas bukan ring kosong.
 class _NavIconImage extends StatelessWidget {
   const _NavIconImage({required this.asset, required this.selected});
 
   final String asset;
   final bool selected;
+
+  static IconData _fallback(String asset) {
+    switch (asset) {
+      case 'home':
+        return LucideIcons.house;
+      case 'connect':
+        return LucideIcons.cable;
+      case 'news':
+        return LucideIcons.newspaper;
+      case 'account':
+        return LucideIcons.user;
+      case 'billing':
+        return LucideIcons.creditCard;
+      default:
+        return LucideIcons.circle;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -594,9 +613,9 @@ class _NavIconImage extends StatelessWidget {
       // tema" — warnanya sudah final dari aset. Hilangkan kaca efek bila
       // tema diubah.
       errorBuilder: (_, __, ___) => Icon(
-        LucideIcons.circle,
-        size: 28,
-        color: selected ? context.c.accent : context.c.textLow,
+        _fallback(asset),
+        size: 24,
+        color: selected ? context.c.accent : context.c.textMid,
       ),
     );
   }
@@ -604,6 +623,8 @@ class _NavIconImage extends StatelessWidget {
 
 /// Tombol Billing di topbar — memakai ikon AI 3D ungu glossy (mesin sewa PC)
 /// yang sudah dibersihkan latar putihnya, konsisten dengan ikon nav.
+/// v6.7.1+ fallback pakai container ungu + icon creditCard biar tetap custom,
+/// bukan icon polos.
 class _BillingIconButton extends StatelessWidget {
   const _BillingIconButton({required this.onPressed});
 
@@ -616,11 +637,19 @@ class _BillingIconButton extends StatelessWidget {
       onPressed: onPressed,
       icon: Image.asset(
         'assets/img/nav/billing.png',
-        width: 24,
-        height: 24,
+        width: 28,
+        height: 28,
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) =>
-            const Icon(LucideIcons.creditCard, size: 19),
+        errorBuilder: (_, __, ___) => Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: context.c.accent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: context.c.accent.withValues(alpha: 0.2)),
+          ),
+          child: Icon(LucideIcons.coins, size: 16, color: context.c.accent),
+        ),
       ),
     );
   }

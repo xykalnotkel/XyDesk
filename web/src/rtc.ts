@@ -176,6 +176,21 @@ export const InputCodec = {
     return b;
   },
 
+  quality(q: number): Uint8Array {
+    const b = new Uint8Array(8);
+    b[0] = 0x0a;
+    b[1] = Math.max(0, Math.min(3, q | 0));
+    return b;
+  },
+
+  bitrateMbps(mbps: number): Uint8Array {
+    const b = new Uint8Array(8);
+    const v = new DataView(b.buffer);
+    b[0] = 0x0b;
+    v.setUint16(1, Math.max(0, Math.min(50, mbps | 0)), true);
+    return b;
+  },
+
   /// Urai 0x08 yang datang dari host. `null` bila bukan pesan papan klip
   /// atau isinya bukan UTF-8 sah — jangan menuliskan byte rusak ke papan
   /// klip pengguna hanya karena paketnya berhasil lewat.
@@ -553,6 +568,16 @@ export class RtcSession {
     b[0] = 0x07;
     b[1] = Math.max(0, Math.min(255, index | 0));
     this.sendInput(b);
+  }
+
+  /// 0x0A VIDEO_QUALITY — preset kualitas (0=auto 1=medium 2=high 3=ultra)
+  setQuality(q: number) {
+    this.sendInput(InputCodec.quality(q));
+  }
+
+  /// 0x0B VIDEO_BITRATE — target bitrate Mbps (0=auto)
+  setBitrate(mbps: number) {
+    this.sendInput(InputCodec.bitrateMbps(mbps));
   }
 
   /// Baca statistik koneksi (resolusi, fps, bitrate, RTT, loss, codec).

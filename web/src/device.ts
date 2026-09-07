@@ -22,8 +22,8 @@ interface NavigatorUAData {
 
 const ANDROID_ARM64 = 'XyDesk-Android-arm64-v8a.apk';
 const ANDROID_ARMV7 = 'XyDesk-Android-armeabi-v7a.apk';
-const WINDOWS_X64 = 'XyDesk-Windows-x64-Setup.exe';
-const WINDOWS_ARM64 = 'XyDesk-Windows-arm64-Setup.exe';
+const WINDOWS_X64 = 'XyDesk-x64.exe';
+const WINDOWS_ARM64 = 'XyDesk-arm64.exe';
 
 function fallback(): DeviceRecommendation {
   const override = localStorage.getItem('xydesk.download.arch');

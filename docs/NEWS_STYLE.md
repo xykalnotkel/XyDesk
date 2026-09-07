@@ -342,3 +342,82 @@ Karena itu urutan yang benar:
 Jangan dibalik: berita yang menjanjikan sesuatu yang belum sampai ke
 pengguna — atau menautkan gambar yang belum ter-deploy — adalah janji yang
 keburu terdengar.
+
+---
+
+## 11. Aturan Banner Artikel — KUNCI DESAIN (Founder Lock 2026-09-07)
+
+Banner/sampul adalah kesan pertama. Mulai 2026-09-07, semua banner artikel
+di `web/public/news/covers/` **WAJIB** mengikuti kunci ini. Tidak boleh
+diganti tanpa persetujuan Founder.
+
+### 11.1 Gaya visual wajib
+
+1. **3D glossy morphing** — bentuk utama harus terlihat seperti objek 3D
+   mengkilap yang sedang meleleh/morphing, bukan flat icon, bukan ilustrasi
+   kartun, bukan foto stok. Permukaan glossy, highlight putih lembut,
+   shadow dalam yang dalam (deep shadow), gradasi ungu-hitam khas XyDesk
+   (#7654F6 → #07050E).
+2. **Elemen melayang + motion blur** — minimal 2-3 elemen kecil (chip,
+   dot, ring, keyboard key, cursor) melayang di sekitar objek utama
+   dengan motion blur tipis (8-16px) seolah sedang bergerak. Efek harus
+   terlihat dinamis, bukan statis.
+3. **Depth & lighting** — pakai DOF ringan (blur latar), rim light ungu
+   di tepi objek, dan satu sumber cahaya utama dari kiri atas (sesuai
+   logo XyDesk). Jangan pakai cahaya datar.
+4. **Resolusi & komposisi** — 1424×752 (web) dan 1024×512 (push). Objek
+   utama di sepertiga kanan, ruang kosong kiri untuk teks bila dipakai
+   sebagai banner push. Jangan taruh objek di tengah mentok.
+
+### 11.2 Harus sesuai konten artikel
+
+- Banner **tidak boleh generik** — harus menggambarkan inti perubahan
+  artikel itu. Contoh:
+  - Artikel virtual mic → banner menampilkan gelombang audio 3D glossy
+    + icon mic melayang dengan motion blur.
+  - Artikel VM/RDP fix → banner menampilkan jendela Windows VM 3D yang
+    morphing dari hitam ke terang.
+  - Artikel driver virtual display → banner menampilkan monitor virtual
+    3D yang muncul dari laptop.
+- Sebelum generate, tulis 1 kalimat: "Banner ini menggambarkan ..."
+  dan cocokkan dengan judul artikel. Jika tidak cocok, ulang.
+
+### 11.3 Kata-kata seperti Founder/CEO menyampaikan
+
+- Semua teks di banner (jika ada) dan di artikel harus **nyata**,
+  seperti Haekal Saputra (Founder/CEO XySpace) berbicara langsung ke
+  pengguna — jujur, hangat, tanpa jargon, tanpa buzzword.
+- Larang: "revolutionary", "cutting-edge", "game-changer", "terbaik di
+  kelasnya", "solusi terdepan".
+- Wajib: kalimat aktif, pakai "kami" dan "kamu", jelaskan kenapa.
+  Contoh: "Kami bikin suara bisa sampai ke PC, karena banyak dari kamu
+  yang butuh ngobrol langsung dari sesi." — bukan "Introducing
+  breakthrough audio streaming technology".
+- Setiap artikel rilis harus ada 1 quote Founder di penutup yang
+  terdengar personal (boleh di bagian "Yang sedang kami siapkan").
+
+### 11.4 Checklist banner sebelum terbit (tambah ke checklist §9)
+
+```
+[ ] Objek utama 3D glossy morphing, bukan flat
+[ ] Ada 2-3 elemen melayang dengan motion blur (gerak)
+[ ] Lighting: rim light ungu + highlight glossy + deep shadow
+[ ] Sesuai konten artikel (tulis 1 kalimat penjelas)
+[ ] Teks (jika ada) seperti Founder berbicara — jujur, hangat, tanpa buzzword
+[ ] 1424×752 (web) + 1024×512 (push) — objek di kanan, ruang kiri kosong
+[ ] Tidak pakai stok/AI generik yang tidak diedit
+```
+
+### 11.5 Implementasi di `tool/art/banner.py`
+
+- `banner_art_hd.png` adalah base art — wajib diganti tiap rilis agar
+  sesuai konten, dengan gaya 3D glossy morphing + floating motion blur.
+- Generator `banner.py` hanya menempelkan tipografi di atas base art —
+  base art-nya sendiri yang harus memenuhi aturan ini.
+- Saat membuat base art baru (via AI atau manual), prompt wajib
+  mengandung: "3D glossy morphing shape, floating elements with motion
+  blur, dynamic movement, deep purple-black gradient #7654F6 to #07050E,
+  soft rim light, studio lighting, ultra detailed, content-matched to
+  [isi artikel]".
+
+Pelanggaran aturan ini = banner ditolak, artikel tidak terbit.

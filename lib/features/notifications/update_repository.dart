@@ -185,9 +185,17 @@ class OfficialUpdateRepository {
       decoded,
       androidAbi: androidAbi,
     );
+    // FIX 2026-09-07 Founder bug: Android selalu "sudah terbaru" karena hanya
+    // cek buildNumber. Jika version naik (6.7.0 -> 6.7.1) tapi build sama (35->35)
+    // karena lupa bump build, updateAvailable jadi false dan tombol tidak
+    // berubah jadi Download. Fix: cek version dulu, baru buildNumber.
+    final versionCompare = _compareVersions(
+      manifest.version,
+      packageInfo.version,
+    );
     final updateAvailable = isAndroid
-        ? manifest.buildNumber > installedBuild
-        : _compareVersions(manifest.version, packageInfo.version) > 0;
+        ? (versionCompare > 0 || manifest.buildNumber > installedBuild)
+        : versionCompare > 0;
 
     return UpdateCheckResult(
       installedVersion: packageInfo.version,

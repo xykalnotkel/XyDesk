@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/store.dart';
 
-/// Tipe input yang bisa di-map ke aksi.
-enum InputType { keyboard, joystick, mouse, touch }
+/// Tipe input yang bisa di-map ke aksi — Founder request 2026-09-07: lengkapin keypad, joystick, gamepad, keyboard
+enum InputType { keyboard, joystick, mouse, touch, gamepad, keypad }
 
 /// Satu mapping dari input ke aksi.
 @immutable

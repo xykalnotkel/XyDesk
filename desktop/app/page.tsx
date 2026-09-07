@@ -40,7 +40,7 @@ const DEMO = typeof window !== 'undefined' && !window.xydesk;
 // ![keterangan](https://app.xydesk.my.id/news/shots/....jpg).
 // Hanya gambar dari domain sendiri yang dirender — sesuai docs/NEWS_STYLE.md;
 // baris lain tetap tampil sebagai paragraf biasa. Pola sama dengan web client.
-const NEWS_IMAGE_BLOCK = /^!\[([^\]]*)\]\((https:\/\/app\.xystudio\.my\.id\/[^\s)]+)\)$/;
+const NEWS_IMAGE_BLOCK = /^!\[([^\]]*)\]\((https:\/\/(app\.)?xydesk\.my\.id\/[^)\s]+)\)$/;
 
 const DEMO_STATUS: StatusPayload = {
   state: 'streaming',
@@ -73,6 +73,11 @@ const DEMO_STATUS: StatusPayload = {
     wanted: 0,
   },
   targetBitrateBps: 8000000,
+  framesCaptured: 214400,
+  isRdpSession: false,
+  captureBackend: 'dxgi-duplication',
+  virtualDisplay: { needed: false, installed: true, isAdmin: true },
+  virtualMic: { needed: false, installed: true, hasVirtualInput: true, hasVirtualOutput: true, renderTarget: 'CABLE Input (VB-Audio Virtual Cable)' },
   lastError: null,
 };
 
@@ -307,7 +312,9 @@ export default function Page() {
         if (action === 'display-select')
           flashMsg(`Monitor sumber diganti ke indeks ${extra.index}.`);
         if (action === 'video-bitrate')
-          flashMsg(`Batas bitrate ${extra.bitrateMbps} Mbps — berlaku pada sesi berikutnya.`);
+          flashMsg(`Bitrate ${extra.bitrateMbps === 0 ? 'Auto' : extra.bitrateMbps + ' Mbps'} — berlaku sesi berikutnya.`);
+        if (action === 'video-quality')
+          flashMsg(`Quality ${extra.quality} — Auto/Medium/High/Ultra, berlaku sesi berikutnya.`);
         if (action === 'audio-volume') flashMsg('Volume PC diubah.');
         setStatus(await window.xydesk!.getStatus());
       } else {
@@ -471,109 +478,150 @@ function LoginScreen({ onDone }: { onDone: (s: AuthSessionPayload) => void }) {
 
   return (
     <div className="login-shell">
-      <form
-        className="login-card"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (mode !== 'email') return;
-          if (tahap === 'email') {
-            void jalankan(() =>
-              window.xydesk!.authEmailRequest(email).then((r) => {
-                if (r.ok) setTahap('otp');
-                return r;
-              }),
-            );
-          } else {
-            void jalankan(() => window.xydesk!.authEmailVerify(email, otp));
-          }
-        }}
-      >
-        <img src="/logo.png" width={56} height={56} alt="Logo XyDesk" />
-        <h2>Masuk ke XyDesk Host</h2>
-        <p className="dim">
-          Identitas pemilik PC. Sesi disimpan terenkripsi di mesin ini; token tidak pernah
-          meninggalkan proses utama.
-        </p>
-
-        <div className="login-tabs">
-          <button
-            type="button"
-            className={mode === 'google' ? 'active' : ''}
-            onClick={() => {
-              setMode('google');
-              setGalat(null);
-            }}
-          >
-            Google
-          </button>
-          <button
-            type="button"
-            className={mode === 'email' ? 'active' : ''}
-            onClick={() => {
-              setMode('email');
-              setGalat(null);
-            }}
-          >
-            Email
-          </button>
+      <div className="login-hero">
+        <div className="login-hero-top">
+          <img src="/logo.png" width={36} height={36} alt="Logo" />
+          <div>
+            <h1>XyDesk</h1>
+            <span>Remote Desktop • Low Latency</span>
+          </div>
         </div>
+        <div className="login-hero-main">
+          <h2>Remote <span>secepat</span><br />di depan PC</h2>
+          <p>Host desktop untuk gaming & kerja. Enkripsi end-to-end, NVENC hardware, dan audio loopback — semua di mesin ini.</p>
+          <div className="login-hero-illust">
+            <div className="row">
+              <div className="dot">🖥️</div>
+              <div className="txt"><strong>DXGI + GDI Fallback</strong><span>Anti hitam di VM/RDP — GetDC(0) aktif v6.7.1+</span></div>
+            </div>
+            <div className="row">
+              <div className="dot">🔊</div>
+              <div className="txt"><strong>WASAPI Loopback</strong><span>Suara PC → HP, mic HP → PC</span></div>
+            </div>
+            <div className="row">
+              <div className="dot">⚡</div>
+              <div className="txt"><strong>NVENC H264</strong><span>Hardware encode 1080p60 &lt;10ms</span></div>
+            </div>
+          </div>
+        </div>
+        <div className="login-hero-foot">
+          <span>© 2026 XyDesk • Proprietary</span>
+          <span>Void #0d0716 + Accent #7c3aed</span>
+        </div>
+      </div>
 
-        {mode === 'google' ? (
-          <button
-            type="button"
-            className="primary wide"
-            disabled={busy}
-            onClick={() => void jalankan(() => window.xydesk!.authGoogle())}
-          >
-            {busy ? 'Menunggu browser…' : 'Masuk dengan Google'}
-          </button>
-        ) : tahap === 'email' ? (
-          <>
-            <input
-              type="email"
-              placeholder="alamat@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
+      <div className="login-form-wrap">
+        <form
+          className="login-card"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (mode !== 'email') return;
+            if (tahap === 'email') {
+              void jalankan(() =>
+                window.xydesk!.authEmailRequest(email).then((r) => {
+                  if (r.ok) setTahap('otp');
+                  return r;
+                }),
+              );
+            } else {
+              void jalankan(() => window.xydesk!.authEmailVerify(email, otp));
+            }
+          }}
+        >
+          <div className="logo-row">
+            <img src="/logo.png" width={40} height={40} alt="Logo XyDesk" />
+            <div>
+              <h2>Masuk ke Host</h2>
+              <p>Identitas pemilik PC</p>
+            </div>
+          </div>
+          <p className="dim">
+            Sesi disimpan terenkripsi di mesin ini (safeStorage). Token tidak pernah meninggalkan proses utama.
+          </p>
+
+          <div className="login-tabs">
             <button
-              type="submit"
-              className="primary wide"
-              disabled={busy || !/^\S+@\S+\.\S+$/.test(email)}
+              type="button"
+              className={mode === 'google' ? 'active' : ''}
+              onClick={() => {
+                setMode('google');
+                setGalat(null);
+              }}
             >
-              {busy ? 'Mengirim…' : 'Kirim kode'}
-            </button>
-          </>
-        ) : (
-          <>
-            <p className="dim">Kode dikirim ke {email}.</p>
-            <input
-              inputMode="numeric"
-              placeholder="6 digit kode"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              autoComplete="one-time-code"
-              required
-            />
-            <button type="submit" className="primary wide" disabled={busy || otp.length !== 6}>
-              {busy ? 'Memverifikasi…' : 'Verifikasi'}
+              Google
             </button>
             <button
               type="button"
-              className="ghost wide"
+              className={mode === 'email' ? 'active' : ''}
               onClick={() => {
-                setTahap('email');
-                setOtp('');
+                setMode('email');
+                setGalat(null);
               }}
             >
-              Ganti email
+              Email
             </button>
-          </>
-        )}
+          </div>
 
-        {galat && <p className="danger-text">{galat}</p>}
-      </form>
+          {mode === 'google' ? (
+            <button
+              type="button"
+              className="primary wide"
+              disabled={busy}
+              onClick={() => void jalankan(() => window.xydesk!.authGoogle())}
+            >
+              {busy ? 'Menunggu browser…' : 'Masuk dengan Google'}
+            </button>
+          ) : tahap === 'email' ? (
+            <>
+              <input
+                type="email"
+                placeholder="alamat@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+              />
+              <button
+                type="submit"
+                className="primary wide"
+                disabled={busy || !/^\S+@\S+\.\S+$/.test(email)}
+              >
+                {busy ? 'Mengirim…' : 'Kirim kode'}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="dim">Kode dikirim ke {email}.</p>
+              <input
+                inputMode="numeric"
+                placeholder="6 digit kode"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                autoComplete="one-time-code"
+                required
+              />
+              <button type="submit" className="primary wide" disabled={busy || otp.length !== 6}>
+                {busy ? 'Memverifikasi…' : 'Verifikasi'}
+              </button>
+              <button
+                type="button"
+                className="ghost wide"
+                onClick={() => {
+                  setTahap('email');
+                  setOtp('');
+                }}
+              >
+                Ganti email
+              </button>
+            </>
+          )}
+
+          {galat && <p className="danger-text">{galat}</p>}
+          <p className="hint" style={{ textAlign: 'center', marginTop: 8 }}>
+            Host tanpa identitas bisa dipasangi siapa saja — login wajib sebelum ID pairing terlihat.
+          </p>
+        </form>
+      </div>
     </div>
   );
 }
@@ -616,6 +664,58 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
                 </strong>
               </div>
             </div>
+            {/* RDP session warning — penyebab #1 hitam di lab Actions */}
+            {status?.isRdpSession && (
+              <div className="vm-warning" style={{ marginTop: 14, background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(167,139,250,0.12))', borderColor: 'rgba(124,58,237,0.22)' }}>
+                <span className="icon">🖥️</span>
+                <div className="text">
+                  <strong>RDP session terdeteksi (SM_REMOTESESSION=1) — ini lab Actions?</strong><br />
+                  DXGI tidak jalan di RDP, tutup RDP = lock = hitam total (BitBlt 0).<br />
+                  Cara tes benar XyDesk di lab:<br />
+                  • Setup ID + password di RDP, lalu <code>tscon %SESSIONNAME% /dest:console</code> atau klik <code>Disconnect-tanpa-lock.bat</code> di Desktop<br />
+                  • Baru konek via XyDesk (bukan RDP) — capture akan jalan via GDI fallback <code>GetDC(0)</code><br />
+                  • Jangan login sebagai <code>runneradmin</code> — itu bunuh job Actions
+                </div>
+              </div>
+            )}
+            {/* Virtual Display Driver — seperti AnyDesk/RustDesk */}
+            {status?.virtualDisplay && (
+              <div className="vm-warning" style={{ marginTop: 14, background: status.virtualDisplay.installed ? 'linear-gradient(135deg, rgba(22,115,71,0.10), rgba(22,115,71,0.06))' : 'linear-gradient(135deg, rgba(124,58,237,0.14), rgba(91,33,182,0.10))', borderColor: status.virtualDisplay.installed ? 'rgba(22,115,71,0.22)' : 'rgba(124,58,237,0.26)' }}>
+                <span className="icon">{status.virtualDisplay.installed ? '✅' : '🖥️'}</span>
+                <div className="text">
+                  <strong>Virtual Display Driver: {status.virtualDisplay.installed ? 'Terpasang (seperti AnyDesk)' : 'Belum terpasang'}</strong><br />
+                  {status.virtualDisplay.needed ? (
+                    <>
+                      Headless/RDP terdeteksi — butuh driver biar tidak hitam seperti AnyDesk.<br />
+                      Status: {status.virtualDisplay.installed ? 'Driver ada, DISPLAY virtual seharusnya muncul' : 'Driver belum ada'} • Admin: {status.virtualDisplay.isAdmin ? 'Ya' : 'Bukan (butuh admin untuk install)'}<br />
+                      {!status.virtualDisplay.installed && (
+                        <>
+                          Install: <code>host/driver/install.ps1</code> (PowerShell admin) atau download dari <code>github.com/itsmikethetech/Virtual-Display-Driver</code><br />
+                          Atau Scoop: <code>scoop install idd-sample-driver</code> • Setelah install, restart XyDesk
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>Tidak butuh driver — {status?.displays?.list?.length ?? 0} monitor terdeteksi, capture jalan normal</>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* VM headless warning — hitam tapi tersambung */}
+            {status?.framesCaptured === 0 && (status?.uptimeMs ?? 0) > 8000 && (
+              <div className="vm-warning" style={{ marginTop: 14 }}>
+                <span className="icon">⚠️</span>
+                <div className="text">
+                  <strong>Belum ada frame — kemungkinan VM tanpa display aktif.</strong><br />
+                  Host mendeteksi {status?.displays?.list?.length ?? 0} monitor. Di GPU VM (Paperspace, RunPod, Vast) atau sesi RDP terkunci,
+                  Windows tidak punya desktop yang bisa di-capture. Solusi:<br />
+                  • Pasang <code>virtual display driver</code> (iddSampleDriver) atau colok HDMI dummy<br />
+                  • Pastikan sesi tidak terkunci (Win+L = hitam) dan tidak lewat RDP headless<br />
+                  • Backend sekarang: <code>{status?.captureBackend || 'mencoba...'}</code> — fallback GDI <code>GetDC(0)</code> sudah aktif di v6.7.1+
+                  {status?.isRdpSession && ' — RDP terdeteksi, ini yang bikin hitam di lab!'}
+                </div>
+              </div>
+            )}
             {status?.lastError && <p className="danger-text">Kendala terakhir: {status.lastError}</p>}
           </>
         )}
@@ -1260,7 +1360,8 @@ function SettingsPage({
   const displays = status?.displays;
   const daftarMonitor = displays?.list ?? [];
   const bitrateMbps = status?.targetBitrateBps ? Math.round(status.targetBitrateBps / 1_000_000) : null;
-  const [bps, setBps] = useState<string>(bitrateMbps ? String(bitrateMbps) : '8');
+  const [bps, setBps] = useState<string>(bitrateMbps ? String(bitrateMbps) : '0');
+  const [quality, setQuality] = useState<string>('auto');
   const volume = status?.audio?.volume ?? null;
   const [vol, setVol] = useState<number>(volume == null ? 60 : Math.round(volume * 100));
   useEffect(() => {
@@ -1392,9 +1493,33 @@ function SettingsPage({
           </p>
         )}
 
-        <span className="field-label">Batas bitrate video</span>
+        <span className="field-label">Quality preset — Auto, Medium, High, Ultra (Founder request)</span>
         <div className="chip-row">
-          {[4, 8, 16, 24].map((m) => (
+          {[
+            { id: 'auto', label: 'Auto', bps: 0, desc: 'Adaptive' },
+            { id: 'medium', label: 'Medium', bps: 8, desc: '720p' },
+            { id: 'high', label: 'High', bps: 15, desc: '1080p' },
+            { id: 'ultra', label: 'Ultra', bps: 25, desc: '1440p' },
+          ].map((q) => (
+            <button
+              key={q.id}
+              className={`chip select${quality === q.id ? ' on' : ''}`}
+              onClick={() => {
+                setQuality(q.id);
+                setBps(String(q.bps));
+                onAction('video-quality', { quality: q.id });
+              }}
+              title={q.desc}
+            >
+              {q.label}
+            </button>
+          ))}
+        </div>
+        <p className="hint">Auto = adaptive to network, Medium = 720p ~8 Mbps, High = 1080p ~15 Mbps, Ultra = 1440p ~25-50 Mbps — controlled from host & session screen.</p>
+
+        <span className="field-label">Bitrate — Auto / Manual (0=Auto)</span>
+        <div className="chip-row">
+          {[0, 8, 15, 25, 50].map((m) => (
             <button
               key={m}
               className={`chip select${bitrateMbps === m ? ' on' : ''}`}
@@ -1403,22 +1528,22 @@ function SettingsPage({
                 onAction('video-bitrate', { bitrateMbps: m });
               }}
             >
-              {m} Mbps
+              {m === 0 ? 'Auto' : `${m} Mbps`}
             </button>
           ))}
           <span className="chip">
             <input
               className="mini"
               type="number"
-              min={1}
+              min={0}
               max={60}
               value={bps}
               onChange={(e) => setBps(e.target.value)}
-              aria-label="Bitrate kustom dalam Mbps"
+              aria-label="Bitrate custom Mbps, 0=Auto"
             />
             <button
               className="ghost tiny"
-              disabled={!/^[1-9][0-9]?$/.test(bps.trim())}
+              disabled={!/^(0|[1-9][0-9]?)$/.test(bps.trim())}
               onClick={() => onAction('video-bitrate', { bitrateMbps: Number(bps.trim()) })}
             >
               Pakai
@@ -1426,10 +1551,9 @@ function SettingsPage({
           </span>
         </div>
         <p className="hint">
-          Sekarang {bitrateMbps != null ? `${bitrateMbps} Mbps` : '—'} ≈{' '}
-          {bitrateMbps != null ? ((bitrateMbps * 450) / 1000).toFixed(1) : '—'} MB per jam sesi.
-          Turunkan kalau terhubung lewat tethering HP; naikkan kalau layar diam tapi tetap patah-patah.
-          Nilai lama tetap dipakai sampai sesi berikutnya.
+          Sekarang {bitrateMbps != null ? (bitrateMbps === 0 ? 'Auto' : `${bitrateMbps} Mbps`) : '—'} ≈{' '}
+          {bitrateMbps != null ? (bitrateMbps === 0 ? 'adaptive' : `${((bitrateMbps * 450) / 1000).toFixed(1)} MB/jam`) : '—'}.
+          Auto = host decides. Turunkan kalau tethering, naikkan kalau patah. Berlaku sesi berikutnya & di session screen.
         </p>
       </section>
 
@@ -1447,6 +1571,40 @@ function SettingsPage({
                 <strong>{status.audio.micAvailable ? status.audio.micPipeline : 'Tidak ada mic'}</strong>
               </div>
             </div>
+            {status.audio.outputs === 0 && (
+              <div className="vm-warning" style={{ marginTop: 14 }}>
+                <span className="icon">🔇</span>
+                <div className="text">
+                  <strong>Tidak ada perangkat audio terdeteksi — ini VM/GPU VM?</strong><br />
+                  WASAPI butuh output device aktif. Di VM tanpa sound card, loopback & mic akan mati.<br />
+                  Solusi: install <code>VB-Audio Virtual Cable</code> atau enable <code>Windows Audio Service</code>, lalu restart engine.
+                  Deteksi baru di v6.7.1+: <code>captureAvailable</code> sekarang cek device beneran, bukan cuma OS.
+                </div>
+              </div>
+            )}
+            {/* Virtual Mic Driver — biar mic client denyut di Control Panel seperti AnyDesk */}
+            {status?.virtualMic && (
+              <div className="vm-warning" style={{ marginTop: 14, background: status.virtualMic.installed ? 'linear-gradient(135deg, rgba(22,115,71,0.10), rgba(22,115,71,0.06))' : 'linear-gradient(135deg, rgba(124,58,237,0.14), rgba(91,33,182,0.10))', borderColor: status.virtualMic.installed ? 'rgba(22,115,71,0.22)' : 'rgba(124,58,237,0.26)' }}>
+                <span className="icon">{status.virtualMic.installed ? '🎙️' : '🔈'}</span>
+                <div className="text">
+                  <strong>Virtual Mic: {status.virtualMic.installed ? 'Terpasang — mic client akan denyut di Recording' : 'Belum terpasang — mic client cuma ke speaker'}</strong><br />
+                  Render target sekarang: <code>{status.virtualMic.renderTarget}</code><br />
+                  {status.virtualMic.installed ? (
+                    <>
+                      ✅ Driver virtual audio ada — CABLE Input/Output terdeteksi.<br />
+                      Di Control Panel → Sound → Recording → <code>CABLE Output</code> akan denyut kalau HP ngomong.<br />
+                      Di Discord/Zoom/Game, pilih mic = <code>CABLE Output</code> biar suara HP masuk sebagai mic.
+                    </>
+                  ) : (
+                    <>
+                      Saat ini mic HP → speaker PC (default), jadi <strong>tidak denyut di Recording</strong> — itu kenapa control panel diam.<br />
+                      Install VB-CABLE dari <code>vb-audio.com/Cable</code> (VBCABLE_Setup_x64.exe admin) atau VoiceMeeter Banana.<br />
+                      Setelah install, restart XyDesk — render akan otomatis ke CABLE Input dan denyut di CABLE Output.
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             <span className="field-label">Volume master PC ({vol}%)</span>
             <input
               className="slider"
@@ -1463,6 +1621,7 @@ function SettingsPage({
             <p className="hint">
               Slider ini mengatur volume MASTER perangkat output default PC — jadi yang didengar
               pengguna di HP ikut berubah. {status.audio.outputs} perangkat output terdeteksi.
+              {status.audio.outputs === 0 && ' (VM tanpa audio)'}
             </p>
           </>
         ) : (

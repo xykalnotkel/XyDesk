@@ -65,6 +65,63 @@ final storeProvider = Provider<Store>((_) => throw UnimplementedError());
 //  Pengaturan aplikasi (termasuk Mesin Streaming & Kualitas Audio/Video)
 // ══════════════════════════════════════════════════════════
 
+/// Quality preset for streaming — Founder request 2026-09-07: auto, medium, high, ultra
+enum StreamQuality { auto, medium, high, ultra }
+
+extension StreamQualityX on StreamQuality {
+  String get label {
+    switch (this) {
+      case StreamQuality.auto:
+        return 'Auto';
+      case StreamQuality.medium:
+        return 'Medium';
+      case StreamQuality.high:
+        return 'High';
+      case StreamQuality.ultra:
+        return 'Ultra';
+    }
+  }
+
+  String get desc {
+    switch (this) {
+      case StreamQuality.auto:
+        return 'Adaptive — adjusts to network';
+      case StreamQuality.medium:
+        return '720p60 • ~8 Mbps • balanced';
+      case StreamQuality.high:
+        return '1080p60 • ~15 Mbps • sharp';
+      case StreamQuality.ultra:
+        return '1440p60 • ~25-50 Mbps • best';
+    }
+  }
+
+  int get bitrateMbps {
+    switch (this) {
+      case StreamQuality.auto:
+        return 0; // 0 = auto
+      case StreamQuality.medium:
+        return 8;
+      case StreamQuality.high:
+        return 15;
+      case StreamQuality.ultra:
+        return 25;
+    }
+  }
+
+  String get resolution {
+    switch (this) {
+      case StreamQuality.auto:
+        return 'Auto';
+      case StreamQuality.medium:
+        return '720p60';
+      case StreamQuality.high:
+        return '1080p60 (FHD)';
+      case StreamQuality.ultra:
+        return '1440p60 (QHD)';
+    }
+  }
+}
+
 @immutable
 class AppSettings {
   const AppSettings({
@@ -75,7 +132,8 @@ class AppSettings {
     this.reduceMotion = false,
     this.codec = 'AV1 (NVENC / AMF GPU)',
     this.resolution = '1080p60 (FHD)',
-    this.bitrateMbps = 25,
+    this.bitrateMbps = 0, // 0 = Auto (Founder request)
+    this.quality = StreamQuality.auto,
     this.relativeMouseMode = false,
     this.audioEnabled = true,
     this.micPassthrough = false,
@@ -90,7 +148,8 @@ class AppSettings {
   final bool reduceMotion;
   final String codec;
   final String resolution;
-  final int bitrateMbps;
+  final int bitrateMbps; // 0 = Auto
+  final StreamQuality quality;
   final bool relativeMouseMode;
   final bool audioEnabled;
   final bool micPassthrough;
@@ -109,6 +168,7 @@ class AppSettings {
     String? codec,
     String? resolution,
     int? bitrateMbps,
+    StreamQuality? quality,
     bool? relativeMouseMode,
     bool? audioEnabled,
     bool? micPassthrough,
@@ -123,6 +183,7 @@ class AppSettings {
     codec: codec ?? this.codec,
     resolution: resolution ?? this.resolution,
     bitrateMbps: bitrateMbps ?? this.bitrateMbps,
+    quality: quality ?? this.quality,
     relativeMouseMode: relativeMouseMode ?? this.relativeMouseMode,
     audioEnabled: audioEnabled ?? this.audioEnabled,
     micPassthrough: micPassthrough ?? this.micPassthrough,
@@ -147,7 +208,11 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       reduceMotion: _s.getBool('reduce_motion'),
       codec: _s.getStr('stream_codec') ?? 'AV1 (NVENC / AMF GPU)',
       resolution: _s.getStr('stream_res') ?? '1080p60 (FHD)',
-      bitrateMbps: _s.getI('stream_bitrate', def: 25),
+      bitrateMbps: _s.getI('stream_bitrate', def: 0), // 0=Auto
+      quality: StreamQuality.values.firstWhere(
+        (q) => q.name == _s.getStr('stream_quality'),
+        orElse: () => StreamQuality.auto,
+      ),
       relativeMouseMode: _s.getBool('stream_relative_mouse', def: false),
       audioEnabled: _s.getBool('stream_audio', def: true),
       micPassthrough: _s.getBool('stream_mic', def: false),
@@ -206,6 +271,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       'stream_codec',
       'stream_res',
       'stream_bitrate',
+      'stream_quality',
       'stream_relative_mouse',
       'stream_audio',
       'stream_mic',
@@ -244,7 +310,20 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> setBitrateMbps(int b) async {
     state = state.copyWith(bitrateMbps: b);
     await _s.setI('stream_bitrate', b);
-    DevLog.i('settings', 'Bitrate diubah', '$b Mbps');
+    DevLog.i('settings', 'Bitrate diubah', b == 0 ? 'Auto' : '$b Mbps');
+  }
+
+  Future<void> setQuality(StreamQuality q) async {
+    // Auto quality maps to auto bitrate + auto resolution
+    state = state.copyWith(
+      quality: q,
+      bitrateMbps: q.bitrateMbps,
+      resolution: q.resolution,
+    );
+    await _s.setStr('stream_quality', q.name);
+    await _s.setI('stream_bitrate', q.bitrateMbps);
+    await _s.setStr('stream_res', q.resolution);
+    DevLog.i('settings', 'Quality diubah', '${q.label} ${q.desc}');
   }
 
   Future<void> setRelativeMouseMode(bool v) async {

@@ -59,14 +59,13 @@ class SessionPage extends ConsumerStatefulWidget {
 
 class _SessionPageState extends ConsumerState<SessionPage>
     with WidgetsBindingObserver {
-  bool _connecting = true;
+  bool _connecting = false; // FIX: no Loading Connection in SessionPage — connect check di ConnectPage
   bool _overlayVisible = true;
   bool _panelVisible = false;
   bool _keyboardVisible = false;
   SessionPanelSection _panelSection = SessionPanelSection.stream;
   int _panelRevision = 0;
   Timer? _idleTimer;
-  Timer? _connectTimer;
   Timer? _captureTimer;
 
   /// Dicatat ke `RepaintBoundary` membungkus permukaan video remote, dipakai
@@ -139,21 +138,36 @@ class _SessionPageState extends ConsumerState<SessionPage>
     }
     DevLog.i(
       'sesi',
-      'Membuka preview sesi ke ${widget.deviceName}',
-      'id=${widget.deviceId}',
+      'Membuka sesi ke ${widget.deviceName}',
+      'id=${widget.deviceId} transport=${widget.initialTransport != null ? "existing" : "new"}',
     );
-    final platformReduce = WidgetsBinding
-        .instance
-        .platformDispatcher
-        .accessibilityFeatures
-        .disableAnimations;
-    final reduceMotion = preferences.reduceMotion || platformReduce;
-    _connectTimer = Timer(Duration(milliseconds: reduceMotion ? 0 : 450), () {
-      if (!mounted) return;
-      setState(() => _connecting = false);
-      DevLog.i('sesi', 'Preview UI siap — transport belum aktif');
-      _restartIdleTimer();
-    });
+    // FIX: jangan Loading Connection di session screen — kalau belum benar-benar
+    // terhubung jangan masuk session screen (sudah dicek di ConnectPage).
+    // Kalau initialTransport sudah negotiating/connected, langsung live.
+    // Kalau gagal, jangan pernah masuk session — pop dengan error.
+    if (widget.initialTransport != null) {
+      final s = widget.initialTransport!.state;
+      if (s.status == TransportStatus.negotiating || s.status == TransportStatus.connected) {
+        _connecting = false;
+        DevLog.i('sesi', 'Transport existing sudah ${s.status} — langsung live');
+      } else if (s.status == TransportStatus.rejected || s.status == TransportStatus.peerOffline || s.status == TransportStatus.hostBusy || s.status == TransportStatus.error) {
+        // Gagal — jangan masuk session screen, pop dengan error
+        DevLog.w('sesi', 'Transport existing gagal ${s.status} — tidak masuk session');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(s.message ?? 'Gagal terhubung ke ${widget.deviceName}')),
+            );
+            Navigator.of(context).pop();
+          }
+        });
+      } else {
+        _connecting = false;
+      }
+    } else {
+      _connecting = false;
+    }
+    _restartIdleTimer();
 
     // Tangkap cuplikan "layar terakhir" secara berkala selama sesi live,
     // supaya halaman detail PC punya gambar terbaru meski sesi berakhir
@@ -347,7 +361,6 @@ class _SessionPageState extends ConsumerState<SessionPage>
     _transport.removeListener(_onTransportChanged);
     _transport.dispose();
     _idleTimer?.cancel();
-    _connectTimer?.cancel();
     _captureTimer?.cancel();
     _durationTimer?.cancel();
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
@@ -543,15 +556,20 @@ class _SessionPageState extends ConsumerState<SessionPage>
 
   @override
   Widget build(BuildContext context) {
-    if (_connecting) return _ConnectingView(name: widget.deviceName);
+    // FIX 2026-09-07 Founder: jangan pernah tampilkan Loading Connection di
+    // session screen. Validasi pairing sudah di ConnectPage sebelum push.
+    // SessionPage langsung live — placeholder _RemoteScreenPlaceholder
+    // menampilkan status transport asli (MENGHUBUNGI, NEGOSIASI, GAGAL) bila
+    // belum live, bukan loading palsu. Tidak ada lagi _ConnectingView.
 
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxHeight < 440;
-          final panelWidth = (constraints.maxWidth * 0.46)
-              .clamp(340.0, 410.0)
+          // Founder request 2026-09-07: panel sempit buat lega — increase width
+          final panelWidth = (constraints.maxWidth * 0.52)
+              .clamp(380.0, 480.0)
               .toDouble();
           return Stack(
             children: [
@@ -754,54 +772,22 @@ class _SessionPageState extends ConsumerState<SessionPage>
   }
 }
 
+/// DEPRECATED 2026-09-07 — _ConnectingView dihapus per permintaan Founder:
+/// "Session screen jangan Loading Connection di dalam — sebelum benar-benar
+/// terhubung jangan masuk session screen, kalau gagal jangan pernah masuk".
+/// Sekarang validasi pairing dilakukan di ConnectPage sebelum push SessionPage.
+/// SessionPage langsung live tanpa loading palsu. Placeholder _RemoteScreenPlaceholder
+/// menampilkan status transport asli (MENGHUBUNGI HOST, NEGOSIASI, dll) bila belum live,
+/// dan auto-pop dengan SnackBar bila status rejected/offline/busy/error.
 class _ConnectingView extends StatelessWidget {
   const _ConnectingView({required this.name});
-
   final String name;
-
   @override
   Widget build(BuildContext context) {
-    final c = context.c;
+    // Fallback — seharusnya tidak pernah dipanggil lagi
     return Scaffold(
       backgroundColor: AppColors.bgDark,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 330),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(
-                  width: 30,
-                  height: 30,
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Menyiapkan preview $name',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textHiDark,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                const Text(
-                  'Menyiapkan preview kontrol',
-                  style: TextStyle(fontSize: 12, color: AppColors.textMidDark),
-                ),
-                const SizedBox(height: 18),
-                LinearProgressIndicator(
-                  minHeight: 3,
-                  backgroundColor: c.textLow.withValues(alpha: 0.18),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      body: Center(child: Text('Menghubungkan ke $name...', style: const TextStyle(color: Colors.white70))),
     );
   }
 }

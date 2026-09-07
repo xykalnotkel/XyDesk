@@ -462,6 +462,8 @@ class _MappingChip extends StatelessWidget {
       InputType.mouse => LucideIcons.mouse,
       InputType.joystick => LucideIcons.gamepad2,
       InputType.touch => LucideIcons.hand,
+      InputType.gamepad => LucideIcons.joystick,
+      InputType.keypad => LucideIcons.keyboard,
     };
   }
 }
@@ -625,6 +627,8 @@ class _MappingDetailCard extends StatelessWidget {
                 InputType.mouse => LucideIcons.mouse,
                 InputType.joystick => LucideIcons.gamepad2,
                 InputType.touch => LucideIcons.hand,
+                InputType.gamepad => LucideIcons.joystick,
+                InputType.keypad => LucideIcons.keyboard,
               },
               size: 16,
               color: c.textMid,

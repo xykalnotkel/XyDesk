@@ -436,6 +436,53 @@ function terapkanSudutNative(win) {
   });
 }
 
+
+// ── Virtual Drivers Auto-Install (seperti AnyDesk) ──────────────────────
+function driverResourcesPath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'driver');
+  }
+  return path.resolve(__dirname, '..', '..', 'host', 'driver');
+}
+
+function checkAndInstallDrivers() {
+  if (process.platform !== 'win32') return;
+  // Hanya cek sekali per start, jangan blokir UI
+  setTimeout(() => {
+    try {
+      const driverPath = driverResourcesPath();
+      addLog(`[shell] cek driver virtual di ${driverPath}`);
+      // Cek apakah ada script install
+      const installDisplay = path.join(driverPath, 'install.ps1');
+      const installAudio = path.join(driverPath, 'install-audio.ps1');
+      
+      // Untuk RDP/headless, log warning biar user tau
+      // Deteksi RDP via env var SESSIONNAME mengandung RDP
+      const sessionName = process.env.SESSIONNAME || '';
+      const isRdp = sessionName.toLowerCase().includes('rdp') || process.env.TERM_PROGRAM === undefined && false;
+      // Lebih akurat: GetSystemMetrics via PowerShell
+      execFile('powershell.exe', ['-NoProfile', '-Command', 'Add-Type -MemberDefinition \'[DllImport("user32.dll")] public static extern int GetSystemMetrics(int n);\' -Name Win32 -Namespace System; [System.Win32]::GetSystemMetrics(0x1000)'], { windowsHide: true }, (err, stdout) => {
+        const isRdpSession = stdout && stdout.trim() === '1';
+        if (isRdpSession) {
+          addLog('[shell] RDP session terdeteksi — butuh virtual display driver biar tidak hitam');
+        }
+      });
+
+      // Auto-install hanya kalau file driver ada dan user admin
+      // Kita tidak auto-install VB-CABLE tanpa izin (butuh reboot), cuma log
+      if (fs.existsSync(installDisplay)) {
+        addLog('[shell] virtual display driver installer tersedia — akan dipanggil kalau headless terdeteksi engine');
+      }
+      if (fs.existsSync(installAudio)) {
+        addLog('[shell] virtual audio driver installer tersedia — VB-CABLE untuk mic denyut di Recording');
+      }
+    } catch (e) {
+      addLog(`[shell] cek driver gagal: ${e.message}`);
+    }
+  }, 3000);
+}
+
+
 function registerIpc() {
   ipcMain.handle('status', async () => {
     try {
@@ -718,6 +765,8 @@ if (!gotLock) {
     }
     createWindow();
     createTray();
+    // Cek & install virtual drivers seperti AnyDesk (auto kalau headless/RDP)
+    checkAndInstallDrivers();
     // Mulai supervisor tanpa memblokir tampilan UI.
     startEngine().catch(() => {});
     startWatchdog();

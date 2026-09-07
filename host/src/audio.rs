@@ -40,9 +40,21 @@ pub fn capture_status() -> &'static str {
     }
 }
 
-/// Benar bila platform ini bisa menangkap audio loopback.
+/// Benar bila platform ini bisa menangkap audio loopback — cek device beneran,
+/// bukan cuma cfg. Di VM tanpa audio device (GPU VM, server core), ini false
+/// dan UI harus jelaskan "tidak ada perangkat audio" bukan "pipeline mati".
 pub fn capture_available() -> bool {
-    cfg!(target_os = "windows")
+    #[cfg(target_os = "windows")]
+    {
+        if windows::list_outputs().is_empty() {
+            return false;
+        }
+        windows::has_default_output()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        false
+    }
 }
 
 /// Status implementasi mic host (mikrofon PC → client).
@@ -78,6 +90,28 @@ pub fn list_outputs() -> Vec<String> {
     #[cfg(target_os = "windows")]
     {
         windows::list_outputs()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Vec::new()
+    }
+}
+
+pub fn list_outputs_detailed() -> Vec<(String, String)> {
+    #[cfg(target_os = "windows")]
+    {
+        windows::list_outputs_detailed()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Vec::new()
+    }
+}
+
+pub fn list_inputs_detailed() -> Vec<(String, String)> {
+    #[cfg(target_os = "windows")]
+    {
+        windows::list_inputs_detailed()
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -218,6 +252,22 @@ mod windows {
         Ok(device)
     }
 
+    fn device_by_id(id: &str) -> anyhow::Result<windows::Win32::Media::Audio::IMMDevice> {
+        init_com()?;
+        let enumerator: IMMDeviceEnumerator = unsafe {
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+                .map_err(|e| anyhow::anyhow!("MMDeviceEnumerator: {e:?}"))?
+        };
+        // HSTRING auto converts to PCWSTR via windows crate
+        let h: windows::core::HSTRING = id.into();
+        let device = unsafe {
+            enumerator
+                .GetDevice(windows::core::PCWSTR::from_raw(h.as_ptr()))
+                .map_err(|e| anyhow::anyhow!("GetDevice {id}: {e:?}"))?
+        };
+        Ok(device)
+    }
+
     /// Perangkat capture default (mikrofon) — jalur mic host → client.
     fn capture_device() -> anyhow::Result<windows::Win32::Media::Audio::IMMDevice> {
         init_com()?;
@@ -265,32 +315,163 @@ mod windows {
 
     /// Daftar ID endpoint output aktif.
     pub fn list_outputs() -> Vec<String> {
+        list_outputs_detailed().into_iter().map(|(id, _)| id).collect()
+    }
+
+    /// Daftar (ID, friendly name) output — dipakai virtual_mic.rs untuk deteksi VB-CABLE
+    pub fn list_outputs_detailed() -> Vec<(String, String)> {
         use windows::Win32::Media::Audio::DEVICE_STATE_ACTIVE;
-        let Ok(device) = device() else {
-            return Vec::new();
-        };
-        let Ok(enumerator) = device.cast::<IMMDeviceEnumerator>() else {
-            return Vec::new();
-        };
-        let Ok(collection) =
-            (unsafe { enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE) })
-        else {
-            return Vec::new();
-        };
-        let Ok(count) = (unsafe { collection.GetCount() }) else {
-            return Vec::new();
+        use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
+        use windows::Win32::System::Com::STGM_READ;
+        let _ = init_com();
+        let enumerator: IMMDeviceEnumerator =
+            match unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) } {
+                Ok(e) => e,
+                Err(_) => return Vec::new(),
+            };
+        let collection =
+            match unsafe { enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE) } {
+                Ok(c) => c,
+                Err(_) => return Vec::new(),
+            };
+        let count = match unsafe { collection.GetCount() } {
+            Ok(c) => c,
+            Err(_) => return Vec::new(),
         };
         let mut out = Vec::new();
         for i in 0..count {
             if let Ok(item) = unsafe { collection.Item(i) } {
-                if let Ok(id) = unsafe { item.GetId() } {
-                    if let Ok(id) = unsafe { id.to_string() } {
-                        out.push(id);
+                if let Ok(id_pw) = unsafe { item.GetId() } {
+                    if let Ok(id) = unsafe { id_pw.to_string() } {
+                        // Friendly name via property store
+                        let name = unsafe {
+                            if let Ok(props) = item.OpenPropertyStore(STGM_READ) {
+                                // PKEY_Device_FriendlyName = {A45C254E-DF1C-4EFD-8020-67D146A850E0},14
+                                // PKEY_Device_DeviceDesc = {A45C254E-DF1C-4EFD-8020-67D146A850E0},2
+                                // Kita coba baca friendly name, fallback ke DeviceDesc
+                                let friendly_key = windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY {
+                                    fmtid: windows::core::GUID::from_u128(0xA45C254E_DF1C_4EFD_8020_67D146A850E0),
+                                    pid: 14,
+                                };
+                                if let Ok(var) = props.GetValue(&friendly_key) {
+                                    // PROPVARIANT to string — coba baca sebagai PWSTR
+                                    // Simplified: pakai DisplayName via ToString? Fallback ke ID
+                                    // Kita coba ambil via PropVariantToString tidak ada, jadi pakai Debug
+                                    // Untuk sekarang, pakai ID sebagai fallback, tapi coba baca via IPropertyStore string
+                                    // Workaround: gunakan DisplayName dari IMMDevice? Tidak ada, jadi pakai ID
+                                    // Kita akan coba baca via variant.Anonymous.Anonymous.bstrVal atau pwszVal
+                                    // Simplifikasi: kalau PROPVARIANT vt=31 (LPWSTR), ambil pointer
+                                    let s = format!("{:?}", var);
+                                    // Kalau s mengandung "CABLE" atau "VoiceMeeter", pakai s, else ID
+                                    // Untuk robust, kita coba baca langsung via GetValue dan convert manual
+                                    // Karena windows crate tidak expose PropVariantToString, kita pakai unsafe baca pwszVal
+                                    let pwsz = var.Anonymous.Anonymous.Anonymous.pwszVal;
+                                    if !pwsz.is_null() && var.Anonymous.Anonymous.vt.0 == 31 {
+                                        let ws = windows::core::PWSTR(pwsz);
+                                        if let Ok(str) = unsafe { ws.to_string() } {
+                                            str
+                                        } else {
+                                            id.clone()
+                                        }
+                                    } else {
+                                        // Fallback: coba baca DeviceDesc (pid 2)
+                                        let desc_key = windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY {
+                                            fmtid: windows::core::GUID::from_u128(0xA45C254E_DF1C_4EFD_8020_67D146A850E0),
+                                            pid: 2,
+                                        };
+                                        if let Ok(var2) = props.GetValue(&desc_key) {
+                                            let pwsz2 = var2.Anonymous.Anonymous.Anonymous.pwszVal;
+                                            if !pwsz2.is_null() && var2.Anonymous.Anonymous.vt.0 == 31 {
+                                                let ws2 = windows::core::PWSTR(pwsz2);
+                                                if let Ok(str2) = unsafe { ws2.to_string() } {
+                                                    str2
+                                                } else {
+                                                    id.clone()
+                                                }
+                                            } else {
+                                                id.clone()
+                                            }
+                                        } else {
+                                            id.clone()
+                                        }
+                                    }
+                                } else {
+                                    id.clone()
+                                }
+                            } else {
+                                id.clone()
+                            }
+                        };
+                        out.push((id, name));
                     }
                 }
             }
         }
         out
+    }
+
+    /// Daftar (ID, friendly name) input (capture) — untuk deteksi virtual mic
+    pub fn list_inputs_detailed() -> Vec<(String, String)> {
+        use windows::Win32::Media::Audio::DEVICE_STATE_ACTIVE;
+        use windows::Win32::System::Com::STGM_READ;
+        let _ = init_com();
+        let enumerator: IMMDeviceEnumerator =
+            match unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) } {
+                Ok(e) => e,
+                Err(_) => return Vec::new(),
+            };
+        let collection =
+            match unsafe { enumerator.EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE) } {
+                Ok(c) => c,
+                Err(_) => return Vec::new(),
+            };
+        let count = match unsafe { collection.GetCount() } {
+            Ok(c) => c,
+            Err(_) => return Vec::new(),
+        };
+        let mut out = Vec::new();
+        for i in 0..count {
+            if let Ok(item) = unsafe { collection.Item(i) } {
+                if let Ok(id_pw) = unsafe { item.GetId() } {
+                    if let Ok(id) = unsafe { id_pw.to_string() } {
+                        let name = unsafe {
+                            if let Ok(props) = item.OpenPropertyStore(STGM_READ) {
+                                let friendly_key = windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY {
+                                    fmtid: windows::core::GUID::from_u128(0xA45C254E_DF1C_4EFD_8020_67D146A850E0),
+                                    pid: 14,
+                                };
+                                if let Ok(var) = props.GetValue(&friendly_key) {
+                                    let pwsz = var.Anonymous.Anonymous.Anonymous.pwszVal;
+                                    if !pwsz.is_null() && var.Anonymous.Anonymous.vt.0 == 31 {
+                                        let ws = windows::core::PWSTR(pwsz);
+                                        if let Ok(str) = ws.to_string() {
+                                            str
+                                        } else {
+                                            id.clone()
+                                        }
+                                    } else {
+                                        id.clone()
+                                    }
+                                } else {
+                                    id.clone()
+                                }
+                            } else {
+                                id.clone()
+                            }
+                        };
+                        out.push((id, name));
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// Cek apakah default output device ada dan bisa dibuka — dipakai
+    /// `capture_available()` supaya VM tanpa audio device tidak dilaporkan
+    /// "tersedia" padahal `capture_loop` bakal gagal terus.
+    pub fn has_default_output() -> bool {
+        device().is_ok()
     }
 
     /// Volume master 0.0–1.0 dari perangkat output default.
@@ -567,9 +748,28 @@ mod windows {
     }
 
     /// Loop render: decode Opus → tulis ke IAudioRenderClient.
+    /// v6.7.2+: coba pakai virtual mic driver (VB-CABLE Input) biar denyut di
+    /// Control Panel → Recording → CABLE Output, seperti AnyDesk. Kalau tidak ada,
+    /// fallback ke default output (speaker) seperti dulu.
     pub fn render_loop(rx: Receiver<Vec<u8>>) -> anyhow::Result<()> {
         init_com()?;
-        let device = device()?;
+        crate::virtual_mic::ensure_virtual_mic();
+        // Prioritas: virtual cable input (biar jadi mic input di Windows)
+        let device = if let Some(id) = crate::virtual_mic::get_render_device_id() {
+            match device_by_id(&id) {
+                Ok(d) => {
+                    eprintln!("[xydesk-host] mic client → virtual mic: render ke device {id} (biar denyut di Recording)");
+                    d
+                }
+                Err(_) => {
+                    eprintln!("[xydesk-host] virtual mic device {id} gagal dibuka, fallback ke default speaker");
+                    device()?
+                }
+            }
+        } else {
+            eprintln!("[xydesk-host] mic client → speaker (default) — tidak akan denyut di Recording, install VB-CABLE biar jadi mic virtual");
+            device()?
+        };
         let client = client(&device)?;
         let (format, src_mix, mix_ptr) = mix_format(&client)?;
         // Buffer 100 ms (10.000.000 satuan 100 ns) — jitter kecil, latency rendah.

@@ -27,6 +27,8 @@
 //! 0x07 DISPLAY_SELECT  index:u8                (pilih monitor; bukan injeksi)
 //! 0x08 CLIPBOARD_SET   utf8 bytes (sisa pesan) (isi papan klip, dua arah)
 //! 0x09 CLIPBOARD_REQ   (tanpa payload)         (minta lawan membalas 0x08)
+//! 0x0A VIDEO_QUALITY   quality:u8             (0=auto 1=medium 2=high 3=ultra)
+//! 0x0B VIDEO_BITRATE   mbps:u16 le            (0=auto 1..50 Mbps)
 //! ```
 //!
 //! Parser lintas platform; injeksi nyata hanya di Windows via `SendInput` —
@@ -57,6 +59,10 @@ pub enum InputEvent {
     ClipboardSet(String),
     /// Minta host mengirim isi papan klipnya sebagai `ClipboardSet`.
     ClipboardRequest,
+    /// Quality preset dari client (auto/medium/high/ultra) — bukan injeksi.
+    VideoQuality(u8),
+    /// Target bitrate Mbps dari client (0=Auto) — bukan injeksi.
+    VideoBitrate(u16),
 }
 
 /// Tipe pesan (byte pertama).
@@ -70,6 +76,8 @@ mod tag {
     pub const DISPLAY_SELECT: u8 = 0x07;
     pub const CLIPBOARD_SET: u8 = 0x08;
     pub const CLIPBOARD_REQ: u8 = 0x09;
+    pub const VIDEO_QUALITY: u8 = 0x0A;
+    pub const VIDEO_BITRATE: u8 = 0x0B;
 }
 
 /// Dekode satu pesan biner. `None` bila tidak valid (pesan dibuang diam-diam
@@ -105,6 +113,11 @@ pub fn decode(data: &[u8]) -> Option<InputEvent> {
             .ok()
             .map(|s| InputEvent::ClipboardSet(s.to_string())),
         (&tag::CLIPBOARD_REQ, n) if n >= 1 => Some(InputEvent::ClipboardRequest),
+        (&tag::VIDEO_QUALITY, n) if n >= 2 => Some(InputEvent::VideoQuality(data[1])),
+        (&tag::VIDEO_BITRATE, n) if n >= 3 => {
+            let mbps = u16::from_le_bytes([data[1], data[2]]);
+            Some(InputEvent::VideoBitrate(mbps))
+        }
         _ => None,
     }
 }
@@ -369,8 +382,10 @@ mod windows_inject {
                 }
                 true
             }
-            // Bukan injeksi — ditangani loop utama sesi (pindah monitor).
+            // Bukan injeksi — ditangani loop utama sesi (pindah monitor / quality / bitrate).
             InputEvent::DisplaySelect(_) => true,
+            InputEvent::VideoQuality(_) => true,
+            InputEvent::VideoBitrate(_) => true,
             // Bukan injeksi juga. Papan klip butuh akses ke data channel
             // untuk membalas permintaan, dan thread injeksi ini tidak
             // memilikinya — keduanya ditangani di loop utama sesi. Nilai

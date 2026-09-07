@@ -49,6 +49,10 @@ pub mod dxgi;
 /// Primitif capture GDI BitBlt (piksel mentah saja; encode ada di `screen`).
 /// Dipisah supaya bisa di-type-check untuk Windows lewat `tool/wincheck`.
 pub mod gdi;
+/// Virtual display driver — solusi hitam di VM/RDP seperti AnyDesk/RustDesk
+pub mod virtual_display;
+/// Virtual mic driver — biar mic client kebaca sebagai input (denyut di Control Panel)
+pub mod virtual_mic;
 /// Spesifikasi mesin host (CPU/GPU/RAM/motherboard/OS) — dibaca nyata, lihat
 /// aturan kejujuran di dalam modul.
 pub mod hwinfo;

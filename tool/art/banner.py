@@ -1,14 +1,30 @@
 #!/usr/bin/env python3
-"""Compositor banner push notification XyDesk.
+"""Compositor banner push notification XyDesk — KUNCI DESAIN FOUNDER 2026-09-07.
 
-Menempelkan tipografi (brand, headline, versi, tanggal, tombol CTA) di atas
-artwork dasar HD. Teks digambar dengan font Inter dari assets/fonts — bukan
-bagian dari gambar — sehingga versi SELALU benar dan tajam di setiap rilis.
+Aturan banner (LOCKED, jangan ubah tanpa Founder):
+  1. 3D glossy morphing — objek utama harus 3D mengkilap yang meleleh/morphing,
+     bukan flat. Glossy highlight, deep shadow, gradient ungu-hitam #7654F6→#07050E.
+  2. Elemen melayang + motion blur — minimal 2-3 chip/dot/ring melayang dengan
+     motion blur 8-16px seolah bergerak. Harus dinamis, bukan statis.
+  3. Sesuai konten artikel — banner harus menggambarkan inti perubahan artikel,
+     bukan generik. Tulis 1 kalimat "Banner ini menggambarkan ..." sebelum generate.
+  4. Kata seperti Founder/CEO — teks jujur, hangat, tanpa buzzword. Seperti
+     Haekal Saputra berbicara langsung ke pengguna.
+
+Menempelkan tipografi (brand, headline, versi, tanggal) di atas artwork dasar
+HD. Teks digambar dengan font Inter dari assets/fonts — bukan bagian dari
+gambar — sehingga versi SELALU benar dan tajam di setiap rilis.
+
+Base art `design/notifications/banner_art_hd.png` WAJIB diganti tiap rilis agar
+sesuai konten dengan gaya di atas. Prompt AI wajib: "3D glossy morphing shape,
+floating elements with motion blur, dynamic movement, deep purple-black gradient,
+soft rim light, studio lighting, ultra detailed, content-matched to [isi artikel]"
 
 Dipanggil dari workflow Release:
     python3 tool/art/banner.py --version 1.2.1 --build 5 --out dist/banner.jpg
 
 Output: JPEG 1024x512 (big picture OneSignal) berkualitas tinggi.
+Lihat docs/NEWS_STYLE.md §11 untuk checklist lengkap.
 """
 
 import argparse

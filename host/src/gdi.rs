@@ -53,29 +53,43 @@ pub struct GdiCapture {
 impl GdiCapture {
     /// Buka capture untuk satu perangkat tampilan.
     ///
-    /// `nama_perangkat` adalah nama GDI seperti `\\.\DISPLAY1` — harus nama
+    /// `nama_perangkat` adalah nama GDI seperti `\\.\\DISPLAY1` — harus nama
     /// yang dikembalikan enumerasi monitor, karena `CreateDCW` menolak nama
-    /// karangan dan mengembalikan DC null.
+    /// karangan dan mengembalikan DC null. Untuk VM headless / RDP tanpa
+    /// monitor, fallback GetDC(0) otomatis dicoba.
     pub fn baru(nama_perangkat: &str, width: usize, height: usize) -> Result<Self, String> {
-        if width == 0 || height == 0 {
-            return Err(format!("ukuran capture tidak sah: {width}x{height}"));
-        }
+        // Kalau caller kasih 0 karena list_displays kosong (VM tanpa monitor),
+        // biarin — Handle::baru akan pakai GetSystemMetrics untuk tentukan ukuran.
+        let (w, h) = if width == 0 || height == 0 {
+            // Coba baca ukuran virtual screen dulu
+            (0, 0)
+        } else {
+            (width, height)
+        };
         Ok(Self {
-            dalam: Handle::baru(nama_perangkat, width, height)?,
-            width,
-            height,
-            rgba: Vec::with_capacity(width * height * 4),
+            dalam: Handle::baru(nama_perangkat, w, h)?,
+            width: if w == 0 { 0 } else { w },
+            height: if h == 0 { 0 } else { h },
+            rgba: Vec::with_capacity(if w == 0 || h == 0 { 1920 * 1080 * 4 } else { w * h * 4 }),
         })
     }
 
-    /// Lebar frame dalam piksel.
+    /// Lebar frame dalam piksel — setelah fallback bisa berubah dari yang diminta.
     pub fn width(&self) -> usize {
-        self.width
+        if self.width == 0 {
+            self.dalam.width as usize
+        } else {
+            self.width
+        }
     }
 
     /// Tinggi frame dalam piksel.
     pub fn height(&self) -> usize {
-        self.height
+        if self.height == 0 {
+            self.dalam.height as usize
+        } else {
+            self.height
+        }
     }
 
     /// Ambil satu frame; kembalikan `(rgba, width, height)`.
@@ -84,11 +98,33 @@ impl GdiCapture {
     /// berikutnya — cukup untuk satu kali encode, dan menghindari salinan
     /// tambahan per frame.
     pub fn grab(&mut self) -> Result<(&[u8], usize, usize), String> {
-        // `dalam` dan `rgba` adalah field berbeda, jadi borrow keduanya tidak
-        // bertabrakan: hasil BitBlt (BGRA) langsung ditukar ke RGBA di sini.
         let bgra = self.dalam.ambil()?;
         crate::pixfmt::bgra_to_rgba(bgra, &mut self.rgba);
-        Ok((&self.rgba, self.width, self.height))
+        // Deteksi frame hitam total — gejala VM tanpa desktop / sesi terkunci.
+        // Kalau semua piksel 0, itu bukan wallpaper hitam user (wallpaper hitam
+        // masih punya taskbar / kursor), melainkan BitBlt dari DC kosong.
+        // Kita tetap kirim (biar client tidak diam), tapi log peringatan
+        // supaya operator tau ini bukan salah encoder.
+        if self.rgba.len() >= 4 && self.rgba.iter().take(100).all(|&b| b == 0) {
+            // Cek 100 byte pertama saja — cepat, cukup untuk deteksi.
+            // Log hanya sekali per 5 detik biar tidak spam.
+            static mut LAST_WARN: Option<std::time::Instant> = None;
+            let now = std::time::Instant::now();
+            let should_warn = unsafe {
+                if let Some(last) = LAST_WARN {
+                    now.duration_since(last).as_secs() >= 5
+                } else {
+                    true
+                }
+            };
+            if should_warn {
+                eprintln!("[xydesk-host] GDI: frame tampak hitam total — mungkin sesi RDP terkunci / VM tanpa desktop aktif");
+                unsafe { LAST_WARN = Some(now); }
+            }
+        }
+        let w = self.width();
+        let h = self.height();
+        Ok((&self.rgba, w, h))
     }
 }
 
@@ -102,15 +138,35 @@ struct Handle {
     /// Buffer BGRA hasil `GetDIBits`, dipakai ulang antar frame.
     bgra: Vec<u8>,
     height: u32,
+    width: u32,
+    is_fallback: bool,
 }
 
 #[cfg(target_os = "windows")]
 impl Handle {
     fn baru(nama_perangkat: &str, width: usize, height: usize) -> Result<Self, String> {
+        // Coba DISPLAY spesifik dulu, kalau gagal fallback ke GetDC(0)
+        match Self::baru_display(nama_perangkat, width, height) {
+            Ok(h) => Ok(h),
+            Err(e) => {
+                eprintln!(
+                    "[xydesk-host] GDI CreateDCW {nama_perangkat} gagal: {e} — fallback GetDC(0) virtual screen"
+                );
+                Self::baru_fallback(width, height)
+            }
+        }
+    }
+
+    fn baru_display(nama_perangkat: &str, width: usize, height: usize) -> Result<Self, String> {
         use windows::core::PCWSTR;
         use windows::Win32::Graphics::Gdi::{
             CreateCompatibleBitmap, CreateCompatibleDC, CreateDCW, BITMAPINFO, BITMAPINFOHEADER,
         };
+
+        // Kalau width/height 0 (list_displays kosong), fallback langsung
+        if width == 0 || height == 0 {
+            return Self::baru_fallback(0, 0);
+        }
 
         let dev: Vec<u16> = nama_perangkat
             .encode_utf16()
@@ -119,10 +175,6 @@ impl Handle {
         let driver: Vec<u16> = "DISPLAY".encode_utf16().chain(std::iter::once(0)).collect();
 
         unsafe {
-            // `CreateDCW`/`CreateCompatibleDC` mengembalikan `HDC` langsung di
-            // crate `windows` 0.61 (dulu dibungkus `CreatedHDC`). Dipastikan
-            // lewat `tool/wincheck`, bukan ditebak — konversi `.into()` yang
-            // berjaga-jaga justru ditolak clippy sebagai useless_conversion.
             let screen: windows::Win32::Graphics::Gdi::HDC = CreateDCW(
                 PCWSTR(driver.as_ptr()),
                 PCWSTR(dev.as_ptr()),
@@ -132,11 +184,8 @@ impl Handle {
             if screen.is_invalid() {
                 return Err(format!("CreateDCW gagal untuk {nama_perangkat}"));
             }
-            // Parameter HDC sumber bertipe Option<HDC> di 0.61 (boleh null untuk
-            // DC layar saat itu); kita selalu punya DC layar sendiri.
             let mem: windows::Win32::Graphics::Gdi::HDC = CreateCompatibleDC(Some(screen));
             if mem.is_invalid() {
-                // DC layar sudah terbuka — Handle yang melepasnya di Drop.
                 let lepas = Self {
                     screen,
                     mem,
@@ -144,6 +193,8 @@ impl Handle {
                     bmi: BITMAPINFO::default(),
                     bgra: Vec::new(),
                     height: 0,
+                    width: 0,
+                    is_fallback: false,
                 };
                 drop(lepas);
                 return Err("CreateCompatibleDC gagal".to_string());
@@ -157,24 +208,20 @@ impl Handle {
                     bmi: BITMAPINFO::default(),
                     bgra: Vec::new(),
                     height: 0,
+                    width: 0,
+                    is_fallback: false,
                 };
                 drop(lepas);
                 return Err(format!("CreateCompatibleBitmap {width}x{height} gagal"));
             }
-            // Bitmap harus ter-select ke memory DC; kalau tidak, BitBlt
-            // menggambar ke permukaan 1x1 bawaan dan frame selalu kosong.
             let _sebelumnya = SelectObject(mem, windows::Win32::Graphics::Gdi::HGDIOBJ(bmp.0));
 
             let mut bmi: BITMAPINFO = std::mem::zeroed();
             bmi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
             bmi.bmiHeader.biWidth = width as i32;
-            // Tinggi NEGATIF = baris atas lebih dulu. Default GetDIBits
-            // bottom-up, yang akan mengirim frame terbalik ke client.
             bmi.bmiHeader.biHeight = -(height as i32);
             bmi.bmiHeader.biPlanes = 1;
             bmi.bmiHeader.biBitCount = 32;
-            // 0 = BI_RGB (tanpa kompresi). Ditulis literal agar tidak bergantung
-            // pada nama konstanta yang pernah pindah antar versi crate.
             bmi.bmiHeader.biCompression = 0;
 
             Ok(Self {
@@ -184,6 +231,70 @@ impl Handle {
                 bmi,
                 bgra: vec![0u8; width * height * 4],
                 height: height as u32,
+                width: width as u32,
+                is_fallback: false,
+            })
+        }
+    }
+
+    fn baru_fallback(width: usize, height: usize) -> Result<Self, String> {
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::Graphics::Gdi::{
+            CreateCompatibleBitmap, CreateCompatibleDC, GetDC, BITMAPINFO, BITMAPINFOHEADER,
+            GetSystemMetrics, SYSTEM_METRICS_INDEX,
+        };
+
+        unsafe {
+            let (w, h) = if width > 0 && height > 0 {
+                (width, height)
+            } else {
+                let vs_w = GetSystemMetrics(SYSTEM_METRICS_INDEX(78)); // SM_CXVIRTUALSCREEN
+                let vs_h = GetSystemMetrics(SYSTEM_METRICS_INDEX(79)); // SM_CYVIRTUALSCREEN
+                let s_w = GetSystemMetrics(SYSTEM_METRICS_INDEX(0)); // SM_CXSCREEN
+                let s_h = GetSystemMetrics(SYSTEM_METRICS_INDEX(1)); // SM_CYSCREEN
+                let fw = if vs_w > 0 { vs_w } else { s_w };
+                let fh = if vs_h > 0 { vs_h } else { s_h };
+                if fw <= 0 || fh <= 0 {
+                    return Err("fallback: tidak bisa baca ukuran layar virtual (GetSystemMetrics 0)".to_string());
+                }
+                (fw as usize, fh as usize)
+            };
+
+            let screen = GetDC(Some(HWND::default()));
+            if screen.is_invalid() {
+                return Err("fallback GetDC(0) gagal — tidak ada desktop".to_string());
+            }
+            let mem = CreateCompatibleDC(Some(screen));
+            if mem.is_invalid() {
+                let _ = windows::Win32::Graphics::Gdi::ReleaseDC(Some(HWND::default()), screen);
+                return Err("fallback CreateCompatibleDC gagal".to_string());
+            }
+            let bmp = CreateCompatibleBitmap(screen, w as i32, h as i32);
+            if bmp.is_invalid() {
+                let _ = windows::Win32::Graphics::Gdi::ReleaseDC(Some(HWND::default()), screen);
+                let _ = windows::Win32::Graphics::Gdi::DeleteDC(mem);
+                return Err(format!("fallback CreateCompatibleBitmap {w}x{h} gagal"));
+            }
+            let _ = SelectObject(mem, windows::Win32::Graphics::Gdi::HGDIOBJ(bmp.0));
+
+            let mut bmi: BITMAPINFO = std::mem::zeroed();
+            bmi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
+            bmi.bmiHeader.biWidth = w as i32;
+            bmi.bmiHeader.biHeight = -(h as i32);
+            bmi.bmiHeader.biPlanes = 1;
+            bmi.bmiHeader.biBitCount = 32;
+            bmi.bmiHeader.biCompression = 0;
+
+            eprintln!("[xydesk-host] GDI fallback aktif: {w}x{h} via GetDC(0) — cocok untuk VM/RDP tanpa DISPLAY spesifik");
+            Ok(Self {
+                screen,
+                mem,
+                bmp,
+                bmi,
+                bgra: vec![0u8; w * h * 4],
+                height: h as u32,
+                width: w as u32,
+                is_fallback: true,
             })
         }
     }
@@ -193,8 +304,6 @@ impl Handle {
         use windows::Win32::Graphics::Gdi::{BitBlt, GetDIBits, DIB_RGB_COLORS, SRCCOPY};
 
         unsafe {
-            // BitBlt mengembalikan Result<()> di 0.61, bukan BOOL — pesan
-            // errornya ikut terbawa, jadi gagal di sini bisa dijelaskan.
             if let Err(e) = BitBlt(
                 self.mem,
                 0,
@@ -207,7 +316,7 @@ impl Handle {
                 SRCCOPY,
             ) {
                 return Err(format!(
-                    "BitBlt gagal (layar terkunci, secure desktop, atau DC lepas): {e}"
+                    "BitBlt gagal (layar terkunci, secure desktop, RDP disconnected, atau VM tanpa console): {e}"
                 ));
             }
             let baris = GetDIBits(
@@ -220,14 +329,11 @@ impl Handle {
                 DIB_RGB_COLORS,
             );
             if baris == 0 {
-                return Err("GetDIBits gagal (format bitmap tidak didukung)".to_string());
+                return Err("GetDIBits gagal (format bitmap tidak didukung / DC lepas)".to_string());
             }
             if baris as u32 != self.height {
-                // Sebagian baris tidak terisi. Mengirimnya akan menghasilkan
-                // gambar terpotong tanpa penjelasan; lebih baik gagal terang-
-                // terangan supaya watchdog memindahkan backend.
                 return Err(format!(
-                    "GetDIBits hanya mengisi {baris} dari {} baris",
+                    "GetDIBits hanya mengisi {baris} dari {} baris — layar berubah ukuran?",
                     self.height
                 ));
             }
@@ -237,27 +343,24 @@ impl Handle {
 }
 
 /// Pelepas handle GDI.
-///
-/// Host bisa hidup berhari-hari di server sewaan dan kuota GDI object per
-/// proses terbatas (10.000). Capture di-respawn setiap kali monitor, bitrate,
-/// atau keyframe berubah — bocor satu bitmap per respawn menghabiskan kuota
-/// itu dalam beberapa jam dan membuat seluruh GUI Windows gagal menggambar.
 #[cfg(target_os = "windows")]
 impl Drop for Handle {
     fn drop(&mut self) {
-        use windows::Win32::Graphics::Gdi::{DeleteDC, DeleteObject};
+        use windows::Win32::Graphics::Gdi::{DeleteDC, DeleteObject, ReleaseDC};
+        use windows::Win32::Foundation::HWND;
         unsafe {
             if !self.bmp.is_invalid() {
                 let _ = DeleteObject(windows::Win32::Graphics::Gdi::HGDIOBJ(self.bmp.0));
             }
-            // Crate `windows` 0.61: DeleteDC menerima HDC langsung (tipe
-            // CreatedHDC yang dulu membungkus DC hasil CreateDCW sudah tidak
-            // diekspor dari Win32::Graphics::Gdi).
             if !self.mem.is_invalid() {
                 let _ = DeleteDC(self.mem);
             }
             if !self.screen.is_invalid() {
-                let _ = DeleteDC(self.screen);
+                if self.is_fallback {
+                    let _ = ReleaseDC(Some(HWND::default()), self.screen);
+                } else {
+                    let _ = DeleteDC(self.screen);
+                }
             }
         }
     }
@@ -268,24 +371,8 @@ use windows::Win32::Graphics::Gdi::SelectObject;
 
 #[cfg(test)]
 mod tests {
-    //! Penjaga arsitektur modul ini BUKAN test yang mencari kata di sumbernya,
-    //! melainkan daftar dependensi `tool/wincheck`: crate itu mengompilasi
-    //! `gdi.rs` hanya dengan `windows` + `pixfmt`. Bila encode, webrtc, atau
-    //! openh264 menyusup ke sini, wincheck gagal kompilasi — penjaga yang tidak
-    //! bisa dikelabui.
-    //!
-    //! Pelajaran yang dibayar di commit ini: test versi pertama memakai
-    //! `include_str!("gdi.rs")` untuk memastikan kata `EncoderKind` dan
-    //! `try_send` TIDAK ada, padahal `include_str!` ikut membaca test itu
-    //! sendiri — assertion-nya memuat kata terlarangnya, jadi test selalu gagal
-    //! justru karena ia benar. Test yang memeriksa dirinya sendiri bukan test.
-
     #[test]
     fn konversi_warna_dilakukan_di_primitif_bukan_di_pemanggil() {
-        // `grab` harus menyerahkan RGBA, bukan BGRA mentah dari GetDIBits: bila
-        // penukaran warna pindah ke pemanggil, backend berikutnya (DXGI, yang
-        // juga memberi BGRA) harus mengulanginya dan berisiko lupa — gejalanya
-        // layar kebiruan di client, bukan error.
         let src = include_str!("gdi.rs");
         assert!(
             src.contains("crate::pixfmt::bgra_to_rgba"),

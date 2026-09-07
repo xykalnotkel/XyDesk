@@ -734,15 +734,42 @@ async fn main() -> Result<()> {
                                             _ => {}
                                         }
 
-                                            // Pindah monitor = bukan injeksi: setel
-                                            // pilihan + kirim meta terbaru.
-                                            if let xydesk_host::input::InputEvent::DisplaySelect(
-                                                i,
-                                            ) = ev
-                                            {
-                                                xydesk_host::screen::select_display(i);
-                                                let _ = dc.send_text(meta_json().to_string()).await;
-                                                continue;
+                                            // Pindah monitor / quality / bitrate = bukan injeksi.
+                                            match ev {
+                                                xydesk_host::input::InputEvent::DisplaySelect(i) => {
+                                                    xydesk_host::screen::select_display(i);
+                                                    let _ = dc.send_text(meta_json().to_string()).await;
+                                                    continue;
+                                                }
+                                                xydesk_host::input::InputEvent::VideoQuality(q) => {
+                                                    // 0=auto 1=medium 2=high 3=ultra → map ke bitrate preset host
+                                                    let bps = match q {
+                                                        1 => 8_000_000,
+                                                        2 => 15_000_000,
+                                                        3 => 25_000_000,
+                                                        _ => xydesk_host::screen::DEFAULT_TARGET_BPS,
+                                                    };
+                                                    if q == 0 {
+                                                        xydesk_host::screen::set_target_bitrate_bps(xydesk_host::screen::DEFAULT_TARGET_BPS);
+                                                    } else {
+                                                        xydesk_host::screen::set_target_bitrate_bps(bps);
+                                                    }
+                                                    println!("[xydesk-host] quality dari client: {} → {} bps", q, bps);
+                                                    continue;
+                                                }
+                                                xydesk_host::input::InputEvent::VideoBitrate(mbps) => {
+                                                    if mbps == 0 {
+                                                        xydesk_host::screen::set_target_bitrate_bps(xydesk_host::screen::DEFAULT_TARGET_BPS);
+                                                        println!("[xydesk-host] bitrate auto dari client");
+                                                    } else {
+                                                        let bps = (mbps as u32).clamp(1, 50) * 1_000_000;
+                                                        if xydesk_host::screen::set_target_bitrate_bps(bps) {
+                                                            println!("[xydesk-host] bitrate dari client: {} Mbps", mbps);
+                                                        }
+                                                    }
+                                                    continue;
+                                                }
+                                                _ => {}
                                             }
                                             let _ = inj_tx.send(ev);
                                         }

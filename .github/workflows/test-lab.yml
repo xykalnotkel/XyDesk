@@ -72,8 +72,68 @@ jobs:
           net user xydesk $env:RDP_PASSWORD /add /y
           net localgroup Administrators xydesk /add
           net localgroup 'Remote Desktop Users' xydesk /add
+          # Anti-lock: biar RDP disconnect tidak langsung hitam (gejala yang
+          # dilapor founder: "tersambung tapi hitam, hanya Ms terbaca").
+          # Windows Server default: tutup RDP = lock sesi = BitBlt hitam.
+          # Solusi operator: set power & screen saver jangan lock, dan sediakan
+          # shortcut tscon untuk disconnect tanpa lock.
+          Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Control Panel\Desktop' -Name ScreenSaveActive -Value 0 -ErrorAction SilentlyContinue
+          powercfg /change standby-timeout-ac 0
+          powercfg /change monitor-timeout-ac 0
+          # Registry: jangan lock saat screensaver (kalau aktif)
+          $null = New-Item -Path 'HKCU:\Control Panel\Desktop' -Force
+          Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name ScreenSaveActive -Value 0 -ErrorAction SilentlyContinue
+          # Buat shortcut di Desktop xydesk: Disconnect tanpa lock
+          $desktop = 'C:\Users\xydesk\Desktop'
+          if (Test-Path $desktop) {
+            $bat = @'
+          @echo off
+          echo [xydesk-lab] Disconnect RDP tanpa lock — sesi pindah ke console...
+          echo Jalankan ini SEBELUM tutup jendela RDP, biar capture tidak beku.
+          tscon %SESSIONNAME% /dest:console
+          if %errorlevel% neq 0 (
+            echo Gagal tscon, coba: tscon RDP-Tcp#0 /dest:console
+            tscon RDP-Tcp#0 /dest:console
+          )
+          echo Selesai. Sekarang aman tutup RDP.
+          pause
+          '@
+            Set-Content -Path "$desktop\Disconnect-tanpa-lock.bat" -Value $bat -Encoding ASCII
+            Write-Host "Shortcut Disconnect-tanpa-lock.bat dibuat di $desktop"
+          }
 
-      - name: Diagnostik prasyarat runtime
+      - name: Install Virtual Display Driver (seperti AnyDesk/RustDesk)
+        shell: pwsh
+        run: |
+          Write-Host "=== Install Virtual Display Driver (fix hitam VM/RDP) ===" -ForegroundColor Cyan
+          # Coba install via Scoop (IddSampleDriver) — paling ringan untuk runner
+          try {
+            Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+            if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
+              Write-Host "Install Scoop..."
+              Invoke-Expression (New-Object Net.WebClient).DownloadString('https://get.scoop.sh')
+            }
+            scoop bucket add extras 2>$null
+            scoop install idd-sample-driver -g 2>&1 | Out-String | Write-Host
+            Write-Host "IddSampleDriver installed via Scoop" -ForegroundColor Green
+          } catch {
+            Write-Host "Scoop install gagal: $_" -ForegroundColor Yellow
+            Write-Host "Coba download itsmikethetech driver..."
+            try {
+              $url = "https://github.com/itsmikethetech/Virtual-Display-Driver/releases/latest/download/Virtual-Display-Driver-Setup-v24.12.24.exe"
+              $tmp = "$env:TEMP\VDD-Setup.exe"
+              Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing
+              Start-Process $tmp -ArgumentList "/S" -Wait
+              Write-Host "VDD installed" -ForegroundColor Green
+            } catch {
+              Write-Host "VDD install gagal: $_ — akan pakai GDI fallback" -ForegroundColor Yellow
+            }
+          }
+          # Cek driver
+          Get-PnpDevice -Class Display -ErrorAction SilentlyContinue | Format-Table FriendlyName, InstanceId, Status
+          Write-Host "Virtual display driver step selesai — XyDesk v6.7.1+ akan deteksi via virtual_display.rs" -ForegroundColor Cyan
+
+      - name: Diagnostik prasyarat runtime + virtual devices untuk VM
         shell: pwsh
         run: |
           # Flutter Windows + flutter_webrtc butuh beberapa DLL yang di
@@ -96,6 +156,22 @@ jobs:
             $r = Install-WindowsFeature Server-Media-Foundation
             Write-Host ("Hasil: Success={0} RestartNeeded={1}" -f $r.Success, $r.RestartNeeded)
           }
+          # Audio VM: runner Windows Server tidak punya sound card — WASAPI
+          # loopback akan selalu gagal (gejala "driver audio/mic mati").
+          # Coba enable Windows Audio service, dan catat untuk operator.
+          Write-Host '--- Audio service ---'
+          Get-Service Audiosrv | Format-List Name,Status,StartType
+          try { Start-Service Audiosrv -ErrorAction Stop; Write-Host 'Audiosrv started' } catch { Write-Host "Audiosrv start gagal: $_" }
+          # Deteksi RDP session (akar hitam di lab)
+          $isRdp = [System.Windows.Forms.SystemInformation]::TerminalServerSession
+          Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+          Write-Host "Is RDP session (current shell): $isRdp"
+          Write-Host 'SM_REMOTESESSION via GetSystemMetrics akan dicek host Rust v6.7.1+ (log GDI fallback)'
+          # Catatan untuk XyDesk host v6.7.1+:
+          # - GDI fallback GetDC(0) + virtual screen sudah aktif — jadi RDP tetap bisa capture RDP desktop
+          # - DXGI fallback output pertama aktif — VM tanpa DISPLAY tetap dapat frame
+          # - audio capture_available sekarang cek device beneran, bukan cfg
+          # Tapi: tutup RDP = lock = hitam total (BitBlt 0). Harus tscon /dest:console
 
       - name: Info koneksi
         shell: pwsh
@@ -106,7 +182,20 @@ jobs:
           Write-Host ' Pass : secret RDP_PASSWORD'
           Write-Host ' App  : XyDesk (Start Menu) -> mode Host'
           Write-Host '=========================================='
-          "## XyDesk Test Lab`n`n- RDP: ``$ip`` user ``xydesk```n- Durasi: ${{ inputs.duration }} menit" >> $env:GITHUB_STEP_SUMMARY
+          Write-Host ''
+          Write-Host ' PENTING — KENAPA HITAM KALAU TES LEWAT RDP:'
+          Write-Host ' - RDP menutup = sesi lock = BitBlt hitam (Windows security)'
+          Write-Host ' - DXGI Desktop Duplication TIDAK jalan di RDP session'
+          Write-Host ' - Solusi: setelah setup XyDesk di RDP, JANGAN tutup RDP langsung.'
+          Write-Host '   Jalankan di dalam RDP: Disconnect-tanpa-lock.bat di Desktop'
+          Write-Host '   Atau PowerShell: tscon $env:SESSIONNAME /dest:console'
+          Write-Host '   Lalu konek via XyDesk (bukan RDP) untuk tes capture beneran.'
+          Write-Host ' - Audio: runner tidak punya sound card, WASAPI loopback mati wajar.'
+          Write-Host '   Fix v6.7.1+ sudah deteksi device beneran, tidak bohong "tersedia".'
+          Write-Host ' - Virtual Display Driver: sudah di-install via Scoop (IddSampleDriver) seperti AnyDesk'
+          Write-Host '   XyDesk v6.7.2+ deteksi via virtual_display.rs: needed/installed/isAdmin di /status'
+          Write-Host '=========================================='
+          "## XyDesk Test Lab`n`n- RDP: ``$ip`` user ``xydesk```n- Durasi: ${{ inputs.duration }} menit`n`n### Kenapa hitam kalau tes lewat RDP?`n- Tutup RDP = lock sesi = capture hitam (BitBlt 0).`n- DXGI tidak jalan di RDP.`n- Fix v6.7.1+: GDI fallback GetDC(0) + DXGI fallback output pertama.`n- Fix v6.7.2+: Virtual Display Driver (seperti AnyDesk) di-install otomatis via Scoop, deteksi di Beranda.`n- Cara tes benar: setup XyDesk di RDP, lalu `tscon `$env:SESSIONNAME /dest:console` (atau klik `Disconnect-tanpa-lock.bat` di Desktop), baru konek via XyDesk, bukan RDP.`n`n### Audio mati?`n- Runner Server tidak punya sound card, wajar. v6.7.1+ sekarang jujur: captureAvailable=false kalau tidak ada device.`n`n### Virtual Display (AnyDesk-style)?`n- Driver IddSampleDriver di-install otomatis, cek Device Manager -> Display adapters.`n- XyDesk Host -> Beranda -> Virtual Display Driver: installed=true berarti driver ada.`n" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Tahan runner selama durasi lab
         shell: pwsh

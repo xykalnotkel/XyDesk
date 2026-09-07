@@ -63,8 +63,8 @@ import {
 } from './version';
 import { vkFromCode } from './vk';
 import BillingPage from './Billing';
-import { VirtualKeyboard, GamingPad, SessionPanel, SessionRail, DEFAULT_PREFS, fmtDurasi, useElapsedSec } from './session_ui';
-import type { SessionPrefs } from './session_ui';
+import { VirtualKeyboard, GamingPad, SessionPanel, SessionRail, DEFAULT_PREFS, QUALITY_META, fmtDurasi, useElapsedSec } from './session_ui';
+import type { SessionPrefs, StreamQuality, BitrateMbps } from './session_ui';
 import { QrScanModal, ConnectGuide, SupportLinks } from './connect_extras';
 import { WhatsAppIcon, TelegramIcon, XIcon, FacebookIcon } from './brand-icons';
 
@@ -80,7 +80,7 @@ type AuthStep = 'closed' | 'login' | 'otp';
 // ![keterangan](https://app.xydesk.my.id/news/shots/....jpg).
 // Hanya gambar dari domain sendiri yang dirender — sesuai docs/NEWS_STYLE.md;
 // baris lain tetap tampil sebagai paragraf biasa.
-const NEWS_IMAGE_BLOCK = /^!\[([^\]]*)\]\((https:\/\/app\.xystudio\.my\.id\/[^\s)]+)\)$/;
+const NEWS_IMAGE_BLOCK = /^!\[([^\]]*)\]\((https:\/\/(app\.)?xydesk\.my\.id\/[^)\s]+)\)$/;
 
 const TOKEN_KEY = 'xydesk.web.jwt';const GUEST_TOKEN_KEY = 'xydesk.web.guestJwt';
 /// Batas sesi tamu: token signaling tamu terbit 2 jam (authstore.js) —
@@ -125,13 +125,19 @@ function routePath(r: Route): string {
 }
 
 function currentRoute(): Route {
-  const path = window.location.pathname.replace(/\/$/, '') || '/';
-  if (path.startsWith('/news/')) {
-    const slug = decodeURIComponent(path.slice('/news/'.length));
+  const raw = window.location.pathname.replace(/\/$/, '') || '/';
+  // Share short link /n/:slug (news.xydesk.my.id/n/:slug) — also handle locally for OG preview / direct link
+  if (raw.startsWith('/n/')) {
+    const slug = decodeURIComponent(raw.slice('/n/'.length));
     if (slug) return { page: 'news-detail', slug };
     return '/news';
   }
-  switch (path) {
+  if (raw.startsWith('/news/')) {
+    const slug = decodeURIComponent(raw.slice('/news/'.length));
+    if (slug) return { page: 'news-detail', slug };
+    return '/news';
+  }
+  switch (raw) {
     case '/connect':
       return '/connect';
     case '/download':
@@ -142,6 +148,8 @@ function currentRoute(): Route {
       return '/news';
     case '/billing':
       return '/billing';
+    case '/n':
+      return '/news';
     default:
       return '/';
   }
@@ -370,6 +378,12 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
         </div>
         <div className="hero-art" aria-hidden="true">
           <div className="hero-glow" />
+          <div className="hero-orb orb-1" />
+          <div className="hero-orb orb-2" />
+          <div className="hero-orb orb-3" />
+          <div className="hero-float-card card-1"><span>◧ 1080p60</span></div>
+          <div className="hero-float-card card-2"><span>● LIVE · 24ms</span></div>
+          <div className="hero-float-card card-3"><span>▶ NVENC</span></div>
           <img className="hero-logo" src="/logo.png" alt="" />
         </div>
       </section>
@@ -794,15 +808,15 @@ function DownloadPage() {
       )}
       <div className="abi-switcher" aria-label="Pilih arsitektur Android manual">
         <span>Android ABI:</span>
-        <button onClick={() => {
+        <button className={typeof localStorage !== 'undefined' && localStorage.getItem('xydesk.download.arch') === 'android-arm64' ? 'active' : ''} onClick={() => {
           localStorage.setItem('xydesk.download.arch', 'android-arm64');
           window.location.reload();
         }}>ARM64</button>
-        <button onClick={() => {
+        <button className={typeof localStorage !== 'undefined' && localStorage.getItem('xydesk.download.arch') === 'android-armv7' ? 'active' : ''} onClick={() => {
           localStorage.setItem('xydesk.download.arch', 'android-armv7');
           window.location.reload();
         }}>ARMv7 32-bit</button>
-        <button onClick={() => {
+        <button className={typeof localStorage !== 'undefined' && !localStorage.getItem('xydesk.download.arch') ? 'active' : ''} onClick={() => {
           localStorage.removeItem('xydesk.download.arch');
           window.location.reload();
         }}>Deteksi ulang</button>
@@ -2008,10 +2022,11 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     totalSesiDetik !== null && durasiDetik !== null
       ? Math.max(0, totalSesiDetik - durasiDetik)
       : null;
-  // Preferensi sesi — bertahan antar sesi di perangkat ini.
+  // Preferensi sesi — bertahan antar sesi di perangkat ini. Migrasi: entri lama tanpa quality/bitrate tetap jalan.
   const [prefs, setPrefs] = useState<SessionPrefs>(() => {
     try {
-      return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem('xydesk.session.prefs') ?? '{}') };
+      const raw = JSON.parse(localStorage.getItem('xydesk.session.prefs') ?? '{}');
+      return { ...DEFAULT_PREFS, ...raw } as SessionPrefs;
     } catch {
       return DEFAULT_PREFS;
     }
@@ -2558,6 +2573,13 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
             trackpad={trackpad}
             onTrackpadMode={(on) => {
               if (on !== trackpad) toggleTrackpad();
+            }}
+            onQuality={(q: StreamQuality) => {
+              const num = QUALITY_META[q].num;
+              sessionRef.current?.setQuality(num);
+            }}
+            onBitrate={(mbps: BitrateMbps) => {
+              sessionRef.current?.setBitrate(mbps);
             }}
           />
         )}

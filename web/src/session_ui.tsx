@@ -97,9 +97,6 @@ const IcPower = () => (
 );
 
 // ── Rail kontrol kanan, ala aplikasi ───────────────────────────
-// Kolom ikon di tepi kanan video. Bisa disembunyikan jadi pil kecil
-// supaya kontrol tidak menutupi game — perilaku yang sama dengan rail
-// _SessionRail di aplikasi (sembunyikan kontrol).
 export function SessionRail({
   collapsed,
   onToggleCollapsed,
@@ -196,7 +193,6 @@ export function SessionRail({
 }
 
 // ── Keyboard virtual penuh ─────────────────────────────────────
-// [label, vk, lebar-relatif, modifier?]
 type KeySpec = [string, number, number?, boolean?];
 
 const VKB_ROWS: KeySpec[][] = [
@@ -233,11 +229,6 @@ const VKB_ROWS: KeySpec[][] = [
   ],
 ];
 
-/// Keyboard QWERTY penuh dengan modifier lengket: ketuk Ctrl/Shift/Alt/Win
-/// untuk menahannya, tombol biasa berikutnya dikirim bersama modifier lalu
-/// modifier dilepas otomatis — pola yang sama dengan keyboard virtual
-/// aplikasi Android. Caps dikirim sebagai ketukan biasa karena host yang
-/// memegang status caps lock sesungguhnya.
 export function VirtualKeyboard({ send }: { send: Send }) {
   const [held, setHeld] = useState<ReadonlySet<number>>(new Set());
 
@@ -284,9 +275,6 @@ export function VirtualKeyboard({ send }: { send: Send }) {
 }
 
 // ── Panel gaming dua sisi ──────────────────────────────────────
-// Tombol TAHAN, bukan ketuk: down saat jari menyentuh, up saat lepas —
-// wajib untuk gerak WASD dan sprint. Glyph border-only seperti HUD
-// aplikasi Android agar tidak menutupi game.
 function HoldKey({
   vk,
   label,
@@ -322,8 +310,6 @@ function HoldKey({
   );
 }
 
-/// Dua gugus kontrol gaming: kiri = gerak (WASD + Shift/Ctrl),
-/// kanan = aksi (Spasi lompat, E/Q/R/F interaksi, Esc/Enter).
 export function GamingPad({ send }: { send: Send }) {
   return (
     <>
@@ -359,25 +345,40 @@ export function GamingPad({ send }: { send: Send }) {
 }
 
 // ── Panel pengaturan sesi: empat tab ala aplikasi ──────────────
-// Tab yang sama dengan SessionControlPanel aplikasi: Gambar, Suara,
-// Kontrol, Sesi. Hanya setelan yang BENAR-BENAR bisa dikendalikan
-// browser — tidak ada slider pajangan.
+export type StreamQuality = 'auto' | 'medium' | 'high' | 'ultra';
+export type BitrateMbps = 0 | 8 | 15 | 25 | 50;
+
 export type SessionPrefs = {
-  /// Volume audio PC di sisi browser (elemen <audio>), 0..1.
   volume: number;
-  /// Sensitivitas gerak kursor mode trackpad.
   sens: number;
-  /// Ketuk singkat = klik kiri (mode trackpad).
   tapClick: boolean;
-  /// Arah scroll dua jari dibalik.
   reverseScroll: boolean;
+  quality: StreamQuality;
+  bitrateMbps: BitrateMbps;
 };
+
+export const QUALITY_META: Record<StreamQuality, { label: string; desc: string; bitrate: BitrateMbps; num: number }> = {
+  auto:   { label: 'Otomatis', desc: 'Adaptif — menyesuaikan jaringan', bitrate: 0,  num: 0 },
+  medium: { label: 'Sedang',   desc: '720p60 • ~8 Mbps • seimbang',    bitrate: 8,  num: 1 },
+  high:   { label: 'Tinggi',   desc: '1080p60 • ~15 Mbps • tajam',      bitrate: 15, num: 2 },
+  ultra:  { label: 'Ultra',    desc: '1440p60 • ~25 Mbps • terbaik',    bitrate: 25, num: 3 },
+};
+
+export const BITRATE_OPTIONS: { value: BitrateMbps; label: string; hint: string }[] = [
+  { value: 0,  label: 'Otomatis', hint: 'Adaptive' },
+  { value: 8,  label: '8 Mbps',   hint: 'Hemat' },
+  { value: 15, label: '15 Mbps',  hint: 'Seimbang' },
+  { value: 25, label: '25 Mbps',  hint: 'Tajam' },
+  { value: 50, label: '50 Mbps',  hint: 'Maksimal' },
+];
 
 export const DEFAULT_PREFS: SessionPrefs = {
   volume: 0.8,
   sens: 1.7,
   tapClick: true,
   reverseScroll: false,
+  quality: 'auto',
+  bitrateMbps: 0,
 };
 
 function ToggleRow({
@@ -419,7 +420,6 @@ function StatRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/// "12,4 Mbps" / "0,0 %" — angka Indonesia, koma desimal, tanpa library.
 function idNum(n: number, digits = 0) {
   return n.toFixed(digits).replace('.', ',');
 }
@@ -433,7 +433,6 @@ const PANEL_TABS: [PanelTab, string, React.ReactNode][] = [
   ['sesi', 'Sesi', <Svg key="s"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></Svg>],
 ];
 
-/// Detik sesi berjalan yang berdetak — dipakai tab Sesi dan chip HUD.
 export function useElapsedSec(from: number | null) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -445,7 +444,6 @@ export function useElapsedSec(from: number | null) {
   return Math.max(0, Math.floor((now - from) / 1000));
 }
 
-/// "1:47:26" / "12:05" — tanpa library, angka konsisten lebar.
 export function fmtDurasi(totalDetik: number): string {
   const s = Math.max(0, Math.floor(totalDetik));
   const h = Math.floor(s / 3600);
@@ -470,26 +468,25 @@ export function SessionPanel({
   totalSesiDetik,
   trackpad,
   onTrackpadMode,
+  onQuality,
+  onBitrate,
 }: {
   prefs: SessionPrefs;
   onChange: (next: SessionPrefs) => void;
   onClose: () => void;
   hostId: string;
   onDisconnect: () => void;
-  /// Statistik live dari getStats() — null berarti belum ada sampel.
   stats: SessionStats | null;
-  /// Daftar layar host (kosong bila host tidak mengirim meta/tidak multi-layar).
   displays: { index: number; name?: string; width: number; height: number }[];
   wantedDisplay: number;
   onSelectDisplay: (index: number) => void;
-  /// Waktu mulai sesi (epoch ms) untuk durasi di tab Sesi.
   connectedAt: number | null;
   railCollapsed: boolean;
-  /// Batas total sesi dalam detik (sesi tamu = 2 jam); null = tanpa batas.
   totalSesiDetik: number | null;
-  /// Mode gerak kursor: true = trackpad (relatif), false = langsung (absolut).
   trackpad: boolean;
   onTrackpadMode: (on: boolean) => void;
+  onQuality?: (q: StreamQuality) => void;
+  onBitrate?: (mbps: BitrateMbps) => void;
 }) {
   const [tab, setTab] = useState<PanelTab>('gambar');
   const elapsed = useElapsedSec(connectedAt);
@@ -525,6 +522,54 @@ export function SessionPanel({
 
       {tab === 'gambar' && (
         <>
+          <p className="spanel-section">Kualitas gambar</p>
+          <div className="display-chips quality-chips">
+            {(Object.keys(QUALITY_META) as StreamQuality[]).map((q) => {
+              const meta = QUALITY_META[q];
+              return (
+                <button
+                  key={q}
+                  type="button"
+                  className={prefs.quality === q ? 'active' : ''}
+                  title={meta.desc}
+                  onClick={() => {
+                    const next = { ...prefs, quality: q, bitrateMbps: meta.bitrate } as SessionPrefs;
+                    onChange(next);
+                    onQuality?.(q);
+                    // quality preset also sets bitrate to its default, but user can override afterwards
+                    if (meta.bitrate !== prefs.bitrateMbps) {
+                      onBitrate?.(meta.bitrate);
+                    }
+                  }}
+                >
+                  {meta.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="spanel-note">{QUALITY_META[prefs.quality].desc}</p>
+
+          <p className="spanel-section">Bitrate</p>
+          <div className="display-chips bitrate-chips">
+            {BITRATE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={prefs.bitrateMbps === opt.value ? 'active' : ''}
+                title={opt.hint}
+                onClick={() => {
+                  const next = { ...prefs, bitrateMbps: opt.value } as SessionPrefs;
+                  // If user picks manual bitrate, keep quality as is but if they pick auto bitrate, also set quality auto? Keep independent.
+                  onChange(next);
+                  onBitrate?.(opt.value);
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="spanel-note">Otomatis = host menyesuaikan ke jaringan. Manual = paksa bitrate tetap.</p>
+
           <p className="spanel-section">Yang sedang berjalan</p>
           <div className="spanel-card">
             {stats ? (
@@ -645,6 +690,8 @@ export function SessionPanel({
                   : '—'
               }
             />
+            <StatRow label="Kualitas" value={QUALITY_META[prefs.quality].label} />
+            <StatRow label="Bitrate" value={prefs.bitrateMbps === 0 ? 'Otomatis' : `${prefs.bitrateMbps} Mbps`} />
           </div>
           <button type="button" className="spanel-disconnect" onClick={onDisconnect}>
             Putuskan sesi

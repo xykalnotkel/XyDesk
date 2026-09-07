@@ -177,7 +177,34 @@ pub struct Status {
     /// Total frame yang berhasil diambil sejak engine mulai — bukti backend
     /// aktif benar-benar menghasilkan piksel, bukan sekadar tidak error.
     pub frames_captured: u64,
+    /// Benar bila host berjalan di sesi RDP (SM_REMOTESESSION=1) — penyebab
+    /// #1 hitam di lab GitHub Actions. UI desktop pakai ini untuk banner.
+    pub is_rdp_session: bool,
+    /// Status virtual display driver — seperti AnyDesk
+    pub virtual_display: VirtualDisplayStatus,
+    /// Status virtual mic driver — biar denyut di Recording
+    pub virtual_mic: VirtualMicStatus,
     pub last_error: Option<String>,
+}
+
+/// Status virtual display driver
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VirtualDisplayStatus {
+    pub needed: bool,
+    pub installed: bool,
+    pub is_admin: bool,
+}
+
+/// Status virtual mic driver — biar mic denyut di Control Panel
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VirtualMicStatus {
+    pub needed: bool,
+    pub installed: bool,
+    pub has_virtual_input: bool,
+    pub has_virtual_output: bool,
+    pub render_target: String,
 }
 
 /// Keadaan bersama engine yang dilaporkan control API.
@@ -238,6 +265,22 @@ impl ControlState {
             video: self.video,
             capture_backend: crate::screen::backend_label().to_string(),
             frames_captured: crate::screen::frames_captured(),
+            is_rdp_session: crate::screen::is_rdp_session(),
+            virtual_display: VirtualDisplayStatus {
+                needed: crate::virtual_display::needs_virtual_display(),
+                installed: crate::virtual_display::is_driver_installed(),
+                is_admin: crate::virtual_display::is_admin(),
+            },
+            virtual_mic: {
+                let s = crate::virtual_mic::get_status();
+                VirtualMicStatus {
+                    needed: s.needed,
+                    installed: s.installed,
+                    has_virtual_input: s.has_virtual_input,
+                    has_virtual_output: s.has_virtual_output,
+                    render_target: s.render_target,
+                }
+            },
             audio: AudioStatus {
                 capture_available: crate::audio::capture_available(),
                 pipeline: crate::audio::capture_status().to_string(),
@@ -327,7 +370,7 @@ pub struct ActionRequest {
     /// Indeks monitor untuk aksi `display-select`.
     #[serde(default)]
     pub index: Option<usize>,
-    /// Target bitrate (Mbps) untuk aksi `video-bitrate`.
+    /// Target bitrate (Mbps) untuk aksi `video-bitrate`. 0 = Auto.
     ///
     /// `ActionRequest` TIDAK di-`rename_all` (bidang lain snake_case apa adanya,
     /// mis. `bitrate_mbps`), sementara `GET /status` justru camelCase — sumber
@@ -335,6 +378,9 @@ pub struct ActionRequest {
     /// supaya keduanya jalan; nama kanonik tetap `bitrate_mbps`.
     #[serde(default, alias = "bitrateMbps")]
     pub bitrate_mbps: Option<u32>,
+    /// Quality preset untuk aksi `video-quality`: auto, medium, high, ultra
+    #[serde(default, alias = "quality")]
+    pub quality: Option<String>,
 }
 
 /// Jawaban aksi. `password` berisi nilai baru untuk `new-password` dan
@@ -566,15 +612,24 @@ async fn action(
                 ))))
             }
         }
-        // Setel target bitrate video (Mbps). Berlaku seketika di sesi aktif
+        // Setel target bitrate video (Mbps). 0 = Auto. Berlaku seketika di sesi aktif
         // (capture di-respawn dengan encoder baru) atau jadi nilai sesi
-        // berikutnya. Batas: MIN_TARGET_BPS..=MAX_TARGET_BPS (screen.rs).
+        // berikutnya. Batas: 0 (Auto) atau MIN..MAX (screen.rs).
         "video-bitrate" => {
             let Some(mbps) = req.bitrate_mbps else {
                 return Ok(Json(ActionResponse::err("bitrate_mbps tidak disertakan")));
             };
-            let bps = mbps.saturating_mul(1_000_000);
-            if crate::screen::set_target_bitrate_bps(bps) {
+            let bps = if mbps == 0 {
+                crate::screen::DEFAULT_TARGET_BPS
+            } else {
+                mbps.saturating_mul(1_000_000)
+            };
+            // 0 = Auto always allowed
+            if mbps == 0 || crate::screen::set_target_bitrate_bps(bps) {
+                if mbps == 0 {
+                    // Auto resets to default adaptive
+                    crate::screen::set_target_bitrate_bps(crate::screen::DEFAULT_TARGET_BPS);
+                }
                 Ok(Json(ActionResponse {
                     ok: true,
                     error: None,
@@ -583,10 +638,37 @@ async fn action(
                 }))
             } else {
                 Ok(Json(ActionResponse::err(format!(
-                    "bitrate {mbps} Mbps di luar batas {}-{} Mbps",
+                    "bitrate {mbps} Mbps di luar batas {}-{} Mbps (0=Auto)",
                     crate::screen::MIN_TARGET_BPS / 1_000_000,
                     crate::screen::MAX_TARGET_BPS / 1_000_000
                 ))))
+            }
+        }
+        // Quality preset: auto, medium, high, ultra — Founder request 2026-09-07
+        "video-quality" => {
+            let Some(q) = req.quality.as_deref() else {
+                return Ok(Json(ActionResponse::err("quality tidak disertakan (auto/medium/high/ultra)")));
+            };
+            let bps = match q.to_lowercase().as_str() {
+                "auto" => crate::screen::DEFAULT_TARGET_BPS,
+                "medium" => 8_000_000,
+                "high" => 15_000_000,
+                "ultra" => 25_000_000,
+                _ => {
+                    return Ok(Json(ActionResponse::err(format!(
+                        "quality '{q}' tidak dikenal — pakai auto/medium/high/ultra"
+                    ))))
+                }
+            };
+            if crate::screen::set_target_bitrate_bps(bps) {
+                Ok(Json(ActionResponse {
+                    ok: true,
+                    error: None,
+                    password: None,
+                    stopped: None,
+                }))
+            } else {
+                Ok(Json(ActionResponse::err(format!("gagal set quality {q}"))))
             }
         }
         other => Ok(Json(ActionResponse::err(format!(

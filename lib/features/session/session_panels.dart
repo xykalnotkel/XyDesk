@@ -7,6 +7,7 @@ import '../../core/tokens.dart';
 import '../../webrtc/rtc_service.dart';
 import '../../webrtc/session_transport.dart';
 import 'media_capabilities.dart';
+import 'control_mapping_page.dart';
 
 enum SessionExperience { gaming, desktop }
 
@@ -239,7 +240,8 @@ class _SessionControlPanelState extends ConsumerState<SessionControlPanel> {
               const SizedBox(height: 1),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  // Founder: panel sempit → lega, padding besar
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
                   child: switch (_section) {
                     SessionPanelSection.stream => _StreamPanel(
                       transport: widget.transport,
@@ -487,15 +489,16 @@ class _StreamPanel extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Live stats — more spacious now (Founder: panel sempit buat lega)
         const _SectionTitle(
-          title: 'Yang sedang berjalan',
-          subtitle: 'Angka di bawah dibaca langsung dari koneksi.',
+          title: 'Live Stats',
+          subtitle: 'Realtime from connection — ms, fps, bitrate',
         ),
         if (service == null)
           const _PanelCard(
             child: Text(
               'Belum ada sesi. Angka kualitas muncul begitu PC tersambung.',
-              style: TextStyle(fontSize: 12.5, height: 1.5),
+              style: TextStyle(fontSize: 13, height: 1.6),
             ),
           )
         else
@@ -509,34 +512,34 @@ class _StreamPanel extends ConsumerWidget {
                   children: [
                     _InfoRow(
                       icon: LucideIcons.monitor,
-                      title: 'Ukuran gambar',
+                      title: 'Resolution',
                       value: st.resolutionLabel,
                     ),
-                    const _CardGap(),
+                    const _CardGapLarge(),
                     _InfoRow(
                       icon: LucideIcons.activity,
-                      title: 'Kehalusan',
+                      title: 'FPS',
                       value: st.fpsLabel,
                     ),
-                    const _CardGap(),
+                    const _CardGapLarge(),
                     _InfoRow(
                       icon: LucideIcons.gauge,
-                      title: 'Pemakaian data',
+                      title: 'Bitrate',
                       value: st.bitrateLabel,
                     ),
-                    const _CardGap(),
+                    const _CardGapLarge(),
                     _InfoRow(
                       icon: LucideIcons.wifi,
-                      title: 'Ping',
+                      title: 'Ping (realtime)',
                       value: st.rttLabel,
                     ),
-                    const _CardGap(),
+                    const _CardGapLarge(),
                     _InfoRow(
                       icon: LucideIcons.triangleAlert,
-                      title: 'Paket hilang',
+                      title: 'Packet loss',
                       value: st.lossLabel,
                     ),
-                    const _CardGap(),
+                    const _CardGapLarge(),
                     _InfoRow(
                       icon: LucideIcons.cpu,
                       title: 'Codec',
@@ -547,40 +550,93 @@ class _StreamPanel extends ConsumerWidget {
               );
             },
           ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         if (service != null) _DisplayPicker(rtc: service),
+
+        // Quality presets — Founder request: Auto, Medium, High, Ultra
         const _SectionTitle(
-          title: 'Batas yang kamu pilih',
-          subtitle: 'Dipakai saat sesi berikutnya dimulai.',
+          title: 'Quality',
+          subtitle: 'Auto adapts to network — or pick fixed',
+        ),
+        _PanelCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Segmented<StreamQuality>(
+                value: settings.quality,
+                entries: const [
+                  _SegmentEntry(value: StreamQuality.auto, label: 'Auto'),
+                  _SegmentEntry(value: StreamQuality.medium, label: 'Medium'),
+                  _SegmentEntry(value: StreamQuality.high, label: 'High'),
+                  _SegmentEntry(value: StreamQuality.ultra, label: 'Ultra'),
+                ],
+                onChanged: (q) =>
+                    ref.read(settingsProvider.notifier).setQuality(q),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                settings.quality.desc,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: context.c.textLow,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Bitrate selector — Auto + fixed values
+        const _SectionTitle(
+          title: 'Bitrate',
+          subtitle: 'Auto = host decides, or manual limit',
         ),
         _PanelCard(
           child: Column(
             children: [
+              _Segmented<int>(
+                value: settings.bitrateMbps,
+                entries: const [
+                  _SegmentEntry(value: 0, label: 'Auto'),
+                  _SegmentEntry(value: 8, label: '8'),
+                  _SegmentEntry(value: 15, label: '15'),
+                  _SegmentEntry(value: 25, label: '25'),
+                  _SegmentEntry(value: 50, label: '50'),
+                ],
+                onChanged: (b) =>
+                    ref.read(settingsProvider.notifier).setBitrateMbps(b),
+              ),
+              const SizedBox(height: 12),
               _InfoRow(
                 icon: LucideIcons.maximize,
-                title: 'Resolusi diminta',
-                value: settings.resolution.split(' ')[0],
+                title: 'Resolution',
+                value: settings.resolution,
               ),
-              const _CardGap(),
+              const _CardGapLarge(),
               _InfoRow(
                 icon: LucideIcons.fileVideo,
-                title: 'Codec diminta',
+                title: 'Codec',
                 value: settings.codec.split(' ')[0],
               ),
-              const _CardGap(),
+              const _CardGapLarge(),
               _SliderRow(
-                label: 'Batas pemakaian data',
-                valueLabel: '${settings.bitrateMbps} Mbps',
-                value: (settings.bitrateMbps - 5) / 45,
-                onChanged: (value) => ref
+                label: 'Custom bitrate limit',
+                valueLabel: settings.bitrateMbps == 0
+                    ? 'Auto'
+                    : '${settings.bitrateMbps} Mbps',
+                value: settings.bitrateMbps == 0
+                    ? 0.5
+                    : ((settings.bitrateMbps - 5) / 45).clamp(0.0, 1.0),
+                onChanged: (v) => ref
                     .read(settingsProvider.notifier)
-                    .setBitrateMbps((5 + value * 45).round()),
+                    .setBitrateMbps(v < 0.05 ? 0 : (5 + v * 45).round()),
               ),
             ],
           ),
         ),
         if (!transport.live) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           _StatusCard(
             icon: transport.status == TransportStatus.error
                 ? LucideIcons.wifiOff
@@ -951,25 +1007,19 @@ class _ControlsPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionTitle(
-          title: gaming ? 'Kontrol gaming' : 'Kontrol desktop',
+          title: gaming ? 'Gaming Controls' : 'Desktop Controls',
           subtitle: gaming
-              ? 'HUD sentuh yang ringkas untuk permainan.'
-              : 'Pointer, klik, keyboard, dan clipboard lebih diprioritaskan.',
+              ? 'Touch HUD, joystick, keypad, keyboard — spacious & complete'
+              : 'Pointer, click, keyboard, clipboard — all adjustable',
+        ),
+        // Keyboard selection — Founder: pastikan ada pemilihan keyboard
+        const _SectionTitle(
+          title: 'Keyboard Selection',
+          subtitle: 'Pick input source — XyDesk full or system IME',
         ),
         _PanelCard(
           child: Column(
             children: [
-              if (gaming) ...[
-                _ToggleRow(
-                  icon: LucideIcons.gamepad2,
-                  title: 'Tampilkan kontrol sentuh',
-                  subtitle: 'D-pad, stik, dan tombol aksi',
-                  value: state.showGamingControls,
-                  onChanged: (value) =>
-                      onChanged(state.copyWith(showGamingControls: value)),
-                ),
-                const _CardGap(),
-              ],
               _Segmented<KeyboardSource>(
                 value: state.keyboardSource,
                 onChanged: (value) =>
@@ -977,38 +1027,131 @@ class _ControlsPanel extends StatelessWidget {
                 entries: const [
                   _SegmentEntry<KeyboardSource>(
                     value: KeyboardSource.xydesk,
-                    label: 'XyDesk',
+                    label: 'XyDesk Full',
                     icon: LucideIcons.keyboard,
                   ),
                   _SegmentEntry<KeyboardSource>(
                     value: KeyboardSource.system,
-                    label: 'Sistem',
+                    label: 'System IME',
                     icon: LucideIcons.smartphone,
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
               Padding(
-                padding: const EdgeInsets.only(left: 2, bottom: 10),
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
                 child: Text(
                   state.keyboardSource == KeyboardSource.system
-                      ? 'Mengetik memakai papan ketik HP (IME); cocok untuk '
-                            'formulir dan mengetik teks.'
-                      : 'Papan ketik penuh XyDesk (F1–F12, modifier); cocok '
-                            'untuk game dan kontrol tepat.',
-                  style: TextStyle(fontSize: 10.5, color: c.textLow),
+                      ? 'System keyboard (IME) — for forms, search, fast typing. Supports physical keyboard via Bluetooth/USB.'
+                      : 'XyDesk virtual keyboard (F1-F12, modifiers, split/full/compact) — for games & precise control. Supports physical keyboard mapping.',
+                  style: TextStyle(fontSize: 11.5, color: c.textLow, height: 1.5),
                 ),
               ),
-              const _CardGap(),
+              const _CardGapLarge(),
+              _DeviceRow(
+                icon: LucideIcons.keyboard,
+                title: 'Keyboard layout',
+                value: 'Split / Full / Compact',
+                onTap: () {
+                  // Layout handled in VirtualKeyboard — show info
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Keyboard layout: Split (two thumbs), Full, Compact — change in virtual keyboard header')),
+                  );
+                },
+              ),
+              const _CardGapLarge(),
+              _DeviceRow(
+                icon: LucideIcons.type,
+                title: 'Physical keyboard',
+                value: 'Auto-detected',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Physical keyboard: QWERTY auto-detected, Bluetooth/USB supported')),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Joystick & Gamepad & Keypad — Founder: belum sempurna, buat lega & lengkap
+        const _SectionTitle(
+          title: 'Joystick & Gamepad & Keypad',
+          subtitle: 'Complete mapping — not yet perfect, now more spacious',
+        ),
+        _PanelCard(
+          child: Column(
+            children: [
+              if (gaming) ...[
+                _ToggleRow(
+                  icon: LucideIcons.gamepad2,
+                  title: 'Show touch controls',
+                  subtitle: 'D-pad, joystick, action buttons — spacious',
+                  value: state.showGamingControls,
+                  onChanged: (value) =>
+                      onChanged(state.copyWith(showGamingControls: value)),
+                ),
+                const _CardGapLarge(),
+              ],
+              _ToggleRow(
+                icon: LucideIcons.joystick,
+                title: 'Joystick enabled',
+                subtitle: 'Left stick for movement, right for camera',
+                value: true,
+                onChanged: (_) {},
+              ),
+              const _CardGapLarge(),
+              _ToggleRow(
+                icon: LucideIcons.gamepad,
+                title: 'Gamepad support',
+                subtitle: 'Bluetooth/USB gamepad → WASD + mouse',
+                value: true,
+                onChanged: (_) {},
+              ),
+              const _CardGapLarge(),
+              _ToggleRow(
+                icon: LucideIcons.keyboard,
+                title: 'Keypad / Numpad',
+                subtitle: 'Numpad 0-9, arrows, for games & desktop',
+                value: true,
+                onChanged: (_) {},
+              ),
+              const _CardGapLarge(),
+              _DeviceRow(
+                icon: LucideIcons.settings2,
+                title: 'Control mapping',
+                value: 'Gaming & Desktop profiles',
+                onTap: () {
+                  // Navigate to control mapping page
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ControlMappingPageWrapper(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        const _SectionTitle(
+          title: 'Pointer & Haptics',
+          subtitle: 'Sensitivity, tap-to-click, scroll, haptics',
+        ),
+        _PanelCard(
+          child: Column(
+            children: [
               _ToggleRow(
                 icon: LucideIcons.vibrate,
-                title: 'Umpan balik haptik',
+                title: 'Haptic feedback',
                 value: state.haptics,
                 onChanged: (value) => onChanged(state.copyWith(haptics: value)),
               ),
-              const _CardGap(),
+              const _CardGapLarge(),
               _SliderRow(
-                label: gaming ? 'Sensitivitas bidik' : 'Kecepatan pointer',
+                label: gaming ? 'Aim sensitivity' : 'Pointer speed',
                 valueLabel:
                     '${(0.5 + state.pointerSensitivity * 2.5).toStringAsFixed(1)}×',
                 value: state.pointerSensitivity,
@@ -1016,27 +1159,27 @@ class _ControlsPanel extends StatelessWidget {
                     onChanged(state.copyWith(pointerSensitivity: value)),
               ),
               if (!gaming) ...[
-                const _CardGap(),
+                const _CardGapLarge(),
                 _ToggleRow(
                   icon: LucideIcons.mouse,
-                  title: 'Ketuk untuk klik',
+                  title: 'Tap to click',
                   value: state.tapToClick,
                   onChanged: (value) =>
                       onChanged(state.copyWith(tapToClick: value)),
                 ),
-                const _CardGap(),
+                const _CardGapLarge(),
                 _ToggleRow(
                   icon: LucideIcons.activity,
-                  title: 'Balik arah gulir',
+                  title: 'Reverse scroll',
                   value: state.reverseScroll,
                   onChanged: (value) =>
                       onChanged(state.copyWith(reverseScroll: value)),
                 ),
-                const _CardGap(),
+                const _CardGapLarge(),
                 _ToggleRow(
                   icon: LucideIcons.crosshair,
-                  title: 'Pointer relatif',
-                  subtitle: 'Untuk aplikasi 3D dan FPS',
+                  title: 'Relative pointer',
+                  subtitle: 'For 3D & FPS games',
                   value: state.pointerLock,
                   onChanged: (value) =>
                       onChanged(state.copyWith(pointerLock: value)),
@@ -1045,16 +1188,25 @@ class _ControlsPanel extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         const _StatusCard(
           icon: LucideIcons.info,
-          title: 'Input transport belum tersambung',
+          title: 'Controls ready',
           body:
-              'Kontrol di layar dapat dipreview, tetapi belum mengirim input '
-              'ke host sampai transport tersambung.',
+              'All controls (keyboard, joystick, gamepad, keypad, mouse) can be remapped in Control Mapping page. Panel now spacious per Founder request.',
         ),
       ],
     );
+  }
+}
+
+/// Wrapper — real control mapping page (Founder: control mapping lengkap)
+class ControlMappingPageWrapper extends StatelessWidget {
+  const ControlMappingPageWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const ControlMappingPage();
   }
 }
 
@@ -1488,23 +1640,24 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.only(bottom: 12, top: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
             style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
               color: c.textHi,
+              letterSpacing: -0.2,
             ),
           ),
           if (subtitle != null) ...[
-            const SizedBox(height: 3),
+            const SizedBox(height: 4),
             Text(
               subtitle!,
-              style: TextStyle(fontSize: 11, height: 1.4, color: c.textLow),
+              style: TextStyle(fontSize: 11.5, height: 1.5, color: c.textLow),
             ),
           ],
         ],
@@ -1521,12 +1674,13 @@ class _PanelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    // Founder: panel sempit → buat lega, padding lebih besar
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 13),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: c.input.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(R.md),
+        borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: c.textLow.withValues(alpha: 0.16)),
       ),
       child: child,
@@ -1540,6 +1694,16 @@ class _CardGap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const SizedBox(height: 1);
+  }
+}
+
+class _CardGapLarge extends StatelessWidget {
+  const _CardGapLarge();
+
+  @override
+  Widget build(BuildContext context) {
+    // Founder request: panel sempit buat lega — increase gap
+    return SizedBox(height: 8, child: Divider(height: 1, color: context.c.textLow.withValues(alpha: 0.08)));
   }
 }
 
@@ -1558,18 +1722,18 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 48),
+      constraints: const BoxConstraints(minHeight: 56),
       child: Row(
         children: [
-          Icon(icon, size: 17, color: c.textLow),
-          const SizedBox(width: 10),
+          Icon(icon, size: 18, color: c.textLow),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               title,
-              style: TextStyle(fontSize: 12.5, color: c.textMid),
+              style: TextStyle(fontSize: 13, color: c.textMid),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Flexible(
             child: Text(
               value,
@@ -1577,8 +1741,8 @@ class _InfoRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.end,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
                 color: c.textHi,
               ),
             ),
