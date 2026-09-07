@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/devlog.dart';
 import '../../core/l10n_bridge.dart';
@@ -58,6 +59,12 @@ class _PermissionsPageState extends ConsumerState<PermissionsPage> {
   }
 
   Future<void> _checkPermissions() async {
+    // Halaman izin adalah tempat yang SAH untuk memunculkan dialog: pengguna
+    // datang kemari justru untuk mengatur izin. Status "denied" diminta
+    // sekali; "denied permanen" tidak dipaksa — jalan pulangnya lewat
+    // pengaturan aplikasi, dan memaksa hanya melahirkan dialog hantu.
+    if (await Permission.microphone.isDenied) await Permission.microphone.request();
+    if (await Permission.camera.isDenied) await Permission.camera.request();
     // Cek status notifikasi.
     _notifEnabled = NotificationService.instance.active;
 

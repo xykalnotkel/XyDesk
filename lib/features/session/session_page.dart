@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import '../../core/permissions.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -511,6 +512,23 @@ class _SessionPageState extends ConsumerState<SessionPage>
       if (!mounted) return;
       setState(
         () => _settings = _settings.copyWith(microphoneRequested: false),
+      );
+      return;
+    }
+    // Izin diminta DI SINI, bukan saat aplikasi mulai: dialog yang muncul
+    // tepat saat pengguna menekan toggle mic adalah dialog yang dipahami
+    // konteksnya. Tanpa ini Android tidak pernah menampilkan apa pun dan
+    // enableMic gagal dengan pesan yang tidak menunjuk ke mana pun.
+    final diizinkan = await Izin.mikrofon();
+    if (!mounted) return;
+    if (!diizinkan) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Izin mikrofon dibutuhkan untuk mengirim suara ke PC. '
+            'Bila sudah ditolak permanen, buka pengaturan aplikasi.',
+          ),
+        ),
       );
       return;
     }

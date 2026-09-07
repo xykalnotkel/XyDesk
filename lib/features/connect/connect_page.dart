@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../../core/permissions.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/devlog.dart';
@@ -708,6 +709,24 @@ class _QrScanPageState extends State<QrScanPage> {
   );
   bool _handled = false;
 
+  /// null = izin belum selesai diminta; false = ditolak; true = diberi.
+  bool? _kameraDiizinkan;
+
+  @override
+  void initState() {
+    super.initState();
+    _mintaKamera();
+  }
+
+  /// Izin kamera diminta eksplisit sebelum scanner dinyalakan. Tanpa ini
+  /// MobileScanner membuka kamera yang belum diizinkan dan pengguna melihat
+  /// layar gelap dengan pesan yang menyalahkan perangkatnya.
+  Future<void> _mintaKamera() async {
+    final ok = await Izin.kamera();
+    if (!mounted) return;
+    setState(() => _kameraDiizinkan = ok);
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -761,7 +780,31 @@ class _QrScanPageState extends State<QrScanPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          MobileScanner(
+          if (_kameraDiizinkan == false)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'XyDesk butuh izin kamera untuk memindai QR pairing. '
+                      'Bila izin sudah ditolak permanen, buka pengaturan '
+                      'aplikasi atau masukkan ID secara manual.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 13, height: 1.6, color: c.textMid),
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton(
+                      onPressed: _mintaKamera,
+                      child: const Text('Beri izin kamera'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            MobileScanner(
             controller: _controller,
             onDetect: _onDetect,
             errorBuilder: (context, error) => Center(

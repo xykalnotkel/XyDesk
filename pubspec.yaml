@@ -27,6 +27,9 @@ dependencies:
   url_launcher: ^6.3.0
   # Pemindai QR nyata (CameraX/MLKit) — menggantikan halaman demo.
   mobile_scanner: ^7.4.0
+  # Izin runtime (mikrofon/kamera/notifikasi). Manifest saja tidak cukup:
+  # Android tidak menampilkan dialog untuk izin yang tidak pernah diminta.
+  permission_handler: ^11.3.1
   flutter_svg: ^2.3.0
   image_picker: ^1.2.3
 
