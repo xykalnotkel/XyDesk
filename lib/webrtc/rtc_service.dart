@@ -357,7 +357,7 @@ class RtcService {
             final retry = (m['retry_in'] as num?)?.toInt();
             _lastError = retry != null && retry > 0
                 ? 'Perangkat sedang dikendalikan sesi lain. Server mengunci '
-                    'pairing sementara — coba lagi dalam $retry detik.'
+                      'pairing sementara — coba lagi dalam $retry detik.'
                 : 'Perangkat sedang dipakai sesi lain. Coba lagi nanti.';
             _emit(RtcPhase.hostBusy);
           }

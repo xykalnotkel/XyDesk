@@ -792,7 +792,11 @@ class _QrScanPageState extends State<QrScanPage> {
                       'Bila izin sudah ditolak permanen, buka pengaturan '
                       'aplikasi atau masukkan ID secara manual.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, height: 1.6, color: c.textMid),
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.6,
+                        color: c.textMid,
+                      ),
                     ),
                     const SizedBox(height: 14),
                     ElevatedButton(
@@ -805,20 +809,24 @@ class _QrScanPageState extends State<QrScanPage> {
             )
           else
             MobileScanner(
-            controller: _controller,
-            onDetect: _onDetect,
-            errorBuilder: (context, error) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(
-                  'Kamera tidak tersedia. Beri izin kamera untuk XyDesk, '
-                  'atau masukkan ID secara manual.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, height: 1.6, color: c.textMid),
+              controller: _controller,
+              onDetect: _onDetect,
+              errorBuilder: (context, error) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text(
+                    'Kamera tidak tersedia. Beri izin kamera untuk XyDesk, '
+                    'atau masukkan ID secara manual.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.6,
+                      color: c.textMid,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
           // Bingkai target sederhana di tengah.
           Center(
             child: Container(
