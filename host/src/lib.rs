@@ -58,6 +58,8 @@ pub mod input;
 pub mod opus_ffi;
 pub mod pairedpeers;
 pub mod pairguard;
+/// Konversi format PCM antar-representasi WASAPI (murni Rust, teruji di Linux).
+pub mod pcmconv;
 /// Konversi format piksel (RGBA → NV12) untuk jalur encode NVENC.
 pub mod pixfmt;
 pub mod screen;

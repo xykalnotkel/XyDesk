@@ -181,8 +181,10 @@ mod windows {
         AUDCLNT_STREAMFLAGS_LOOPBACK,
     };
     use windows::Win32::System::Com::{
-        CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED,
+        CoCreateInstance, CoInitializeEx, CoTaskMemFree, CLSCTX_ALL, COINIT_MULTITHREADED,
     };
+
+    use crate::pcmconv::{Sampel, Sumber};
 
     const SAMPLE_RATE: u32 = 48_000;
     const CHANNELS: u16 = 2;
@@ -261,32 +263,6 @@ mod windows {
         Ok(client)
     }
 
-    fn pcm_format() -> windows::Win32::Media::Audio::WAVEFORMATEX {
-        windows::Win32::Media::Audio::WAVEFORMATEX {
-            wFormatTag: 1, // WAVE_FORMAT_PCM
-            nChannels: CHANNELS,
-            nSamplesPerSec: SAMPLE_RATE,
-            nAvgBytesPerSec: SAMPLE_RATE * u32::from(CHANNELS) * 2,
-            nBlockAlign: CHANNELS * 2,
-            wBitsPerSample: 16,
-            cbSize: 0,
-        }
-    }
-
-    /// Format PCM mono 48 kHz untuk jalur mic (bandwidth lebih hemat dari
-    /// stereo; suara mic nyaris selalu mono).
-    fn mic_pcm_format() -> windows::Win32::Media::Audio::WAVEFORMATEX {
-        windows::Win32::Media::Audio::WAVEFORMATEX {
-            wFormatTag: 1, // WAVE_FORMAT_PCM
-            nChannels: MIC_CHANNELS,
-            nSamplesPerSec: SAMPLE_RATE,
-            nAvgBytesPerSec: SAMPLE_RATE * u32::from(MIC_CHANNELS) * 2,
-            nBlockAlign: MIC_CHANNELS * 2,
-            wBitsPerSample: 16,
-            cbSize: 0,
-        }
-    }
-
     /// Daftar ID endpoint output aktif.
     pub fn list_outputs() -> Vec<String> {
         use windows::Win32::Media::Audio::DEVICE_STATE_ACTIVE;
@@ -335,12 +311,63 @@ mod windows {
         unsafe { volume.SetMasterVolumeLevelScalar(vol.clamp(0.0, 1.0), std::ptr::null()) }.is_ok()
     }
 
+    /// Format mix perangkat + representasi sampelnya.
+    ///
+    /// Di mode SHARED, WASAPI hanya menerima format mix engine — memaksa
+    /// PCM16 48 kHz ke device yang mix-nya float32 atau 44,1 kHz menghasilkan
+    /// `AUDCLNT_E_UNSUPPORTED_FORMAT` (0x88890008), kesalahan audio yang
+    /// selama ini tidak pernah sembuh karena yang salah inisialisasinya,
+    /// bukan perangkatnya. Pointer yang dikembalikan wajib dibebaskan dengan
+    /// `CoTaskMemFree` SESETELAH Initialize (WASAPI menyalin isinya di sana).
+    fn mix_format(
+        client: &IAudioClient,
+    ) -> anyhow::Result<(
+        windows::Win32::Media::Audio::WAVEFORMATEX,
+        Sumber,
+        *mut windows::Win32::Media::Audio::WAVEFORMATEX,
+    )> {
+        use windows::Win32::Media::Audio::WAVEFORMATEXTENSIBLE;
+        unsafe {
+            let ptr = client
+                .GetMixFormat()
+                .map_err(|e| anyhow::anyhow!("GetMixFormat: {e:?}"))?;
+            let fmt = *ptr;
+            let sampel = if fmt.wFormatTag == 0xFFFE {
+                // WAVE_FORMAT_EXTENSIBLE: tipe aslinya ada di SubFormat.
+                let ext = &*(ptr as *const WAVEFORMATEXTENSIBLE);
+                match ext.SubFormat.data1 {
+                    3 => Sampel::F32, // KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
+                    1 => match fmt.wBitsPerSample {
+                        16 => Sampel::I16,
+                        24 => Sampel::I24,
+                        _ => Sampel::I32,
+                    },
+                    _ => Sampel::F32,
+                }
+            } else if fmt.wFormatTag == 3 {
+                Sampel::F32 // WAVE_FORMAT_IEEE_FLOAT
+            } else {
+                match fmt.wBitsPerSample {
+                    16 => Sampel::I16,
+                    24 => Sampel::I24,
+                    _ => Sampel::I32,
+                }
+            };
+            let src = Sumber {
+                channels: usize::from(fmt.nChannels),
+                rate: fmt.nSamplesPerSec,
+                sampel,
+            };
+            Ok((fmt, src, ptr))
+        }
+    }
+
     /// Loop penangkap: WASAPI loopback → encode Opus → `tx`.
     pub fn capture_loop(tx: SyncSender<Vec<u8>>) -> anyhow::Result<()> {
         init_com()?;
         let device = device()?;
         let client = client(&device)?;
-        let format = pcm_format();
+        let (format, src_mix, mix_ptr) = mix_format(&client)?;
         unsafe {
             client
                 .Initialize(
@@ -353,6 +380,7 @@ mod windows {
                 )
                 .map_err(|e| anyhow::anyhow!("IAudioClient::Initialize: {e:?}"))?;
         }
+        unsafe { CoTaskMemFree(Some(mix_ptr)) };
         let capture: IAudioCaptureClient = unsafe {
             client
                 .GetService::<IAudioCaptureClient>()
@@ -403,7 +431,16 @@ mod windows {
             let packet_bytes = SAMPLES_PER_PACKET * block;
             while pending.len() >= packet_bytes {
                 let chunk: Vec<u8> = pending.drain(..packet_bytes).collect();
-                let samples: Vec<i16> = chunk
+                // Chunk masih berbentuk format mix device; normalkan ke
+                // kebutuhan Opus (48 kHz stereo PCM16) sebelum encode.
+                let pcm16 = crate::pcmconv::konversi(
+                    &chunk,
+                    &src_mix,
+                    usize::from(CHANNELS),
+                    SAMPLE_RATE,
+                    Sampel::I16,
+                );
+                let samples: Vec<i16> = pcm16
                     .as_chunks::<2>()
                     .0
                     .iter()
@@ -431,7 +468,7 @@ mod windows {
         init_com()?;
         let device = capture_device()?;
         let client = client(&device)?;
-        let format = mic_pcm_format();
+        let (format, src_mix, mix_ptr) = mix_format(&client)?;
         unsafe {
             client
                 .Initialize(
@@ -444,6 +481,7 @@ mod windows {
                 )
                 .map_err(|e| anyhow::anyhow!("mic Initialize: {e:?}"))?;
         }
+        unsafe { CoTaskMemFree(Some(mix_ptr)) };
         let capture: IAudioCaptureClient = unsafe {
             client
                 .GetService::<IAudioCaptureClient>()
@@ -498,7 +536,16 @@ mod windows {
             let packet_bytes = SAMPLES_PER_PACKET * block;
             while pending.len() >= packet_bytes {
                 let chunk: Vec<u8> = pending.drain(..packet_bytes).collect();
-                let samples: Vec<i16> = chunk
+                // Mix device mic bisa stereo/float walau Opus minta mono
+                // PCM16 — konversi menyerahkan channel dan laju yang benar.
+                let pcm16 = crate::pcmconv::konversi(
+                    &chunk,
+                    &src_mix,
+                    usize::from(MIC_CHANNELS),
+                    SAMPLE_RATE,
+                    Sampel::I16,
+                );
+                let samples: Vec<i16> = pcm16
                     .as_chunks::<2>()
                     .0
                     .iter()
@@ -524,7 +571,7 @@ mod windows {
         init_com()?;
         let device = device()?;
         let client = client(&device)?;
-        let format = pcm_format();
+        let (format, src_mix, mix_ptr) = mix_format(&client)?;
         // Buffer 100 ms (10.000.000 satuan 100 ns) — jitter kecil, latency rendah.
         unsafe {
             client
@@ -538,12 +585,14 @@ mod windows {
                 )
                 .map_err(|e| anyhow::anyhow!("render Initialize: {e:?}"))?;
         }
+        unsafe { CoTaskMemFree(Some(mix_ptr)) };
         let render: IAudioRenderClient = unsafe {
             client
                 .GetService::<IAudioRenderClient>()
                 .map_err(|e| anyhow::anyhow!("GetService IAudioRenderClient: {e:?}"))?
         };
         let buffer_frames = unsafe { client.GetBufferSize()? } as usize;
+        let block = usize::from(format.nBlockAlign);
 
         let mut decoder = crate::opus_ffi::Decoder::new(SAMPLE_RATE, usize::from(CHANNELS))
             .map_err(|e| anyhow::anyhow!("opus decoder: {e}"))?;
@@ -583,8 +632,24 @@ mod windows {
                     let data = render
                         .GetBuffer(want as u32)
                         .map_err(|e| anyhow::anyhow!("render GetBuffer: {e:?}"))?;
-                    let dst = std::slice::from_raw_parts_mut(data as *mut i16, chunk.len());
-                    dst.copy_from_slice(&chunk);
+                    // Buffer render berbentuk format mix device — belum tentu
+                    // PCM16 seperti kiriman client. Konversi dulu, lalu salin
+                    // sebagai byte mentah sepanjang `want` frame.
+                    let masuk: Vec<u8> = chunk.iter().flat_map(|s| s.to_le_bytes()).collect();
+                    let mut bytes = crate::pcmconv::konversi(
+                        &masuk,
+                        &Sumber {
+                            channels: usize::from(CHANNELS),
+                            rate: SAMPLE_RATE,
+                            sampel: Sampel::I16,
+                        },
+                        src_mix.channels,
+                        src_mix.rate,
+                        src_mix.sampel,
+                    );
+                    bytes.resize(want * block, 0);
+                    let dst = std::slice::from_raw_parts_mut(data as *mut u8, want * block);
+                    dst.copy_from_slice(&bytes);
                     render
                         .ReleaseBuffer(want as u32, 0)
                         .map_err(|e| anyhow::anyhow!("render ReleaseBuffer: {e:?}"))?;
