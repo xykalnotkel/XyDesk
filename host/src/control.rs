@@ -168,6 +168,15 @@ pub struct Status {
     /// Target bitrate video aktif (bps) — dipakai UI untuk menampilkan dan
     /// mengubah batas pemakaian internet selama sesi.
     pub target_bitrate_bps: u32,
+    /// Backend capture yang SEDANG dipakai ("dxgi-duplication",
+    /// "windows-graphics-capture", "gdi-bitblt"). Ini hasil pengukuran
+    /// watchdog, bukan preferensi: tanpa bidang ini, layar hitam di lapangan
+    /// hanya bisa ditebak; dengan ini, UI dan log menunjuk jalur mana yang
+    /// benar-benar hidup.
+    pub capture_backend: String,
+    /// Total frame yang berhasil diambil sejak engine mulai — bukti backend
+    /// aktif benar-benar menghasilkan piksel, bukan sekadar tidak error.
+    pub frames_captured: u64,
     pub last_error: Option<String>,
 }
 
@@ -227,6 +236,8 @@ impl ControlState {
                 duration_ms: now.saturating_sub(s.started_at_ms),
             }),
             video: self.video,
+            capture_backend: crate::screen::backend_label().to_string(),
+            frames_captured: crate::screen::frames_captured(),
             audio: AudioStatus {
                 capture_available: crate::audio::capture_available(),
                 pipeline: crate::audio::capture_status().to_string(),

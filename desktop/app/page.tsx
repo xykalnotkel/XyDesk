@@ -603,6 +603,18 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
                 <span>Uptime engine</span>
                 <strong>{status?.uptimeMs != null ? formatDuration(status.uptimeMs) : '—'}</strong>
               </div>
+              <div className="kv">
+                <span>Backend capture</span>
+                <strong title="Hasil pengukuran watchdog, bukan preferensi">
+                  {status?.captureBackend || '—'}
+                </strong>
+              </div>
+              <div className="kv">
+                <span>Frame tertangkap</span>
+                <strong>
+                  {status?.framesCaptured != null ? status.framesCaptured.toLocaleString('id-ID') : '—'}
+                </strong>
+              </div>
             </div>
             {status?.lastError && <p className="danger-text">Kendala terakhir: {status.lastError}</p>}
           </>

@@ -168,6 +168,12 @@ struct Args {
     bench_h: usize,
     /// Port control API lokal untuk shell desktop (127.0.0.1 saja).
     /// 0 = port efemeral (default; shell membaca alamat + token dari stdout).
+    /// Ukur backend capture di mesin ini (±2,5 detik per backend) lalu keluar
+    /// tanpa memulai signaling maupun control API. Alat diagnosis layar hitam
+    /// di lapangan: backend mana yang benar-benar menghasilkan frame di sini.
+    #[arg(long)]
+    capture_test: bool,
+
     #[arg(long, value_name = "PORT", default_value_t = 0)]
     control_port: u16,
 }
@@ -198,6 +204,10 @@ fn meta_json() -> serde_json::Value {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
+    if args.capture_test {
+        jalankan_capture_test();
+        return Ok(());
+    }
 
     // ── Kelola password: --set-password / --new-password (keluar setelahnya) ──
     if let Some(pw) = args.set_password.as_deref().map(str::trim) {
@@ -999,4 +1009,66 @@ mod pair_label_tests {
         assert_eq!(label_suffix(separuh.as_ref()), " — ThinkPad X1".to_string());
         assert_eq!(label_suffix(PeerLabel::new(None, None).as_ref()), "");
     }
+}
+
+/// Ukur tiap backend capture yang punya primitif mentah (DXGI, GDI) selama
+/// ±2,5 detik dan cetak jumlah frame nyatanya. WGC sengaja tidak diukur di
+/// sini: sesinya melekat pada pipeline encode penuh, dan bukti hidupnya sudah
+/// dilaporkan `/status` lewat `framesCaptured` saat sesi berjalan.
+#[cfg(target_os = "windows")]
+fn jalankan_capture_test() {
+    use xydesk_host::screen;
+    const DUR: std::time::Duration = std::time::Duration::from_millis(2500);
+
+    println!("== capture test: 2,5 detik per backend, monitor pertama ==");
+    let displays = screen::list_displays();
+    let Some(info) = displays.first() else {
+        println!("tidak ada monitor terdeteksi");
+        return;
+    };
+    println!("monitor 0: {} ({}x{})", info.name, info.width, info.height);
+
+    match xydesk_host::dxgi::DxgiCapture::baru(&info.name) {
+        Ok(mut cap) => {
+            let (w, h) = (cap.width(), cap.height());
+            let t = std::time::Instant::now();
+            let mut n = 0u64;
+            while t.elapsed() < DUR {
+                match cap.grab(100) {
+                    Ok(true) => n += 1,
+                    Ok(false) => {}
+                    Err(e) => {
+                        println!(
+                            "dxgi-duplication : putus di tengah uji — {e} ({n} frame sejauh ini)"
+                        );
+                        return;
+                    }
+                }
+            }
+            println!("dxgi-duplication : {n} frame / 2,5 dtk ({w}x{h})");
+        }
+        Err(e) => println!("dxgi-duplication : GAGAL dibuka — {e}"),
+    }
+
+    match xydesk_host::gdi::GdiCapture::baru(&info.name, info.width as usize, info.height as usize)
+    {
+        Ok(mut cap) => {
+            let t = std::time::Instant::now();
+            let mut n = 0u64;
+            while t.elapsed() < DUR {
+                if cap.grab().is_ok() {
+                    n += 1;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(16));
+            }
+            println!("gdi-bitblt       : {n} frame / 2,5 dtk");
+        }
+        Err(e) => println!("gdi-bitblt       : GAGAL dibuka — {e}"),
+    }
+    println!("catatan: windows-graphics-capture diukur saat sesi berjalan (lihat framesCaptured di /status)");
+}
+
+#[cfg(not(target_os = "windows"))]
+fn jalankan_capture_test() {
+    println!("--capture-test hanya bermakna di Windows (backend capture ada di sana).");
 }

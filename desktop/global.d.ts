@@ -62,6 +62,10 @@ declare global {
     audio?: AudioPayload;
     displays?: DisplaysPayload;
     targetBitrateBps?: number;
+    /** Backend capture aktif: hasil pengukuran watchdog, bukan preferensi. */
+    captureBackend?: string;
+    /** Total frame sejak engine mulai — bukti backend benar menghasilkan piksel. */
+    framesCaptured?: number;
     lastError?: string | null;
   }
 
