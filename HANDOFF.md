@@ -1013,6 +1013,22 @@ _(kosong)_
 
 ## Selesai
 
+- [x] (dari Operator - XyDesk Team, 2026-09-07, sesi RILIS-670) — **Rilis
+  6.7.0+35 tuntas end-to-end:** Build #244 hijau -> Release #188 (tag
+  v6.7.0; APK arm64/v7a + installer x64/arm64 + update.json) -> Deploy Web
+  #174 (bundle live memuat 6.7.0 dan penanganan `pair-terkunci`) -> Deploy
+  Signaling #31 (rem pairing + auth desktop live) -> Deploy News #18
+  (artikel changelog-v6-6-1 dan changelog-v6-7-0 live; changelog-v6-6-0
+  ditarik dari D1 ke `news/seed.sql` supaya repo kembali jadi cermin
+  sumber-kebenaran). **INFO untuk semua role yang menyentuh Dart:** tiga
+  gerbang Build hanya bisa diverifikasi jujur dengan toolchain yang PERSIS
+  sama dengan CI (Flutter 3.44.9 / Dart 3.12.2) — `dart format` beda versi
+  = beda keluaran, dan `tool/gen-licenses.mjs` TANPA `flutter` di PATH jatuh
+  ke mode lama "semua entri lock" (menghasilkan 519/125, salah — yang benar
+  509/115 dari closure runtime `flutter pub deps --json`). Regenerasi
+  inventaris lisensi wajib dijalankan dengan Flutter tersedia, lalu
+  `node tool/gen-licenses.mjs --check` sebelum push.
+
 - [x] (dari Danu - XySpace Team, 2026-09-03, sesi WEB-ADMINFIX) — **Mode
   founder tidak lagi menyuruh tempel token saat id_token kosong:** founder
   yang sudah login (OTP/sesi lama, atau id_token kedaluwarsa) kini diberi
