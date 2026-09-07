@@ -24,6 +24,14 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+## [6.7.8] - 2026-09-07
+
+> Build 43. Fix CI Build 34170927923 — flutter seamless Divider + clippy single_element_loop.
+
+### Diperbaiki
+- **CI Build 34170927923**: 2 job gagal — `Verifikasi aturan seamless` (Divider) + `Clippy single_element_loop`. Fixed.
+- Lihat detail di [6.7.8](./changelogs/6.7.8.md)
+
 ## [6.7.7] - 2026-09-07
 
 > Build 42. Fix CI Build 34170387236 — flutter analyze unused + host bitrate 0 auto.
@@ -66,6 +74,7 @@ Kebijakan rilis:
 
 ## Daftar versi (per file)
 
+- [6.7.8](./changelogs/6.7.8.md) - 2026-09-07 — Fix CI seamless Divider + clippy
 - [6.7.7](./changelogs/6.7.7.md) - 2026-09-07 — Fix CI flutter analyze + host bitrate 0 auto
 - [6.7.6](./changelogs/6.7.6.md) - 2026-09-07 — Hotfix CI format + TURN direct
 - [6.7.5](./changelogs/6.7.5.md) - 2026-09-07 — Web Perfection

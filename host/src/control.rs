@@ -928,23 +928,22 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&resp).expect("JSON valid");
         assert_eq!(v["ok"], true, "mbps=0 auto should be ok: {resp}");
 
-        for mbps in ["999"] {
-            let body = format!(r#"{{"action":"video-bitrate","bitrate_mbps":{mbps}}}"#);
-            let (code, resp) = http_request(
-                addr,
-                "POST",
-                "/action",
-                &[(TOKEN_HEADER, &token)],
-                Some(&body),
-            );
-            assert_eq!(code, 200, "mbps={mbps}");
-            let v: serde_json::Value = serde_json::from_str(&resp).expect("JSON valid");
-            assert_eq!(v["ok"], false, "mbps={mbps}: {resp}");
-            assert!(
-                v["error"].as_str().unwrap_or("").contains("di luar batas"),
-                "mbps={mbps}: {resp}"
-            );
-        }
+        let mbps = "999";
+        let body = format!(r#"{{"action":"video-bitrate","bitrate_mbps":{mbps}}}"#);
+        let (code, resp) = http_request(
+            addr,
+            "POST",
+            "/action",
+            &[(TOKEN_HEADER, &token)],
+            Some(&body),
+        );
+        assert_eq!(code, 200, "mbps={mbps}");
+        let v: serde_json::Value = serde_json::from_str(&resp).expect("JSON valid");
+        assert_eq!(v["ok"], false, "mbps={mbps}: {resp}");
+        assert!(
+            v["error"].as_str().unwrap_or("").contains("di luar batas"),
+            "mbps={mbps}: {resp}"
+        );
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

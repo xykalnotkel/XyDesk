@@ -1715,11 +1715,14 @@ class _CardGapLarge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Founder request: panel sempit buat lega — increase gap
+    // No Divider per design rule seamless — use Container 1px
     return SizedBox(
       height: 8,
-      child: Divider(
-        height: 1,
-        color: context.c.textLow.withValues(alpha: 0.08),
+      child: Center(
+        child: Container(
+          height: 1,
+          color: context.c.textLow.withValues(alpha: 0.08),
+        ),
       ),
     );
   }
