@@ -380,7 +380,7 @@ mod windows {
                 )
                 .map_err(|e| anyhow::anyhow!("IAudioClient::Initialize: {e:?}"))?;
         }
-        unsafe { CoTaskMemFree(Some(mix_ptr)) };
+        unsafe { CoTaskMemFree(Some(mix_ptr as *const _ as *const std::ffi::c_void)) };
         let capture: IAudioCaptureClient = unsafe {
             client
                 .GetService::<IAudioCaptureClient>()
@@ -481,7 +481,7 @@ mod windows {
                 )
                 .map_err(|e| anyhow::anyhow!("mic Initialize: {e:?}"))?;
         }
-        unsafe { CoTaskMemFree(Some(mix_ptr)) };
+        unsafe { CoTaskMemFree(Some(mix_ptr as *const _ as *const std::ffi::c_void)) };
         let capture: IAudioCaptureClient = unsafe {
             client
                 .GetService::<IAudioCaptureClient>()
@@ -585,7 +585,7 @@ mod windows {
                 )
                 .map_err(|e| anyhow::anyhow!("render Initialize: {e:?}"))?;
         }
-        unsafe { CoTaskMemFree(Some(mix_ptr)) };
+        unsafe { CoTaskMemFree(Some(mix_ptr as *const _ as *const std::ffi::c_void)) };
         let render: IAudioRenderClient = unsafe {
             client
                 .GetService::<IAudioRenderClient>()

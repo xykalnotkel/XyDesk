@@ -393,9 +393,18 @@ export class RtcSession {
         return this.stop();
       case 'error':
         if (m.error === 'peer-offline') this.setPhase('peer-offline');
-        // Host sibuk: sesi lain sedang berjalan — koneksi kedua ditolak
-        // meski password benar (host melayani satu sesi pada satu waktu).
-        if (m.error === 'host-sibuk') this.setPhase('host-busy');
+        // Rem pairing server (hub.js) mengirim 'pair-terkunci' beserta alasan
+        // dan sisa tunggu; 'host-sibuk' disimpan sebagai alias legacy supaya
+        // client lama tetap paham bila berbicara dengan worker lama.
+        if (m.error === 'pair-terkunci' || m.error === 'host-sibuk') {
+          const retry = (m as { retry_in?: number }).retry_in;
+          this.setPhase(
+            'host-busy',
+            retry && retry > 0
+              ? `PC sedang dikendalikan sesi lain. Server mengunci pairing sementara — coba lagi dalam ${retry} detik.`
+              : undefined,
+          );
+        }
         return;
     }
   }

@@ -350,10 +350,15 @@ class RtcService {
         case 'error':
           if (m.error == 'peer-offline') {
             _emit(RtcPhase.peerOffline);
-          } else if (m.error == 'host-sibuk') {
-            // Host sibuk: sesi lain sedang berjalan. UI menampilkan pesan
-            // tendangan yang jelas — bukan error generik.
-            _lastError = 'Perangkat sedang dipakai sesi lain. Coba lagi nanti.';
+          } else if (m.error == 'pair-terkunci' || m.error == 'host-sibuk') {
+            // Rem pairing server (hub.js) mengirim 'pair-terkunci' beserta
+            // alasan dan sisa tunggu; 'host-sibuk' alias legacy untuk worker
+            // lama. UI menampilkan pesan yang jelas — bukan error generik.
+            final retry = (m['retry_in'] as num?)?.toInt();
+            _lastError = retry != null && retry > 0
+                ? 'Perangkat sedang dikendalikan sesi lain. Server mengunci '
+                    'pairing sementara — coba lagi dalam $retry detik.'
+                : 'Perangkat sedang dipakai sesi lain. Coba lagi nanti.';
             _emit(RtcPhase.hostBusy);
           }
           break;

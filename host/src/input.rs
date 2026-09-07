@@ -109,6 +109,32 @@ pub fn decode(data: &[u8]) -> Option<InputEvent> {
     }
 }
 
+/// Pisahkan "state" dari "event" dalam satu batch input yang menumpuk.
+///
+/// `MouseMoveAbs` adalah STATE: hanya posisi terakhir yang bermakna, jadi
+/// gerak absolut yang lebih tua dari posisi abs terbaru aman dibuang saat
+/// antrean penuh — inilah yang membuat kursor tidak "berenang" melanjutkan
+/// perjalanan basi setelah jaringan sempat padat. Semua yang lain (delta
+/// relatif, tombol, key, scroll) adalah EVENT: membuang satu saja berarti
+/// kehilangan gerakan/klik, jadi semuanya tetap diterapkan.
+///
+/// Bila antrean tidak menumpuk, batch berukuran satu dan fungsi ini tidak
+/// mengubah apa pun — perilaku sehat identik dengan sebelum split ada.
+pub fn buang_abs_basi(batch: Vec<InputEvent>) -> Vec<InputEvent> {
+    let Some(terakhir) = batch
+        .iter()
+        .rposition(|e| matches!(e, InputEvent::MouseMoveAbs { .. }))
+    else {
+        return batch;
+    };
+    batch
+        .into_iter()
+        .enumerate()
+        .filter(|(i, e)| !(*i < terakhir && matches!(e, InputEvent::MouseMoveAbs { .. })))
+        .map(|(_, e)| e)
+        .collect()
+}
+
 /// Batas jumlah unit UTF-16 yang diketik dari SATU pesan `0x06 TEXT`.
 ///
 /// Papan ketik sistem di client mengirim satu pesan per rentetan ketikan, jadi
@@ -555,5 +581,51 @@ mod tests {
 
         assert_eq!(decode(&m), Some(InputEvent::Text("a".to_string())));
         assert_ne!(decode(&m), Some(InputEvent::ClipboardSet("a".to_string())));
+    }
+
+    #[test]
+    fn abs_basi_dibuang_event_tetap() {
+        use super::InputEvent::*;
+        let batch = vec![
+            MouseMoveAbs { x: 100, y: 100 },
+            MouseMoveRel { dx: 3, dy: 0 },
+            MouseMoveAbs { x: 200, y: 200 },
+            MouseButton {
+                button: 0,
+                down: true,
+            },
+            MouseMoveAbs { x: 300, y: 300 },
+        ];
+        let out = super::buang_abs_basi(batch);
+        assert_eq!(
+            out,
+            vec![
+                MouseMoveRel { dx: 3, dy: 0 },
+                MouseButton {
+                    button: 0,
+                    down: true
+                },
+                MouseMoveAbs { x: 300, y: 300 },
+            ]
+        );
+    }
+
+    #[test]
+    fn tanpa_abs_tidak_ada_yang_dibuang() {
+        use super::InputEvent::*;
+        let batch = vec![
+            MouseMoveRel { dx: 1, dy: 1 },
+            Key { vk: 65, down: true },
+            Scroll { dx: 0, dy: 120 },
+        ];
+        let out = super::buang_abs_basi(batch.clone());
+        assert_eq!(out, batch);
+    }
+
+    #[test]
+    fn batch_satu_tidak_berubah() {
+        use super::InputEvent::*;
+        let satu = vec![MouseMoveAbs { x: 7, y: 7 }];
+        assert_eq!(super::buang_abs_basi(satu.clone()), satu);
     }
 }
