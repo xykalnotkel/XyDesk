@@ -15,6 +15,7 @@ class SignalMessage {
     this.candidate,
     this.error,
     this.reason,
+    this.retryIn,
     this.devices,
     this.name,
     this.platform,
@@ -29,6 +30,12 @@ class SignalMessage {
   final Map<String, dynamic>? candidate;
   final String? error;
   final String? reason;
+
+  /// Sisa tunggu detik saat rem pairing server menolak (`pair-terkunci`).
+  /// Hanya diterima — seperti `error` dan `devices`, tidak pernah dikirim
+  /// balik oleh klien, jadi sengaja tidak masuk `toJson`.
+  final int? retryIn;
+
   final List<Map<String, dynamic>>? devices;
 
   /// Label diri untuk panel host: `name` = nama perangkat/akun, `platform`
@@ -68,6 +75,7 @@ class SignalMessage {
     candidate: j['candidate'] as Map<String, dynamic>?,
     error: j['error'] as String?,
     reason: j['reason'] as String?,
+    retryIn: (j['retry_in'] as num?)?.toInt(),
     devices: (j['devices'] as List?)
         ?.map((e) => Map<String, dynamic>.from(e as Map))
         .toList(),

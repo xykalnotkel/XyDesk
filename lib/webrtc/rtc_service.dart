@@ -354,7 +354,7 @@ class RtcService {
             // Rem pairing server (hub.js) mengirim 'pair-terkunci' beserta
             // alasan dan sisa tunggu; 'host-sibuk' alias legacy untuk worker
             // lama. UI menampilkan pesan yang jelas — bukan error generik.
-            final retry = (m['retry_in'] as num?)?.toInt();
+            final retry = m.retryIn;
             _lastError = retry != null && retry > 0
                 ? 'Perangkat sedang dikendalikan sesi lain. Server mengunci '
                       'pairing sementara — coba lagi dalam $retry detik.'

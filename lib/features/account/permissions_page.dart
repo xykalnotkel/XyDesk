@@ -63,9 +63,12 @@ class _PermissionsPageState extends ConsumerState<PermissionsPage> {
     // datang kemari justru untuk mengatur izin. Status "denied" diminta
     // sekali; "denied permanen" tidak dipaksa — jalan pulangnya lewat
     // pengaturan aplikasi, dan memaksa hanya melahirkan dialog hantu.
-    if (await Permission.microphone.isDenied)
+    if (await Permission.microphone.isDenied) {
       await Permission.microphone.request();
-    if (await Permission.camera.isDenied) await Permission.camera.request();
+    }
+    if (await Permission.camera.isDenied) {
+      await Permission.camera.request();
+    }
     // Cek status notifikasi.
     _notifEnabled = NotificationService.instance.active;
 
