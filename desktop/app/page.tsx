@@ -18,6 +18,7 @@ import {
   Smartphone,
   User,
   ExternalLink,
+  LogOut,
 } from 'lucide-react';
 import {
   fetchNewsList,
@@ -200,6 +201,12 @@ export default function Page() {
   const [flash, setFlash] = useState<string | null>(null);
   const [info, setInfo] = useState<InfoPayload | null>(null);
   const [demoReady, setDemoReady] = useState(false);
+  // Identitas pemilik PC. Shell tidak pernah melihat token: yang dikirim
+  // proses utama hanya { masuk, user, metode, exp, tersimpan }. Selama belum
+  // masuk, seluruh aplikasi diganti layar login — host tanpa identitas adalah
+  // host yang bisa dipasangi siapa saja.
+  const [sesi, setSesi] = useState<AuthSessionPayload | null>(null);
+  const [sesiDicek, setSesiDicek] = useState(false);
 
   const flashMsg = useCallback((msg: string) => {
     setFlash(msg);
@@ -217,6 +224,25 @@ export default function Page() {
     setStatus(DEMO_STATUS);
     setLogs(DEMO_LOGS);
     setDemoReady(true);
+    setSesi({
+      masuk: true,
+      user: { id: 'demo', email: 'pratinjau@xydesk.my.id', name: 'Mode Pratinjau', picture: null },
+      metode: 'email',
+      exp: null,
+      tersimpan: false,
+    });
+    setSesiDicek(true);
+  }, []);
+
+  useEffect(() => {
+    if (DEMO) return;
+    window.xydesk
+      ?.authSession()
+      .then((s) => {
+        setSesi(s);
+        setSesiDicek(true);
+      })
+      .catch(() => setSesiDicek(true));
   }, []);
 
   useEffect(() => {
@@ -305,6 +331,26 @@ export default function Page() {
   const pill = st && STATE_LABEL[st.state] ? STATE_LABEL[st.state] : STATE_LABEL.starting;
   const engineUp = !!st?.engine;
 
+  // Gerbang identitas: tanpa sesi, tidak ada yang lain yang boleh tampil —
+  // termasuk ID + password pairing, sebab keduanya adalah kunci ke layar ini.
+  if (!sesiDicek) {
+    return (
+      <div className="login-shell">
+        <p className="dim">Menyiapkan…</p>
+      </div>
+    );
+  }
+  if (!sesi?.masuk) {
+    return (
+      <LoginScreen
+        onDone={(s) => {
+          setSesi(s);
+          flashMsg(`Selamat datang, ${s.user?.name || s.user?.email || 'pengguna'}.`);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -353,32 +399,11 @@ export default function Page() {
           <h2>{PAGE_TITLE[page]}</h2>
           <div className="quick">
             {flash && <span className="flash">{flash}</span>}
-            {/* "ada yang sedang menonton" harus terlihat dari halaman mana pun,
-                termasuk saat jendela dikecilkan — klik = buka Beranda. */}
-            {st?.session && (
-              <button
-                className="chip live"
-                onClick={() => setPage('home')}
-                title="Sesi sedang berjalan — buka Beranda"
-              >
-                {(() => {
-                  const Icon = peerIcon(st.session.clientPlatform);
-                  return <Icon size={13} aria-hidden="true" />;
-                })()}
-                <span className="who">{peerLabel(st.session)}</span>
-                <span className="dur">{formatDuration(st.session.durationMs)}</span>
-              </button>
-            )}
-            {st?.deviceId && (
-              <button
-                className="chip"
-                onClick={() => copy(st.deviceId as string, 'ID')}
-                title="Salin ID perangkat untuk pairing"
-              >
-                {formatId(st.deviceId)}
-                <ClipboardCopy size={12} aria-hidden="true" />
-              </button>
-            )}
+            {/* Indikator sesi SENGAJA tidak ada di topbar: siapa yang sedang
+                terhubung ditampilkan sebagai daftar perangkat di bawah blok
+                ID + password (keputusan UI), bukan chip yang bersaing dengan
+                judul halaman. Pemilik PC tetap punya sinyal itu lewat tooltip
+                tray dan judul jendela (setHint di atas). */}
             <span className={`pill ${pill.cls}`}>
               <span className="dot" />
               {engineUp ? pill.label : 'Engine belum siap'}
@@ -394,7 +419,19 @@ export default function Page() {
             <ConnectPage status={st} onCopy={copy} onAction={runAction} />
           )}
           {page === 'news' && <NewsPage />}
-          {page === 'profile' && <ProfilePage status={st} info={info} />}
+          {page === 'profile' && (
+            <ProfilePage
+              status={st}
+              info={info}
+              sesi={sesi}
+              onLogout={() => {
+                window.xydesk
+                  ?.authLogout()
+                  .then((r) => setSesi(r.sesi ?? null))
+                  .catch(() => setSesi({ masuk: false, user: null, exp: null, tersimpan: false }));
+              }}
+            />
+          )}
           {page === 'settings' && (
             <SettingsPage
               status={st}
@@ -410,7 +447,138 @@ export default function Page() {
   );
 }
 
-/* ── Home ─────────────────────────────────────────────────────────── */
+/* ── Login ────────────────────────────────────────────────────────── */
+
+/// Gerbang identitas shell: Google (browser sistem + loopback di proses utama)
+/// atau email OTP. Keduanya endpoint Worker yang sama dengan web/Android, jadi
+/// satu akun tetap satu identitas di semua platform.
+function LoginScreen({ onDone }: { onDone: (s: AuthSessionPayload) => void }) {
+  const [mode, setMode] = useState<'google' | 'email'>('google');
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [tahap, setTahap] = useState<'email' | 'otp'>('email');
+  const [busy, setBusy] = useState(false);
+  const [galat, setGalat] = useState<string | null>(null);
+
+  const jalankan = async (fn: () => Promise<AuthResultPayload>) => {
+    setBusy(true);
+    setGalat(null);
+    const r = await fn();
+    setBusy(false);
+    if (r.ok && r.sesi) onDone(r.sesi);
+    else if (!r.ok) setGalat(r.message || r.error || 'Gagal masuk. Coba lagi.');
+  };
+
+  return (
+    <div className="login-shell">
+      <form
+        className="login-card"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (mode !== 'email') return;
+          if (tahap === 'email') {
+            void jalankan(() =>
+              window.xydesk!.authEmailRequest(email).then((r) => {
+                if (r.ok) setTahap('otp');
+                return r;
+              }),
+            );
+          } else {
+            void jalankan(() => window.xydesk!.authEmailVerify(email, otp));
+          }
+        }}
+      >
+        <img src="/logo.png" width={56} height={56} alt="Logo XyDesk" />
+        <h2>Masuk ke XyDesk Host</h2>
+        <p className="dim">
+          Identitas pemilik PC. Sesi disimpan terenkripsi di mesin ini; token tidak pernah
+          meninggalkan proses utama.
+        </p>
+
+        <div className="login-tabs">
+          <button
+            type="button"
+            className={mode === 'google' ? 'active' : ''}
+            onClick={() => {
+              setMode('google');
+              setGalat(null);
+            }}
+          >
+            Google
+          </button>
+          <button
+            type="button"
+            className={mode === 'email' ? 'active' : ''}
+            onClick={() => {
+              setMode('email');
+              setGalat(null);
+            }}
+          >
+            Email
+          </button>
+        </div>
+
+        {mode === 'google' ? (
+          <button
+            type="button"
+            className="primary wide"
+            disabled={busy}
+            onClick={() => void jalankan(() => window.xydesk!.authGoogle())}
+          >
+            {busy ? 'Menunggu browser…' : 'Masuk dengan Google'}
+          </button>
+        ) : tahap === 'email' ? (
+          <>
+            <input
+              type="email"
+              placeholder="alamat@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+            <button
+              type="submit"
+              className="primary wide"
+              disabled={busy || !/^\S+@\S+\.\S+$/.test(email)}
+            >
+              {busy ? 'Mengirim…' : 'Kirim kode'}
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="dim">Kode dikirim ke {email}.</p>
+            <input
+              inputMode="numeric"
+              placeholder="6 digit kode"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              autoComplete="one-time-code"
+              required
+            />
+            <button type="submit" className="primary wide" disabled={busy || otp.length !== 6}>
+              {busy ? 'Memverifikasi…' : 'Verifikasi'}
+            </button>
+            <button
+              type="button"
+              className="ghost wide"
+              onClick={() => {
+                setTahap('email');
+                setOtp('');
+              }}
+            >
+              Ganti email
+            </button>
+          </>
+        )}
+
+        {galat && <p className="danger-text">{galat}</p>}
+      </form>
+    </div>
+  );
+}
+
+/* ── Home ────────────────────────────────────────────────────────── */
 
 function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: () => void }) {
   const s = status?.session;
@@ -518,6 +686,31 @@ function ConnectPage({
 }) {
   const [showPw, setShowPw] = useState(false);
   const [customPw, setCustomPw] = useState('');
+  const [popover, setPopover] = useState(false);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+
+  // Popover menutup saat klik jatuh di luar panel atau Esc ditekan — perilaku
+  // yang orang harapkan dari popover, tanpa library tambahan.
+  useEffect(() => {
+    if (!popover) return;
+    const klik = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) setPopover(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPopover(false);
+    };
+    document.addEventListener('mousedown', klik);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', klik);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [popover]);
+
+  // Engine melaporkan satu sesi berjalan; dibungkus array supaya daftar ini
+  // siap bila host suatu saat menerima lebih dari satu peer.
+  const sesiList = status?.session ? [status.session] : [];
+
   return (
     <div className="pg">
       <section className="card">
@@ -539,13 +732,74 @@ function ConnectPage({
           <button className="ghost" disabled={!status?.password} onClick={() => setShowPw((v) => !v)}>
             {showPw ? <EyeOff size={14} /> : <Eye size={14} />} {showPw ? 'Sembunyikan' : 'Lihat'}
           </button>
-          <button
-            className="ghost"
-            disabled={!status?.password}
-            onClick={() => status?.password && onCopy(status.password, 'Password')}
-          >
-            <ClipboardCopy size={14} /> Salin
-          </button>
+          {/* Semua pengaturan password hidup DI baris ini sebagai popover —
+              bukan seksi terpisah di bawah, supaya konteksnya tidak lepas
+              dari password yang sedang dilihat. */}
+          <div className="pw-anchor" ref={popoverRef}>
+            <button
+              className="ghost"
+              disabled={!status?.password}
+              onClick={() => setPopover((v) => !v)}
+              title="Atur password pairing"
+            >
+              <Settings size={14} /> Atur
+            </button>
+            {popover && (
+              <div className="popover">
+                <div className="pop-row">
+                  <button
+                    disabled={!status?.engine}
+                    onClick={() => {
+                      onAction('new-password');
+                      setPopover(false);
+                    }}
+                  >
+                    <RefreshCw size={14} /> Password acak baru
+                  </button>
+                  <button
+                    disabled={!status?.password}
+                    onClick={() => status?.password && onCopy(status.password, 'Password')}
+                  >
+                    <ClipboardCopy size={14} /> Salin password
+                  </button>
+                </div>
+                <div className="set-row">
+                  <input
+                    type="text"
+                    placeholder="Password kustom (min. 6 karakter)"
+                    value={customPw}
+                    onChange={(e) => setCustomPw(e.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    autoComplete="off"
+                  />
+                  <button
+                    className="primary"
+                    disabled={customPw.trim().length < 6}
+                    onClick={() => {
+                      onAction('set-password', { password: customPw });
+                      setCustomPw('');
+                      setPopover(false);
+                    }}
+                  >
+                    Simpan
+                  </button>
+                </div>
+                {customPw.trim().length >= 6 && isLegacyShape(customPw) && (
+                  <p className="danger-text">
+                    Tanpa huruf kecil, host memperlakukannya sebagai password lama: besar-kecil
+                    TIDAK dihitung dan ruang tebakannya turun. Tambahkan huruf kecil.
+                  </p>
+                )}
+                <p className="hint">
+                  Min. 6 karakter, bebas huruf besar/kecil/angka/spasi. Besar-kecil dihitung:{' '}
+                  <code>KopiPagi2026</code> dan <code>kopipagi2026</code> adalah dua password
+                  berbeda. Mengganti password tidak memutus sesi yang sedang berjalan.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
         <p className="hint">
           Ketik ID dan password ini di aplikasi XyDesk di HP untuk menghubungkan ke layar ini.
@@ -554,51 +808,32 @@ function ConnectPage({
       </section>
 
       <section className="card">
-        <h3>Password pairing</h3>
-        <div className="set-row">
-          <button disabled={!status?.engine} onClick={() => onAction('new-password')}>
-            <RefreshCw size={14} /> Password acak baru
-          </button>
-        </div>
-        <div className="set-row">
-          <input
-            type="text"
-            placeholder="Password kustom, bebas huruf besar/kecil (min. 6 karakter)"
-            value={customPw}
-            onChange={(e) => setCustomPw(e.target.value)}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            autoComplete="off"
-          />
-          <button
-            className="primary"
-            disabled={customPw.trim().length < 6}
-            onClick={() => onAction('set-password', { password: customPw })}
-          >
-            Simpan
-          </button>
-        </div>
-        <p className="hint">
-          Boleh huruf besar, kecil, angka, bahkan spasi di tengah — minimal 6 karakter. Yang
-          ditolak hanya karakter kontrol (Enter/Tab): tidak bisa diketik dari papan ketik ponsel.
-          <br />
-          <strong>Besar-kecil dihitung.</strong> Sejak host memverifikasi password secara
-          peka-kasus, <code>KopiPagi2026</code> dan <code>kopipagi2026</code> adalah dua password
-          berbeda. Ketik ulang, jangan salin dari catatan yang sudah terkapitalisasi, dan pastikan
-          papan ketik HP tidak mengkapital huruf pertama sendiri (kolom ini sudah
-          autoCapitalize=none; aplikasi HP juga sudah diperbaiki).
-        </p>
-        {customPw.trim().length >= 6 && isLegacyShape(customPw) && (
-          <p className="danger-text">
-            Password ini tidak punya satu pun huruf kecil, jadi host akan memperlakukannya sebagai
-            password lama: besar-kecil TIDAK dihitung dan ruang tebakannya turun dari ~5,75 ke
-            ~4,95 bit per karakter. Tambahkan huruf kecil untuk proteksi penuh.
-          </p>
+        <h3>Perangkat terhubung</h3>
+        {sesiList.length === 0 ? (
+          <p className="dim">Belum ada perangkat yang mengendalikan PC ini.</p>
+        ) : (
+          <ul className="device-list">
+            {sesiList.map((ss) => {
+              const Icon = peerIcon(ss.clientPlatform);
+              return (
+                <li className="device-row" key={ss.clientId}>
+                  <Icon size={16} aria-hidden="true" />
+                  <div className="who">
+                    <strong>Device {ss.clientName || ss.clientId}</strong>
+                    <span>
+                      {platformLabel(ss.clientPlatform) || 'Platform tidak dikenal'} ·{' '}
+                      {formatDuration(ss.durationMs)}
+                    </span>
+                  </div>
+                  <span className="live-dot" title="Sesi aktif" />
+                </li>
+              );
+            })}
+          </ul>
         )}
         <p className="hint">
-          Password pendek hanya aman karena engine membatasi laju percobaan pairing (pairguard).
-          Mengganti password tidak memutus sesi yang sedang berjalan.
+          Nama dan jenis perangkat dilaporkan sendiri oleh HP/PC yang terhubung — host hanya
+          menampilkannya. Hanya satu sesi yang bisa berjalan; koneksi kedua ditolak otomatis.
         </p>
       </section>
     </div>
@@ -900,9 +1135,44 @@ function NewsDetail({ post, onBack }: { post: NewsPost; onBack: () => void }) {
 
 /* ── Profile ──────────────────────────────────────────────────────── */
 
-function ProfilePage({ status, info }: { status: StatusPayload | null; info: InfoPayload | null }) {
+function ProfilePage({
+  status,
+  info,
+  sesi,
+  onLogout,
+}: {
+  status: StatusPayload | null;
+  info: InfoPayload | null;
+  sesi: AuthSessionPayload | null;
+  onLogout: () => void;
+}) {
   return (
     <div className="pg">
+      <section className="card">
+        <h3>Akun</h3>
+        <div className="kv-grid">
+          <div className="kv wide">
+            <span>Masuk sebagai</span>
+            <strong>{sesi?.user?.email || '—'}</strong>
+          </div>
+          <div className="kv">
+            <span>Metode</span>
+            <strong>
+              {sesi?.metode === 'google' ? 'Google' : sesi?.metode === 'email' ? 'Email OTP' : '—'}
+            </strong>
+          </div>
+        </div>
+        <div className="set-row">
+          <button className="danger" onClick={onLogout}>
+            <LogOut size={14} /> Keluar dari akun ini
+          </button>
+        </div>
+        <p className="hint">
+          Keluar tidak mematikan engine maupun sesi yang sedang berjalan — hanya identitas di
+          shell ini yang dilepas.
+        </p>
+      </section>
+
       <section className="card">
         <h3>Perangkat host</h3>
         <div className="kv-grid">

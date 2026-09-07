@@ -21,6 +21,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const net = require('node:net');
+const os = require('node:os');
 const { registerAuthIpc } = require('./auth.cjs');
 
 // ── Konfigurasi ─────────────────────────────────────────────────────────
@@ -416,6 +417,25 @@ async function controlFetch(pathname, init = {}) {
   return json;
 }
 
+/// Jamin sudut jendela membulat di Windows 11 (nilai 2 = DWMWCP_ROUND).
+function terapkanSudutNative(win) {
+  if (process.platform !== 'win32') return;
+  const build = Number((os.release().split('.')[2] || '0'));
+  if (!build || build < 22000) return; // atribut ini hanya ada di Win11+
+  let hwnd;
+  try {
+    hwnd = win.getNativeWindowHandle().readBigUInt64LE(0).toString();
+  } catch {
+    return;
+  }
+  const skrip =
+    "Add-Type -Namespace D -Name W -MemberDefinition '[DllImport(\"dwmapi.dll\")] public static extern int DwmSetWindowAttribute(IntPtr h, int a, ref int v, int s);';" +
+    `$v = 2; [D.W]::DwmSetWindowAttribute([IntPtr]${hwnd}, 33, [ref]$v, 4) | Out-Null`;
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', skrip], (err) => {
+    if (err) addLog(`[win] sudut native dilewati: ${String(err.message).split('\n')[0]}`);
+  });
+}
+
 function registerIpc() {
   ipcMain.handle('status', async () => {
     try {
@@ -674,6 +694,17 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', () => showWindow());
+
+  // Sudut luar jendela dibiarkan milik Windows (frame + caption tidak
+  // disentuh, supaya snap layout tetap ada). Di Win11 pembulatan sudah
+  // default; atribut DWMWA_WINDOW_CORNER_PREFERENCE dipasang eksplisit supaya
+  // jaminan itu tidak bergantung pada kebijakan tema mesin. Electron tidak
+  // mengekspos DwmSetWindowAttribute dan menambah dependensi FFI ke installer
+  // tidak sepadan, jadi dipakai powershell tersembunyi — gagal di sini tidak
+  // fatal, default Win11 sudah membulat.
+  app.on('browser-window-created', (_event, win) => {
+    win.once('ready-to-show', () => terapkanSudutNative(win));
+  });
 
   app.whenReady().then(async () => {
     registerIpc();

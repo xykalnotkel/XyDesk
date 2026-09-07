@@ -29,8 +29,17 @@
   --success: #167347;
   --warning: #855400;
   --danger: #a52a36;
-  --radius: 14px;
-  --radius-sm: 10px;
+  /* Paritas radius dengan klien Flutter (lib/core/tokens.dart, class R):
+     sm 8 / md 12 / lg 16 / xl 20 / pill 999. Satu skala di dua platform
+     supaya kartu, tombol, dan panel terasa barang yang sama — keputusan UI
+     "sudut luar native Windows, sudut dalam mengikuti token". */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+  --radius: var(--r-lg);
+  --radius-sm: var(--r-md);
   --sidebar-w: 224px;
 }
 
@@ -128,7 +137,7 @@ img { display: block; max-width: 100%; }
   align-items: center;
   gap: 11px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   color: var(--text-mid);
   font-size: 13.5px;
   font-weight: 500;
@@ -341,7 +350,7 @@ button.chip:hover { background: var(--input); color: var(--text-hi); }
 button {
   font: inherit;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   padding: 9px 16px;
   background: var(--overlay);
   color: var(--text-hi);
@@ -370,7 +379,7 @@ textarea {
   font: inherit;
   background: var(--input);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   color: var(--text-hi);
   padding: 9px 12px;
   outline: none;
@@ -415,7 +424,7 @@ input:focus, textarea:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
   text-align: center;
   color: var(--text-hi);
 }
-button.tiny { padding: 3px 9px; font-size: 11.5px; border-radius: 7px; }
+button.tiny { padding: 3px 9px; font-size: 11.5px; border-radius: var(--r-sm); }
 .slider { width: 100%; margin-top: 8px; accent-color: var(--accent); cursor: pointer; }
 .slider:disabled { cursor: default; opacity: 0.5; }
 /* Kartu sesi punya empat metrik; yang tiga kolom tetap untuk tempat lain. */
@@ -433,7 +442,7 @@ button.tiny { padding: 3px 9px; font-size: 11.5px; border-radius: 7px; }
   text-decoration: none;
   background: var(--overlay);
   padding: 9px 14px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
 }
 .btn-ghost-link:hover { color: var(--text-hi); background: #ecebe8; }
 
@@ -554,7 +563,7 @@ button.tiny { padding: 3px 9px; font-size: 11.5px; border-radius: 7px; }
 }
 .sk-line {
   height: 12px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: linear-gradient(100deg, #ecebe8 40%, #e0dfdb 50%, #ecebe8 60%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
@@ -586,7 +595,7 @@ button.like.liked { background: rgba(217, 100, 110, 0.16); color: var(--danger);
 button.share { background: var(--accent); border-radius: 999px; font-weight: 700; }
 .post-body p { margin-bottom: 14px; color: var(--text-hi); opacity: 0.92; }
 .post-body figure { margin: 4px 0 18px; }
-.post-body figure img { display: block; width: 100%; border-radius: 12px; }
+.post-body figure img { display: block; width: 100%; border-radius: var(--r-md); }
 .post-body figcaption { margin-top: 7px; font-size: 12.5px; line-height: 1.5; color: var(--text-mid); text-align: center; }
 
 .comments { margin-top: 24px; }
@@ -670,8 +679,100 @@ button.share { background: var(--accent); border-radius: 999px; font-weight: 700
   font: inherit;
   font-size: 14px;
   padding: 11px 14px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   border: 1px solid var(--line);
   outline: none;
 }
 .subscribe-row input:focus { border-color: var(--accent); }
+
+/* ── Login (gerbang identitas shell) ─────────────────────────────── */
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  padding: 24px;
+}
+.login-card {
+  width: min(400px, 100%);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  padding: 28px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 12px 32px rgba(24, 24, 27, 0.08);
+}
+.login-card img { margin: 0 auto 4px; }
+.login-card h2 { font-size: 18px; text-align: center; }
+.login-card > p.dim { font-size: 12.5px; text-align: center; margin-bottom: 6px; }
+.login-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--input);
+  border-radius: var(--r-md);
+  padding: 4px;
+}
+.login-tabs button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-mid);
+  cursor: pointer;
+}
+.login-tabs button.active {
+  background: var(--raised);
+  color: var(--text-hi);
+  box-shadow: 0 1px 3px rgba(24, 24, 27, 0.12);
+}
+button.wide { width: 100%; }
+
+/* ── Popover password (hidup di baris password, bukan seksi bawah) ── */
+.pw-anchor { position: relative; display: inline-flex; }
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(360px, calc(100vw - 48px));
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: 0 16px 40px rgba(24, 24, 27, 0.16);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.popover .pop-row { display: flex; gap: 8px; }
+.popover .pop-row button { flex: 1; }
+.popover .hint { margin: 0; }
+
+/* ── Daftar perangkat terhubung (di bawah blok ID + password) ────── */
+.device-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.device-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--overlay);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+.device-row .who { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.device-row .who strong { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.device-row .who span { font-size: 12px; color: var(--text-mid); }
+.device-row .live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--success);
+  box-shadow: 0 0 0 3px rgba(22, 115, 71, 0.15);
+  flex: none;
+}
