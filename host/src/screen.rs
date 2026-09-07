@@ -1110,7 +1110,11 @@ mod windows {
                 first.width,
                 first.height
             );
-            (first.name.clone(), first.width as usize, first.height as usize)
+            (
+                first.name.clone(),
+                first.width as usize,
+                first.height as usize,
+            )
         } else {
             // Tidak ada monitor sama sekali — VM tanpa display
             eprintln!("[xydesk-host] GDI: tidak ada monitor terdeteksi (VM headless?) — pakai virtual screen GetDC(0)");
@@ -1254,7 +1258,9 @@ mod windows {
             );
             first.name.clone()
         } else {
-            eprintln!("[xydesk-host] DXGI: tidak ada monitor terdeteksi — coba output pertama (VM?)");
+            eprintln!(
+                "[xydesk-host] DXGI: tidak ada monitor terdeteksi — coba output pertama (VM?)"
+            );
             String::new()
         };
         // Resolusi dibaca dari sesi duplikasi, bukan dari DEVMODE: yang akan

@@ -92,10 +92,11 @@ impl DxgiCapture {
                     let desc = output.GetDesc().map_err(|e| format!("desc output: {e}"))?;
                     let nama = String::from_utf16_lossy(&desc.DeviceName);
                     let nama = nama.trim_matches('\0');
-                    let output1 = match output.cast::<windows::Win32::Graphics::Dxgi::IDXGIOutput1>() {
-                        Ok(o) => o,
-                        Err(_) => continue,
-                    };
+                    let output1 =
+                        match output.cast::<windows::Win32::Graphics::Dxgi::IDXGIOutput1>() {
+                            Ok(o) => o,
+                            Err(_) => continue,
+                        };
                     let dupl = match output1.DuplicateOutput(&device) {
                         Ok(d) => d,
                         Err(_) => continue,
@@ -189,7 +190,9 @@ impl DxgiCapture {
                     return Ok(false);
                 }
                 if e.code() == DXGI_ERROR_ACCESS_LOST {
-                    return Err("access-lost (resolusi ganti / sesi terkunci / RDP disconnect)".to_string());
+                    return Err(
+                        "access-lost (resolusi ganti / sesi terkunci / RDP disconnect)".to_string(),
+                    );
                 }
                 return Err(format!("acquire: {e}"));
             }
@@ -235,7 +238,9 @@ impl DxgiCapture {
             };
             if should {
                 eprintln!("[xydesk-host] DXGI: frame hitam total terdeteksi — mungkin GPU hibrida / VM tanpa output");
-                unsafe { LAST_WARN = Some(now); }
+                unsafe {
+                    LAST_WARN = Some(now);
+                }
             }
         }
         Ok(true)

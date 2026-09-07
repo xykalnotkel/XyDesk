@@ -29,8 +29,8 @@ use std::process::Command;
 
 #[cfg(target_os = "windows")]
 const DRIVER_HWIDS: &[&str] = &[
-    "IddSampleDriver",           // roshkins/ge9
-    "VirtualDisplayDriver",      // itsmikethetech
+    "IddSampleDriver",      // roshkins/ge9
+    "VirtualDisplayDriver", // itsmikethetech
     "ROOT\\VirtualDisplayDriver",
     "ROOT\\IddSampleDriver",
 ];
@@ -97,7 +97,9 @@ pub fn is_driver_installed() -> bool {
 pub fn is_admin() -> bool {
     unsafe {
         use windows::Win32::Foundation::HANDLE;
-        use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
+        use windows::Win32::Security::{
+            GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY,
+        };
         use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 
         let mut token = HANDLE::default();
@@ -127,7 +129,10 @@ pub fn is_admin() -> bool {
 #[cfg(target_os = "windows")]
 pub fn try_install_driver() -> Result<String, String> {
     if !is_admin() {
-        return Err("butuh admin untuk install driver — jalankan xydesk-host sebagai Administrator".to_string());
+        return Err(
+            "butuh admin untuk install driver — jalankan xydesk-host sebagai Administrator"
+                .to_string(),
+        );
     }
 
     let candidates = [
@@ -182,14 +187,17 @@ pub fn ensure_display() {
         return;
     }
 
-    eprintln!("[xydesk-host] HEADLESS/RDP terdeteksi: {} monitor, RDP={}, driver_installed={}",
+    eprintln!(
+        "[xydesk-host] HEADLESS/RDP terdeteksi: {} monitor, RDP={}, driver_installed={}",
         crate::screen::list_displays().len(),
         crate::screen::is_rdp_session(),
         is_driver_installed()
     );
 
     if is_driver_installed() {
-        println!("[xydesk-host] virtual display driver sudah ada — DISPLAY virtual seharusnya tersedia");
+        println!(
+            "[xydesk-host] virtual display driver sudah ada — DISPLAY virtual seharusnya tersedia"
+        );
         return;
     }
 
@@ -234,11 +242,19 @@ pub fn create_virtual_display(width: u32, height: u32, count: u32) -> Result<Str
         if std::path::Path::new(exe).exists() {
             // itsmikethetech driver: VirtualDisplayDriver.exe add 1 1920 1080
             let output = Command::new(exe)
-                .args(["add", &count.to_string(), &width.to_string(), &height.to_string()])
+                .args([
+                    "add",
+                    &count.to_string(),
+                    &width.to_string(),
+                    &height.to_string(),
+                ])
                 .output()
                 .map_err(|e| format!("gagal jalankan {exe}: {e}"))?;
             if output.status.success() {
-                return Ok(format!("virtual display {}x{} dibuat via {exe}", width, height));
+                return Ok(format!(
+                    "virtual display {}x{} dibuat via {exe}",
+                    width, height
+                ));
             }
         }
     }

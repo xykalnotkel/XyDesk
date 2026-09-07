@@ -70,7 +70,11 @@ impl GdiCapture {
             dalam: Handle::baru(nama_perangkat, w, h)?,
             width: if w == 0 { 0 } else { w },
             height: if h == 0 { 0 } else { h },
-            rgba: Vec::with_capacity(if w == 0 || h == 0 { 1920 * 1080 * 4 } else { w * h * 4 }),
+            rgba: Vec::with_capacity(if w == 0 || h == 0 {
+                1920 * 1080 * 4
+            } else {
+                w * h * 4
+            }),
         })
     }
 
@@ -119,7 +123,9 @@ impl GdiCapture {
             };
             if should_warn {
                 eprintln!("[xydesk-host] GDI: frame tampak hitam total — mungkin sesi RDP terkunci / VM tanpa desktop aktif");
-                unsafe { LAST_WARN = Some(now); }
+                unsafe {
+                    LAST_WARN = Some(now);
+                }
             }
         }
         let w = self.width();
@@ -240,8 +246,8 @@ impl Handle {
     fn baru_fallback(width: usize, height: usize) -> Result<Self, String> {
         use windows::Win32::Foundation::HWND;
         use windows::Win32::Graphics::Gdi::{
-            CreateCompatibleBitmap, CreateCompatibleDC, GetDC, BITMAPINFO, BITMAPINFOHEADER,
-            GetSystemMetrics, SYSTEM_METRICS_INDEX,
+            CreateCompatibleBitmap, CreateCompatibleDC, GetDC, GetSystemMetrics, BITMAPINFO,
+            BITMAPINFOHEADER, SYSTEM_METRICS_INDEX,
         };
 
         unsafe {
@@ -255,7 +261,10 @@ impl Handle {
                 let fw = if vs_w > 0 { vs_w } else { s_w };
                 let fh = if vs_h > 0 { vs_h } else { s_h };
                 if fw <= 0 || fh <= 0 {
-                    return Err("fallback: tidak bisa baca ukuran layar virtual (GetSystemMetrics 0)".to_string());
+                    return Err(
+                        "fallback: tidak bisa baca ukuran layar virtual (GetSystemMetrics 0)"
+                            .to_string(),
+                    );
                 }
                 (fw as usize, fh as usize)
             };
@@ -346,8 +355,8 @@ impl Handle {
 #[cfg(target_os = "windows")]
 impl Drop for Handle {
     fn drop(&mut self) {
-        use windows::Win32::Graphics::Gdi::{DeleteDC, DeleteObject, ReleaseDC};
         use windows::Win32::Foundation::HWND;
+        use windows::Win32::Graphics::Gdi::{DeleteDC, DeleteObject, ReleaseDC};
         unsafe {
             if !self.bmp.is_invalid() {
                 let _ = DeleteObject(windows::Win32::Graphics::Gdi::HGDIOBJ(self.bmp.0));

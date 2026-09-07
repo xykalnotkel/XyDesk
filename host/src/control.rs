@@ -647,7 +647,9 @@ async fn action(
         // Quality preset: auto, medium, high, ultra — Founder request 2026-09-07
         "video-quality" => {
             let Some(q) = req.quality.as_deref() else {
-                return Ok(Json(ActionResponse::err("quality tidak disertakan (auto/medium/high/ultra)")));
+                return Ok(Json(ActionResponse::err(
+                    "quality tidak disertakan (auto/medium/high/ultra)",
+                )));
             };
             let bps = match q.to_lowercase().as_str() {
                 "auto" => crate::screen::DEFAULT_TARGET_BPS,

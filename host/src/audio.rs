@@ -315,14 +315,17 @@ mod windows {
 
     /// Daftar ID endpoint output aktif.
     pub fn list_outputs() -> Vec<String> {
-        list_outputs_detailed().into_iter().map(|(id, _)| id).collect()
+        list_outputs_detailed()
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect()
     }
 
     /// Daftar (ID, friendly name) output — dipakai virtual_mic.rs untuk deteksi VB-CABLE
     pub fn list_outputs_detailed() -> Vec<(String, String)> {
         use windows::Win32::Media::Audio::DEVICE_STATE_ACTIVE;
-        use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
         use windows::Win32::System::Com::STGM_READ;
+        use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
         let _ = init_com();
         let enumerator: IMMDeviceEnumerator =
             match unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) } {
@@ -349,10 +352,13 @@ mod windows {
                                 // PKEY_Device_FriendlyName = {A45C254E-DF1C-4EFD-8020-67D146A850E0},14
                                 // PKEY_Device_DeviceDesc = {A45C254E-DF1C-4EFD-8020-67D146A850E0},2
                                 // Kita coba baca friendly name, fallback ke DeviceDesc
-                                let friendly_key = windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY {
-                                    fmtid: windows::core::GUID::from_u128(0xA45C254E_DF1C_4EFD_8020_67D146A850E0),
-                                    pid: 14,
-                                };
+                                let friendly_key =
+                                    windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY {
+                                        fmtid: windows::core::GUID::from_u128(
+                                            0xA45C254E_DF1C_4EFD_8020_67D146A850E0,
+                                        ),
+                                        pid: 14,
+                                    };
                                 if let Ok(var) = props.GetValue(&friendly_key) {
                                     // PROPVARIANT to string — coba baca sebagai PWSTR
                                     // Simplified: pakai DisplayName via ToString? Fallback ke ID
@@ -381,7 +387,9 @@ mod windows {
                                         };
                                         if let Ok(var2) = props.GetValue(&desc_key) {
                                             let pwsz2 = var2.Anonymous.Anonymous.Anonymous.pwszVal;
-                                            if !pwsz2.is_null() && var2.Anonymous.Anonymous.vt.0 == 31 {
+                                            if !pwsz2.is_null()
+                                                && var2.Anonymous.Anonymous.vt.0 == 31
+                                            {
                                                 let ws2 = windows::core::PWSTR(pwsz2);
                                                 if let Ok(str2) = unsafe { ws2.to_string() } {
                                                     str2
@@ -436,10 +444,13 @@ mod windows {
                     if let Ok(id) = unsafe { id_pw.to_string() } {
                         let name = unsafe {
                             if let Ok(props) = item.OpenPropertyStore(STGM_READ) {
-                                let friendly_key = windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY {
-                                    fmtid: windows::core::GUID::from_u128(0xA45C254E_DF1C_4EFD_8020_67D146A850E0),
-                                    pid: 14,
-                                };
+                                let friendly_key =
+                                    windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY {
+                                        fmtid: windows::core::GUID::from_u128(
+                                            0xA45C254E_DF1C_4EFD_8020_67D146A850E0,
+                                        ),
+                                        pid: 14,
+                                    };
                                 if let Ok(var) = props.GetValue(&friendly_key) {
                                     let pwsz = var.Anonymous.Anonymous.Anonymous.pwszVal;
                                     if !pwsz.is_null() && var.Anonymous.Anonymous.vt.0 == 31 {

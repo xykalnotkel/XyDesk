@@ -22,16 +22,51 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [Belum terbit]
+
+## [6.7.6] - 2026-09-07
+
+> Build 41. Hotfix CI — format Dart + Rust + CHANGELOG + TURN direct kind. Build 6.7.5 gagal 4 jobs, fixed.
+
+### Diperbaiki
+- **CI Build 34169492118**: 4 job gagal — `Cek Lintas-Dokumen` (CHANGELOG top version), `Analisis Statis Flutter` (dart format 3 files), `Uji Logika Host Rust` (cargo fmt 9 files), `Uji Backend` (TURN direct kind). Semua fixed, `tool/check_version.py` lulus, `dart format` 0 changed, `cargo fmt --check` ok, `node --test` 94 pass.
+- Lihat detail di [6.7.6](./changelogs/6.7.6.md)
+
+## [6.7.5] - 2026-09-07
+
+> Build 40. Web Perfection — Founder: "Sempurnakan web, serta jalur jalur dan lain lain okey? Gas"
+
+### Ditambahkan
+- **Web quality & bitrate UI** `web/src/session_ui.tsx`: `StreamQuality auto|medium|high|ultra`, `BitrateMbps 0|8|15|25|50`, `QUALITY_META`, `BITRATE_OPTIONS`, `DEFAULT_PREFS` quality auto bitrate 0. Tab Gambar: chips Otomatis/Sedang/Tinggi/Ultra + Otomatis/8/15/25/50 Mbps + live stats. Callback `onQuality`/`onBitrate` ke host via 0x0A/0x0B.
+- **Host protocol 0x0A/0x0B** `host/src/input.rs` + `main.rs`: `VideoQuality(u8)` `VideoBitrate(u16)`, mapping quality auto→DEFAULT medium 8M high 15M ultra 25M, bitrate 0 auto else 1-50M.
+- **Web rtc codec** `web/src/rtc.ts`: `InputCodec.quality()` `bitrateMbps()` + `RtcSession.setQuality/setBitrate`.
+- **Hero 3D glossy morphing + floating motion blur** `web/src/style.css` + `App.tsx`: 3 orb radial glossy blur morph + 3 glass card 1080p60 LIVE 24ms NVENC backdrop blur motion blur, hero-glow-morph 9s, logo translateZ.
+- **Routing /n/:slug** `web/src/App.tsx`: `currentRoute()` handle `/n/:slug` share short link `news.xydesk.my.id/n/:slug` + `/n` → `/news`. Static routes /, /connect, /download, /legal, /news, /billing, /news/:slug, /n/:slug verified.
+- **Download ABI active** `web/src/App.tsx`: switcher active class dari localStorage `xydesk.download.arch`.
+
+### Diperbaiki
+- **NEWS_IMAGE_BLOCK domain** `web/src/App.tsx` + `desktop/app/page.tsx`: `app.xystudio.my.id` salah → `(app.)?xydesk.my.id` allow app.xydesk.my.id & xydesk.my.id, fix image block.
+- **device.ts** `web/src/device.ts`: `XyDesk-Windows-x64-Setup.exe` → `XyDesk-x64.exe` / `XyDesk-arm64.exe` match RELEASE_BASE.
+- **Panel sempit** `web/src/style.css`: `.spanel` min 460px calc(100%-108px) max 480 min 380 padding 20 gap 14 mobile 440px 92vw.
+- **Prefs migration** `web/src/App.tsx`: spread DEFAULT untuk localStorage lama tanpa quality/bitrate.
+
+### Build
+- `web` vite 8.2.1 37 modules 295.69kB gzip 93.22kB SUCCESS
+- `desktop` Next.js 15.1.6 4 static pages 15.8kB SUCCESS
+- `host` Cargo.toml 6.7.5 + protocol 0x0A/0x0B ready
+- `pubspec.yaml` 6.7.5+40, `web/package.json` 6.7.5, `desktop/package.json` 6.7.5
+
 ## Daftar versi (per file)
 
-- [6.7.5](./changelogs/6.7.5.md) - 2026-09-07 — Web Perfection: fix NEWS_IMAGE_BLOCK, quality Auto/Medium/High/Ultra + bitrate Auto web, spacious 380-480, hero 3D glossy morphing + floating motion blur, routing /n/:slug, download ABI
-- [6.7.4](./changelogs/6.7.4.md) - 2026-09-07 — License EN + Admin Auto + Simple Splash + Quality Auto/Medium/High/Ultra + Spacious Panel + Control Mapping + Realtime MS + Keyboard Picker
-- [6.7.3](./changelogs/6.7.3.md) - 2026-09-07 — Fix Android update check + Session Loading + Banner lock + Changelog split
-- [6.7.2](./changelogs/6.7.2.md) - 2026-09-07 — Virtual Display + Virtual Mic driver seperti AnyDesk + NSIS auto-installer + skip jika sudah ada
-- [6.7.1](./changelogs/6.7.1.md) - 2026-09-07 — Fix VM/RDP hitam + audio mati + UI desktop v3.0 + GDI fallback
-- [6.7.0](./changelogs/6.7.0.md) - 2026-09-07 — DXGI utama, audio 0x88890008 fix, auth desktop, pairguard
-- [6.6.1](./changelogs/6.6.1.md) - 2026-09-06 — Fix layar hitam saat diam + kredensial block
-- [6.6.0](./changelogs/6.6.0.md) - 2026-09-06 — Fix Android splash stuck + CSP web
+- [6.7.6](./changelogs/6.7.6.md) - 2026-09-07 — Hotfix CI format + TURN direct
+- [6.7.5](./changelogs/6.7.5.md) - 2026-09-07 — Web Perfection
+- [6.7.4](./changelogs/6.7.4.md) - 2026-09-07 — License EN + Admin Auto + Simple Splash + Quality + Spacious Panel
+- [6.7.3](./changelogs/6.7.3.md) - 2026-09-07 — Fix Android update + Session Loading + Banner lock + Changelog split
+- [6.7.2](./changelogs/6.7.2.md) - 2026-09-07 — Virtual Display + Virtual Mic + NSIS auto-installer
+- [6.7.1](./changelogs/6.7.1.md) - 2026-09-07 — Fix VM/RDP hitam + audio mati + UI desktop v3.0
+- [6.7.0](./changelogs/6.7.0.md) - 2026-09-07 — DXGI utama, audio 0x88890008 fix, auth desktop
+- [6.6.1](./changelogs/6.6.1.md) - 2026-09-06 — Fix layar hitam saat diam
+- [6.6.0](./changelogs/6.6.0.md) - 2026-09-06 — Fix splash stuck + CSP web
 - [6.5.4](./changelogs/6.5.4.md) - 2026-09-05
 - [6.5.3](./changelogs/6.5.3.md) - 2026-09-04
 - [6.5.2](./changelogs/6.5.2.md) - 2026-09-03
@@ -46,30 +81,3 @@ Kebijakan rilis:
 - [6.0.0](./changelogs/6.0.0.md) - 2026-08-01
 - [2.5.0](./changelogs/2.5.0.md) - 2026-07-20
 - [2.4.0](./changelogs/2.4.0.md) - 2026-07-15
-
-## [Belum terbit] → 6.7.5 DONE
-
-### Build Status 6.7.5
-- Web build: SUCCESS (vite 8.2.1, 37 modules)
-- Desktop build: SUCCESS (Next.js 15.1.6)
-- Host Rust: protocol 0x0A/0x0B added, ready
-- Pubspec: 6.7.5+40, package.json web 6.7.5, desktop 6.7.5
-
-## 6.7.4 DONE (prev)
-
-
-### Build Status
-- Next.js build: SUCCESS (6.7.4)
-- TS typecheck: SUCCESS
-- Host Rust: needs cargo (not in this env) — code ready, logic for Auto bitrate + quality preset done
-- Flutter: needs flutter SDK — code ready for quality, realtime ping, keyboard picker
-
-### All Founder Requests DONE 2026-09-07
-- License English + Admin Auto — DONE 6.7.4
-- Simple Splash watermark only — DONE 6.7.4
-- Quality Auto/Medium/High/Ultra + Bitrate Auto — DONE 6.7.4 (session screen & host)
-- Spacious Panel 380-480px — DONE 6.7.4
-- Control Mapping complete (keypad, joystick, gamepad, keyboard, mouse, touch) — DONE 6.7.4
-- Realtime MS detail PC — DONE 6.7.4
-- Keyboard picker — DONE 6.7.4 (XyDesk Full vs System IME + layout Split/Full/Compact + physical QWERTY auto-detect)
-- Prev round: Changelog split, driver auto-skip, Android update check, session loading, banner lock — DONE 6.7.2/6.7.3

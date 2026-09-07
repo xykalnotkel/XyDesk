@@ -59,7 +59,8 @@ class SessionPage extends ConsumerStatefulWidget {
 
 class _SessionPageState extends ConsumerState<SessionPage>
     with WidgetsBindingObserver {
-  bool _connecting = false; // FIX: no Loading Connection in SessionPage — connect check di ConnectPage
+  bool _connecting =
+      false; // FIX: no Loading Connection in SessionPage — connect check di ConnectPage
   bool _overlayVisible = true;
   bool _panelVisible = false;
   bool _keyboardVisible = false;
@@ -147,16 +148,30 @@ class _SessionPageState extends ConsumerState<SessionPage>
     // Kalau gagal, jangan pernah masuk session — pop dengan error.
     if (widget.initialTransport != null) {
       final s = widget.initialTransport!.state;
-      if (s.status == TransportStatus.negotiating || s.status == TransportStatus.connected) {
+      if (s.status == TransportStatus.negotiating ||
+          s.status == TransportStatus.connected) {
         _connecting = false;
-        DevLog.i('sesi', 'Transport existing sudah ${s.status} — langsung live');
-      } else if (s.status == TransportStatus.rejected || s.status == TransportStatus.peerOffline || s.status == TransportStatus.hostBusy || s.status == TransportStatus.error) {
+        DevLog.i(
+          'sesi',
+          'Transport existing sudah ${s.status} — langsung live',
+        );
+      } else if (s.status == TransportStatus.rejected ||
+          s.status == TransportStatus.peerOffline ||
+          s.status == TransportStatus.hostBusy ||
+          s.status == TransportStatus.error) {
         // Gagal — jangan masuk session screen, pop dengan error
-        DevLog.w('sesi', 'Transport existing gagal ${s.status} — tidak masuk session');
+        DevLog.w(
+          'sesi',
+          'Transport existing gagal ${s.status} — tidak masuk session',
+        );
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(s.message ?? 'Gagal terhubung ke ${widget.deviceName}')),
+              SnackBar(
+                content: Text(
+                  s.message ?? 'Gagal terhubung ke ${widget.deviceName}',
+                ),
+              ),
             );
             Navigator.of(context).pop();
           }
@@ -787,7 +802,12 @@ class _ConnectingView extends StatelessWidget {
     // Fallback — seharusnya tidak pernah dipanggil lagi
     return Scaffold(
       backgroundColor: AppColors.bgDark,
-      body: Center(child: Text('Menghubungkan ke $name...', style: const TextStyle(color: Colors.white70))),
+      body: Center(
+        child: Text(
+          'Menghubungkan ke $name...',
+          style: const TextStyle(color: Colors.white70),
+        ),
+      ),
     );
   }
 }

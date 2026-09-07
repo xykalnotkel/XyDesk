@@ -191,7 +191,10 @@ test('/turn-ice mengembalikan gabungan penyedia plus diagnostik', async () => {
 test('daftar penyedia terdokumentasi dan punya penanganan', () => {
   for (const p of TURN_PROVIDERS) {
     assert.ok(p.id && p.kind, 'penyedia butuh id dan kind');
-    assert.ok(['static', 'cloudflare', 'rest'].includes(p.kind), `kind tak dikenal: ${p.kind}`);
+    assert.ok(
+      ['static', 'direct', 'cloudflare', 'rest'].includes(p.kind),
+      `kind tak dikenal: ${p.kind}`,
+    );
   }
 });
 

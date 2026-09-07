@@ -37,17 +37,17 @@ use std::process::Command;
 
 #[cfg(target_os = "windows")]
 const VIRTUAL_MIC_KEYWORDS: &[&str] = &[
-    "cable",        // VB-CABLE
-    "voicemeeter",  // VoiceMeeter
-    "virtual",      // generic virtual
+    "cable",       // VB-CABLE
+    "voicemeeter", // VoiceMeeter
+    "virtual",     // generic virtual
     "vb-audio",
-    "vac",          // Virtual Audio Cable
+    "vac", // Virtual Audio Cable
 ];
 
 #[cfg(target_os = "windows")]
 const VIRTUAL_SPEAKER_KEYWORDS: &[&str] = &[
-    "cable input",          // VB-CABLE Input (render)
-    "voicemeeter input",    // VoiceMeeter Input
+    "cable input",       // VB-CABLE Input (render)
+    "voicemeeter input", // VoiceMeeter Input
     "virtual input",
 ];
 
@@ -125,7 +125,7 @@ pub fn is_driver_installed() -> bool {
 #[cfg(target_os = "windows")]
 pub fn get_render_device_id() -> Option<String> {
     let outputs = crate::audio::list_outputs_detailed();
-    
+
     // Prioritas 1: CABLE Input (VB-CABLE)
     for (id, name) in &outputs {
         if name.to_lowercase().contains("cable input") {
@@ -177,7 +177,9 @@ pub fn try_install_driver() -> Result<String, String> {
                 .output()
                 .map_err(|e| format!("gagal jalankan {exe}: {e}"))?;
             if output.status.success() {
-                return Ok(format!("VB-CABLE terpasang dari {exe} — restart audio service"));
+                return Ok(format!(
+                    "VB-CABLE terpasang dari {exe} — restart audio service"
+                ));
             }
         }
     }
@@ -212,7 +214,10 @@ pub fn ensure_virtual_mic() {
     );
 
     if status.installed {
-        println!("[xydesk-host] virtual audio driver ada — client mic akan di-render ke {}", status.render_target);
+        println!(
+            "[xydesk-host] virtual audio driver ada — client mic akan di-render ke {}",
+            status.render_target
+        );
         return;
     }
 

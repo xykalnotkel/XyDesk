@@ -93,8 +93,7 @@ class DeviceDetailPage extends ConsumerWidget {
             'Terakhir aktif',
             _ago(context, device.lastSeen),
           ),
-          if (device.pingMs != null)
-            _RealtimePing(pingMs: device.pingMs!),
+          if (device.pingMs != null) _RealtimePing(pingMs: device.pingMs!),
           _spec(
             context,
             LucideIcons.shieldCheck,
@@ -681,8 +680,8 @@ class _RealtimePingState extends State<_RealtimePing> {
         final color = _ping < 50
             ? AppColors.success
             : _ping < 150
-                ? AppColors.warning
-                : c.danger;
+            ? AppColors.warning
+            : c.danger;
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 9),
           child: Row(
@@ -692,15 +691,40 @@ class _RealtimePingState extends State<_RealtimePing> {
               Expanded(
                 child: Row(
                   children: [
-                    Text('Latensi', style: TextStyle(fontSize: 13, color: c.textMid)),
+                    Text(
+                      'Latensi',
+                      style: TextStyle(fontSize: 13, color: c.textMid),
+                    ),
                     const SizedBox(width: 6),
-                    Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                     const SizedBox(width: 4),
-                    Text('realtime', style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+                    Text(
+                      'realtime',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Text('$_ping ms', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.textHi, fontFeatures: const [FontFeature.tabularFigures()])),
+              Text(
+                '$_ping ms',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: c.textHi,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
             ],
           ),
         );

@@ -1044,7 +1044,11 @@ class _ControlsPanel extends StatelessWidget {
                   state.keyboardSource == KeyboardSource.system
                       ? 'System keyboard (IME) — for forms, search, fast typing. Supports physical keyboard via Bluetooth/USB.'
                       : 'XyDesk virtual keyboard (F1-F12, modifiers, split/full/compact) — for games & precise control. Supports physical keyboard mapping.',
-                  style: TextStyle(fontSize: 11.5, color: c.textLow, height: 1.5),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: c.textLow,
+                    height: 1.5,
+                  ),
                 ),
               ),
               const _CardGapLarge(),
@@ -1055,7 +1059,11 @@ class _ControlsPanel extends StatelessWidget {
                 onTap: () {
                   // Layout handled in VirtualKeyboard — show info
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Keyboard layout: Split (two thumbs), Full, Compact — change in virtual keyboard header')),
+                    const SnackBar(
+                      content: Text(
+                        'Keyboard layout: Split (two thumbs), Full, Compact — change in virtual keyboard header',
+                      ),
+                    ),
                   );
                 },
               ),
@@ -1066,7 +1074,11 @@ class _ControlsPanel extends StatelessWidget {
                 value: 'Auto-detected',
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Physical keyboard: QWERTY auto-detected, Bluetooth/USB supported')),
+                    const SnackBar(
+                      content: Text(
+                        'Physical keyboard: QWERTY auto-detected, Bluetooth/USB supported',
+                      ),
+                    ),
                   );
                 },
               ),
@@ -1703,7 +1715,13 @@ class _CardGapLarge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Founder request: panel sempit buat lega — increase gap
-    return SizedBox(height: 8, child: Divider(height: 1, color: context.c.textLow.withValues(alpha: 0.08)));
+    return SizedBox(
+      height: 8,
+      child: Divider(
+        height: 1,
+        color: context.c.textLow.withValues(alpha: 0.08),
+      ),
+    );
   }
 }
 
