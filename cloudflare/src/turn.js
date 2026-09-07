@@ -105,6 +105,13 @@ export const TURN_PROVIDERS = [
     userVar: 'TURN_STATIC_USER',
   },
   {
+    id: 'direct',
+    kind: 'direct',
+    urlsVar: 'TURN_DIRECT_URLS',
+    userVar: 'TURN_DIRECT_USERNAME',
+    credVar: 'TURN_DIRECT_CREDENTIAL',
+  },
+  {
     id: 'cloudflare',
     kind: 'cloudflare',
     secretVar: 'TURN_KEY_ID',
@@ -128,6 +135,8 @@ function configured(provider, env) {
   switch (provider.kind) {
     case 'static':
       return Boolean(env[provider.urlsVar] && env[provider.secretVar]);
+    case 'direct':
+      return Boolean(env[provider.urlsVar] && env[provider.userVar] && env[provider.credVar]);
     case 'cloudflare':
       return Boolean(env[provider.secretVar] && env[provider.secret2Var]);
     case 'rest': {
@@ -170,6 +179,16 @@ async function fetchProvider(provider, env, ttl, now, fetchImpl, timeoutMs) {
     });
     value = {
       iceServers: [{ urls, username: cred.username, credential: cred.credential }],
+    };
+  } else if (provider.kind === 'direct') {
+    const urls = String(env[provider.urlsVar])
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean);
+    const username = String(env[provider.userVar]).trim();
+    const credential = String(env[provider.credVar]).trim();
+    value = {
+      iceServers: [{ urls, username, credential }],
     };
   } else if (provider.kind === 'cloudflare') {
     const res = await fetchImpl(

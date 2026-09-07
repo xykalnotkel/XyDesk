@@ -80,6 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260907-OPERATOR-TURN | Operator - XyDesk Team | Backend / Edge | LAGI KERJA | Pasang TURN ExpressTurn direct dari kunci founder turn.txt — tambah provider direct di turn.js, deploy signaling live | 2026-09-07 |
 
 ## Antrean izin push
 
