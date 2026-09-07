@@ -2049,11 +2049,41 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   const connected = phase === 'connected';
   const canConnect = hostId.replace(/[\s-]/g, '').length === 9 && pin.length >= 6 && !['pairing', 'negotiating'].includes(phase);
 
+  // Fullscreen: tombol = toggle (masuk/keluar), dan state disinkronkan lewat
+  // fullscreenchange supaya Esc/batal dari browser juga tercermin di UI.
+  const [fullscreenOn, setFullscreenOn] = useState(false);
+  useEffect(() => {
+    const onFsChange = () => setFullscreenOn(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onFsChange);
+    // iOS Safari: fullscreen elemen <video> tidak memicu fullscreenchange di
+    // document; ia mengirim event webkit sendiri pada elemen videonya.
+    const v = videoRef.current;
+    const onBegin = () => setFullscreenOn(true);
+    const onEnd = () => setFullscreenOn(false);
+    v?.addEventListener('webkitbeginfullscreen', onBegin);
+    v?.addEventListener('webkitendfullscreen', onEnd);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      v?.removeEventListener('webkitbeginfullscreen', onBegin);
+      v?.removeEventListener('webkitendfullscreen', onEnd);
+    };
+  }, [connected]);
+
   const enterImmersive = useCallback(async () => {
     try {
-      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      if (!document.fullscreenElement) {
+        if (typeof document.documentElement.requestFullscreen === 'function') {
+          await document.documentElement.requestFullscreen();
+        } else {
+          // iOS Safari: Fullscreen API hanya tersedia pada elemen <video>.
+          const v = videoRef.current as
+            | (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
+            | null;
+          v?.webkitEnterFullscreen?.();
+        }
+      }
     } catch {
-      // iOS Safari tidak mendukung Fullscreen API pada elemen biasa.
+      // Permintaan fullscreen ditolak browser (mis. tanpa gestur pengguna).
     }
     try {
       const orientation = screen.orientation as ScreenOrientation & { lock?: (value: string) => Promise<void> };
@@ -2062,6 +2092,11 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       // Orientation lock bersifat best-effort dan tergantung browser.
     }
   }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void enterImmersive();
+  }, [enterImmersive]);
 
   const connect = async (isRetry = false) => {
     localStorage.setItem(LAST_HOST_KEY, hostId);
@@ -2478,7 +2513,8 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
           onTrackpad={toggleTrackpad}
           onClipboardPush={() => void clipboardPush()}
           onClipboardPull={clipboardPull}
-          onFullscreen={() => void enterImmersive()}
+          onFullscreen={toggleFullscreen}
+          fullscreenOn={fullscreenOn}
           panelOpen={panelOpen}
           onPanel={() => setPanelOpen((v) => !v)}
           onDisconnect={disconnect}

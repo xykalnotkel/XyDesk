@@ -116,6 +116,7 @@ export function SessionRail({
   onClipboardPush,
   onClipboardPull,
   onFullscreen,
+  fullscreenOn,
   panelOpen,
   onPanel,
   onDisconnect,
@@ -135,6 +136,7 @@ export function SessionRail({
   onClipboardPush: () => void;
   onClipboardPull: () => void;
   onFullscreen: () => void;
+  fullscreenOn: boolean;
   panelOpen: boolean;
   onPanel: () => void;
   onDisconnect: () => void;
@@ -179,7 +181,7 @@ export function SessionRail({
       <button type="button" className="srail-btn" title="Ambil dari papan klip PC" aria-label="Ambil dari papan klip PC" onClick={onClipboardPull}>
         <IcClipboardDown />
       </button>
-      <button type="button" className="srail-btn" title="Layar penuh" aria-label="Layar penuh" onClick={onFullscreen}>
+      <button type="button" className={`srail-btn${fullscreenOn ? ' on' : ''}`} title={fullscreenOn ? 'Keluar layar penuh' : 'Layar penuh'} aria-label={fullscreenOn ? 'Keluar layar penuh' : 'Layar penuh'} aria-pressed={fullscreenOn} onClick={onFullscreen}>
         <IcFullscreen />
       </button>
       <button type="button" className={`srail-btn${panelOpen ? ' on' : ''}`} title="Pengaturan sesi" aria-label="Pengaturan sesi" aria-pressed={panelOpen} onClick={onPanel}>
