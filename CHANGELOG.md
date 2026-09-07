@@ -10,10 +10,21 @@ Kebijakan rilis:
 - Setiap rilis **wajib punya artikel Berita** dengan changelog yang jelas dan
   panjang (lihat `news/README.md` untuk alur penerbitan).
 - **Berita dan changelog adalah dua hal berbeda.** File ini untuk tim dan
-  untuk catatan GitHub Release. Berita di `news.xystudio.my.id` ditulis untuk
+  untuk catatan GitHub Release. Berita di `news.xydesk.my.id` ditulis untuk
   pengguna: tanpa nama berkas, tanpa nomor versi di judul, tanpa daftar
   commit. Panduan lengkap nadanya ada di [`docs/NEWS_STYLE.md`](docs/NEWS_STYLE.md).
 - File ini otomatis dilampirkan ke GitHub Release oleh `release.yml`.
+
+## [Belum terbit]
+
+### Ditambahkan
+- **Audit operator pasca-6.7.0 (SESI-20260907-OPERATOR-ALL):** laporan lengkap `docs/AUDIT-2026-09-07-OPERATOR.md` — paritas tiga platform, status TURN, sisa domain, dan roadmap zero-copy.
+- **Roadmap 6.8.0:** `docs/OPERATOR-ROADMAP-6.8.0.md` — prioritas: ukur latency glass-to-glass, TURN static ExpressTurn, zero-copy DXGI→NVENC, per-app audio capture, signed installer.
+- **Tool verifikasi TURN live:** `tool/check_turn_live.js` — cek `/turn-ice` + `providers` + latency per penyedia, untuk dipakai sebelum/ sesudah isi secret.
+- **Perbaikan docs:** `news.xystudio.my.id` → `news.xydesk.my.id` di header kebijakan changelog (sisa migrasi domain).
+
+### Diperbaiki
+- **Papan koordinasi:** sesi aktif `SESI-20260907-OPERATOR-ALL` dikunci untuk kerja lintas area operator.
 
 ## [6.7.0] - 2026-09-07
 

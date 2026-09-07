@@ -80,6 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260907-OPERATOR-ALL | Operator - XyDesk Team | Operator (semua area) | LAGI KERJA | Audit operator pasca-6.7.0: paritas, TURN, zero-copy roadmap, cleanup docs, bahan rilis berikutnya | 2026-09-07 |
 
 ## Antrean izin push
 
