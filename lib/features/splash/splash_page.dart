@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/store.dart';
+import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
 
 class SplashPage extends ConsumerStatefulWidget {

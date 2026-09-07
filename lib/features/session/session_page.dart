@@ -59,8 +59,6 @@ class SessionPage extends ConsumerStatefulWidget {
 
 class _SessionPageState extends ConsumerState<SessionPage>
     with WidgetsBindingObserver {
-  bool _connecting =
-      false; // FIX: no Loading Connection in SessionPage — connect check di ConnectPage
   bool _overlayVisible = true;
   bool _panelVisible = false;
   bool _keyboardVisible = false;
@@ -150,7 +148,6 @@ class _SessionPageState extends ConsumerState<SessionPage>
       final s = widget.initialTransport!.state;
       if (s.status == TransportStatus.negotiating ||
           s.status == TransportStatus.connected) {
-        _connecting = false;
         DevLog.i(
           'sesi',
           'Transport existing sudah ${s.status} — langsung live',
@@ -176,12 +173,8 @@ class _SessionPageState extends ConsumerState<SessionPage>
             Navigator.of(context).pop();
           }
         });
-      } else {
-        _connecting = false;
-      }
-    } else {
-      _connecting = false;
-    }
+      } else {}
+    } else {}
     _restartIdleTimer();
 
     // Tangkap cuplikan "layar terakhir" secara berkala selama sesi live,
@@ -784,31 +777,6 @@ class _SessionPageState extends ConsumerState<SessionPage>
       ),
     );
     if (confirmed == true && mounted) _leaveSession();
-  }
-}
-
-/// DEPRECATED 2026-09-07 — _ConnectingView dihapus per permintaan Founder:
-/// "Session screen jangan Loading Connection di dalam — sebelum benar-benar
-/// terhubung jangan masuk session screen, kalau gagal jangan pernah masuk".
-/// Sekarang validasi pairing dilakukan di ConnectPage sebelum push SessionPage.
-/// SessionPage langsung live tanpa loading palsu. Placeholder _RemoteScreenPlaceholder
-/// menampilkan status transport asli (MENGHUBUNGI HOST, NEGOSIASI, dll) bila belum live,
-/// dan auto-pop dengan SnackBar bila status rejected/offline/busy/error.
-class _ConnectingView extends StatelessWidget {
-  const _ConnectingView({required this.name});
-  final String name;
-  @override
-  Widget build(BuildContext context) {
-    // Fallback — seharusnya tidak pernah dipanggil lagi
-    return Scaffold(
-      backgroundColor: AppColors.bgDark,
-      body: Center(
-        child: Text(
-          'Menghubungkan ke $name...',
-          style: const TextStyle(color: Colors.white70),
-        ),
-      ),
-    );
   }
 }
 

@@ -916,7 +916,19 @@ mod tests {
     async fn aksi_video_bitrate_di_luar_batas_ditolak() {
         let (addr, token) = spawn().await;
         let _g = crate::screen::test_support::BITRATE_LOCK.lock().unwrap();
-        for mbps in ["0", "999"] {
+        // 0 = Auto is allowed (Founder request 2026-09-07), only 999 out of range rejected
+        let (code, resp) = http_request(
+            addr,
+            "POST",
+            "/action",
+            &[(TOKEN_HEADER, &token)],
+            Some(r#"{"action":"video-bitrate","bitrate_mbps":0}"#),
+        );
+        assert_eq!(code, 200);
+        let v: serde_json::Value = serde_json::from_str(&resp).expect("JSON valid");
+        assert_eq!(v["ok"], true, "mbps=0 auto should be ok: {resp}");
+
+        for mbps in ["999"] {
             let body = format!(r#"{{"action":"video-bitrate","bitrate_mbps":{mbps}}}"#);
             let (code, resp) = http_request(
                 addr,

@@ -4,6 +4,7 @@ Setiap versi punya file sendiri biar ga numpuk (kebijakan Founder 2026-09-07). F
 
 ## Daftar versi (baru ke lama)
 
+- [6.7.7](./6.7.7.md) - 2026-09-07 — Fix CI flutter analyze unused + host bitrate 0 auto
 - [6.7.6](./6.7.6.md) - 2026-09-07 — Hotfix CI: format Dart + Rust + CHANGELOG + TURN direct kind
 - [6.7.5](./6.7.5.md) - 2026-09-07 — Web Perfection: fix NEWS_IMAGE_BLOCK, quality Auto/Medium/High/Ultra + bitrate Auto web, spacious 380-480, hero 3D glossy morphing + floating motion blur, routing /n/:slug, download ABI
 - [6.7.4](./6.7.4.md) - 2026-09-07 — License EN + Admin Auto + Simple Splash + Quality Auto/Medium/High/Ultra + Spacious Panel + Control Mapping + Realtime MS + Keyboard Picker

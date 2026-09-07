@@ -24,12 +24,20 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+## [6.7.7] - 2026-09-07
+
+> Build 42. Fix CI Build 34170387236 — flutter analyze unused + host bitrate 0 auto.
+
+### Diperbaiki
+- **CI Build 34170387236**: 2 job gagal — `Analisis Statis Flutter` (unused _connecting, _ConnectingView, missing tokens import) + `Uji Logika Host` (bitrate 0 auto should be allowed). Fixed, 122 tests pass.
+- Lihat detail di [6.7.7](./changelogs/6.7.7.md)
+
 ## [6.7.6] - 2026-09-07
 
 > Build 41. Hotfix CI — format Dart + Rust + CHANGELOG + TURN direct kind. Build 6.7.5 gagal 4 jobs, fixed.
 
 ### Diperbaiki
-- **CI Build 34169492118**: 4 job gagal — `Cek Lintas-Dokumen` (CHANGELOG top version), `Analisis Statis Flutter` (dart format 3 files), `Uji Logika Host Rust` (cargo fmt 9 files), `Uji Backend` (TURN direct kind). Semua fixed, `tool/check_version.py` lulus, `dart format` 0 changed, `cargo fmt --check` ok, `node --test` 94 pass.
+- **CI Build 34169492118**: 4 job gagal — `Cek Lintas-Dokumen`, `Analisis Statis Flutter`, `Uji Logika Host Rust`, `Uji Backend`. Fixed.
 - Lihat detail di [6.7.6](./changelogs/6.7.6.md)
 
 ## [6.7.5] - 2026-09-07
@@ -58,6 +66,7 @@ Kebijakan rilis:
 
 ## Daftar versi (per file)
 
+- [6.7.7](./changelogs/6.7.7.md) - 2026-09-07 — Fix CI flutter analyze + host bitrate 0 auto
 - [6.7.6](./changelogs/6.7.6.md) - 2026-09-07 — Hotfix CI format + TURN direct
 - [6.7.5](./changelogs/6.7.5.md) - 2026-09-07 — Web Perfection
 - [6.7.4](./changelogs/6.7.4.md) - 2026-09-07 — License EN + Admin Auto + Simple Splash + Quality + Spacious Panel
