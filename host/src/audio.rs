@@ -373,7 +373,7 @@ mod windows {
                                     // Karena windows crate tidak expose PropVariantToString, kita pakai unsafe baca pwszVal
                                     let pwsz = var.Anonymous.Anonymous.Anonymous.pwszVal;
                                     if !pwsz.is_null() && var.Anonymous.Anonymous.vt.0 == 31 {
-                                        let ws = windows::core::PWSTR(pwsz);
+                                        let ws = pwsz;
                                         if let Ok(str) = unsafe { ws.to_string() } {
                                             str
                                         } else {
@@ -390,7 +390,7 @@ mod windows {
                                             if !pwsz2.is_null()
                                                 && var2.Anonymous.Anonymous.vt.0 == 31
                                             {
-                                                let ws2 = windows::core::PWSTR(pwsz2);
+                                                let ws2 = pwsz2;
                                                 if let Ok(str2) = unsafe { ws2.to_string() } {
                                                     str2
                                                 } else {
@@ -454,8 +454,8 @@ mod windows {
                                 if let Ok(var) = props.GetValue(&friendly_key) {
                                     let pwsz = var.Anonymous.Anonymous.Anonymous.pwszVal;
                                     if !pwsz.is_null() && var.Anonymous.Anonymous.vt.0 == 31 {
-                                        let ws = windows::core::PWSTR(pwsz);
-                                        if let Ok(str) = ws.to_string() {
+                                        let ws = pwsz;
+                                        if let Ok(str) = unsafe { ws.to_string() } {
                                             str
                                         } else {
                                             id.clone()

@@ -756,8 +756,8 @@ pub fn is_rdp_session() -> bool {
     {
         unsafe {
             // SM_REMOTESESSION = 0x1000 (4096)
-            windows::Win32::UI::WindowsAndMessaging::GetSystemMetrics(
-                windows::Win32::UI::WindowsAndMessaging::SYSTEM_METRICS_INDEX(0x1000),
+            ::windows::Win32::UI::WindowsAndMessaging::GetSystemMetrics(
+                ::windows::Win32::UI::WindowsAndMessaging::SYSTEM_METRICS_INDEX(0x1000),
             ) != 0
         }
     }

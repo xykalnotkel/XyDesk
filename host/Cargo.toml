@@ -1,6 +1,6 @@
 [package]
 name = "xydesk-host"
-version = "6.7.9"
+version = "6.7.10"
 edition = "2021"
 description = "XyDesk host — capture & stream layar Windows via WebRTC"
 
@@ -42,6 +42,8 @@ axum = { version = "0.8", default-features = false, features = ["http1", "json",
 windows-capture = "2.0"
 # Injeksi input via SendInput (user-mode, tanpa driver) — lihat src/input.rs
 windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_System_Com",
   "Win32_UI_Input_KeyboardAndMouse",
   "Win32_UI_WindowsAndMessaging",
   "Win32_UI_Shell",
