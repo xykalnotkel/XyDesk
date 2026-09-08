@@ -4,6 +4,7 @@ Setiap versi punya file sendiri biar ga numpuk (kebijakan Founder 2026-09-07). F
 
 ## Daftar versi (baru ke lama)
 
+- [6.7.9](./6.7.9.md) - 2026-09-07 — Fix CI Windows cargo build 4 errors
 - [6.7.8](./6.7.8.md) - 2026-09-07 — Fix CI seamless Divider + clippy
 - [6.7.7](./6.7.7.md) - 2026-09-07 — Fix CI flutter analyze unused + host bitrate 0 auto
 - [6.7.6](./6.7.6.md) - 2026-09-07 — Hotfix CI: format Dart + Rust + CHANGELOG + TURN direct kind

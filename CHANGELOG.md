@@ -24,6 +24,14 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+## [6.7.9] - 2026-09-07
+
+> Build 44. Fix CI Build 34171262232 — Windows x64/arm64 cargo build errors (format, PropertiesSystem, GetSystemMetrics, Security/Threading).
+
+### Diperbaiki
+- **CI Build 34171262232**: 2 job gagal — `Windows x64` + `Windows arm64` cargo build release error 4 distinct: `screen.rs` format `{:.1}` no arg, `audio.rs` PropertiesSystem feature, `gdi.rs` GetSystemMetrics wrong module, `virtual_display.rs` Security/Threading features. Fixed.
+- Lihat detail di [6.7.9](./changelogs/6.7.9.md)
+
 ## [6.7.8] - 2026-09-07
 
 > Build 43. Fix CI Build 34170927923 — flutter seamless Divider + clippy single_element_loop.
@@ -74,6 +82,7 @@ Kebijakan rilis:
 
 ## Daftar versi (per file)
 
+- [6.7.9](./changelogs/6.7.9.md) - 2026-09-07 — Fix CI Windows cargo build 4 errors
 - [6.7.8](./changelogs/6.7.8.md) - 2026-09-07 — Fix CI seamless Divider + clippy
 - [6.7.7](./changelogs/6.7.7.md) - 2026-09-07 — Fix CI flutter analyze + host bitrate 0 auto
 - [6.7.6](./changelogs/6.7.6.md) - 2026-09-07 — Hotfix CI format + TURN direct

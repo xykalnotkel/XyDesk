@@ -246,9 +246,9 @@ impl Handle {
     fn baru_fallback(width: usize, height: usize) -> Result<Self, String> {
         use windows::Win32::Foundation::HWND;
         use windows::Win32::Graphics::Gdi::{
-            CreateCompatibleBitmap, CreateCompatibleDC, GetDC, GetSystemMetrics, BITMAPINFO,
-            BITMAPINFOHEADER, SYSTEM_METRICS_INDEX,
+            CreateCompatibleBitmap, CreateCompatibleDC, GetDC, BITMAPINFO, BITMAPINFOHEADER,
         };
+        use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SYSTEM_METRICS_INDEX};
 
         unsafe {
             let (w, h) = if width > 0 && height > 0 {

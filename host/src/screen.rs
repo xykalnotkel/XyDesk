@@ -453,11 +453,11 @@ pub fn spawn_frame_source() -> FrameSource {
                                 {
                                     if is_rdp_session() {
                                         eprintln!(
-                                            "[xydesk-host] PERINGATAN: tidak ada backend capture yang mengirim frame ({:.1} detik, armed) — RDP session terdeteksi! DXGI tidak jalan di RDP, tutup RDP = lock = hitam. Jalankan tscon $env:SESSIONNAME /dest:console lalu konek via XyDesk. Layar client akan hitam sampai ada desktop aktif"
+                                            "[xydesk-host] PERINGATAN: tidak ada backend capture yang mengirim frame (30+ detik, armed) — RDP session terdeteksi! DXGI tidak jalan di RDP, tutup RDP = lock = hitam. Jalankan tscon $env:SESSIONNAME /dest:console lalu konek via XyDesk. Layar client akan hitam sampai ada desktop aktif"
                                         );
                                     } else {
                                         eprintln!(
-                                            "[xydesk-host] PERINGATAN: tidak ada backend capture yang mengirim frame ({:.1} detik, armed) — layar client akan hitam"
+                                            "[xydesk-host] PERINGATAN: tidak ada backend capture yang mengirim frame (30+ detik, armed) — layar client akan hitam"
                                         );
                                     }
                                     log_semua_gagal = sekarang;
@@ -756,8 +756,8 @@ pub fn is_rdp_session() -> bool {
     {
         unsafe {
             // SM_REMOTESESSION = 0x1000 (4096)
-            windows::Win32::Graphics::Gdi::GetSystemMetrics(
-                windows::Win32::Graphics::Gdi::SYSTEM_METRICS_INDEX(0x1000),
+            windows::Win32::UI::WindowsAndMessaging::GetSystemMetrics(
+                windows::Win32::UI::WindowsAndMessaging::SYSTEM_METRICS_INDEX(0x1000),
             ) != 0
         }
     }
