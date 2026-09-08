@@ -24,6 +24,14 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+## [6.7.11] - 2026-09-07
+
+> Build 46. Fix CI Build 34249803875 — Windows x64/arm64 3 errors PROPERTYKEY not found.
+
+### Diperbaiki
+- **CI Build 34249803875**: 2 job gagal — `Windows x64` + `Windows arm64` 3 errors PROPERTYKEY not found in PropertiesSystem, actually in Foundation. Fixed.
+- Lihat detail di [6.7.11](./changelogs/6.7.11.md)
+
 ## [6.7.10] - 2026-09-07
 
 > Build 45. Fix CI Build 34245728600 — Windows x64/arm64 cargo build 8 errors (Win32 not found, PROPERTYKEY, PWSTR).
@@ -90,6 +98,7 @@ Kebijakan rilis:
 
 ## Daftar versi (per file)
 
+- [6.7.11](./changelogs/6.7.11.md) - 2026-09-07 — Fix CI Windows PROPERTYKEY Foundation
 - [6.7.10](./changelogs/6.7.10.md) - 2026-09-07 — Fix CI Windows cargo build 8 errors (Win32, PROPERTYKEY, PWSTR)
 - [6.7.9](./changelogs/6.7.9.md) - 2026-09-07 — Fix CI Windows cargo build 4 errors
 - [6.7.8](./changelogs/6.7.8.md) - 2026-09-07 — Fix CI seamless Divider + clippy
