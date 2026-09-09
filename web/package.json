@@ -1,7 +1,7 @@
 {
   "name": "xydesk-web",
   "private": true,
-  "version": "6.7.11",
+  "version": "6.7.12",
   "type": "module",
   "scripts": {
     "dev": "vite",

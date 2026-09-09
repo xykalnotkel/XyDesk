@@ -1,8 +1,7 @@
-//! Splash XyDesk — simple watermark only (Founder request 2026-09-07).
+//! Splash XyDesk — Modern luminous watermark with subtle ambient glow aura.
 //!
-//! Hanya logo watermark, tanpa wordmark, tanpa progress bar, tanpa setting.
-//! Pengaturan kualitas dll cukup di session screen & host.
-//! Durasi 800ms fade simple.
+//! Quiet Surface aesthetic: smooth micro-scale intro, subtle violet ambient
+//! bloom behind the clean 3D logo watermark, zero borders.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,7 +21,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 800),
+    duration: const Duration(milliseconds: 1100),
   )..forward();
 
   @override
@@ -55,20 +54,55 @@ class _SplashScene extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    // Simple fade only — watermark
-    final opacity = t.clamp(0.0, 1.0);
+    // Curved progression for buttery-smooth ease-out
+    final curveVal = Curves.easeOutCubic.transform(t.clamp(0.0, 1.0));
+    final opacity = (curveVal * 1.2).clamp(0.0, 1.0);
+    final scale = 0.88 + (0.12 * curveVal);
+    final auraScale = 0.75 + (0.35 * curveVal);
 
     return Scaffold(
       backgroundColor: c.bg,
       body: Center(
-        child: Opacity(
-          opacity: opacity,
-          child: Image.asset(
-            Img.logo,
-            width: 120,
-            height: 120,
-            fit: BoxFit.contain,
-          ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Soft glowing ambient bloom behind logo
+            Transform.scale(
+              scale: auraScale,
+              child: Opacity(
+                opacity: (opacity * 0.45).clamp(0.0, 1.0),
+                child: Container(
+                  width: 220,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        c.accent.withValues(alpha: 0.28),
+                        c.accent.withValues(alpha: 0.08),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Watermark Logo
+            Transform.scale(
+              scale: scale,
+              child: Opacity(
+                opacity: opacity,
+                child: Image.asset(
+                  Img.logo,
+                  width: 130,
+                  height: 130,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

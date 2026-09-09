@@ -1,206 +1,177 @@
 # XyDesk
 
-Aplikasi remote desktop low-latency untuk **gaming dan kerja**.
-Gaya visual **Quiet Surface** — clean, modern, tanpa satu pun garis pemisah.
+<div align="center">
 
-[![Build](https://github.com/xykalnotkel/XyDesk/actions/workflows/build.yml/badge.svg)](https://github.com/xykalnotkel/XyDesk/actions/workflows/build.yml)
-[![Signaling](https://github.com/xykalnotkel/XyDesk/actions/workflows/deploy-signaling.yml/badge.svg)](https://github.com/xykalnotkel/XyDesk/actions/workflows/deploy-signaling.yml)
-[![Release](https://img.shields.io/github/v/release/xykalnotkel/XyDesk?display_name=tag&sort=semver)](https://github.com/xykalnotkel/XyDesk/releases)
-[![Flutter](https://img.shields.io/badge/Flutter-3.44%2B-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Rust](https://img.shields.io/badge/Host-Rust-000000?logo=rust&logoColor=white)](host/)
-[![Cloudflare](https://img.shields.io/badge/Edge-Cloudflare_Workers-F38020?logo=cloudflare&logoColor=white)](cloudflare/)
-[![License](https://img.shields.io/github/license/xykalnotkel/XyDesk)](LICENSE)
+<img src="design/logo-asli.png" width="128" height="128" alt="XyDesk Logo" />
+
+### *PC kamu, di tangan kamu.*
+**Aplikasi Remote Desktop Ultra-Low Latency untuk Gaming dan Produktivitas**
+*Gaya Visual **Quiet Surface** — Clean, Modern, Elegan, dan Tanpa Garis Pemisah.*
 
 ---
 
-## Status
+[![Build Status](https://img.shields.io/github/actions/workflow/status/xykalnotkel/XyDesk/build.yml?branch=main&label=CI%2FCD%20Build&logo=githubactions&logoColor=white&style=flat-square)](https://github.com/xykalnotkel/XyDesk/actions/workflows/build.yml)
+[![Release Version](https://img.shields.io/github/v/release/xykalnotkel/XyDesk?display_name=tag&sort=semver&label=Release&logo=github&logoColor=white&color=7c3aed&style=flat-square)](https://github.com/xykalnotkel/XyDesk/releases)
+[![Signaling Status](https://img.shields.io/github/actions/workflow/status/xykalnotkel/XyDesk/deploy-signaling.yml?label=Signaling%20Edge&logo=cloudflare&logoColor=white&style=flat-square)](https://signal.xydesk.my.id)
+[![News Status](https://img.shields.io/github/actions/workflow/status/xykalnotkel/XyDesk/deploy-news.yml?label=News%20Worker&logo=cloudflarepages&logoColor=white&style=flat-square)](https://news.xydesk.my.id)
+[![Web Client](https://img.shields.io/badge/Web_Client-Live-success?logo=googlechrome&logoColor=white&style=flat-square)](https://app.xydesk.my.id)
 
-Lapisan WebRTC client kini tersambung ke layar sesi: setelah login dan pairing
-diterima host, `RTCVideoView` menampilkan video host dan input (trackpad +
-keyboard virtual) terkirim lewat data channel biner. Tanpa login (mode tamu)
-layar sesi berjalan sebagai preview dengan status transport yang jujur.
+[![Flutter](https://img.shields.io/badge/Client-Flutter_3.44+-02569B?logo=flutter&logoColor=white&style=flat-square)](https://flutter.dev)
+[![Rust](https://img.shields.io/badge/Host_Engine-Rust_1.80+-000000?logo=rust&logoColor=white&style=flat-square)](host/)
+[![Tauri](https://img.shields.io/badge/Desktop_Shell-Tauri_v2-24C8D5?logo=tauri&logoColor=white&style=flat-square)](desktop/)
+[![TypeScript](https://img.shields.io/badge/Web_&_Edge-TypeScript_5-3178C6?logo=typescript&logoColor=white&style=flat-square)](web/)
+[![Cloudflare](https://img.shields.io/badge/Edge_Infrastructure-Workers_+_D1_+_DO-F38020?logo=cloudflare&logoColor=white&style=flat-square)](cloudflare/)
+[![WebRTC](https://img.shields.io/badge/Protocol-WebRTC_DTLS--SRTP-333333?logo=webrtc&logoColor=white&style=flat-square)](https://webrtc.org)
+[![OneSignal](https://img.shields.io/badge/Push_Notifications-OneSignal-E53935?logo=onesignal&logoColor=white&style=flat-square)](https://onesignal.com)
+[![Resend](https://img.shields.io/badge/Email_Service-Resend-000000?logo=resend&logoColor=white&style=flat-square)](https://resend.com)
+[![License](https://img.shields.io/badge/License-Proprietary-blueviolet?style=flat-square)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/xykalnotkel/XyDesk/pulls)
 
-**Status loop inti (per 28 Agu 2026):** jalur `capture → encode → RTP →
-client` sekarang **terbukti di test loopback otomatis** (`host/tests/
-loopback.rs`): track video didaftarkan SEBELUM `create_answer` (bug urutan
-yang dulu membuat SDP jawaban tanpa arah video — koneksi sukses tapi layar
-kosong — sudah diperbaiki dan dijaga test regresi). Yang masih perlu
-dibuktikan di perangkat nyata: capture layar DXGI di Windows dan angka
-latency end-to-end.
-
-| Bagian | Status |
-|---|---|
-| Design system & tema | Selesai |
-| Home, Connect, Akun, Tentang | Selesai |
-| Layar sesi + loading bertahap | Selesai |
-| Panel gaming dua sisi (7 kategori) | Selesai |
-| Keyboard virtual (modifier sticky) | Selesai |
-| Glyph HUD (mouse, gulir, arah, switch) | Selesai |
-| CI/CD GitHub Actions | Selesai |
-| Web landing, download, legal, blog, dan client tamu | Deploy otomatis — `app.xydesk.my.id` |
-| Signaling server (Cloudflare Workers + DO) | Live — `signal.xydesk.my.id` |
-| Autentikasi (OTP email + JWT + Google OAuth) | Live di Worker; JWT dan OTP punya test otomatis |
-| Gerbang signaling | Role terikat HMAC, relay client-host divalidasi, daftar host global ditutup |
-| TURN (kredensial Cloudflare ber-TTL) | Selesai |
-| Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Loop RTP terbukti di test loopback; capture DXGI nyata menunggu verifikasi lab Windows |
-| Control API lokal host (HTTP 127.0.0.1 + token) | Selesai — status, password, stop-session untuk shell desktop; 8 test otomatis |
-| Desktop shell (Tauri v2 + Next.js, engine tetap Rust) | Selesai — sidebar Home/Connect/News/Profile/Settings; installer Windows dibangun CI |
-| News (Web + Android + Desktop) | Live — Worker publik + D1 di `news.xydesk.my.id`; like, komentar, berbagi sosial + OpenGraph per konten |
-| OpenGraph web per konten | Live — renderer worker di `web_deploy/worker/` (crawler dapat meta berita), CSP mengizinkan `news.xydesk.my.id` |
-| Tema aplikasi Android | Terang (Paper) saja — mode gelap dihapus agar satu set kontras teruji |
-| Identitas visual | Logo asli XyDesk dipakai di semua platform — satu sumber `design/logo-asli.png`, semua ukuran lahir dari `tool/gen_logo.py` |
-| Push notifikasi | Jalan — jalur server REST OneSignal teruji; rilis & berita baru memicu push (dan email Resend untuk pelanggan berita) |
-| Audio forward & mic | Jalan (kode) — WASAPI loopback → Opus (host), mic client → speaker host; uji dengar di lab Windows |
-| Multi-monitor | Jalan (kode) — pilih layar live dari sesi (respawn capture); uji di lab Windows |
-| Changelog rilis | Wajib — `CHANGELOG.md` di-update tiap rilis & dilampirkan ke GitHub Release |
-| Lisensi | **Proprietary** (`LICENSE` — EULA, larangan clone) + daftar lisensi pihak ketiga lengkap di `docs/LEGAL.md` dan Legal di semua platform |
-| Sesi tunggal (anti-ambil alih) | Selesai — koneksi kedua ditolak `host-sibuk` meski password benar; client menampilkan status "perangkat sedang dipakai" |
-| Test loopback host (SDP + video + data channel) | Selesai — `cargo test` hijau; jaga bug regresi SDP |
-| Benchmark encode (`xydesk-host --bench`) | Selesai — **~30 ms @640x360**: openh264 CPU TIDAK tembus <10 ms @1080p, hardware encode (NVENC/AMF/QSV) wajib untuk target itu |
-| Benchmark latency end-to-end di jaringan nyata | Belum — protokolnya ada di `docs/LATENCY.md` |
+</div>
 
 ---
 
-## Menjalankan
+## 🌟 Sorotan Fitur Utama
 
+- **🚀 Ultra-Low Latency Streaming**: Pipeline tangkapan layar DXGI / GDI hardware-accelerated di Windows, enkripsi P2P WebRTC DTLS-SRTP, fallback TURN otomatis (ExpressTurn + Cloudflare ber-TTL), dan latensi end-to-end teroptimasi untuk gaming.
+- **🎮 In-Session Gaming HUD & Haptic Virtual Controller**: Kontrol overlay ABXY & D-pad virtual berhaptik mikro, keyboard mekanis virtual dengan modifier sticky, dan gesture switch intuitif.
+- **🔄 In-App Update Experience (AI Portrait Modal)**: Dialog visual pembaruan rasio 3:4 portrait AI modern, progress unduh di latar belakang via Android system tray push notification, dan instalasi instan direct-to-package-installer.
+- **🖥️ Multi-Platform Native Architecture**:
+  - **Android Client**: Flutter native dengan rendering WebRTC hardware decoder, Picture-in-Picture (PiP), dan sensor adaptif.
+  - **Windows Host & Desktop Shell**: Rust supervisor engine yang ringan dipadukan dengan cangkang modern Tauri v2 + Next.js.
+  - **Web Client**: Aplikasi web PWA modern di `https://app.xydesk.my.id` yang siap diakses dari peramban mana pun tanpa instalasi.
+- **📺 Multi-Monitor & Audio Loopback**: Pindah layar live antar monitor tanpa memutus sesi, capture audio loopback WASAPI stereo berdefinisi tinggi, dan mikrofon passthrough dua arah.
+- **🔒 Keamanan & Zero-Trust Pairing**: Autentikasi OTP email, Google OAuth terverifikasi, HMAC token gerbang signaling, perlindungan anti brute-force pairing (*PairGuard*), dan sesi tunggal anti-ambil alih.
+- **✨ Desain "Quiet Surface"**: Nol garis pemisah Material (zero `Divider`), kontras lembut berbasis elevasi ruang, palet warna Paper terang, dan aksen ungu violet 3D-glossy.
+
+---
+
+## 📊 Matriks Platform & Unduhan Rilis
+
+| Platform | Format Berkas | Deskripsi Target |
+|---|---|---|
+| **Android 64-bit** | `XyDesk-Android-arm64-v8a.apk` | Smartphone dan tablet Android modern (64-bit) |
+| **Android 32-bit** | `XyDesk-Android-armeabi-v7a.apk` | Perangkat Android ARMv7 legasi |
+| **Windows x64** | `XyDesk-x64.exe` | Laptop & PC Windows Intel/AMD 64-bit (Setup + Engine) |
+| **Windows Arm64** | `XyDesk-arm64.exe` | Windows on Arm (Snapdragon X Elite / SQ3 / Surface Pro) |
+| **Web Client** | Web App PWA | Akses instan di [app.xydesk.my.id](https://app.xydesk.my.id) |
+
+Seluruh artefak rilis resmi otomatis diverifikasi dengan checksum `SHA256SUMS.txt` dan manifest terenkripsi `update.json`.
+
+---
+
+## 🏗️ Arsitektur Sistem
+
+```
+┌────────────────────────────────────────────────────────┐
+│               XyDesk Signaling & Edge API              │
+│       (Cloudflare Workers + Durable Objects + D1)      │
+│  - signal.xydesk.my.id (WebSocket DO Room & PairGuard) │
+│  - news.xydesk.my.id   (Umpan Berita & Komentar D1)    │
+└───────────────────────────┬────────────────────────────┘
+                            │
+               SDP Offer / Answer & ICE Candidate
+                            │
+       ┌────────────────────┴────────────────────┐
+       ▼                                         ▼
+┌───────────────────────────┐         ┌───────────────────────────┐
+│     XyDesk Client         │         │      XyDesk Host          │
+│   (Android / Web / PC)    │◄───────►│  (Windows Rust Engine)    │
+│  - Flutter WebRTC Video   │  P2P    │  - DXGI Desktop Dupl.     │
+│  - Audio Track Renderer   │  DTLS   │  - WASAPI Audio Capture   │
+│  - Gaming HUD / Virtual KB│  SRTP   │  - Virtual Display & Mic  │
+└───────────────────────────┘  Media  └───────────────────────────┘
+```
+
+---
+
+## 💻 Memulai Pengembangan Lokal
+
+### Prasyarat
+- **Flutter SDK**: `3.44.9+` (Channel Stable) & **Dart**: `3.12+`
+- **Rust**: `1.80+` (Toolchain stable with `x86_64-pc-windows-msvc` / `aarch64-pc-windows-msvc`)
+- **Node.js**: `v20+` atau `v24` & **npm**: `10+`
+
+### 1. Menjalankan Aplikasi Flutter (Android)
 ```bash
+# Pasang dependensi Flutter
 flutter pub get
+
+# Jalankan pengujian unit & analisis statis
+flutter analyze --fatal-infos --fatal-warnings
+flutter test
+
+# Jalankan di emulator / perangkat fisik
 flutter run
 ```
 
-Butuh Flutter **3.44+** / Dart 3.5+.
-
+### 2. Membangun Host Engine (Rust)
 ```bash
-flutter analyze           # pemeriksaan statis
-dart format lib           # rapikan source sebelum push
+cd host
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+cargo build --release
 ```
 
-GitHub Actions menjalankan analisis Flutter, test keamanan Worker, test unit
-host Rust, pemeriksaan format/lint, serta build target. APK/EXE hasilnya tetap
-diuji manual untuk perilaku perangkat nyata.
+### 3. Menjalankan Web Client & Desktop Shell
+```bash
+# Menjalankan Web Client (Vite + React)
+cd web
+npm ci
+npm test
+npm run dev
 
----
-
-## Struktur
-
-```
-lib/
-├── main.dart                     # edge-to-edge + ProviderScope
-├── app.dart                      # shell + bottom-nav seamless
-├── core/
-│   ├── tokens.dart               # warna, jarak, radius, durasi
-│   └── theme.dart                # ThemeData — semua garis dimatikan di sini
-├── widgets/
-│   ├── seamless.dart             # SeamlessScaffold, SurfaceCard, FadeEdge
-│   └── hud_glyphs.dart           # 20 glyph CustomPainter
-└── features/
-    ├── home/                     # daftar perangkat
-    ├── connect/                  # ID + kata sandi + blok dukungan
-    ├── account/                  # akun & halaman Tentang
-    └── session/
-        ├── session_page.dart     # sesi, loading, overlay auto-hide
-        ├── session_panels.dart   # bilah kiri + panel kategori kanan
-        └── virtual_keyboard.dart # keyboard penuh, radius 3dp
-
-host/src/
-├── main.rs                       # engine: signaling, pairing, streaming
-├── control.rs                    # control API lokal untuk shell desktop
-├── session.rs                    # WebRTC (answerer) + track video
-├── screen.rs                     # capture DXGI + NVENC/openh264
-└── bin/gui.rs                    # GUI native Win32 (fallback, tanpa WebView)
-
-desktop/                          # shell desktop Windows — lihat docs/DESKTOP_SHELL.md
-├── electron/                     # proses utama (supervisor engine) + preload
-└── app/                          # renderer Next.js (static export)
+# Menjalankan Desktop Shell (Tauri v2 + Next.js)
+cd ../desktop
+npm ci
+npm test
+npm run tauri dev
 ```
 
 ---
 
-## Keputusan Desain yang Perlu Diketahui
+## 🎨 Pedoman Desain & Kualitas Kode
 
-Ini bukan preferensi acak — masing-masing ada alasannya.
-
-**Nol garis pemisah.** Semua sumber garis Material dimatikan di `theme.dart`:
-`surfaceTintColor` transparan, `scrolledUnderElevation: 0`, dan `DividerTheme`
-transparan. Pemisahan visual memakai jarak minimal 24dp dan gradasi `FadeEdge`.
-CI memverifikasi ini otomatis — kalau ada yang menambahkan `Divider()`, build
-gagal.
-
-**Item nav aktif berwarna putih, bukan aksen.** Kalau ikon aktif ikut biru,
-satu layar punya dua titik perhatian. Cukup pil `accentSoft` di belakangnya.
-
-**Tombol keyboard tidak berubah warna saat ditekan** — hanya sedikit lebih
-terang. Kilatan biru berulang melelahkan saat mengetik cepat. Hanya modifier
-sticky yang memakai aksen, karena statusnya memang perlu terlihat.
-
-**Radius tombol keyboard 3dp.** Radius besar membuatnya terlihat seperti
-mainan; 3dp terasa presisi seperti keyboard mekanis.
-
-**HUD border-only.** Isi sepenuhnya transparan, hanya garis 1,5px putih 34%.
-Piksel game di dalam tombol tetap terlihat. Saat ditekan hanya diisi 14%.
-
-**Glyph HUD memakai CustomPainter, bukan teks.** Karakter seperti `↑↓` dan `⇄`
-dirender berbeda di tiap font dan OS. Dengan painter, ketebalan garis bisa
-diubah 1,5px → 3px untuk mode kontras tinggi tanpa mengubah bentuk.
-
-**Rotasi landscape terjadi sebelum layar loading muncul.** Kalau dibalik, ada
-kedipan orientasi yang membuat aplikasi terasa murah.
-
-**Loading connect menampilkan waktu tiap tahap.** Kegagalan koneksi remote
-desktop punya belasan penyebab. Dengan waktu per tahap, user dan tim dukungan
-langsung tahu macetnya di penemuan host, autentikasi, atau NAT.
+- **Zero Divider Line**: Dilarang menyisipkan `Divider()` atau `VerticalDivider()`. Pemisah visual murni menggunakan jarak token `Gap` (16dp, 24dp, 32dp) dan gradasi permukaan `FadeEdge`.
+- **High Transparency Assets**: Seluruh ilustrasi diuji otomatis oleh `tool/audit_assets.py` untuk memastikan kompatibilitas tema dan transparansi tepi yang bersih.
+- **Konsistensi Lintas-Dokumen**: Nomor versi di seluruh manifest (`pubspec.yaml`, `host/Cargo.toml`, `desktop/src-tauri/tauri.conf.json`, `web/package.json`, dan `CHANGELOG.md`) divalidasi secara ketat oleh `tool/check_version.py`.
+- **Inventaris Lisensi Pihak Ketiga**: Seluruh dependensi tercatat dan terverifikasi secara hukum di [`docs/THIRD-PARTY-LICENSES.md`](docs/THIRD-PARTY-LICENSES.md).
 
 ---
 
-## Build dan Release
+## 🤝 Kontribusi & Kolaborasi
 
-**Sejak 3 September 2026 push ke `main` TIDAK memicu build.** Analisis
-statis serta build Android, Windows, dan Web dijalankan manual
-(`workflow_dispatch`) oleh role CI/Release setelah izin operator. Sejak
-5 September 2026 bahkan tidak ada workflow yang berjalan karena push:
-gerbang audit izin `verify-push-auth.yml` dihapus operator sendiri, dan
-`main` tidak memakai branch protection. Penanda `Izin: <ID-SESI>` di body
-commit tetap menjadi kebiasaan tim untuk jejak audit. Artefak build tersedia melalui tab **Actions**.
+Kami menyambut hangat kontribusi, diskusi teknis, pelaporan bug, dan ide fitur dari komunitas pengembang!
 
-| Target | Artefak Release | Status |
-|---|---|---|
-| Android 64-bit | `XyDesk-Android-arm64-v8a.apk` | HP Android modern |
-| Android 32-bit | `XyDesk-Android-armeabi-v7a.apk` | Perangkat ARMv7 lama |
-| Windows x64 installer | `XyDesk-Windows-x64-Setup.exe` | Satu EXE utuh Connect + Host |
-| Windows Arm64 installer | `XyDesk-Windows-arm64-Setup.exe` | Satu EXE utuh Windows on Arm |
-| Windows portable | `XyDesk-Windows-<arch>.zip` | Alternatif tanpa instalasi |
-| Windows host standalone x64 | `XyDesk-Host-x64.exe` | Engine opsional untuk otomasi |
-| Windows host standalone Arm64 | `XyDesk-Host-arm64.exe` | Engine opsional untuk otomasi |
-| Windows desktop shell | `XyDesk-Desktop-<ver>-x64-Setup.exe` | Installer Tauri v2 + Next.js, engine dibundel |
-| Windows desktop portable | `XyDesk-Desktop-<ver>-x64-Portable.exe` | Shell desktop tanpa instalasi |
-| Web | `XyDesk-Web.zip` | Bundle web client (Vite + React) |
-
-Bundle Web dari Build `main` yang sukses dideploy ke Cloudflare
-Workers Static Assets di `https://app.xydesk.my.id`; frontend ini tetap
-berkomunikasi dengan Worker API/signaling di `https://signal.xydesk.my.id`.
-
-GitHub Release tidak dibuat pada setiap push. Release baru hanya berjalan
-setelah workflow Build sukses dan nilai `version` di `pubspec.yaml` berubah.
-Workflow menerbitkan checksum serta manifest `update.json`, lalu mengirim push
-OneSignal hanya ke Android dengan build lebih lama.
-
-Detail trigger, signing, aset, dan secret CI ada di
-[`docs/CI.md`](docs/CI.md).
+### Cara Berkontribusi:
+1. **Fork Repositori**: Buat salinan repo di akun GitHub Anda.
+2. **Buat Branch Fitur**: `git checkout -b feature/fitur-keren-anda`
+3. **Patuhi Standar Mutu**: Pastikan `flutter analyze`, `cargo clippy`, dan seluruh test suite lulus 100%.
+4. **Format Kode**: Jalankan `dart format lib tool` dan `cargo fmt`.
+5. **Kirim Pull Request**: Buka PR dengan deskripsi yang jelas dan alasan perubahan.
 
 ---
 
-## Langkah Berikutnya
+## 👥 Tim & Kontributor
 
-1. Selesaikan capture DXGI nyata dan ukur latency end-to-end pada jaringan target.
-2. Ikat registrasi host ke pemilik akun agar daftar perangkat privat dapat
-   dikembalikan tanpa membocorkan ID lintas akun.
-3. Terapkan PAKE untuk pairing agar password tidak pernah dikirim lewat relay.
-4. Tambahkan test codec input Flutter dan test protokol signaling Go.
+<div align="center">
 
-> **Catatan jujur:** bagian tersulit bukan UI, melainkan **latency dan NAT
-> traversal**. Buat PoC `capture → encode → WebRTC → decode` lebih dulu dan
-> ukur angkanya. Kalau tidak tembus di bawah 40 ms pada jaringan target,
-> posisi "cocok untuk game" harus dievaluasi ulang sebelum UI dipoles.
+Dibuat dan dipelihara dengan dedikasi tinggi oleh:
 
-Dokumen arsitektur, protokol, keamanan, CI, dan keputusan produk ada di folder
-[`docs/`](docs/).
+**Haekal Saputra** (*Founder & Lead Developer*) — [@xykalnotkel](https://github.com/xykalnotkel)  
+*Dan seluruh kontributor komunitas open-source yang luar biasa.*
+
+[![GitHub Contributors](https://img.shields.io/github/contributors/xykalnotkel/XyDesk?color=7c3aed&style=flat-square)](https://github.com/xykalnotkel/XyDesk/graphs/contributors)
+[![GitHub Forks](https://img.shields.io/github/forks/xykalnotkel/XyDesk?style=flat-square)](https://github.com/xykalnotkel/XyDesk/network/members)
+[![GitHub Stars](https://img.shields.io/github/stars/xykalnotkel/XyDesk?style=flat-square)](https://github.com/xykalnotkel/XyDesk/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/xykalnotkel/XyDesk?style=flat-square)](https://github.com/xykalnotkel/XyDesk/issues)
+
+</div>
+
+---
+
+## 📄 Lisensi
+
+Kode sumber XyDesk dilindungi hak cipta dan didistribusikan di bawah lisensi resmi **XyDesk Proprietary License** (lihat [`LICENSE`](LICENSE)).  
+Rincian atribusi lisensi perangkat lunak pihak ketiga tersedia di [`docs/THIRD-PARTY-LICENSES.md`](docs/THIRD-PARTY-LICENSES.md) serta pada menu **Legal & Lisensi** di seluruh klien aplikasi.

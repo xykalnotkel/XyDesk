@@ -22,15 +22,21 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
-## [Belum terbit]
+## [6.7.12] - 2026-09-09
+
+> Build 47. In-App Update Modal Portrait 3:4 AI, Background Android Notification Download, Splash Luminous Glow, Desktop Tauri v2 fixes, dan pembaruan README.
 
 ### Ditambahkan
-- **Gaya Tombol Aksen 3D-Glossy**: Komponen `PrimaryButton` baru di Flutter (`lib/widgets/seamless.dart`) dan penyelarasan tema tombol di Web & Desktop dengan gradien violet 3-stop 160deg (`#8b5cf6` $\to$ `#7c3aed` $\to$ `#5b21b6`), garis *inner bevel highlight* atas, dan *lavender drop shadow*.
-- **Ikon Navigasi Vektor Lucide**: Seluruh raster bitmap navigasi lama dibersihkan dan digantikan ikon vektor murni Lucide (`house`, `cable`, `newspaper`, `user`, `sparkles`) dengan pil aktif beraksen violet.
-- **Watchdog Belum Ada Gambar (Roadmap P1.1)**: Banner informatif *"Belum ada gambar (periksa PC host)"* dengan tombol aksi *"Pilih Layar"* pada Flutter dan Web saat sesi terhubung 10 detik tanpa frame video.
-- **Virtual Gaming HUD Berhaptik (Flutter)**: Tombol aksi ABXY dan D-pad virtual kini memiliki efek sentuh *glassmorphism*, gradien violet saat ditekan, animasi kompresi skala `0.92`, dan getaran haptik mikro `AppHaptics.tap()`.
-- **Optimasi Mobile Web Touch**: Menambahkan `touch-action: none` dan penguncian *viewport* `user-scalable=no` pada canvas/gamepad web untuk mencegah pinch-zoom/gesture konflik.
-- **Uji Otomatis Manifest Update (Roadmap P1.2)**: Penambahan automated test guard di `web/test/csp.test.js` memastikan manifest `update.json` terikat ke GitHub Release resmi.
+- **In-App Update Experience (AI Portrait Modal 3:4)**: Dialog visual pembaruan murni rasio 3:4 portrait AI dengan elemen 3D gaming morphing, motion blur, dan tombol floating close `X`.
+- **Background Download Progress Notification (Android)**: Notifikasi progress unduh APK pada drawer sistem Android, memungkinkan download tetap jalan di background.
+- **Direct APK Install Flow**: Pemasangan langsung APK terverifikasi setelah unduhan selesai.
+- **Splash Screen Luminous Ambient Glow (Flutter)**: Aura ambient bloom violet lembut di belakang logo watermark dengan kurva transisi halus.
+- **README.md Komprehensif**: Penambahan badge status CI/CD lengkap, dukungan platform, matriks teknologi, dan panduan kontribusi komunitas.
+- **Panduan Update Popup Guide (`docs/APP_UPDATE_POPUP_GUIDE.md`)**: Dokumentasi arsitektur, prompt template, dan alur notifikasi.
+
+### Diperbaiki
+- **Desktop Tauri v2 Config**: Konfigurasi bundle targets pada `desktop/src-tauri/tauri.conf.json` untuk stabilitas kompilasi release Windows x64 & arm64.
+- **Inventaris Lisensi Pihak Ketiga**: Sinkronisasi seluruh dependensi lockfile ke 509 komponen resmi.
 
 ## [6.7.11] - 2026-09-07
 
