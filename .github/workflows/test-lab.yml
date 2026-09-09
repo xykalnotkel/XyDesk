@@ -215,9 +215,12 @@ jobs:
           Write-Host '--- Audio service ---'
           Get-Service Audiosrv | Format-List Name,Status,StartType
           try { Start-Service Audiosrv -ErrorAction Stop; Write-Host 'Audiosrv started' } catch { Write-Host "Audiosrv start gagal: $_" }
-          # Deteksi RDP session (akar hitam di lab)
-          $isRdp = [System.Windows.Forms.SystemInformation]::TerminalServerSession
+          # Deteksi RDP session (akar hitam di lab). Add-Type DULU: referensi
+          # tipe sebelum assembly dimuat = InvalidOperation yang mematikan step
+          # (lab 9 Sep). try/catch agar cek informatif ini tak pernah fatal.
           Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+          $isRdp = 'unknown'
+          try { $isRdp = [System.Windows.Forms.SystemInformation]::TerminalServerSession } catch {}
           Write-Host "Is RDP session (current shell): $isRdp"
           Write-Host 'SM_REMOTESESSION via GetSystemMetrics akan dicek host Rust v6.7.1+ (log GDI fallback)'
           # Catatan untuk XyDesk host v6.7.1+:
