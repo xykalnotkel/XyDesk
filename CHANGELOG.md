@@ -24,6 +24,14 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Ditambahkan
+- **Gaya Tombol Aksen 3D-Glossy**: Komponen `PrimaryButton` baru di Flutter (`lib/widgets/seamless.dart`) dan penyelarasan tema tombol di Web & Desktop dengan gradien violet 3-stop 160deg (`#8b5cf6` $\to$ `#7c3aed` $\to$ `#5b21b6`), garis *inner bevel highlight* atas, dan *lavender drop shadow*.
+- **Ikon Navigasi Vektor Lucide**: Seluruh raster bitmap navigasi lama dibersihkan dan digantikan ikon vektor murni Lucide (`house`, `cable`, `newspaper`, `user`, `sparkles`) dengan pil aktif beraksen violet.
+- **Watchdog Belum Ada Gambar (Roadmap P1.1)**: Banner informatif *"Belum ada gambar (periksa PC host)"* dengan tombol aksi *"Pilih Layar"* pada Flutter dan Web saat sesi terhubung 10 detik tanpa frame video.
+- **Virtual Gaming HUD Berhaptik (Flutter)**: Tombol aksi ABXY dan D-pad virtual kini memiliki efek sentuh *glassmorphism*, gradien violet saat ditekan, animasi kompresi skala `0.92`, dan getaran haptik mikro `AppHaptics.tap()`.
+- **Optimasi Mobile Web Touch**: Menambahkan `touch-action: none` dan penguncian *viewport* `user-scalable=no` pada canvas/gamepad web untuk mencegah pinch-zoom/gesture konflik.
+- **Uji Otomatis Manifest Update (Roadmap P1.2)**: Penambahan automated test guard di `web/test/csp.test.js` memastikan manifest `update.json` terikat ke GitHub Release resmi.
+
 ## [6.7.11] - 2026-09-07
 
 > Build 46. Fix CI Build 34249803875 — Windows x64/arm64 3 errors PROPERTYKEY not found.
