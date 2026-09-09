@@ -105,65 +105,57 @@ jobs:
             Write-Host "Shortcut Disconnect-tanpa-lock.bat dibuat di $desktop"
           }
 
-      - name: Install Virtual Display Driver (ge9/IddSampleDriver + pnputil)
+      - name: Install Virtual Display Driver (installer .exe itsmikethetech)
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           Write-Host "=== Install Virtual Display Driver (fix hitam VM/RDP) ===" -ForegroundColor Cyan
-          # JANGAN pakai Scoop: manifest `idd-sample-driver` sudah tidak ada di
-          # bucket extras (lab 8 Sep 2026 gagal: "Couldn't find manifest" dan
-          # run mati sebelum RDP tersedia). Jalur ini SAMA dengan installer
-          # rilis (release.yml): unduh zip ge9 -> pasang via install.bat repo
-          # (trust cert Root+TrustedPublisher -> pnputil /add-driver /install).
-          $drvDir = Join-Path $env:RUNNER_TEMP "vdd"
-          New-Item -ItemType Directory -Force -Path $drvDir | Out-Null
-          # Tag rilis ge9 TIDAK memakai awalan "v" (sama seperti release.yml).
-          $iddZip = Join-Path $env:RUNNER_TEMP "idd.zip"
-          $urls = @(
-            "https://github.com/ge9/IddSampleDriver/releases/download/0.0.1.4/IddSampleDriver.zip",
-            "https://github.com/ge9/IddSampleDriver/releases/download/0.0.1.3/IddSampleDriver.zip"
-          )
-          $ok = $false
-          foreach ($u in $urls) {
-            try {
-              Invoke-WebRequest -Uri $u -OutFile $iddZip -UseBasicParsing -ErrorAction Stop
-              # Zip berisi folder bersarang IddSampleDriver/ — ratakan.
-              $stage = Join-Path $env:RUNNER_TEMP "idd-stage"
-              Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
-              Expand-Archive $iddZip -DestinationPath $stage -Force
-              $inner = Join-Path $stage "IddSampleDriver"
-              if (Test-Path $inner) { Copy-Item "$inner\*" $drvDir -Recurse -Force }
-              else { Copy-Item "$stage\*" $drvDir -Recurse -Force }
-              $ok = $true; break
-            } catch {
-              Write-Host "[WARN] Gagal unduh $u : $($_.Exception.Message)"
-            }
-          }
-          if (-not $ok) { Write-Host "::error::Driver VDD gagal diunduh dari semua URL."; exit 1 }
-          foreach ($need in @("iddsampledriver.inf", "iddsampledriver.cer")) {
-            if (-not (Test-Path (Join-Path $drvDir $need))) {
-              Write-Host "::error::Berkas $need tidak ada setelah ekstraksi."
-              Get-ChildItem $drvDir | ForEach-Object { Write-Host "  ada: $($_.Name)" }
-              exit 1
-            }
-          }
-          Copy-Item "packaging\windows\drivers\IddSampleDriver\install.bat" $drvDir -Force
-          Copy-Item "packaging\windows\drivers\IddSampleDriver\option.txt" $drvDir -Force
-          & cmd.exe /c (Join-Path $drvDir "install.bat") /silent
-          $rc = $LASTEXITCODE
-          # 0 = sukses, 2 = driver sudah ada (keduanya sah).
-          if ($rc -ne 0 -and $rc -ne 2) {
-            Write-Host "::error::install.bat gagal (kode $rc)."
+          # RIWAYAT KEGAGALAN (Sep 2026) — jangan diulang:
+          # - Scoop `idd-sample-driver`: manifest sudah tidak ada di bucket
+          #   extras ("Couldn't find manifest", lab 8 Sep).
+          # - ge9/IddSampleDriver + pnputil: driver TERDAFTAR (oem13.inf) tapi
+          #   TIDAK ADA devicenya — pnputil /install tidak membuat software
+          #   devnode, jadi PnP tetap cuma Hyper-V Video = tetap headless.
+          # Jalur ini: installer .exe itsmikethetech (NSIS silent /S) yang
+          # membuat devicenya sendiri — rekomendasi host/driver/README.md.
+          # Nama aset dibaca dari API (nama file ganti tiap versi).
+          $relJson = gh api repos/itsmikethetech/Virtual-Display-Driver/releases/latest 2>$null
+          if ($LASTEXITCODE -ne 0 -or -not $relJson) {
+            Write-Host "::error::Gagal membaca release itsmikethetech."
             exit 1
           }
-          # Verifikasi: adapter tampil di PnP + hitung layar sesi ini.
+          $rel = $relJson | ConvertFrom-Json
+          $asset = @($rel.assets | Where-Object { $_.name -match "Setup.*\.exe$" }) | Select-Object -First 1
+          if (-not $asset) {
+            Write-Host "::error::Tidak ada Setup .exe di release $($rel.tag_name)."
+            $rel.assets | ForEach-Object { Write-Host "  aset: $($_.name)" }
+            exit 1
+          }
+          Write-Host "Aset: $($asset.name) ($($rel.tag_name))"
+          $setup = Join-Path $env:RUNNER_TEMP "VDD-Setup.exe"
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $setup -UseBasicParsing -ErrorAction Stop
+          Write-Host "Install silent (/S)..."
+          $p = Start-Process $setup -ArgumentList "/S" -Wait -PassThru
+          Write-Host "Exit setup: $($p.ExitCode)"
+          # Daftarkan 1 display virtual via manager CLI bila ada (best-effort).
+          foreach ($mgr in @("C:\Program Files\Virtual Display Driver\VirtualDisplayDriver.exe",
+                             "C:\Program Files (x86)\Virtual Display Driver\VirtualDisplayDriver.exe")) {
+            if (Test-Path $mgr) {
+              Write-Host "Manager: $mgr"
+              try { & $mgr add 1 1920 1080 2>&1 | Out-String | Write-Host } catch { Write-Host "[WARN] manager: $_" }
+            }
+          }
+          Start-Sleep -Seconds 10
           Get-PnpDevice -Class Display -ErrorAction SilentlyContinue | Format-Table FriendlyName, Status
           Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
-          $n = ([System.Windows.Forms.Screen]::AllScreens).Count
-          Write-Host "Layar terdeteksi sesi ini: $n"
+          Write-Host "Layar sesi ini (INFO saja — sesi ini lahir sebelum driver, bisa basi): $(([System.Windows.Forms.Screen]::AllScreens).Count)"
+          # Kebenaran sistem: adapter PnP (berlaku semua sesi, termasuk sesi
+          # RDP yang baru login sesudah driver terpasang).
           $vdd = @(Get-PnpDevice -Class Display -ErrorAction SilentlyContinue |
-            Where-Object { $_.FriendlyName -like "*IddSample*" -or $_.FriendlyName -like "*Virtual*" })
+            Where-Object { $_.FriendlyName -like "*Virtual*" -or $_.FriendlyName -like "*IddSample*" -or $_.FriendlyName -like "*VDD*" })
           if ($vdd.Count -eq 0) {
-            Write-Host "::error::Driver VDD tidak muncul di Display adapters."
+            Write-Host "::error::Adapter VDD tidak muncul di Display adapters."
             exit 1
           }
           Write-Host "[OK] Virtual Display Driver terpasang." -ForegroundColor Green
@@ -227,10 +219,10 @@ jobs:
           Write-Host '   Lalu konek via XyDesk (bukan RDP) untuk tes capture beneran.'
           Write-Host ' - Audio: runner tidak punya sound card, WASAPI loopback mati wajar.'
           Write-Host '   Fix v6.7.1+ sudah deteksi device beneran, tidak bohong "tersedia".'
-          Write-Host ' - Virtual Display Driver: ge9/IddSampleDriver via pnputil (sama seperti installer rilis)'
+          Write-Host ' - Virtual Display Driver: itsmikethetech via installer .exe silent (Scoop/ge9+pnputil terbukti gagal, Sep 2026)'
           Write-Host '   XyDesk v6.7.2+ deteksi via virtual_display.rs: needed/installed/isAdmin di /status'
           Write-Host '=========================================='
-          "## XyDesk Test Lab`n`n- RDP: ``$ip`` user ``xydesk```n- Durasi: ${{ inputs.duration }} menit`n`n### Kenapa hitam kalau tes lewat RDP?`n- Tutup RDP = lock sesi = capture hitam (BitBlt 0).`n- DXGI tidak jalan di RDP.`n- Fix v6.7.1+: GDI fallback GetDC(0) + DXGI fallback output pertama.`n- Fix v6.7.2+: Virtual Display Driver (seperti AnyDesk) di-install otomatis via pnputil (ge9), deteksi di Beranda.`n- Cara tes benar: setup XyDesk di RDP, lalu `tscon `$env:SESSIONNAME /dest:console` (atau klik `Disconnect-tanpa-lock.bat` di Desktop), baru konek via XyDesk, bukan RDP.`n`n### Audio mati?`n- Runner Server tidak punya sound card, wajar. v6.7.1+ sekarang jujur: captureAvailable=false kalau tidak ada device.`n`n### Virtual Display (AnyDesk-style)?`n- Driver IddSampleDriver di-install otomatis, cek Device Manager -> Display adapters.`n- XyDesk Host -> Beranda -> Virtual Display Driver: installed=true berarti driver ada.`n" >> $env:GITHUB_STEP_SUMMARY
+          "## XyDesk Test Lab`n`n- RDP: ``$ip`` user ``xydesk```n- Durasi: ${{ inputs.duration }} menit`n`n### Kenapa hitam kalau tes lewat RDP?`n- Tutup RDP = lock sesi = capture hitam (BitBlt 0).`n- DXGI tidak jalan di RDP.`n- Fix v6.7.1+: GDI fallback GetDC(0) + DXGI fallback output pertama.`n- Fix v6.7.2+: Virtual Display Driver (seperti AnyDesk) di-install otomatis via installer .exe (itsmikethetech), deteksi di Beranda.`n- Cara tes benar: setup XyDesk di RDP, lalu `tscon `$env:SESSIONNAME /dest:console` (atau klik `Disconnect-tanpa-lock.bat` di Desktop), baru konek via XyDesk, bukan RDP.`n`n### Audio mati?`n- Runner Server tidak punya sound card, wajar. v6.7.1+ sekarang jujur: captureAvailable=false kalau tidak ada device.`n`n### Virtual Display (AnyDesk-style)?`n- Driver IddSampleDriver di-install otomatis, cek Device Manager -> Display adapters.`n- XyDesk Host -> Beranda -> Virtual Display Driver: installed=true berarti driver ada.`n" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Tahan runner selama durasi lab
         shell: pwsh
