@@ -160,10 +160,21 @@ keputusan struktur informasi, bukan token — perlu diputuskan operator.
 
 ## Yang sudah paritas (contoh baik)
 
-**Kartu artikel Berita** disamakan di tiga platform pada 6 Sep 2026 (commit
-`8da171e`): chip kategori bundar di atas sampul, rasio sampul 16:9. Sebelumnya
-kategori ditulis tiga cara berbeda — di web menempel di atas sampul, di desktop
-duduk di badan kartu, di aplikasi berupa teks kapital di atas judul.
+1. **Gaya Tombol Utama (Aksen 3D-Glossy)** disamakan di semua platform pada 9 Sep 2026:
+   - **Gradien**: `linear-gradient(160deg, #8b5cf6 0%, #7c3aed 45%, #5b21b6 100%)`
+   - **Top Bevel Highlight**: garis semi-transparan `inset 0 1px 0 rgba(255, 255, 255, 0.22)`
+   - **Bayangan Halus**: `0 3px 8px rgba(38, 18, 92, 0.16)`
+   - **Flutter**: Tersedia terpusat di `PrimaryButton` (`lib/widgets/seamless.dart`) dan `filledButtonTheme`.
+   - **Web & Desktop**: Menggunakan class `.btn.primary` dan `button.primary`.
+
+2. **Ikon Navigasi Vektor (Lucide Icons)**:
+   - Seluruh raster bitmap navigasi lama (`assets/img/nav/*.png`) dibersihkan dari shell aplikasi.
+   - Semua platform kini memakai ikon vektor murni Lucide (`house`, `cable`, `newspaper`, `user`, `sparkles`) dengan pil indikator aktif beraksen `c.accentSoft`.
+
+3. **Kartu artikel Berita** disamakan di tiga platform pada 6 Sep 2026 (commit
+   `8da171e`): chip kategori bundar di atas sampul, rasio sampul 16:9. Sebelumnya
+   kategori ditulis tiga cara berbeda — di web menempel di atas sampul, di desktop
+   duduk di badan kartu, di aplikasi berupa teks kapital di atas judul.
 
 Itu bukti paritas bisa dicapai: satu keputusan, diterapkan ke tiga tempat, dalam satu
 commit. Token desain butuh perlakuan yang sama.
