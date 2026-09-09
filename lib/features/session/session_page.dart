@@ -10,6 +10,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/devlog.dart';
+import '../../core/haptics.dart';
 import '../../core/l10n_bridge.dart';
 import '../../core/pip_controller.dart';
 import '../../core/session_preview.dart';
@@ -1673,15 +1674,22 @@ class _DpadControlState extends State<_DpadControl> {
     if (dy > dead) next.add(_s);
     if (dx < -dead) next.add(_a);
     if (dx > dead) next.add(_d);
+
+    final newlyPressed = next.difference(_held);
+    if (newlyPressed.isNotEmpty) {
+      AppHaptics.tap();
+    }
+
     for (final vk in _held.difference(next)) {
       widget.onKey(vk, false);
     }
-    for (final vk in next.difference(_held)) {
+    for (final vk in newlyPressed) {
       widget.onKey(vk, true);
     }
     _held
       ..clear()
       ..addAll(next);
+    setState(() {});
   }
 
   void _releaseAll() {
@@ -1689,6 +1697,7 @@ class _DpadControlState extends State<_DpadControl> {
       widget.onKey(vk, false);
     }
     _held.clear();
+    setState(() {});
   }
 
   @override
@@ -1708,6 +1717,7 @@ class _DpadControlState extends State<_DpadControl> {
         size: widget.size,
         glyph: HudGlyph.dpad,
         label: 'Gerak',
+        active: _held.isNotEmpty,
       ),
     );
   }
@@ -1718,35 +1728,71 @@ class _TouchControl extends StatelessWidget {
     required this.size,
     required this.glyph,
     required this.label,
+    this.active = false,
   });
 
   final double size;
   final HudGlyph glyph;
   final String label;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.58,
-      child: Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.2),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.32)),
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: active
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0x667C3AED), Color(0x445B21B6)],
+              )
+            : const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0x44181926), Color(0x220E1018)],
+              ),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: active
+              ? const Color(0xFFA78BFA).withValues(alpha: 0.6)
+              : Colors.white.withValues(alpha: 0.28),
+          width: active ? 1.4 : 1.0,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            HudIcon(glyph, size: size * 0.58, color: Colors.white70),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 10, color: Colors.white54),
+        boxShadow: active
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
+                  blurRadius: 10,
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 6,
+                ),
+              ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          HudIcon(
+            glyph,
+            size: size * 0.54,
+            color: active ? Colors.white : Colors.white70,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: active ? const Color(0xFFC4B5FD) : Colors.white54,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1776,7 +1822,7 @@ class _ActionButtonState extends State<_ActionButton> {
     if (_down == down) return;
     _down = down;
     widget.onKey(widget.vk, down);
-    if (down) HapticFeedback.selectionClick();
+    if (down) AppHaptics.tap();
     setState(() {});
   }
 
@@ -1788,30 +1834,67 @@ class _ActionButtonState extends State<_ActionButton> {
 
   @override
   Widget build(BuildContext context) {
-    final size = widget.compact ? 42.0 : 50.0;
+    final size = widget.compact ? 44.0 : 52.0;
     return Listener(
       onPointerDown: (_) => _set(true),
       onPointerUp: (_) => _set(false),
       onPointerCancel: (_) => _set(false),
-      child: Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: _down
-              ? AppColors.accentDark.withValues(alpha: 0.45)
-              : Colors.black.withValues(alpha: 0.2),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white.withValues(alpha: _down ? 0.7 : 0.34),
+      child: AnimatedScale(
+        scale: _down ? 0.92 : 1.0,
+        duration: const Duration(milliseconds: 60),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: _down
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF8B5CF6),
+                      Color(0xFF7C3AED),
+                      Color(0xFF5B21B6),
+                    ],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0x52181926),
+                      Color(0x330E1018),
+                    ],
+                  ),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: _down
+                  ? const Color(0xFFC4B5FD)
+                  : Colors.white.withValues(alpha: 0.28),
+              width: _down ? 1.4 : 1.0,
+            ),
+            boxShadow: _down
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.5),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 6,
+                    ),
+                  ],
           ),
-        ),
-        child: Text(
-          widget.label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: Colors.white70,
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: widget.compact ? 13 : 14.5,
+              fontWeight: FontWeight.w800,
+              color: _down ? Colors.white : Colors.white.withValues(alpha: 0.85),
+            ),
           ),
         ),
       ),
