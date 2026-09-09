@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
+import '../../widgets/seamless.dart';
 import 'app_update_details.dart';
 import 'update_download_service.dart';
 import 'update_repository.dart';
@@ -398,32 +399,32 @@ class _UpdatePageState extends State<UpdatePage> with WidgetsBindingObserver {
     }
 
     return switch (_downloadStatus.phase) {
-      UpdateDownloadPhase.ready => FilledButton.icon(
+      UpdateDownloadPhase.ready => PrimaryButton(
         onPressed: _acting ? null : _installUpdate,
-        icon: const Icon(LucideIcons.packageCheck, size: 18),
-        label: Text(_acting ? 'Menyiapkan installer…' : 'Pasang update'),
-        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+        icon: LucideIcons.packageCheck,
+        label: _acting ? 'Menyiapkan installer…' : 'Pasang Update Sekarang',
+        isLoading: _acting,
       ),
       UpdateDownloadPhase.queued ||
       UpdateDownloadPhase.running ||
       UpdateDownloadPhase.paused ||
-      UpdateDownloadPhase.verifying => FilledButton.icon(
+      UpdateDownloadPhase.verifying => PrimaryButton(
         onPressed: null,
-        icon: const Icon(LucideIcons.download, size: 18),
-        label: const Text('Download berjalan di latar belakang'),
-        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+        icon: LucideIcons.download,
+        label: _downloadStatus.progress != null
+            ? 'Mengunduh (${(_downloadStatus.progress! * 100).toInt()}%)…'
+            : 'Download berjalan di latar belakang…',
+        isLoading: true,
       ),
-      _ => FilledButton.icon(
+      _ => PrimaryButton(
         onPressed: _acting ? null : _startDownload,
-        icon: const Icon(LucideIcons.download, size: 18),
-        label: Text(
-          _acting
-              ? 'Menyiapkan download…'
-              : _downloadStatus.phase == UpdateDownloadPhase.failed
-              ? 'Coba unduh lagi'
-              : 'Unduh update',
-        ),
-        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+        icon: LucideIcons.download,
+        label: _acting
+            ? 'Menyiapkan download…'
+            : _downloadStatus.phase == UpdateDownloadPhase.failed
+            ? 'Coba unduh lagi'
+            : 'Unduh Update Resmi',
+        isLoading: _acting,
       ),
     };
   }

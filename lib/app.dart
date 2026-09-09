@@ -26,6 +26,7 @@ import 'features/notifications/app_update_details.dart';
 import 'features/notifications/notification_preferences_page.dart';
 import 'features/notifications/notification_service.dart';
 import 'features/notifications/update_page.dart';
+import 'features/notifications/update_popup_dialog.dart';
 import 'features/notifications/update_state.dart';
 import 'features/splash/splash_page.dart';
 import 'widgets/seamless.dart';
@@ -290,7 +291,28 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _offerNotifications());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _offerNotifications();
+      if (mounted) await _checkUpdatePopup();
+    });
+  }
+
+  Future<void> _checkUpdatePopup() async {
+    final update = await ref.read(updateAvailabilityProvider.future);
+    if (!mounted || update == null || !update.updateAvailable) return;
+    final store = ref.read(storeProvider);
+    final dismissKey = 'update_popup_seen_${update.manifest.buildNumber}';
+    final wasDismissed = store.getBool(dismissKey);
+    if (!wasDismissed && mounted) {
+      await UpdatePopupDialog.showIfNeeded(
+        context,
+        update,
+        wasDismissed: wasDismissed,
+        onDismiss: () async {
+          await store.setBool(dismissKey, true);
+        },
+      );
+    }
   }
 
   Future<void> _offerNotifications() async {
