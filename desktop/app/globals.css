@@ -360,12 +360,20 @@ button:active { transform: translateY(0px); }
 button:disabled { opacity: 0.45; cursor: default; transform: none; box-shadow: none; }
 
 button.primary {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  background: linear-gradient(160deg, #8b5cf6 0%, var(--accent) 45%, var(--accent-deep) 100%);
   color: #ffffff;
-  border-color: var(--accent-deep);
-  box-shadow: var(--shadow-accent);
+  border: 1px solid var(--accent-deep);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
-button.primary:hover { background: linear-gradient(135deg, #6d28e0 0%, #4c1aa0 100%); box-shadow: 0 6px 24px rgba(124,58,237,0.32); }
+button.primary:hover {
+  background: linear-gradient(160deg, #9d70ff 0%, #8447f5 45%, var(--accent-deep) 100%);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+button.primary:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
 
 button.danger {
   background: var(--danger-soft);

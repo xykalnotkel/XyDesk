@@ -153,9 +153,10 @@ class AppTheme {
           disabledBackgroundColor: p.accent.withValues(alpha: 0.20),
           disabledForegroundColor: Colors.white.withValues(alpha: 0.45),
           minimumSize: const Size.fromHeight(50),
-          elevation: 0,
+          elevation: 2,
+          shadowColor: const Color(0xFF26125C).withValues(alpha: 0.22),
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
         ),
       ),
       textButtonTheme: TextButtonThemeData(

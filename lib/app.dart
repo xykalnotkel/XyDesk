@@ -357,17 +357,17 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (mounted) setState(() {});
   }
 
-  /// Suatu tambahan kecil ke rail: memakai ikon AI 3D ungu glossy.
-  /// Aktif memakai versi warna; nonaktif memakai versi "off" (abu-abu).
+  /// Rail destination memakai ikon Lucide yang tajam dan selaras tema.
   NavigationRailDestination _railDest(
     BuildContext context,
     String label,
-    String asset,
+    IconData icon,
     int index,
   ) {
+    final c = context.c;
     return NavigationRailDestination(
-      icon: _NavIconImage(asset: asset, selected: _index == index),
-      selectedIcon: _NavIconImage(asset: asset, selected: true),
+      icon: Icon(icon, size: 22, color: c.textLow),
+      selectedIcon: Icon(icon, size: 22, color: c.accentDeep),
       label: Text(label),
     );
   }
@@ -402,10 +402,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                 labelType: NavigationRailLabelType.all,
                 backgroundColor: Colors.transparent,
                 destinations: [
-                  _railDest(context, context.tr('nav_home'), 'home', 0),
-                  _railDest(context, context.tr('nav_connect'), 'connect', 1),
-                  _railDest(context, context.tr('nav_news'), 'news', 2),
-                  _railDest(context, context.tr('nav_account'), 'account', 3),
+                  _railDest(context, context.tr('nav_home'), LucideIcons.house, 0),
+                  _railDest(context, context.tr('nav_connect'), LucideIcons.cable, 1),
+                  _railDest(context, context.tr('nav_news'), LucideIcons.newspaper, 2),
+                  _railDest(context, context.tr('nav_account'), LucideIcons.user, 3),
                 ],
               ),
               // Geser kanan-kiri untuk berpindah halaman — sama seperti
@@ -447,35 +447,28 @@ class _AppShellState extends ConsumerState<AppShell> {
         bottomNav: NavigationBar(
           selectedIndex: _index,
           onDestinationSelected: _goTo,
-          // Beberapa highlight & ruang ikon sedikit lebih besar.
-          height: 76,
+          height: 68,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           indicatorColor: c.accent.withValues(alpha: 0.12),
           destinations: [
             NavigationDestination(
-              icon: const _NavIconImage(asset: 'home', selected: false),
-              selectedIcon: const _NavIconImage(asset: 'home', selected: true),
+              icon: Icon(LucideIcons.house, size: 22, color: c.textLow),
+              selectedIcon: Icon(LucideIcons.house, size: 22, color: c.accentDeep),
               label: context.tr('nav_home'),
             ),
             NavigationDestination(
-              icon: const _NavIconImage(asset: 'connect', selected: false),
-              selectedIcon: const _NavIconImage(
-                asset: 'connect',
-                selected: true,
-              ),
+              icon: Icon(LucideIcons.cable, size: 22, color: c.textLow),
+              selectedIcon: Icon(LucideIcons.cable, size: 22, color: c.accentDeep),
               label: context.tr('nav_connect'),
             ),
             NavigationDestination(
-              icon: const _NavIconImage(asset: 'news', selected: false),
-              selectedIcon: const _NavIconImage(asset: 'news', selected: true),
+              icon: Icon(LucideIcons.newspaper, size: 22, color: c.textLow),
+              selectedIcon: Icon(LucideIcons.newspaper, size: 22, color: c.accentDeep),
               label: context.tr('nav_news'),
             ),
             NavigationDestination(
-              icon: const _NavIconImage(asset: 'account', selected: false),
-              selectedIcon: const _NavIconImage(
-                asset: 'account',
-                selected: true,
-              ),
+              icon: Icon(LucideIcons.user, size: 22, color: c.textLow),
+              selectedIcon: Icon(LucideIcons.user, size: 22, color: c.accentDeep),
               label: context.tr('nav_account'),
             ),
           ],
@@ -573,58 +566,8 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
-/// Ikon AI 3D untuk navigasi bawah/rail. Aktif memakai versi warna ungu
-/// glossy; nonaktif memakai versi "off" (abu-abu). Gambar sudah dibersihkan
-/// latar putihnya (transparan) sehingga cocok di atas tema terang.
-/// Fallback: Lucide icon yang sesuai (bukan circle ring) — jadi kalau asset
-/// gagal load di APK lama, tetap jelas bukan ring kosong.
-class _NavIconImage extends StatelessWidget {
-  const _NavIconImage({required this.asset, required this.selected});
-
-  final String asset;
-  final bool selected;
-
-  static IconData _fallback(String asset) {
-    switch (asset) {
-      case 'home':
-        return LucideIcons.house;
-      case 'connect':
-        return LucideIcons.cable;
-      case 'news':
-        return LucideIcons.newspaper;
-      case 'account':
-        return LucideIcons.user;
-      case 'billing':
-        return LucideIcons.creditCard;
-      default:
-        return LucideIcons.circle;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final suffix = selected ? '' : '_off';
-    return Image.asset(
-      'assets/img/nav/$asset$suffix.png',
-      width: 28,
-      height: 28,
-      fit: BoxFit.contain,
-      // Ikon nav sebaiknya tidak diekspos sebagai gambar yang "berbeda warna
-      // tema" — warnanya sudah final dari aset. Hilangkan kaca efek bila
-      // tema diubah.
-      errorBuilder: (_, __, ___) => Icon(
-        _fallback(asset),
-        size: 24,
-        color: selected ? context.c.accent : context.c.textMid,
-      ),
-    );
-  }
-}
-
-/// Tombol Billing di topbar — memakai ikon AI 3D ungu glossy (mesin sewa PC)
-/// yang sudah dibersihkan latar putihnya, konsisten dengan ikon nav.
-/// v6.7.1+ fallback pakai container ungu + icon creditCard biar tetap custom,
-/// bukan icon polos.
+/// Tombol Billing di topbar — memakai aksen ungu glossy selaras logo X
+/// dan ikon Lucide sparkles yang tajam.
 class _BillingIconButton extends StatelessWidget {
   const _BillingIconButton({required this.onPressed});
 
@@ -635,21 +578,33 @@ class _BillingIconButton extends StatelessWidget {
     return IconButton(
       tooltip: 'Sewa PC',
       onPressed: onPressed,
-      icon: Image.asset(
-        'assets/img/nav/billing.png',
-        width: 28,
-        height: 28,
-        fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: context.c.accent.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: context.c.accent.withValues(alpha: 0.2)),
+      icon: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF8B5CF6),
+              Color(0xFF7C3AED),
+              Color(0xFF5B21B6),
+            ],
           ),
-          child: Icon(LucideIcons.coins, size: 16, color: context.c.accent),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.25),
+            width: 0.8,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF26125C).withValues(alpha: 0.18),
+              offset: const Offset(0, 2),
+              blurRadius: 6,
+            ),
+          ],
         ),
+        child: const Icon(LucideIcons.sparkles, size: 16, color: Colors.white),
       ),
     );
   }

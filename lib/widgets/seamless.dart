@@ -358,3 +358,156 @@ class OutlinedButtonLike extends StatelessWidget {
     );
   }
 }
+
+/// Tombol aksi utama dengan aksen gradient 3D glossy khas XyDesk.
+///
+/// Paritas visual 100% dengan tombol web (.btn.primary di style.css):
+/// - Gradient ungu: #8B5CF6 -> #7C3AED -> #5B21B6
+/// - Bevel/highlight atas: garis putih semi-transparan (inset 0 1px 0 rgba(255,255,255,0.22))
+/// - Shadow ungu halus: offset 0 3px blur 8px rgba(38,18,92,0.16)
+/// - Press feedback: haptic tap + animasi skala lembut 0.985
+class PrimaryButton extends StatefulWidget {
+  const PrimaryButton({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onPressed,
+    this.isLoading = false,
+    this.height = 50.0,
+    this.expand = true,
+  });
+
+  final String label;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+  final double height;
+  final bool expand;
+
+  @override
+  State<PrimaryButton> createState() => _PrimaryButtonState();
+}
+
+class _PrimaryButtonState extends State<PrimaryButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final enabled = widget.onPressed != null && !widget.isLoading;
+
+    final btnContent = Row(
+      mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (widget.isLoading) ...[
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+          const SizedBox(width: Gap.md),
+        ] else if (widget.icon != null) ...[
+          Icon(widget.icon, size: 18, color: Colors.white),
+          const SizedBox(width: Gap.sm),
+        ],
+        Text(
+          widget.label,
+          style: const TextStyle(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.1,
+            color: Colors.white,
+          ),
+        ),
+      ],
+    );
+
+    return AnimatedScale(
+      scale: (_isPressed && enabled) ? 0.985 : 1.0,
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.easeOutCubic,
+      child: Container(
+        height: widget.height,
+        width: widget.expand ? double.infinity : null,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(R.pill),
+          gradient: enabled
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  stops: [0.0, 0.45, 1.0],
+                  colors: [
+                    Color(0xFF8B5CF6),
+                    Color(0xFF7C3AED),
+                    Color(0xFF5B21B6),
+                  ],
+                )
+              : null,
+          color: enabled ? null : c.accent.withValues(alpha: 0.20),
+          border: Border.all(
+            color: enabled ? const Color(0xFF5B21B6) : Colors.transparent,
+            width: 1.0,
+          ),
+          boxShadow: enabled
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF26125C).withValues(alpha: 0.16),
+                    offset: const Offset(0, 3),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(R.pill),
+          child: InkWell(
+            onTap: enabled
+                ? () {
+                    AppHaptics.tap();
+                    widget.onPressed?.call();
+                  }
+                : null,
+            onHighlightChanged: (highlighted) {
+              if (enabled) setState(() => _isPressed = highlighted);
+            },
+            borderRadius: BorderRadius.circular(R.pill),
+            child: Stack(
+              children: [
+                if (enabled)
+                  Positioned(
+                    top: 0,
+                    left: 16,
+                    right: 16,
+                    height: 1.2,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: 0.0),
+                            Colors.white.withValues(alpha: 0.35),
+                            Colors.white.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: btnContent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -19,6 +19,7 @@ import '../devices/device_model.dart';
 import '../devices/history_page.dart';
 import 'guide_page.dart';
 import '../session/session_page.dart';
+import '../../widgets/seamless.dart';
 
 /// Memformat ID jadi "123 456 789" sambil user mengetik.
 class DeviceIdFormatter extends TextInputFormatter {
@@ -460,29 +461,10 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
           ),
         ),
         const SizedBox(height: Gap.lg),
-        FilledButton(
+        PrimaryButton(
+          label: _connecting ? 'Menyambung…' : context.tr('connect_btn'),
+          isLoading: _connecting,
           onPressed: _valid && !_connecting ? _connect : null,
-          child: _connecting
-              // Umpan balik langsung di tombol: penekanan pertama harus
-              // terasa, bukan diam sampai layar berganti.
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 15,
-                      height: 15,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.white.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: Gap.sm),
-                    const Text('Menyambung…'),
-                  ],
-                )
-              : Text(context.tr('connect_btn')),
         ),
         const SizedBox(height: Gap.lg),
         Row(

@@ -11,6 +11,7 @@ import '../../core/l10n_bridge.dart';
 import '../../core/store.dart';
 import '../../core/tokens.dart';
 import '../../widgets/brand.dart';
+import '../../widgets/seamless.dart';
 import 'auth_service.dart';
 import 'legal_page.dart';
 
@@ -462,20 +463,10 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
                 ),
               ),
               const SizedBox(height: Gap.xl),
-              FilledButton(
+              PrimaryButton(
+                label: context.tr('auth_send_code'),
+                isLoading: _operation == _EmailOperation.sendOtp,
                 onPressed: _busy ? null : _send,
-                style: _operation == _EmailOperation.sendOtp
-                    ? FilledButton.styleFrom(
-                        disabledBackgroundColor: c.accent,
-                        disabledForegroundColor: Colors.white,
-                      )
-                    : null,
-                child: _operation == _EmailOperation.sendOtp
-                    ? Semantics(
-                        label: context.tr('auth_send_code'),
-                        child: const _Spinner(),
-                      )
-                    : Text(context.tr('auth_send_code')),
               ),
             ] else ...[
               _OtpBoxes(
@@ -504,20 +495,10 @@ class _EmailStepState extends ConsumerState<_EmailStep> {
                 ),
               ],
               const SizedBox(height: Gap.xl),
-              FilledButton(
+              PrimaryButton(
+                label: context.tr('auth_verify'),
+                isLoading: _operation == _EmailOperation.verifyOtp,
                 onPressed: _busy || _otpValue.length != 6 ? null : _verify,
-                style: _operation == _EmailOperation.verifyOtp
-                    ? FilledButton.styleFrom(
-                        disabledBackgroundColor: c.accent,
-                        disabledForegroundColor: Colors.white,
-                      )
-                    : null,
-                child: _operation == _EmailOperation.verifyOtp
-                    ? Semantics(
-                        label: context.tr('auth_verify'),
-                        child: const _Spinner(),
-                      )
-                    : Text(context.tr('auth_verify')),
               ),
               const SizedBox(height: Gap.md),
               Center(
