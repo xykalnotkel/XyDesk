@@ -43,16 +43,20 @@
 
 ## 2. Standar Desain Visual Banner Pembaruan (AI Generated)
 
-Setiap pembaruan resmi XyDesk menggunakan banner gambar 4:3 yang digenerate menggunakan AI dengan gaya visual futuristik khas XyDesk.
+Setiap pembaruan resmi XyDesk menggunakan modal popup visual murni (**Pure Image + Tombol X di Pojok**) dengan orientasi tinggi (**Portrait 3:4**).
 
 ### A. Karakteristik Utama Banner
-1. **Rasio Aspek**: **4:3** (misal $1200 \times 900$ atau $1024 \times 768$).
-2. **Gaya Visual**:
-   - **3D Morphing Glass**: Bentuk geometri kaca violet/lavender transparan yang melengkung organik.
-   - **Floating Elements**: Kartu UI holografik melayang dengan statistik performa, ikon fitur, dan indikator versi.
-   - **Motion Blur & Energy Trails**: Jejak partikel berkecepatan tinggi, lingkaran cahaya (*glowing orbital rings*), dan garis energi halus yang memberikan kesan dinamis dan cepat.
-   - **Bola Logam / Chrome**: Bola krom reflektif dengan pendaran neon violet dan magenta pekat.
-   - **Tipografi Jelas & Tegas**: Teks 3D timbul (*embossed/glowing typography*) bertuliskan *"NEW UPDATE AVAILABLE"* dan *"XyDesk Next-Gen Engine"*.
+1. **Rasio Aspek & Orientasi**: **Portrait 3:4** (Tinggi/Vertikal, misal $900 \times 1200$ atau $1080 \times 1440$).
+2. **Struktur Popup Modal**:
+   - **Pure Image**: Modal menampilkan banner visual penuh tanpa kotak teks atau tombol duplikat di bawahnya.
+   - **Tipografi 3D di Dalam Gambar**: Teks sudah tertanam langsung di gambar dengan kontras tinggi dan jelas: *"NEW UPDATE AVAILABLE"*, *"TAP TO UPDATE NOW"*, dan logo mark *"X XyDesk Next-Gen Engine"*.
+   - **Tombol X di Pojok**: Tombol tutup melayang di pojok kanan atas dengan latar transparan gelap dan ikon `LucideIcons.x`.
+   - **Aksi Sentuh**: Mengetuk di area mana saja pada poster gambar langsung memicu haptik dan membuka layar `UpdatePage`.
+3. **Gaya Visual**:
+   - **3D Morphing Glass Geometry**: Bentuk kristal/kaca violet transparan organik yang membiaskan cahaya secara dinamis.
+   - **Floating Holographic Cards**: Kartu UI melayang dengan indikator performa dan efek *motion blur*.
+   - **Glowing Chrome Spheres**: Bola logam krom reflektif dengan pendaran neon violet dan magenta pekat.
+   - **Energy Trails & Particle Dust**: Jejak cahaya orbit berkecepatan tinggi.
 
 ### B. Variasi Tema per Rilis
 Setiap versi baru dapat mengusung aksen tema unik sesuai fokus rilis:
@@ -67,7 +71,7 @@ Setiap versi baru dapat mengusung aksen tema unik sesuai fokus rilis:
 Gunakan template prompt di bawah ini saat men-generate banner pembaruan baru:
 
 ```text
-A futuristic high-end 3D visual update announcement banner in 4:3 aspect ratio, featuring morphing translucent purple glass geometry, floating holographic UI cards, glossy neon violet and deep magenta chrome spheres, smooth motion-blur trails and energy streaks, high-tech glowing particle dust. Bold stylish 3D embossed typography centered stating 'NEW UPDATE AVAILABLE' with subtitle 'XyDesk Next-Gen Engine'. Studio lighting, clean soft purple background with dark void contrast, cinematic depth of field, ultra-detailed 8k render, octane render style.
+A vertical portrait 3:4 aspect ratio futuristic high-end 3D visual update announcement poster, featuring morphing translucent purple glass geometry, floating holographic UI cards, glossy neon violet and deep magenta chrome spheres, smooth motion-blur trails and energy streaks, high-tech glowing particle dust. Bold crystal-clear 3D embossed typography prominently readable stating 'NEW UPDATE AVAILABLE' and 'TAP TO UPDATE NOW' with 'XyDesk Next-Gen Engine'. Studio lighting, clean soft purple-void background, cinematic depth of field, ultra-detailed 8k render, octane render style, vertical composition.
 ```
 
 **Lokasi Aset di Aplikasi**:
