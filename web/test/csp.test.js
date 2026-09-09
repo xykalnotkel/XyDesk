@@ -149,3 +149,15 @@ test("script-src 'self' tidak menghalangi alur OAuth", () => {
     'google.ts memuat skrip pihak ketiga padahal script-src hanya \'self\'',
   );
 });
+
+test('update.json di Flutter mengarah ke GitHub Release resmi, bukan domain custom yang 404', () => {
+  const repoFile = baca(join(ROOT, 'lib', 'features', 'notifications', 'update_repository.dart'));
+  assert.ok(
+    repoFile.includes('https://github.com/xykalnotkel/XyDesk/releases/latest/download/update.json'),
+    'update_repository.dart tidak mengarah ke URL GitHub Release resmi yang valid',
+  );
+  assert.ok(
+    !repoFile.includes('app.xydesk.my.id/update.json') && !repoFile.includes('signal.xydesk.my.id/update.json'),
+    'update_repository.dart keliru mengarah ke domain custom yang belum ada endpoint update.json-nya',
+  );
+});
