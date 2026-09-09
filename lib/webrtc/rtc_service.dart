@@ -151,6 +151,7 @@ class SessionStats {
     this.packetLossPercent,
     this.codec,
     this.audioKbps,
+    this.noFrameWarning = false,
   });
 
   final int? width;
@@ -162,11 +163,12 @@ class SessionStats {
   final double? packetLossPercent;
   final String? codec;
   final double? audioKbps;
+  final bool noFrameWarning;
 
   bool get hasVideo => width != null && height != null;
 
   String get resolutionLabel =>
-      hasVideo ? '$width x $height' : 'Belum ada gambar';
+      hasVideo ? '$width x $height' : (noFrameWarning ? 'Belum ada gambar (periksa PC)' : 'Belum ada gambar');
 
   String get fpsLabel => fps == null ? '-' : '${fps!.round()} fps';
 
@@ -187,6 +189,32 @@ class SessionStats {
     final v = audioKbps;
     if (v == null) return 'Tidak ada suara masuk';
     return '${v.round()} kbps';
+  }
+
+  SessionStats copyWith({
+    int? width,
+    int? height,
+    double? fps,
+    double? kbps,
+    double? rttMs,
+    double? jitterMs,
+    double? packetLossPercent,
+    String? codec,
+    double? audioKbps,
+    bool? noFrameWarning,
+  }) {
+    return SessionStats(
+      width: width ?? this.width,
+      height: height ?? this.height,
+      fps: fps ?? this.fps,
+      kbps: kbps ?? this.kbps,
+      rttMs: rttMs ?? this.rttMs,
+      jitterMs: jitterMs ?? this.jitterMs,
+      packetLossPercent: packetLossPercent ?? this.packetLossPercent,
+      codec: codec ?? this.codec,
+      audioKbps: audioKbps ?? this.audioKbps,
+      noFrameWarning: noFrameWarning ?? this.noFrameWarning,
+    );
   }
 }
 
@@ -261,6 +289,10 @@ class RtcService {
   /// selamanya menampilkan "MENGHUBUNGI HOST…".
   Timer? _watchdog;
 
+  /// Watchdog: 10 detik setelah connected tetapi belum ada frame video.
+  Timer? _noFrameWatchdog;
+  bool _noFrameWarning = false;
+
   /// Pesan kegagalan terakhir (null bila tidak ada kesalahan).
   String? get lastError => _lastError;
 
@@ -269,6 +301,11 @@ class RtcService {
     if (phase != RtcPhase.pairing && phase != RtcPhase.negotiating) {
       _watchdog?.cancel();
       _watchdog = null;
+    }
+    if (phase != RtcPhase.connected) {
+      _noFrameWatchdog?.cancel();
+      _noFrameWatchdog = null;
+      _noFrameWarning = false;
     }
     if (!_phaseCtrl.isClosed) _phaseCtrl.add(phase);
   }
@@ -468,6 +505,17 @@ class RtcService {
         case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
           _startStatsPolling();
           _lastError = null;
+          _noFrameWarning = false;
+          _noFrameWatchdog?.cancel();
+          _noFrameWatchdog = Timer(const Duration(seconds: 10), () {
+            if (_stopped || _phase != RtcPhase.connected) return;
+            if (!_stats.hasVideo) {
+              _noFrameWarning = true;
+              if (!_statsCtrl.isClosed) {
+                _statsCtrl.add(_stats.copyWith(noFrameWarning: true));
+              }
+            }
+          });
           _emit(RtcPhase.connected);
         case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
           _fail('Koneksi peer gagal (ICE) — tidak bisa menembus jaringan.');
@@ -713,6 +761,12 @@ class RtcService {
     _lastPacketsReceived = packetsReceived;
     _lastStatsAt = now;
 
+    if (width != null && height != null) {
+      _noFrameWatchdog?.cancel();
+      _noFrameWatchdog = null;
+      _noFrameWarning = false;
+    }
+
     _stats = SessionStats(
       width: width,
       height: height,
@@ -723,6 +777,7 @@ class RtcService {
       packetLossPercent: loss,
       codec: codecName?.toUpperCase(),
       audioKbps: audioKbps,
+      noFrameWarning: _noFrameWarning,
     );
     if (!_statsCtrl.isClosed) _statsCtrl.add(_stats);
   }
@@ -732,6 +787,9 @@ class RtcService {
     _stopped = true;
     _watchdog?.cancel();
     _watchdog = null;
+    _noFrameWatchdog?.cancel();
+    _noFrameWatchdog = null;
+    _noFrameWarning = false;
     _statsTimer?.cancel();
     _statsTimer = null;
     await disableMic();

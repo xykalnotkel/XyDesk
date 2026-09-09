@@ -1,6 +1,5 @@
 # XyDesk Virtual Display Driver Installer
-# Jalankan sebagai Administrator
-# Download driver otomatis dari itsmikethetech/Virtual-Display-Driver
+# Jalankan sebagai Administrator — memprioritaskan driver bawaan/offline
 
 param(
     [string]$DriverUrl = "https://github.com/itsmikethetech/Virtual-Display-Driver/releases/latest/download/Virtual-Display-Driver-Setup-v24.12.24.exe",
@@ -20,6 +19,12 @@ if (-not (Test-Admin)) {
 
 if ($Uninstall) {
     Write-Host "Uninstall Virtual Display Driver..." -ForegroundColor Yellow
+    $localUninstall = Join-Path $PSScriptRoot "..\..\packaging\windows\drivers\IddSampleDriver\uninstall.bat"
+    if (Test-Path $localUninstall) {
+        & cmd.exe /c $localUninstall /silent
+        Write-Host "Uninstall selesai via batch script lokal" -ForegroundColor Green
+        exit 0
+    }
     $uninstaller = "C:\Program Files\Virtual Display Driver\uninstall.exe"
     if (Test-Path $uninstaller) {
         Start-Process $uninstaller -Wait
@@ -32,13 +37,25 @@ if ($Uninstall) {
 
 # Cek apakah driver sudah ada
 $driverInf = "C:\Program Files\Virtual Display Driver\VirtualDisplayDriver.inf"
-if (Test-Path $driverInf) {
-    Write-Host "Virtual Display Driver sudah terinstal di $driverInf" -ForegroundColor Green
-    Write-Host "Cek Device Manager -> Display adapters -> Virtual Display Driver" -ForegroundColor Cyan
+$iddInf = "C:\Program Files\XyDesk\drivers\IddSampleDriver\iddsampledriver.inf"
+if ((Test-Path $driverInf) -or (Test-Path $iddInf)) {
+    Write-Host "Virtual Display Driver sudah terinstal di sistem." -ForegroundColor Green
+    Write-Host "Cek Device Manager -> Display adapters -> Virtual Display Driver / IddSampleDriver" -ForegroundColor Cyan
     exit 0
 }
 
-# Download installer
+# Cek apakah ada driver lokal bawaan (offline bundling)
+$localBat = Join-Path $PSScriptRoot "..\..\packaging\windows\drivers\IddSampleDriver\install.bat"
+if (Test-Path $localBat) {
+    Write-Host "Memasang driver display bawaan lokal..." -ForegroundColor Cyan
+    & cmd.exe /c $localBat /silent
+    if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 2) {
+        Write-Host "Driver bawaan lokal berhasil dipasang." -ForegroundColor Green
+        exit 0
+    }
+}
+
+# Fallback download installer online
 $tempFile = "$env:TEMP\Virtual-Display-Driver-Setup.exe"
 Write-Host "Download driver dari $DriverUrl ..." -ForegroundColor Cyan
 try {

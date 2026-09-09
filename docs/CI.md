@@ -11,7 +11,7 @@ perlu menjalankan Flutter, Android SDK, Rust, atau Visual Studio secara lokal.
 | `.github/workflows/deploy-signaling.yml` | **manual** (`workflow_dispatch`) | deploy Cloudflare Worker API/signaling |
 | `.github/workflows/deploy-web.yml` | Build `main` sukses, manual recovery | deploy bundle Flutter Web terverifikasi ke Cloudflare Static Assets |
 | `.github/workflows/release.yml` | Build `main` sukses + nilai `version` berubah (menolak SHA yang tertinggal dari `main`), manual recovery via `release_sha` | GitHub Release multi-platform + push OneSignal |
-| `.github/workflows/build-desktop.yml` | **manual** (`workflow_dispatch`) | kemasan shell desktop Electron + Next.js |
+| `.github/workflows/build-desktop.yml` | **manual** (`workflow_dispatch`) | kemasan shell desktop Tauri v2 + Next.js |
 | `.github/workflows/deploy-news.yml` | **manual** (`workflow_dispatch`) | deploy Worker berita + migrasi D1 |
 | `.github/workflows/test-lab.yml` | **manual** (`workflow_dispatch`) | uji lab perangkat |
 | ~~`.github/workflows/verify-push-auth.yml`~~ | **dihapus** operator 5 Sep 2026 (`b4ce4a4`) — resep pemulihan ada di bawah | dulu: audit izin push, commit wajib memuat `Izin: <ID>` berstatus `DISETUJUI` di `AGENT_BOARD.md` |

@@ -75,7 +75,10 @@ pub fn is_driver_installed() -> bool {
     let common_paths = [
         r"C:\Program Files\Virtual Display Driver\VirtualDisplayDriver.inf",
         r"C:\Program Files\IddSampleDriver\IddSampleDriver.inf",
+        r"C:\Program Files\XyDesk\drivers\IddSampleDriver\iddsampledriver.inf",
         r"C:\IddSampleDriver\IddSampleDriver.inf",
+        r"./drivers/IddSampleDriver/iddsampledriver.inf",
+        r"../drivers/IddSampleDriver/iddsampledriver.inf",
         r"./driver/IddSampleDriver.inf",
         r"./driver/VirtualDisplayDriver.inf",
     ];
@@ -136,6 +139,9 @@ pub fn try_install_driver() -> Result<String, String> {
     }
 
     let candidates = [
+        r"C:\Program Files\XyDesk\drivers\IddSampleDriver\iddsampledriver.inf",
+        r"./drivers/IddSampleDriver/iddsampledriver.inf",
+        r"../drivers/IddSampleDriver/iddsampledriver.inf",
         r"C:\Program Files\Virtual Display Driver\VirtualDisplayDriver.inf",
         r"C:\Program Files\IddSampleDriver\IddSampleDriver.inf",
         r"./driver/VirtualDisplayDriver.inf",

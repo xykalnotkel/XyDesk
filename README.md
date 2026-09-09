@@ -44,7 +44,7 @@ latency end-to-end.
 | TURN (kredensial Cloudflare ber-TTL) | Selesai |
 | Host app (Rust: capture DXGI + openh264 + webrtc-rs) | Loop RTP terbukti di test loopback; capture DXGI nyata menunggu verifikasi lab Windows |
 | Control API lokal host (HTTP 127.0.0.1 + token) | Selesai — status, password, stop-session untuk shell desktop; 8 test otomatis |
-| Desktop shell (Electron + Next.js, engine tetap Rust) | Selesai — sidebar Home/Connect/News/Profile/Settings; installer Windows dibangun CI |
+| Desktop shell (Tauri v2 + Next.js, engine tetap Rust) | Selesai — sidebar Home/Connect/News/Profile/Settings; installer Windows dibangun CI |
 | News (Web + Android + Desktop) | Live — Worker publik + D1 di `news.xydesk.my.id`; like, komentar, berbagi sosial + OpenGraph per konten |
 | OpenGraph web per konten | Live — renderer worker di `web_deploy/worker/` (crawler dapat meta berita), CSP mengizinkan `news.xydesk.my.id` |
 | Tema aplikasi Android | Terang (Paper) saja — mode gelap dihapus agar satu set kontras teruji |
@@ -171,7 +171,7 @@ commit tetap menjadi kebiasaan tim untuk jejak audit. Artefak build tersedia mel
 | Windows portable | `XyDesk-Windows-<arch>.zip` | Alternatif tanpa instalasi |
 | Windows host standalone x64 | `XyDesk-Host-x64.exe` | Engine opsional untuk otomasi |
 | Windows host standalone Arm64 | `XyDesk-Host-arm64.exe` | Engine opsional untuk otomasi |
-| Windows desktop shell | `XyDesk-Desktop-<ver>-x64-Setup.exe` | Installer Electron + Next.js, engine dibundel |
+| Windows desktop shell | `XyDesk-Desktop-<ver>-x64-Setup.exe` | Installer Tauri v2 + Next.js, engine dibundel |
 | Windows desktop portable | `XyDesk-Desktop-<ver>-x64-Portable.exe` | Shell desktop tanpa instalasi |
 | Web | `XyDesk-Web.zip` | Bundle web client (Vite + React) |
 

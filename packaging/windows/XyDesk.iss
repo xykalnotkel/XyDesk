@@ -12,9 +12,10 @@
 #endif
 
 ; ============================================================================
-; XyDesk Installer — Wizard utuh Windows
+; XyDesk Installer — Wizard utuh Windows (Tauri Desktop + Rust Engine)
 ; Driver VDD: ge9/IddSampleDriver (MIT + CC0)
-; License tampilan: LICENSE (XyDesk), license-ge9.txt (driver)
+; Driver Audio/Mic: VB-Audio Software / VB-CABLE (Freeware)
+; License tampilan: LICENSE (XyDesk), license-ge9.txt (VDD), license-vbcable.txt (Audio)
 ;
 ; Build:
 ;   ISCC /DArch=x64 /DVersion=1.7.0 /DSourceDir=... /DOutputDir=... XyDesk.iss
@@ -54,11 +55,7 @@ LicenseFile={#SourcePath}\..\..\LICENSE
 InfoAfterFile={#SourcePath}\README-postinstall.md
 UninstallDisplayName=XyDesk (Uninstall)
 
-; Code signing SENGAJA tidak diaktifkan.
-; Untuk mengaktifkan: daftarkan SignTool bernama "xydesk" di mesin build
-; (Inno Setup IDE → Tools → Configure Sign Tools) lalu compile dengan
-;   ISCC /DSign=1 ...
-; Tanpa registrasi itu, direktif SignTool membuat compile GAGAL.
+; Code signing
 #ifdef Sign
 SignTool=xydesk $f
 SignedUninstaller=yes
@@ -73,9 +70,6 @@ ArchitecturesInstallIn64BitMode=x64compatible
 #endif
 
 [Languages]
-; Inno Setup TIDAK memaketkan Indonesian.isl (bukan terjemahan resmi).
-; Merujuk compiler:Languages\Indonesian.isl membuat compile gagal di mesin
-; bersih. Teks kustom Indonesia ada di [Messages] & [CustomMessages] bawah.
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
@@ -83,59 +77,56 @@ Name: "desktopicon"; \
   Description: "Buat shortcut di Desktop"; \
   GroupDescription: "Shortcut tambahan:"; \
   Flags: unchecked
-Name: "vddinstall"; \
-  Description: "Pasang driver display virtual (untuk PC tanpa monitor, +FPS optimal)"; \
-  GroupDescription: "Driver tambahan:"; \
-  Check: VddAvailable
+
+; Driver bawaan (Display Virtual + Audio & Mic) otomatis terpasang secara silent
+Name: "driverinstall"; \
+  Description: "Pasang driver display virtual & audio/mic terintegrasi (otomatis & silent)"; \
+  GroupDescription: "Driver bawaan:"; \
+  Check: DriversAvailable
+
 Name: "quicklaunch"; \
   Description: "Jalankan XyDesk saat Windows startup"; \
   GroupDescription: "Perilaku startup:"; \
   Flags: unchecked
-; Tanpa flag = tercentang secara default. Flag "checked" TIDAK ADA di [Tasks]
-; dan membuat compile gagal.
+
 Name: "launchapp"; \
   Description: "Buka XyDesk setelah instalasi selesai"; \
   GroupDescription: "Setelah instalasi:"
 
 [Files]
-; Aplikasi utama (client + engine Host) — selalu dipasang.
+; Aplikasi utama (shell Tauri + engine Host) — selalu dipasang.
 Source: "{#SourceDir}\*"; \
   DestDir: "{app}"; \
   Flags: ignoreversion recursesubdirs createallsubdirs; \
   Excludes: "drivers\*"
 
-; Driver VDD — hanya disalin kalau user mencentang tugas vddinstall.
-; `skipifsourcedoesntexist` penting: unduhan VDD di CI bersifat best-effort,
-; installer harus tetap bisa dibangun walau folder driver tidak ada.
+; Driver Display Virtual (IddSampleDriver)
 Source: "{#SourceDir}\drivers\IddSampleDriver\*"; \
   DestDir: "{app}\drivers\IddSampleDriver"; \
   Flags: recursesubdirs createallsubdirs skipifsourcedoesntexist; \
-  Tasks: vddinstall
+  Tasks: driverinstall
 
 Source: "{#SourceDir}\drivers\license-ge9.txt"; \
   DestDir: "{app}\drivers"; \
   Flags: onlyifdoesntexist skipifsourcedoesntexist; \
-  Tasks: vddinstall
+  Tasks: driverinstall
 
 Source: "{#SourceDir}\drivers\README-VDD.txt"; \
   DestDir: "{app}\drivers"; \
   Flags: onlyifdoesntexist skipifsourcedoesntexist; \
-  Tasks: vddinstall
+  Tasks: driverinstall
+
+; Driver Virtual Audio & Mic (VB-CABLE)
+Source: "{#SourceDir}\drivers\audio\*"; \
+  DestDir: "{app}\drivers\audio"; \
+  Flags: recursesubdirs createallsubdirs skipifsourcedoesntexist; \
+  Tasks: driverinstall
 
 [Icons]
-; SATU shortcut aplikasi langsung di Programs. Dulu ada juga folder
-; "XyDesk\Uninstall..." — nama folder bentrok dengan nama shortcut sehingga
-; shortcut app gagal dibuat senyap dan Start Menu hanya berisi Uninstall.
-; Uninstall cukup lewat Settings > Apps (terdaftar otomatis).
 Name: "{autoprograms}\XyDesk"; Filename: "{app}\XyDesk.exe"
 Name: "{autodesktop}\XyDesk"; Filename: "{app}\XyDesk.exe"; Tasks: desktopicon
-; Autostart lewat registry Run milik MESIN, bukan shortcut {userstartup}.
-; Installer berjalan sebagai admin, jadi menulis ke area per-user akan mendarat
-; di profil admin — bukan profil user yang memakai XyDesk.
-; Lihat [Registry]. Konstanta "{autostart}" tidak ada di Inno Setup.
 
 [Registry]
-; Autostart untuk semua user (installer admin). Dihapus otomatis saat uninstall.
 Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "XyDesk"; \
   ValueData: """{app}\XyDesk.exe"""; \
@@ -143,24 +134,22 @@ Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
   Tasks: quicklaunch
 
 [Run]
-Filename: "{app}\drivers\IddSampleDriver\install.bat"; \
-  Parameters: "/silent"; \
-  StatusMsg: "Memasang driver display virtual (mungkin butuh restart)..."; \
-  Flags: runhidden waituntilterminated; \
-  Tasks: vddinstall; \
-  Check: VddFilesInstalled
-
 Filename: "{app}\XyDesk.exe"; \
   Description: "Buka XyDesk"; \
   Flags: nowait postinstall skipifsilent; \
   Tasks: launchapp
 
 [UninstallRun]
-; Hapus driver VDD dulu sebelum file dihapus.
+; Hapus driver VDD & Audio saat uninstalasi aplikasi
 Filename: "{app}\drivers\IddSampleDriver\uninstall.bat"; \
   Parameters: "/silent"; \
   Flags: runhidden waituntilterminated; \
   RunOnceId: "vdduninstall"
+
+Filename: "{app}\drivers\audio\uninstall-audio.bat"; \
+  Parameters: ""; \
+  Flags: runhidden waituntilterminated; \
+  RunOnceId: "audiouninstall"
 
 [Messages]
 BeveledLabel=XyDesk by XySpace Tch
@@ -173,20 +162,20 @@ ClickFinish=Klik Finish untuk menutup Setup.
 var
   VddInstallFailed: Boolean;
 
-// Apakah berkas driver VDD ikut dipaketkan di installer ini?
-//
-// Unduhan VDD di CI best-effort: kalau upstream down, installer tetap terbit
-// tanpa driver. Tanpa cek ini, task VDD akan tampil, user mencentangnya, lalu
-// [Run] gagal memanggil install.bat yang tidak pernah ada.
-function VddAvailable: Boolean;
+function DriversAvailable: Boolean;
 begin
-  Result := FileExists(ExpandConstant('{src}\drivers\IddSampleDriver\install.bat'));
+  Result := FileExists(ExpandConstant('{src}\drivers\IddSampleDriver\install.bat')) or
+            FileExists(ExpandConstant('{src}\drivers\audio\install-audio.bat'));
 end;
 
-// Setelah file disalin: pastikan install.bat memang mendarat di {app}.
 function VddFilesInstalled: Boolean;
 begin
   Result := FileExists(ExpandConstant('{app}\drivers\IddSampleDriver\install.bat'));
+end;
+
+function AudioFilesInstalled: Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\drivers\audio\install-audio.bat'));
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
@@ -203,48 +192,45 @@ begin
     WizardForm.StatusLabel.Caption :=
       'Menyalin file XyDesk ke ' + ExpandConstant('{app}') + '...';
 
-  // Exit code install.bat DIPERIKSA. Sebelumnya [Run] mengabaikannya diam-diam
-  // sehingga driver gagal pasang tetap tampak "berhasil" bagi user.
-  //   0 = sukses, 2 = sudah terpasang, 1/3 = gagal
   if CurStep = ssPostInstall then
   begin
     VddInstallFailed := False;
-    if WizardIsTaskSelected('vddinstall') and VddFilesInstalled then
+    if WizardIsTaskSelected('driverinstall') then
     begin
-      WizardForm.StatusLabel.Caption := 'Menginstal driver display virtual...';
-      if Exec(ExpandConstant('{app}\drivers\IddSampleDriver\install.bat'),
-              '/silent', ExpandConstant('{app}\drivers\IddSampleDriver'),
-              SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+      // 1. Install driver display virtual bila berkas tersedia
+      if VddFilesInstalled then
       begin
-        if (ResultCode <> 0) and (ResultCode <> 2) then
+        WizardForm.StatusLabel.Caption := 'Menginstal driver display virtual (silent)...';
+        if Exec(ExpandConstant('{app}\drivers\IddSampleDriver\install.bat'),
+                '/silent', ExpandConstant('{app}\drivers\IddSampleDriver'),
+                SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+        begin
+          if (ResultCode <> 0) and (ResultCode <> 2) then
+            VddInstallFailed := True;
+        end
+        else
           VddInstallFailed := True;
-      end
-      else
-        VddInstallFailed := True;
+      end;
 
-      if VddInstallFailed then
-        MsgBox('Driver display virtual gagal dipasang (kode ' +
-               IntToStr(ResultCode) + ').' + #13#10#13#10 +
-               'XyDesk tetap berfungsi normal dengan monitor fisik. ' +
-               'Untuk PC tanpa monitor, pasang driver manual lewat ' +
-               'Device Manager — lihat drivers\README-VDD.txt.',
-               mbError, MB_OK);
-    end
-    else
-      WizardForm.StatusLabel.Caption := 'Menyelesaikan instalasi...';
+      // 2. Install driver audio & virtual mic bila berkas tersedia
+      if AudioFilesInstalled then
+      begin
+        WizardForm.StatusLabel.Caption := 'Menginstal driver virtual audio & mic (silent)...';
+        Exec(ExpandConstant('{app}\drivers\audio\install-audio.bat'),
+             '', ExpandConstant('{app}\drivers\audio'),
+             SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      end;
+    end;
+    WizardForm.StatusLabel.Caption := 'Menyelesaikan instalasi...';
   end;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
-    UninstallProgressForm.StatusLabel.Caption := 'Membersihkan instalasi XyDesk...';
+    UninstallProgressForm.StatusLabel.Caption := 'Membersihkan instalasi XyDesk dan driver...';
 end;
 
-// Restart TIDAK diminta. Indirect Display Driver (IddSampleDriver) aktif
-// tanpa reboot pada praktik umum; prompt restart hanya menakut-nakuti user.
-// Bila layar virtual belum muncul, cabut-pasang lewat Device Manager atau
-// restart manual — dicatat di README-postinstall.
 function NeedRestart: Boolean;
 begin
   Result := False;

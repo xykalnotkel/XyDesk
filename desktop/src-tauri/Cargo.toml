@@ -1,0 +1,27 @@
+[package]
+name = "xydesk-desktop"
+version = "6.7.11"
+description = "XyDesk Desktop — shell Tauri + Next.js untuk host Windows."
+authors = ["XySpace Tch"]
+edition = "2021"
+
+[lib]
+name = "xydesk_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-autostart = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.38", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+rand = "0.8"
+sha2 = "0.10"
+base64 = "0.22"
+url = "2.5"
+open = "5.3"

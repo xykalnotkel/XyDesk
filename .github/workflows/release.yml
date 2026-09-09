@@ -327,7 +327,32 @@ jobs:
               Copy-Item $s.src (Join-Path $driverRoot $s.dst) -Force
             }
           }
-          Write-Host "[OK] Bundle driver siap."
+
+          # Bundle Driver Virtual Audio & Mic (VB-CABLE)
+          $driverAudio = Join-Path $driverRoot "audio"
+          New-Item -ItemType Directory -Force -Path $driverAudio | Out-Null
+          $cableZip = "$env:RUNNER_TEMP\vbcable.zip"
+          $cableUrl = "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip"
+          try {
+            Invoke-WebRequest -Uri $cableUrl -OutFile $cableZip -UseBasicParsing -ErrorAction Stop
+            Expand-Archive $cableZip -DestinationPath $driverAudio -Force
+            Write-Host "[OK] Driver Virtual Audio (VB-CABLE) berhasil diunduh & diekstrak."
+          } catch {
+            Write-Host "[WARN] Gagal unduh VB-CABLE: $($_.Exception.Message)"
+          }
+
+          $audioCopy = @(
+            @{ src = "packaging/windows/drivers/audio/install-audio.bat";   dst = "audio/install-audio.bat" },
+            @{ src = "packaging/windows/drivers/audio/uninstall-audio.bat"; dst = "audio/uninstall-audio.bat" },
+            @{ src = "packaging/windows/drivers/audio/README-AUDIO.txt";    dst = "audio/README-AUDIO.txt" },
+            @{ src = "packaging/windows/drivers/audio/license-vbcable.txt"; dst = "audio/license-vbcable.txt" }
+          )
+          foreach ($s in $audioCopy) {
+            if (Test-Path $s.src) {
+              Copy-Item $s.src (Join-Path $driverRoot $s.dst) -Force
+            }
+          }
+          Write-Host "[OK] Bundle driver lengkap (VDD + Audio/Mic) siap."
       - name: Pasang Inno Setup stabil
         shell: pwsh
         run: choco install innosetup --no-progress -y

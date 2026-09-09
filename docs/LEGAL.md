@@ -119,11 +119,11 @@ Pencantuman di sini TIDAK mengubah status proprietary XyDesk.
 | onesignal_flutter | Ketentuan OneSignal | Notifikasi push |
 | share_plus | BSD-3-Clause (Flutter Community) | Berbagi tautan berita |
 
-### Desktop Windows (Electron + Next.js)
+### Desktop Windows (Tauri v2 + Next.js)
 
 | Komponen | Lisensi | Fungsi di XyDesk |
 |---|---|---|
-| Electron | MIT (OpenJS Foundation) | Cangkang aplikasi desktop |
+| Tauri v2 | MIT / Apache-2.0 | Cangkang aplikasi desktop native WebView2 |
 | Next.js | MIT (Vercel) | Render UI panel |
 | React | MIT (Meta) | Komponen UI |
 | lucide-react | ISC (Lucide Contributors) | Ikon panel |

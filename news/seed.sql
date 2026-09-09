@@ -587,3 +587,12 @@ ON CONFLICT(slug) DO UPDATE SET
   category = excluded.category,
   author = excluded.author,
   published = excluded.published;
+
+-- Alias slug untuk artikel changelog terdahulu agar tautan footer/About tidak 404
+INSERT OR IGNORE INTO post_aliases (alias, slug) VALUES
+  ('changelog-v6-5-4', 'rilis-654'),
+  ('changelog-v6-5-3', 'rilis-653'),
+  ('changelog-v6-5-2', 'p-8f5aa26aa3bc'),
+  ('changelog-v6-4-0', 'p-66a4edde0222'),
+  ('changelog-v6-1-0', 'p-d5b4512f7d17'),
+  ('changelog-v6-0-0', 'p-d5b4512f7d17');

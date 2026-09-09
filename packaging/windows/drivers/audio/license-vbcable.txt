@@ -1,0 +1,8 @@
+VB-CABLE Driver License Notice
+==============================
+VB-CABLE is a software application developed by VB-Audio Software.
+Copyright (C) VB-Audio Software (Vincent Burel).
+Website: https://vb-audio.com/Cable/
+
+VB-CABLE is distributed as Donationware / Freeware for end-users.
+All rights reserved by VB-Audio Software.

@@ -1,150 +1,68 @@
-# XyDesk Desktop — Shell Electron + Next.js
+# XyDesk Desktop — Shell Tauri v2 + Next.js
 
 ## Posisi dalam arsitektur
 
-XyDesk Desktop adalah **launcher + panel** untuk host Windows, menggantikan
-GUI native Win32 (`host/src/bin/gui.rs`, tetap dipertahankan sebagai
-fallback tanpa WebView).
+XyDesk Desktop adalah **launcher + panel host Windows** berbasis **Tauri v2 (Rust + WebView2)**
+yang menyajikan antarmuka React / Next.js (static export) dan mensupervisi engine streaming
+Rust murni (`xydesk-host.exe`).
 
 Pemisahan peran yang ketat:
 
 | Lapisan | Teknologi | Tanggung jawab |
 |---|---|---|
-| Shell | Electron + Next.js (static export) | Sidebar (Home, Connect, News, Profile, Settings), identitas, watchdog engine |
-| Engine | Rust (`xydesk-host.exe`) | Signaling, pairing, capture DXGI, encode NVENC, WebRTC, injeksi input |
+| Shell Desktop | Tauri v2 + Next.js (static export) | Sidebar (Home, Connect, News, Profile, Settings), identitas, tray, supervisor engine |
+| Engine Streaming | Rust (`xydesk-host.exe`) | Signaling, pairing, capture DXGI, encode NVENC, WebRTC, WASAPI audio loopback, injeksi input |
+| Driver Bawaan | IddSampleDriver + VB-CABLE | Virtual display driver (headless/RDP tanpa layar hitam) + Virtual audio/mic driver |
 
-**Kenapa Electron boleh di sini tapi tidak untuk media:** desktopCapturer /
-getDisplayMedia di Chromium memutar frame lewat CPU dan encode-nya jauh di
-atas target `< 40 ms` glass-to-glass. Engine Rust memakai Desktop Duplication
-+ NVENC langsung dari tekstur GPU (zero-copy). Selama shell tidak menyentuh
-frame video, Electron hanya menambah biaya RAM (~80–120 MB), bukan latency.
+### Mengapa Tauri v2 Menggantikan Electron:
+1. **Ringan & Hemat RAM:** Penggunaan memori turun dari ~150–200 MB (Chromium V8 Electron) menjadi **~25–40 MB** (Tauri + native Windows WebView2).
+2. **Ukuran Installer:** Ukuran installer terpangkas drastis menjadi **~15–20 MB**.
+3. **Ekosistem Rust Terpadu:** Engine streaming (`host/`) dan shell desktop sama-sama ditulis dalam Rust, membuat IPC, tray handling, lifecycle management, dan integrasi OS jauh lebih andal dan konsisten.
 
-**Kenapa Next.js:** pilihan tim untuk UI React dengan toolchain yang nyaman.
-Dipakai sebagai static export (`output: 'export'`) — tidak ada SSR/API routes
-di runtime desktop; renderer disajikan proses utama lewat server HTTP lokal
-di `127.0.0.1` (bukan `file://`, agar tidak ada masalah path/aset).
+---
 
-## Control API (engine ↔ shell)
+## Driver Bawaan Terintegrasi (Zero-Prompt Setup)
 
-Agar panel bisa menampilkan keadaan engine (bukan menebak dari log), engine
-punya control API HTTP **hanya di `127.0.0.1`** (`host/src/control.rs`):
+Pada rilis ini, seluruh driver pendukung **ditanam langsung (embedded)** di dalam paket installer dan runtime:
+- **Virtual Display Driver (`IddSampleDriver`)**:
+  Menghasilkan layar virtual berkecepatan tinggi saat PC host dijalankan tanpa monitor (headless), monitor mati, atau saat sesi RDP ditutup agar capture tidak menjadi hitam.
+- **Virtual Audio & Mic Driver (`VB-CABLE`)**:
+  Menangkap audio PC host dan meneruskan microphone client (HP/Tablet/Laptop) agar langsung terbaca sebagai perangkat microphone fisik Windows (CABLE Input $\rightarrow$ CABLE Output di Recording devices).
 
-- **Auth:** token acak 128 bit per-lahir, dicetak sekali ke stdout sebagai
-  `[control] http://127.0.0.1:PORT token=HEX`; hanya parent process yang
-  membacanya. Perbandingan token konstan-waktu (hash SHA-256 + XOR).
-- `GET /health` — liveness (tanpa token; tidak membocorkan apa pun).
-- `GET /status` — status JSON: `state` (`starting|connecting|ready|streaming|
-  error`), `deviceId`, `password`, `signalingUrl`, `startedAtMs`, `uptimeMs`,
-  `session` (`clientId`, `clientName`, `clientPlatform`, durasi), `video`
-  (framesSent, fps, nvenc, encoder, latencyMs, latencyMaxMs), `audio`
-  (captureAvailable/pipeline, micAvailable/micPipeline, outputs, volume),
-  `displays` (`list[]` + `wanted`), `targetBitrateBps`, `lastError`.
-  Semua nama di sisi ini camelCase — lihat tipe-nya di `desktop/global.d.ts`.
-- `POST /action` — `new-password`, `set-password` (min. 6 karakter; aturannya
-  ada di `identity::set_password`, bukan di shell), `stop-session` (tutup peer
-  connection + cabut izin pairing — sama seperti `bye` dari client),
-  `audio-volume` (`{"volume":0..1}`), `display-select` (`{"index":n}`),
-  `video-bitrate` (`{"bitrate_mbps":n}`).
-  **Awas:** body `ActionRequest` TIDAK di-`rename_all`, jadi nama bidangnya
-  snake_case apa adanya; `bitrateMbps` diterima lewat `serde(alias)` supaya
-  TypeScript tidak salah tebak, tetapi kanoniknya `bitrate_mbps`.
-- `session.clientName` / `clientPlatform` berasal dari pesan `pair` client
-  (dilaporkan sendiri, boleh dikarang) — dipakai untuk menampilkan "siapa yang
-  menonton" dan TIDAK pernah jadi dasar keputusan akses. UI shell: chip di
-  topbar, kartu Sesi aktif, tooltip tray, judul jendela.
+### Otomasi Instalasi:
+- Saat installer dijalankan (dengan hak Admin), skrip Inno Setup (`packaging/windows/XyDesk.iss`) secara otomatis menginstal driver secara silent di latar belakang tanpa memunculkan dialog tambahan atau meminta pengguna menjalankan PowerShell manual.
+- Saat aplikasi di-uninstall, driver dibersihkan secara otomatis.
 
-Yang **sengaja tidak bisa** dilakukan control API: memberi izin pairing /
-offer. Jalur kepercayaan itu tetap di loop signaling (`pairguard`,
-`pairedpeers`). `stop-session` menutup sesi tapi tidak bisa membuka sesi.
+---
 
-Status dibaca polling tiap ~1,5 detik dari renderer — cukup untuk panel,
-dan jauh lebih sederhana daripada push-event.
+## Control API & Supervisi Engine
 
-## Alur hidup shell
+Shell Tauri berkomunikasi dengan engine `xydesk-host.exe` melalui Control API lokal di `127.0.0.1`:
+- **Auth:** Token acak 128-bit yang dibaca dari stdout saat engine pertama kali di-spawn (`[control] http://127.0.0.1:PORT token=HEX`).
+- `GET /status`: Mengambil status realtime (state, session, video fps/encoder/latency, audio, display, dll.).
+- `POST /action`: Perintah interaktif (ganti password pairing, stop-session, pilih display, ubah bitrate, atur volume audio).
+- **Watchdog:** Supervisor mendeteksi bila engine berhenti tak terduga dan melakukan auto-restart dengan backoff bertahap (2s hingga 30s).
 
-1. Proses utama membaca identitas: `xydesk-host --identity-json`
-   → `{deviceId, password}`.
-2. Tukar `id + password` → token signaling lewat `POST /host-token`
-   (dari Node — tidak ada CORS, sama seperti GUI native dulu).
-3. Spawn engine: `--url wss://signal.xydesk.my.id/ws --token TOKEN
-   --control-port <port-bebas>`; port dipilih proses utama agar tidak bentrok.
-4. Parse baris `[control]` dari stdout → token + port control.
-5. Renderer meminta status lewat IPC (`window.xydesk.getStatus()`);
-   proses utama yang memanggil control API — renderer tidak pernah bicara
-   langsung ke engine.
-6. Watchdog tiap 2,5 detik: engine mati → start ulang dengan token baru,
-   backoff eksponensial 2 detik → maks 30 detik.
+---
 
-## Mode identitas portabel
+## Autentikasi Desktop (Google OAuth PKCE & Email OTP)
 
-`XYDESK_HOME` (env) mengarahkan penyimpanan `device_id` + `password`.
-Dipasang untuk test otomatis; installer portable dapat memakainya agar
-identitas ikut folder aplikasi.
+- **Google OAuth:** Menggunakan alur Authorization Code + PKCE dengan loopback server lokal pada port acak `127.0.0.1:PORT/callback`. Pertukaran kode token dilakukan dengan Worker Cloudflare (`/auth/google/desktop`). Client secret tidak pernah ditanam di binary desktop.
+- **Email OTP:** Mengirimkan permintaan OTP ke Cloudflare Worker dan memverifikasinya langsung dari UI desktop.
+- **Penyimpanan Sesi:** Sesi login disimpan secara lokal di `%APPDATA%\XyDesk\auth_session.json` dan dijaga masa berlakunya.
 
-## Pengembangan lokal
+---
+
+## Pengembangan & Build
 
 ```bash
 cd desktop
 npm install
-npm run dev        # renderer Next.js di http://localhost:3470 (mode demo bila
-                   # dibuka di browser biasa)
-npm run typecheck  # pemeriksaan tipe
-npm run build      # static export ke out/
-
-# Terminal lain: jalankan shell dengan Electron
-npm run electron   # butuh xydesk-host.exe (cargo build --release di host/)
+npm run dev        # Pratinjau frontend (mode demo di browser): http://localhost:3470
+npm run build      # Static export Next.js ke desktop/out/
 ```
 
-Mode demo: bila `window.xydesk` tidak ada (dibuka di browser), UI menampilkan
-data contoh dengan banner "Mode pratinjau".
-
-## Halaman sidebar
-
-- **Home** — status engine, uptime, sesi aktif (perangkat pengendali, ID
-  pairing, durasi, FPS/frame/encoder/latensi/monitor) + akhiri sesi.
-- **Connect** — ID + password pairing, salin/tampilkan, password acak/kustom.
-  Kolom password kustom TIDAK mengkapital otomatis (`autoCapitalize="none"`)
-  karena host membandingkan secara peka-kasus; ada peringatan kalau password
-  yang dipilih tidak punya huruf kecil sama sekali (lihat `host/README.md`).
-- **News** — feed publik `news.xydesk.my.id` (like, komentar, salin tautan berbagi).
-- **Profile** — identitas perangkat, versi, tautan eksternal.
-- **Settings** (pojok kiri bawah) — mulai dengan Windows (nyata lewat
-  `app.setLoginItemSettings`), mulai ulang engine, monitor sumber
-  (`display-select`), batas bitrate + perkiraan MB/jam (`video-bitrate`),
-  volume master PC (`audio-volume`), pipeline audio, lisensi, log engine.
-
-## Aturan tata letak (yang sudah dibayar mahal)
-
-- **Yang menggulung = `.page-body`, bukan jendela.** `.shell` grid-nya
-  `grid-template-rows: minmax(0, 100%)` + `overflow: hidden`, dan `.main`
-  serta `.page-body` diberi `min-height: 0`. Baris `auto` (keadaan dulu) membuat
-  grid memanjang mengikuti isi sehingga `overflow-y: auto` tidak pernah aktif:
-  konten terpotong tanpa scrollbar (`body { overflow: hidden }`). Sidebar
-  punya scroll sendiri. Diuji Playwright: 5 halaman × 3 viewport (1280×720,
-  900×560, 1100×480) → nol baris terkunci.
-- **Topbar = baris judul Windows = quick surface.** `titleBarStyle: 'hidden'` +
-  `titleBarOverlay` sewarna `--bg`; `.topbar` `-webkit-app-region: drag` dan
-  SETIAP elemen yang bisa diklik di dalamnya `no-drag`. Jangan pakai
-  `frame: false` (snap layouts + tombol caption asli ikut hilang). Baris di
-  ATAS topbar menutupi tombol caption — jangan dipakai di mode Electron.
-  `padding-right: 150px` khusus `<html class="electron">` adalah tempat tombol
-  min/maks/tutup; cek ulang kalau Electron di-upgrade.
-- **Satu data, satu tempat.** Pill status pernah dobel (topbar + bawah
-  sidebar); yang dibuang yang di sidebar.
-- **Merek dari generator.** `desktop/public/logo.png` dan
-  `desktop/electron/tray.ico` adalah keluaran `tool/gen_logo.py`
-  (`docs/BRAND_ASSETS.md`). Jangan menggambar logo sendiri di JSX dan jangan
-  menyunting berkas hasil — jalankan generatornya.
-- **Teks konten bisa diseleksi** (`.page-body { user-select: text }`) supaya
-  log/pesan error bisa disalin; chrome aplikasi (`body`, sidebar, tombol) tetap
-  `none`.
-- **Aset & warna latar jendela sinkron**: `backgroundColor` di `main.cjs`
-  sama dengan `--bg`; kalau beda, satu frame pertama menampilkan kilat gelap.
-
-## Paket & rilis
-
-`npm run package` → `electron-builder` menghasilkan installer NSIS + EXE
-portable di `desktop/dist/`. Engine dibundel lewat `extraResources` ke
-`resources/engine/xydesk-host.exe`. CI: `.github/workflows/build-desktop.yml`
-(job Linux verifikasi shell; job Windows paket x64). Rilis terintegrasi di
-`release.yml`.
+Kompilasi paket penuh Windows:
+```bash
+cargo build --release -p xydesk-desktop --manifest-path desktop/src-tauri/Cargo.toml
+```

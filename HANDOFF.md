@@ -219,6 +219,14 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Desktop Shell
 
+- [x] (dari Operator - XyDesk Team, 2026-09-09) — **Migrasi ke Tauri v2 + Penanaman Driver Display, Audio, & Mic.**
+  Shell desktop sekarang berjalan di atas Tauri v2 (Rust + native WebView2)
+  dengan direktori `desktop/src-tauri/`. Frontend Next.js dihubungkan lewat
+  `desktop/app/bridge.ts` yang mengisi `window.xydesk` secara otomatis.
+  Driver Display (IddSampleDriver) dan Audio & Virtual Mic (VB-CABLE) kini
+  ditanam langsung di installer `{app}\drivers\` dan dipasang silent saat setup.
+  RAM shell turun ke ~25–40 MB, ukuran installer menjadi ~15–20 MB.
+
 - [x] (dari Galih - XySpace Team, 2026-09-03) — **Topbar sekarang = baris judul
   Windows; jangan dilucuti lagi.** `desktop/electron/main.cjs` memakai
   `titleBarStyle: 'hidden'` + `titleBarOverlay` sewarna `--bg`, `.topbar`

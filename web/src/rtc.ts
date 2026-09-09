@@ -230,6 +230,7 @@ export interface SessionStats {
   rttMs: number;
   lossPct: number;
   codec: string;
+  noFrameWarning?: boolean;
 }
 
 export class RtcSession {
@@ -245,6 +246,8 @@ export class RtcSession {
   private audioTransceiver?: RTCRtpTransceiver;
   private micStream?: MediaStream;
   private watchdog?: ReturnType<typeof setTimeout>;
+  private noFrameWatchdog?: ReturnType<typeof setTimeout>;
+  public noFrameWarning = false;
   private phase: RtcPhase | '' = '';
   private wsFailed = false;
 
@@ -291,6 +294,14 @@ export class RtcSession {
       // pesan lama supaya UI tidak menampilkan sisa galat dari percobaan lalu.
       if (next !== 'error') this.lastError = null;
     }
+
+    if (next === 'connected') {
+      this.armNoFrameWatchdog();
+    } else {
+      this.clearNoFrameWatchdog();
+      this.noFrameWarning = false;
+    }
+
     this.onPhase(next);
   }
 
@@ -313,6 +324,23 @@ export class RtcSession {
     if (this.watchdog === undefined) return;
     clearTimeout(this.watchdog);
     this.watchdog = undefined;
+  }
+
+  private armNoFrameWatchdog() {
+    this.clearNoFrameWatchdog();
+    this.noFrameWatchdog = setTimeout(() => {
+      this.noFrameWatchdog = undefined;
+      if (this.stopped || this.phase !== 'connected') return;
+      if (this.lastFrames <= 0) {
+        this.noFrameWarning = true;
+      }
+    }, 10_000);
+  }
+
+  private clearNoFrameWatchdog() {
+    if (this.noFrameWatchdog === undefined) return;
+    clearTimeout(this.noFrameWatchdog);
+    this.noFrameWatchdog = undefined;
   }
 
   /// Gagal dengan pesan yang bisa ditampilkan. Padanan `_fail()` di Flutter.
@@ -628,7 +656,14 @@ export class RtcSession {
           }
         }
       }
-      if (stats) stats.rttMs = rttMs;
+      if (stats) {
+        stats.rttMs = rttMs;
+        if (stats.width > 0 && stats.height > 0) {
+          this.clearNoFrameWatchdog();
+          this.noFrameWarning = false;
+        }
+        stats.noFrameWarning = this.noFrameWarning;
+      }
       return stats;
     } catch {
       return null;
@@ -681,6 +716,8 @@ export class RtcSession {
   stop() {
     if (this.stopped) return;
     this.stopped = true;
+    this.clearNoFrameWatchdog();
+    this.noFrameWarning = false;
     void this.disableMic();
     this.input?.close();
     this.pc?.close();

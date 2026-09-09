@@ -1,15 +1,13 @@
-name: Build Desktop (Electron + Next.js)
+name: Build Desktop (Tauri + Next.js)
 
-# Shell desktop XyDesk: Electron (supervisor engine) + renderer Next.js
+# Shell desktop XyDesk: Tauri v2 (Rust + WebView2) + renderer Next.js
 # (static export). Engine Rust dibangun di job Windows, lalu dibundel ke
-# installer NSIS + portable lewat electron-builder.
+# installer Inno Setup / Tauri EXE.
 #
-# Job Linux memverifikasi hal yang bisa diverifikasi tanpa Windows:
-# sintaks proses utama, typecheck renderer, dan static export.
+# Job Linux memverifikasi:
+# typecheck renderer, static export, dan unit test.
 
 on:
-  # Manual hanya (kebijakan 3 Sep 2026): semua build butuh izin operator
-  # lewat `workflow_dispatch`, tidak otomatis oleh push.
   workflow_dispatch:
 
 permissions:
@@ -29,21 +27,11 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
 
-      # Tanpa biner Electron — cukup untuk typecheck + static export.
       - name: Pasang dependensi
         working-directory: desktop
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: npm ci
 
-      - name: Periksa sintaks proses utama + preload
-        working-directory: desktop
-        run: node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/auth.cjs
-
-      # Test proses utama (auth: PKCE, server loopback, penerjemahan galat).
-      # Jalan tanpa biner Electron: `electron` di-stub lewat Module._load, dan
-      # server loopback-nya sungguhan (bind 127.0.0.1 port acak).
-      - name: Test proses utama
+      - name: Test proses utama & auth
         working-directory: desktop
         run: npm test
 
@@ -71,11 +59,11 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             host/target
-          key: desktop-${{ runner.os }}-cargo-${{ hashFiles('host/Cargo.lock') }}
+            desktop/src-tauri/target
+          key: desktop-${{ runner.os }}-cargo-${{ hashFiles('host/Cargo.lock') }}-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
           restore-keys: desktop-${{ runner.os }}-cargo-
 
-      # Wajib selesai SEBELUM electron-builder: extraResources mengambil
-      # xydesk-host.exe dari target/release.
+      # Build engine host Rust
       - name: Build engine host (release)
         working-directory: host
         run: cargo build --release
@@ -86,17 +74,33 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
 
-      - name: Pasang dependensi
+      - name: Pasang dependensi frontend
         working-directory: desktop
         run: npm ci
 
-      - name: Paket NSIS + portable
+      - name: Build static frontend
         working-directory: desktop
-        run: npm run package
+        run: npm run build
+
+      # Build shell Tauri
+      - name: Build shell Tauri (release)
+        working-directory: desktop/src-tauri
+        run: cargo build --release
+
+      - name: Siapkan direktori bundle
+        shell: pwsh
+        run: |
+          $bundle = "desktop/dist/bundle"
+          New-Item -ItemType Directory -Force -Path "$bundle/resources/engine" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$bundle/drivers" | Out-Null
+          Copy-Item "desktop/src-tauri/target/release/xydesk-desktop.exe" "$bundle/XyDesk.exe" -Force
+          Copy-Item "host/target/release/xydesk-host.exe" "$bundle/resources/engine/xydesk-host.exe" -Force
+          Copy-Item "packaging/windows/drivers/*" "$bundle/drivers/" -Recurse -Force
+          Write-Host "[OK] Bundle siap: $bundle"
 
       - uses: actions/upload-artifact@v4
         with:
           name: xydesk-desktop-windows-x64
-          path: desktop/dist/*.exe
+          path: desktop/dist/bundle/*
           if-no-files-found: error
           retention-days: 14

@@ -274,6 +274,12 @@ OUTPUTS = [
     # sendiri) sehingga shell memajang logo yang berbeda dari platform lain.
     ("desktop/public/logo.png", 256, "mark"),
     ("desktop/electron/tray.ico", 256, "ico"),
+    ("desktop/src-tauri/icons/icon.ico", 256, "ico"),
+    ("desktop/src-tauri/icons/tray.ico", 256, "ico"),
+    ("desktop/src-tauri/icons/32x32.png", 32, "mark"),
+    ("desktop/src-tauri/icons/128x128.png", 128, "mark"),
+    ("desktop/src-tauri/icons/128x128@2x.png", 256, "mark"),
+    ("desktop/src-tauri/icons/icon.png", 512, "mark"),
 ]
 
 # Ukuran yang ikut dibundel dalam satu berkas .ico.

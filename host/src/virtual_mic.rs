@@ -163,6 +163,9 @@ pub fn try_install_driver() -> Result<String, String> {
 
     // Cek lokasi installer
     let candidates = [
+        r"C:\Program Files\XyDesk\drivers\audio\VBCABLE_Setup_x64.exe",
+        r"./drivers/audio/VBCABLE_Setup_x64.exe",
+        r"../drivers/audio/VBCABLE_Setup_x64.exe",
         r"C:\Program Files\VB\CABLE\VBCABLE_Setup_x64.exe",
         r"./driver/VBCABLE_Setup_x64.exe",
         r"./driver/VBCABLE_Setup.exe",

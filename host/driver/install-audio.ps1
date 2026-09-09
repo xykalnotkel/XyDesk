@@ -1,6 +1,6 @@
-# XyDesk Virtual Mic Driver Installer (VB-CABLE)
+# XyDesk Virtual Mic & Audio Driver Installer (VB-CABLE)
 # Biar mic client (HP → PC) kebaca sebagai mic input di Windows dan denyut di Control Panel
-# Jalankan sebagai Administrator
+# Jalankan sebagai Administrator — memprioritaskan driver bawaan/offline
 
 param(
     [string]$DriverUrl = "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip",
@@ -20,6 +20,12 @@ if (-not (Test-Admin)) {
 
 if ($Uninstall) {
     Write-Host "Uninstall VB-CABLE..." -ForegroundColor Yellow
+    $localUninstall = Join-Path $PSScriptRoot "..\..\packaging\windows\drivers\audio\uninstall-audio.bat"
+    if (Test-Path $localUninstall) {
+        & cmd.exe /c $localUninstall
+        Write-Host "Uninstall selesai via batch script lokal" -ForegroundColor Green
+        exit 0
+    }
     $uninstaller = "C:\Program Files\VB\CABLE\VBCABLE_Setup_x64.exe"
     if (Test-Path $uninstaller) {
         Start-Process $uninstaller -ArgumentList "-u -h" -Wait
@@ -40,7 +46,18 @@ if ($hasCable) {
     exit 0
 }
 
-# Download
+# Cek apakah ada driver lokal bawaan (offline bundling)
+$localBat = Join-Path $PSScriptRoot "..\..\packaging\windows\drivers\audio\install-audio.bat"
+if (Test-Path $localBat) {
+    Write-Host "Memasang driver audio bawaan lokal..." -ForegroundColor Cyan
+    & cmd.exe /c $localBat
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Driver audio bawaan lokal berhasil dipasang." -ForegroundColor Green
+        exit 0
+    }
+}
+
+# Fallback download online
 $tempZip = "$env:TEMP\VBCABLE_Driver_Pack45.zip"
 $tempDir = "$env:TEMP\VBCABLE"
 Write-Host "Download VB-CABLE dari $DriverUrl ..." -ForegroundColor Cyan

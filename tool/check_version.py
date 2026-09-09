@@ -68,6 +68,22 @@ def main() -> None:
             f"host/Cargo.toml = {m.group(1) if m else 'tidak ada'}, seharusnya {version}"
         )
 
+    # desktop/src-tauri/Cargo.toml
+    tauri_cargo = ROOT / "desktop/src-tauri/Cargo.toml"
+    if tauri_cargo.exists():
+        mt = re.search(r'^version\s*=\s*"([^"]+)"', read("desktop/src-tauri/Cargo.toml"), re.M)
+        if not mt or mt.group(1) != version:
+            problems.append(
+                f"desktop/src-tauri/Cargo.toml = {mt.group(1) if mt else 'tidak ada'}, seharusnya {version}"
+            )
+
+    # desktop/src-tauri/tauri.conf.json
+    tauri_conf = ROOT / "desktop/src-tauri/tauri.conf.json"
+    if tauri_conf.exists():
+        got_tc = json.loads(read("desktop/src-tauri/tauri.conf.json")).get("version")
+        if got_tc != version:
+            problems.append(f"desktop/src-tauri/tauri.conf.json = {got_tc}, seharusnya {version}")
+
     for pkg in ("web/package.json", "desktop/package.json"):
         path = ROOT / pkg
         if not path.exists():
