@@ -285,12 +285,14 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
   String _pendingName(String id) => 'PC-${id.substring(id.length - 4)}';
 
   Future<void> _scanQr() async {
-    final id = await Navigator.of(context)
-        .push<String>(MaterialPageRoute(builder: (_) => const QrScanPage()));
+    final id = await Navigator.of(
+      context,
+    ).push<String>(MaterialPageRoute(builder: (_) => const QrScanPage()));
     if (!mounted || id == null) return;
     _id.text = id;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('QR berhasil dipindai.')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('QR berhasil dipindai.')));
   }
 
   @override
@@ -476,8 +478,9 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
               context,
               LucideIcons.history,
               'Riwayat',
-              () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const HistoryPage())),
+              () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
             ),
           ],
         ),
@@ -492,8 +495,9 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
                 style: TextStyle(fontSize: 11.5, color: c.textLow),
               ),
               TextButton(
-                onPressed: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const GuidePage())),
+                onPressed: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const GuidePage())),
                 child: const Text('Ke sini'),
               ),
             ],

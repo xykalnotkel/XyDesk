@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/haptics.dart';
-import '../../core/tokens.dart';
 import 'update_page.dart';
 import 'update_repository.dart';
 

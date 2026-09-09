@@ -1204,7 +1204,8 @@ class _ControlsPanel extends StatelessWidget {
         const _StatusCard(
           icon: LucideIcons.info,
           title: 'Controls ready',
-          body: 'All controls (keyboard, joystick, gamepad, keypad, mouse) can be remapped in Control Mapping page. Panel now spacious per Founder request.',
+          body:
+              'All controls (keyboard, joystick, gamepad, keypad, mouse) can be remapped in Control Mapping page. Panel now spacious per Founder request.',
         ),
       ],
     );

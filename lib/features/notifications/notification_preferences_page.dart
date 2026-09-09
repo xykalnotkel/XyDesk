@@ -56,8 +56,9 @@ class _NotificationPreferencesPageState
         _service.lastError ??
         'Notifikasi belum aktif. Jika izin pernah ditolak, aktifkan melalui '
             'pengaturan notifikasi Android.';
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override

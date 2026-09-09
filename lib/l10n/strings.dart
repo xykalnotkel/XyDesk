@@ -166,7 +166,8 @@ const Map<String, Map<String, String>> kStrings = {
   'news_subtitle': {
     'id':
         'Pembaruan produk, keputusan teknik, dan angka yang kami ukur sendiri.',
-    'en': 'Product updates, engineering decisions, and numbers we measured ourselves.',
+    'en':
+        'Product updates, engineering decisions, and numbers we measured ourselves.',
     'zh': '产品更新、工程决策，以及我们自己测量的数据。',
     'es':
         'Actualizaciones, decisiones técnicas y números medidos por nosotros.',

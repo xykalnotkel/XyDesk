@@ -159,8 +159,9 @@ class DevLog {
   /// Buka DevLog sebagai halaman penuh — lebih nyaman untuk membaca
   /// stack trace panjang daripada lembar setengah layar.
   static Future<void> openPage(BuildContext context) {
-    return Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const DevLogScreen()));
+    return Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const DevLogScreen()));
   }
 
   /// Ekspor hanya baris error & fatal — inilah yang biasanya perlu

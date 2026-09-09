@@ -548,9 +548,9 @@ class _AppShellState extends ConsumerState<AppShell> {
       // Ikon AI 3D ungu glossy untuk Billing / Sewa PC — buka layar
       // Langganan langsung dari topbar (bukan via menu Akun).
       _BillingIconButton(
-        onPressed: () =>
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const BillingPage())),
+        onPressed: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const BillingPage())),
       ),
       _DotIconButton(
         icon: LucideIcons.bell,
@@ -588,9 +588,9 @@ class _AppShellState extends ConsumerState<AppShell> {
         IconButton(
           tooltip: context.tr('connect_history'),
           icon: Icon(LucideIcons.history, size: 19, color: c.textMid),
-          onPressed: () =>
-              Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const HistoryPage())),
+          onPressed: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
         ),
       );
     } else if (_index == 2) {
