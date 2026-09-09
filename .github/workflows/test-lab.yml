@@ -107,8 +107,12 @@ jobs:
 
       - name: Install Virtual Display Driver (installer .exe itsmikethetech)
         shell: pwsh
+        # Jaring pengaman: installer driver tidak boleh menggantung job.
+        # (Lab 9 Sep: setup 25.5.2 gantung >11 mnt tanpa timeout.)
+        timeout-minutes: 12
         run: |
           Write-Host "=== Install Virtual Display Driver (fix hitam VM/RDP) ===" -ForegroundColor Cyan
+          function Stamp($m) { Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $m" }
           # RIWAYAT KEGAGALAN (Sep 2026) — jangan diulang:
           # - Scoop `idd-sample-driver`: manifest sudah tidak ada di bucket
           #   extras ("Couldn't find manifest", lab 8 Sep).
@@ -124,15 +128,30 @@ jobs:
           # lama redirect, tapi pakai yang kanonik).
           $url = "https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe"
           $setup = Join-Path $env:RUNNER_TEMP "VDD-Setup.exe"
+          Stamp "Unduh Setup VDD..."
           try {
-            Invoke-WebRequest -Uri $url -OutFile $setup -UseBasicParsing -ErrorAction Stop
+            Invoke-WebRequest -Uri $url -OutFile $setup -UseBasicParsing -ErrorAction Stop -TimeoutSec 180
           } catch {
             Write-Host "::error::Gagal unduh Setup VDD: $($_.Exception.Message)"
             exit 1
           }
-          Write-Host "Install silent (/VERYSILENT)..."
-          $p = Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
-          Write-Host "Exit setup: $($p.ExitCode)"
+          Stamp "Unduhan OK: $((Get-Item $setup).Length) byte"
+          # Installer dengan BATAS TUNGGU 5 menit — JANGAN -Wait tanpa batas:
+          # setup 25.5.2 terbukti bisa gantung (kemungkinan anak proses / dialog
+          # tak terlihat). Timeout -> bunuh -> tetap lanjut ke verifikasi PnP,
+          # karena driver bisa saja sudah terpasang walau setupnya gantung.
+          Stamp "Install silent (/VERYSILENT, maks 5 mnt)..."
+          $p = Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -PassThru
+          $deadline = (Get-Date).AddMinutes(5)
+          while (-not $p.HasExited -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 5 }
+          if (-not $p.HasExited) {
+            Stamp "[WARN] Setup gantung >5 mnt (PID $($p.Id)) — dibunuh, lanjut verifikasi."
+            try { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } catch {}
+            Get-Process | Where-Object { $_.ProcessName -like "*VDD*" -or $_.ProcessName -like "*Virtual*Display*" } |
+              ForEach-Object { try { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue } catch {} }
+          } else {
+            Stamp "Exit setup: $($p.ExitCode)"
+          }
           # Daftarkan 1 display virtual via manager CLI bila ada (best-effort).
           foreach ($mgr in @("C:\Program Files\Virtual Display Driver\VirtualDisplayDriver.exe",
                              "C:\Program Files (x86)\Virtual Display Driver\VirtualDisplayDriver.exe")) {
