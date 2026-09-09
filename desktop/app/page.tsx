@@ -666,7 +666,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
             </div>
             {/* RDP session warning — penyebab #1 hitam di lab Actions */}
             {status?.isRdpSession && (
-              <div className="vm-warning" style={{ marginTop: 14, background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(167,139,250,0.12))', borderColor: 'rgba(124,58,237,0.22)' }}>
+              <div className="vm-warning" style={{ marginTop: 14, background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(167,139,250,0.12))' }}>
                 <span className="icon">🖥️</span>
                 <div className="text">
                   <strong>RDP session terdeteksi (SM_REMOTESESSION=1) — ini lab Actions?</strong><br />
@@ -680,7 +680,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
             )}
             {/* Virtual Display Driver — seperti AnyDesk/RustDesk */}
             {status?.virtualDisplay && (
-              <div className="vm-warning" style={{ marginTop: 14, background: status.virtualDisplay.installed ? 'linear-gradient(135deg, rgba(22,115,71,0.10), rgba(22,115,71,0.06))' : 'linear-gradient(135deg, rgba(124,58,237,0.14), rgba(91,33,182,0.10))', borderColor: status.virtualDisplay.installed ? 'rgba(22,115,71,0.22)' : 'rgba(124,58,237,0.26)' }}>
+              <div className="vm-warning" style={{ marginTop: 14, background: status.virtualDisplay.installed ? 'linear-gradient(135deg, rgba(22,115,71,0.10), rgba(22,115,71,0.06))' : 'linear-gradient(135deg, rgba(124,58,237,0.14), rgba(91,33,182,0.10))' }}>
                 <span className="icon">{status.virtualDisplay.installed ? '✅' : '🖥️'}</span>
                 <div className="text">
                   <strong>Virtual Display Driver: {status.virtualDisplay.installed ? 'Terpasang (seperti AnyDesk)' : 'Belum terpasang'}</strong><br />
@@ -1695,7 +1695,7 @@ function SettingsPage({
             )}
             {/* Virtual Mic Driver — biar mic client denyut di Control Panel seperti AnyDesk */}
             {status?.virtualMic && (
-              <div className="vm-warning" style={{ marginTop: 14, background: status.virtualMic.installed ? 'linear-gradient(135deg, rgba(22,115,71,0.10), rgba(22,115,71,0.06))' : 'linear-gradient(135deg, rgba(124,58,237,0.14), rgba(91,33,182,0.10))', borderColor: status.virtualMic.installed ? 'rgba(22,115,71,0.22)' : 'rgba(124,58,237,0.26)' }}>
+              <div className="vm-warning" style={{ marginTop: 14, background: status.virtualMic.installed ? 'linear-gradient(135deg, rgba(22,115,71,0.10), rgba(22,115,71,0.06))' : 'linear-gradient(135deg, rgba(124,58,237,0.14), rgba(91,33,182,0.10))' }}>
                 <span className="icon">{status.virtualMic.installed ? '🎙️' : '🔈'}</span>
                 <div className="text">
                   <strong>Virtual Mic: {status.virtualMic.installed ? 'Terpasang — mic client akan denyut di Recording' : 'Belum terpasang — mic client cuma ke speaker'}</strong><br />

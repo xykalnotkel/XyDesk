@@ -24,10 +24,14 @@ class AppColors {
   static const textLowDark = Color(0xFF6B6B73);
 
   // ── Light: "Paper" ──
-  static const bgLight = Color(0xFFFAFAF9);
+  // Diselaraskan ke web Sep 2026 (operator: web = acuan): bg putih murni,
+  // overlay + input lavender-putih. input == overlay BUKAN duplikat yang
+  // tertinggal — hukum tanpa-garis butuh beda nada, dan input putih web
+  // (#ffffff) dulu cuma terbaca karena ada border.
+  static const bgLight = Color(0xFFFFFFFF);
   static const raisedLight = Color(0xFFFFFFFF);
-  static const overlayLight = Color(0xFFFFFFFF);
-  static const inputLight = Color(0xFFF2F2F0);
+  static const overlayLight = Color(0xFFF5F3FF);
+  static const inputLight = Color(0xFFF5F3FF);
   // Ungu brand versi light — sama dengan web (primary), dipakai di Paper.
   static const accentLight = Color(0xFF7C3AED);
   static const textHiLight = Color(0xFF18181B);
@@ -75,7 +79,8 @@ class AppPalette extends ThemeExtension<AppPalette> {
   Color get danger => AppColors.danger;
 
   /// Isi aksen sangat halus — dipakai untuk pil indikator nav & modifier aktif.
-  Color get accentSoft => accent.withValues(alpha: 0.12);
+  /// 10% mengikuti web (--accent-soft): tiga platform satu angka.
+  Color get accentSoft => accent.withValues(alpha: 0.10);
 
   static const dark = AppPalette(
     bg: AppColors.bgDark,

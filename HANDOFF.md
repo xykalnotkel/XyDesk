@@ -909,26 +909,15 @@ _(kosong)_
 
 ## Untuk: Docs & Audit
 
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **`docs/DESIGN.md` dibuat di sesi ini** (sebelumnya
-  dirujuk `lib/core/tokens.dart:6` tapi tidak pernah ada). Tiga keputusan di
-  dalamnya sengaja TIDAK diambil oleh agent dan butuh mata operator:
-  (1) skala radius Flutter 8/12/16/20 vs CSS 10/14/20 — menyamakannya mengubah
-  bentuk setiap kartu dan tombol di web + desktop; (2) web & desktop masih
-  memakai garis pemisah (`--line`, ±282 pemakaian di web, ±51 di desktop)
-  padahal hukum "Quiet Surface" melarangnya — menghapusnya adalah perombakan
-  visual, bukan perbaikan token; (3) navigasi tidak sama jumlahnya (HP 4 item
-  dengan "Akun", desktop 5 item dengan "Profil"+"Pengaturan" terpisah, web 2).
-  Ketiganya tercatat di bagian "Penyimpangan yang disengaja" supaya tidak
-  "dirapikan" orang berikutnya yang mengira kelupaan.
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Permukaan web sengaja dibiarkan berbeda dari
-  aplikasi.** `web/src/style.css` memakai `--bg: #ffffff` / `--overlay: #f5f3ff`
-  / `--input: #ffffff` sementara aplikasi `#FAFAF9` / `#FFFFFF` / `#F2F2F0`.
-  Berkas itu sendiri mencatat alasannya ("design pass 2026-09"), jadi sesi audit
-  ini TIDAK menimpanya — hanya warna status yang disamakan karena itu murni
-  hanyut (bukan warna dasar aplikasi maupun varian terangnya). Konsekuensinya
-  harus dikatakan jujur ke operator: **web dan aplikasi tidak terlihat persis
-  sama.** Kalau itu tidak diinginkan, samakan ke nilai Paper di `docs/DESIGN.md`
-  lalu hapus catatan penyimpangannya.
+- [ ] (dari Operator - XyDesk Team, 2026-09-06, diperbarui 2026-09-09) — **Sisa dari `docs/DESIGN.md`: navigasi
+  tidak sama jumlahnya** (HP 4 item dengan "Akun", desktop 5 item dengan "Profil"+"Pengaturan" terpisah, web 2).
+  Dua keputusan lain SUDAH dieksekusi 2026-09-09 atas suara operator (web = acuan): (1) radius disatukan ke
+  8/12/16/20 di semua platform (kartu = 16); (2) garis pemisah dihapus di desktop + web (~120 situs web,
+  ~60 desktop) — kartu→bayangan, baris→ubin overlay, tabel→zebra/ubin, chip→isi lembut. Tercatat di
+  `docs/DESIGN.md` ("Garis yang disengaja" + "Yang sudah paritas" #4).
+- [x] (dari Operator - XyDesk Team, 2026-09-06, SELESAI 2026-09-09) — Permukaan web vs aplikasi disatukan —
+  operator memutuskan **web sebagai acuan**, jadi yang mengikuti justru aplikasi + desktop: `bg`/`raised`
+  `#ffffff`, `overlay`/`input` `#f5f3ff` di ketiga platform. Keputusan lama (biarkan berbeda) batal.
 - [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Laporan audit lengkap ada di
   `docs/AUDIT-2026-09-06.md`** (paritas UI/UX tiga platform, diagnosis stuck,
   dan keputusan C++ dengan bukti). Kesimpulan bagian C: **jangan menambah C++.**

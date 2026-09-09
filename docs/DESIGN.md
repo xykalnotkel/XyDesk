@@ -1,18 +1,22 @@
 # DESIGN.md — Sumber kebenaran token desain XyDesk
 
-> **Berkas ini dirujuk `lib/core/tokens.dart:6` sejak awal, tapi tidak pernah ada.**
-> Akibatnya tiga platform menyimpan token sendiri-sendiri di tiga berkas berbeda
-> tanpa rujukan bersama, dan sudah menyimpang. Audit 6 Sep 2026
-> (`docs/AUDIT-2026-09-06.md`) menemukan desktop masih memakai aksen pra-rebrand.
+> Riwayat singkat: berkas ini dirujuk `lib/core/tokens.dart:6` sejak awal,
+> tapi tidak pernah ada — tiga platform menyimpan token sendiri-sendiri dan
+> menyimpang. Dibuat 6 Sep 2026 dari audit. **9 Sep 2026 (unifikasi UI/UX):
+> operator memutuskan WEB sebagai acuan** — aplikasi + desktop mengikuti
+> nilai web, radius disatukan ke 8/12/16/20, garis pemisah dihapus di
+> desktop + web, installer di-brand. Berkas ini diperbarui mengikuti.
 >
-> Mulai sekarang: **ubah nilai di sini dulu**, baru salin ke tiga tempat di bawah.
-> Kalau ada selisih, berkas ini yang menang — kecuali selisihnya tercatat di
-> bagian "Penyimpangan yang disengaja".
+> Mulai sekarang: **ubah nilai di sini dulu**, baru salin ke tiga tempat di
+> bawah. Kalau ada selisih, berkas ini yang menang — kecuali selisihnya
+> tercatat di bagian "Penyimpangan yang disengaja".
 
 ## Hukum visual
 
 1. **Quiet Surface** — clean, modern, tanpa garis pemisah. Pemisah dibangun dari
-   beda warna permukaan (`bg` → `raised` → `overlay` → `input`), bukan dari border.
+   beda warna permukaan (`bg` → `raised` → `overlay`/`input`), bayangan halus,
+   dan jarak — bukan dari border. Satu-satunya garis yang boleh ada adalah
+   outline SEMANTIK (lihat "Garis yang disengaja" di bawah), bukan pemisah.
 2. **Satu tema terang ("Paper")** di aplikasi Android. Mode gelap dihapus supaya
    hanya ada satu set kontras yang teruji. Nilai gelap ("Graphite") tetap
    dipertahankan di `tokens.dart` sebagai pasangan yang konsisten, bukan sebagai
@@ -28,7 +32,7 @@
 | Platform | Berkas | Bentuk |
 |---|---|---|
 | Aplikasi (Android) | `lib/core/tokens.dart` | kelas Dart `AppColors` / `AppPalette` |
-| Web | `web/src/style.css` | variabel CSS `:root` |
+| Web (ACUAN) | `web/src/style.css` | variabel CSS `:root` |
 | Desktop shell | `desktop/app/globals.css` | variabel CSS `:root` |
 
 Logo punya pola yang lebih baik dan layak ditiru untuk token: satu sumber
@@ -38,23 +42,25 @@ lihat `web/test/csp.test.js` untuk contoh pola uji yang membandingkan dua berkas
 
 ## Token warna — Paper (terang)
 
-Ini nilai kanonik. Nama kolom web/desktop adalah nama variabel CSS-nya.
+Ini nilai kanonik = nilai web. Nama kolom web/desktop adalah nama variabel CSS-nya.
 
 | Makna | Nilai | Flutter | Web | Desktop |
 |---|---|---|---|---|
-| Latar halaman | `#FAFAF9` | `bgLight` | `--bg` ⚠️ | `--bg` |
+| Latar halaman | `#FFFFFF` | `bgLight` | `--bg` | `--bg` |
 | Permukaan naik (kartu) | `#FFFFFF` | `raisedLight` | `--raised` | `--raised` |
-| Permukaan overlay | `#FFFFFF` | `overlayLight` | `--overlay` ⚠️ | `--overlay` |
-| Latar field input | `#F2F2F0` | `inputLight` | `--input` ⚠️ | `--input` |
+| Permukaan overlay | `#F5F3FF` | `overlayLight` | `--overlay` | `--overlay` |
+| Latar field input | `#F5F3FF` | `inputLight` | `--input` | `--input` |
 | Teks utama | `#18181B` | `textHiLight` | `--text-hi`, `--ink` | `--text-hi`, `--ink` |
-| Teks sekunder | `#52525B` | `textMidLight` | `--text-mid` | `--text-mid` |
+| Teks sekunder | `#52525B` | `textMidLight` | `--text-mid`, `--ink-soft` | `--text-mid` |
 | Teks redup | `#9A9AA2` | `textLowLight` | `--text-low` | `--text-low` |
 | **Aksen** | `#7C3AED` | `accentLight` | `--accent` | `--accent` |
 | Aksen dalam (teks di latar terang) | `#5B21B6` | `accentDeep` | `--accent-deep` | `--accent-deep` |
 | Aksen sekunder (lavender) | `#A78BFA` | `accentLavender` | `--accent-2` | `--accent-2` |
-| Isi aksen halus | `accent` @ 12% | `accentSoft` | `--accent-soft` ⚠️ | `--accent-soft` |
+| Isi aksen halus | `accent` @ 10% | `accentSoft` | `--accent-soft` | `--accent-soft` |
 
-⚠️ = lihat "Penyimpangan yang disengaja" di bawah.
+Catatan `input == overlay`: BUKAN duplikat tertinggal. Hukum tanpa-garis butuh
+beda nada antar permukaan; input putih lama (`#ffffff`) dulu cuma terbaca karena
+ada border. Setelah border dihapus (Sep 2026), input memakai nada lavender-putih.
 
 ## Token warna — status
 
@@ -85,25 +91,31 @@ web/desktop — nilai jarak di sana masih ditulis per aturan.
 | `md` | 12 |
 | `lg` | 16 |
 | `xl` | 20 |
-| `xxl` | 24 |
 | `h32` / `h40` / `h56` | 32 / 40 / 56 |
 | `screen` (padding horizontal layar) | 20 |
 
 ## Radius
 
+**DIPUTUSKAN 9 Sep 2026 (operator): satu skala 8/12/16/20 + pil di semua platform.**
+Web pindah dari 10/14/20; kartu disatukan ke peran 16.
+
 | Nama | Flutter (`R`) | Web | Desktop |
 |---|---|---|---|
-| kecil | 8 | `--radius-sm: 10px` | `--radius-sm: 10px` |
-| sedang | 12 | `--radius: 14px` | `--radius: 14px` |
-| besar | 16 | — | — |
-| ekstra | 20 | `--radius-lg: 20px` | — |
-| tombol keyboard virtual | 3 (sengaja hampir kotak) | — | — |
-| pil | 999 | — | — |
+| kecil | 8 | `--radius-sm: 8px` | `--r-sm: 8px` |
+| sedang | 12 | `--radius-md: 12px` | `--r-md: 12px` |
+| besar (kartu, dialog) | 16 | `--radius: 16px` | `--r-lg: 16px` |
+| ekstra | 20 | `--radius-lg: 20px` | `--r-xl: 20px` (didefinisikan, belum dipakai) |
+| tombol keyboard virtual | 3 (sengaja hampir kotak) | `3px` + komentar `R.key` | — (tidak ada keyboard virtual) |
+| pil | 999 | `999px` | `999px` / `--r-pill` |
 
-**BELUM diputuskan.** Skala Flutter 8/12/16/20 dan skala CSS 10/14/20 tidak sama.
-Menyamakannya mengubah bentuk setiap kartu dan tombol di web maupun desktop, jadi
-ini keputusan yang harus dilihat mata operator, bukan disamakan diam-diam oleh agent.
-Diangkat sebagai temuan terbuka di `HANDOFF.md`.
+Peran bentuk per komponen (disatukan Sep 2026): kartu/kartu berita/dialog/popover/
+panel modal = 16; input field + tombol CSS + tab strip + segmen = 12; chip kecil,
+badge, tab aktif = 8; chip filter/kategori = pil; tombol keyboard virtual = 3.
+
+BELUM disatukan (butuh mata operator, jangan diam-diam): **tombol aplikasi = pil
+penuh** (`StadiumBorder`) sementara tombol web/desktop = 12; **input aplikasi =
+pil penuh** sementara input web/desktop = 12. Skalanya sama, perannya beda —
+menyamakannya mengubah bahasa bentuk salah satu sisi.
 
 ## Durasi
 
@@ -120,34 +132,37 @@ Diangkat sebagai temuan terbuka di `HANDOFF.md`.
 Web memakai `--speed: 0.16s` — dekat dengan `fast`/`tab`, tidak identik. Desktop
 tidak punya token durasi.
 
+## Garis yang disengaja
+
+Hukum #1 melarang garis PEMISAH. Yang di bawah ini outline SEMANTIK — boleh ada,
+dan daftarnya tertutup (tambah jenis baru = ubah bagian ini dulu):
+
+1. **Varian tombol outlined** — cermin `OutlinedButton` aplikasi
+   (`side: textLow @30%`): web `.btn.ghost` + `.ghost-btn`, desktop
+   `button.ghost` memakai `rgba(154,154,162,0.30)`. Hover = isi halus + teks
+   dalam, border transparan.
+2. **Indikator fokus** — aplikasi: outline aksen 1.5px saat fokus; web: `--ring`
+   (+ `--ring-danger` untuk invalid); desktop: ring `0 0 0 3px accent-soft`.
+   Mekanisme beda, makna sama.
+3. **Tuts di atas video/game** — `vkb-key` (web), `gp-key` border-only (web),
+   `hud-icon-btn` (web): tanpa tepi tidak terbaca sebagai tombol di atas
+   gambar bergerak. Disengaja + dikomentari di kode.
+4. **Viewfinder pemindai QR** — `.qr-frame` (web): bingkai sudut = fungsi alat.
+5. **Penanda aksen merek** — mistar 5px di `h2` section web, centang 3px di `h3`
+   kartu desktop: dekorasi aksen, bukan pemisah.
+6. **Chrome peramban** — `scrollbar` web (`#d5cde8` literal, bukan token),
+   trik `background-clip` desktop: fungsional, bukan bahasa desain.
+
+Pengganti pemisah yang dihapus (pola baku): kartu = bayangan; baris daftar =
+ubin overlay + gap; strip/tab = jalur input + tab putih; tabel = strip zebra
+(web lisensi) atau ubin; chip = isi overlay/lembut; panel modal = bayangan.
+
 ## Penyimpangan yang disengaja
 
 Dicatat di sini supaya tidak "dirapikan" oleh orang berikutnya yang mengira ini
 kelupaan. Kalau suatu hari mau disamakan, hapus barisnya dari bagian ini dulu.
 
-### 1. Permukaan web lebih putih dan overlay-nya bernada lavender
-
-`web/src/style.css` memakai `--bg: #ffffff`, `--overlay: #f5f3ff`,
-`--input: #ffffff`, sementara aplikasi memakai `#FAFAF9` / `#FFFFFF` / `#F2F2F0`.
-Berkas itu sendiri mencatat alasannya: *"Ungu inti diselaraskan dengan logo X baru
-(violet kaca #7C3AED–#A78BFA) pada design pass 2026-09."* Jadi ini keputusan desain,
-bukan drift — dan karena itu TIDAK disamakan pada audit 6 Sep 2026.
-
-Konsekuensinya harus dikatakan jujur: **web dan aplikasi tidak terlihat persis sama.**
-Kalau itu tidak lagi diinginkan, samakan ke nilai Paper di tabel atas dan hapus
-catatan ini.
-
-### 2. Web dan desktop masih memakai garis pemisah
-
-Hukum #1 melarang garis pemisah, tapi web punya `--line: #e9e5f2` +
-`--line-strong: #d5cde8` (dipakai ±282 kali) dan desktop punya `--line: #e7e7e4`
-(±51 kali). Warna garisnya pun berbeda satu sama lain.
-
-Menghapusnya adalah perombakan visual, bukan perbaikan token — 300+ pemakaian harus
-ditinjau satu per satu supaya hierarki tidak hilang bersama garisnya. Diangkat
-sebagai pekerjaan terbuka, bukan dikerjakan separuh.
-
-### 3. Navigasi tidak sama jumlahnya
+### 1. Navigasi tidak sama jumlahnya
 
 | Platform | Item |
 |---|---|
@@ -157,6 +172,13 @@ sebagai pekerjaan terbuka, bukan dikerjakan separuh.
 
 Desktop memecah Profil dan Pengaturan; aplikasi menggabungnya jadi Akun. Ini
 keputusan struktur informasi, bukan token — perlu diputuskan operator.
+
+### 2. Aksen Void (gelap) di desktop + web
+
+Sidebar + hero login desktop dan footer/seksi gelap web memakai Void `#0D0716`
+dengan radial ungu. Aplikasi tidak punya permukaan gelap sama sekali (hukum #2).
+Ini bahasa bersama web + desktop, bukan drift — menghapusnya = mendesain ulang
+kedua sisi, bukan menyamakan token.
 
 ## Yang sudah paritas (contoh baik)
 
@@ -175,6 +197,16 @@ keputusan struktur informasi, bukan token — perlu diputuskan operator.
    `8da171e`): chip kategori bundar di atas sampul, rasio sampul 16:9. Sebelumnya
    kategori ditulis tiga cara berbeda — di web menempel di atas sampul, di desktop
    duduk di badan kartu, di aplikasi berupa teks kapital di atas judul.
+
+4. **Unifikasi UI/UX Sep 2026** (operator: web = acuan): token Paper mengikuti web
+   (`bg #ffffff`, `overlay`/`input #f5f3ff`, `accent-soft` 10%); radius satu skala
+   8/12/16/20 + pil + tuts-3 di semua platform; ±185 garis pemisah dihapus di
+   desktop + web (kartu→bayangan, baris→ubin overlay, strip→jalur input, tabel→
+   zebra/ubin, chip→isi lembut); chip filter/kategori disatukan (isi overlay,
+   aktif isi-lembut + teks dalam); switch desktop = trek `textLow @45%` tanpa
+   outline + flat aksen saat on (cermin aplikasi); installer Windows di-brand
+   (`wizard-image.bmp` + `wizard-small.bmp` dari logo asli). Sisa terbuka:
+   tombol/input pil aplikasi vs 12px CSS, jumlah item navigasi.
 
 Itu bukti paritas bisa dicapai: satu keputusan, diterapkan ke tiga tempat, dalam satu
 commit. Token desain butuh perlakuan yang sama.

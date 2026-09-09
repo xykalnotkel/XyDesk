@@ -24,6 +24,18 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Diperbaiki
+- **Unifikasi UI/UX tiga platform** (operator: web = acuan): token Paper mengikuti web — `bg #ffffff`,
+  `overlay`/`input #f5f3ff`, `accent-soft` 10%; radius satu skala 8/12/16/20 + pil + tuts-3 (kartu = 16
+  di semua platform); garis pemisah dihapus di desktop + web (kartu = bayangan, baris daftar = ubin
+  overlay + gap, strip/tab = jalur input + tab putih, tabel = zebra/ubin, chip = isi overlay dengan
+  aktif isi-lembut + teks dalam); switch desktop = trek `textLow @45%` tanpa outline + flat aksen saat
+  on; aturan tersisa yang disengaja tercatat tertutup di `docs/DESIGN.md` ("Garis yang disengaja").
+- **Installer Windows di-brand**: gambar wizard `wizard-image.bmp` (164×314) + `wizard-small.bmp` (55×55)
+  dari logo asli — bukan lagi default polos Inno Setup.
+- **Korupsi CSS web**: blok `@media` rusak di `web/src/style.css` (~L1067) dihapus; ~10 deklarasi yatim
+  (`margin`, `padding`, `border`, `grid-*`) ikut terbuang, aturan `.sesi-panel h2` duplikat digabung.
+
 ### Ditambahkan
 - **Updater desktop (PC)**: kartu "Pembaruan aplikasi" di Pengaturan — cek
   otomatis, unduh installer terverifikasi SHA-256, pasang lalu mulai ulang.
