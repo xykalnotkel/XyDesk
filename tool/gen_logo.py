@@ -147,23 +147,33 @@ def build_wordmark_tile(size: int, light: bool) -> Image.Image:
 #
 # Ganti identitas? Timpa `design/logo-asli.png` (persegi, latar transparan,
 # isi tidak menyentuh tepi), lalu jalankan ulang skrip ini.
+#
+# Kebijakan tile (hasil keluhan "kok hitam", Sep 2026): tile launcher dan
+# .ico SELALU terang (#F5F3FF) dan warna logo asli SELALU dipertahankan.
+# Aturan lama ("sumber gelap → siluet putih di tile gelap") memutihkan logo
+# ungu asli dan memanggang tile gelap opak ke foreground adaptive icon —
+# hasilnya ikon terlihat hitam dan bukan logo asli. Kalau sumbernya diganti
+# logo terang, generator GAGAL dengan pesan jelas (jangan diam-diam
+# memutihkan/menghitamkan identitas).
 SOURCE = ROOT / "design" / "logo-asli.png"
+
+TILE_LIGHT = (245, 243, 255, 255)  # #F5F3FF — samakan dengan
+# android/app/src/main/res/values/ic_launcher_background.xml
 
 
 def source_is_dark() -> bool:
     """Apakah logo asli bernilai gelap?
 
-    Logo XyDesk pernah berganti-ganti: ada yang biru-ungu, ada yang monokrom
-    hitam. Beberapa target duduk di atas latar gelap (ikon launcher, .ico
-    Windows) dan sisanya di latar terang (splash Android #FAFAF9). Kalau
-    pembuatnya memilih warna sendiri, cepat atau lambat ada logo yang
-    tenggelam di latarnya — jadi terang/gelapnya diukur, bukan ditebak.
+    dipakai sebagai prasyarat kebijakan tile terang: logo gelas (ungu XyDesk
+    maupun monokrom hitam) terbaca di atas tile #F5F3FF. Hasilnya TIDAK boleh
+    dipakai untuk mengubah warna logo — aturan lama yang memutihkan sumber
+    gelap adalah bug yang menelan identitas (Sep 2026).
     """
     im = _source_image()
     small = im.resize((64, 64), Image.LANCZOS)
     total = 0.0
     weight = 0
-    for r, g, b, a in small.convert("RGBA").getdata():
+    for r, g, b, a in small.convert("RGBA").get_flattened_data():
         if a < 128:
             continue
         lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
@@ -175,10 +185,19 @@ def source_is_dark() -> bool:
 
 
 def _source_image() -> Image.Image:
-    """Buka sumber logo, dipangkas ke isinya supaya margin simetris."""
+    """Buka sumber logo, dipangkas ke isinya lalu diganjal jadi persegi.
+
+    Pengganjal (bukan regang) supaya sumber non-persegi seperti 768x729
+    tidak melar saat di-resize ke kanvas persegi.
+    """
     im = Image.open(SOURCE).convert("RGBA")
     bbox = im.getchannel("A").getbbox()
-    return im.crop(bbox) if bbox else im
+    if bbox:
+        im = im.crop(bbox)
+    side = max(im.size)
+    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    square.paste(im, ((side - im.width) // 2, (side - im.height) // 2), im)
+    return square
 
 
 def build_source(
@@ -191,24 +210,27 @@ def build_source(
     """Render logo asli pada kanvas `size x size`.
 
     fill  proporsi kanvas yang diisi logo (0..1).
-    mono  bila diisi, logo dijadikan siluet warna itu (dipakai di latar yang
-          bertolak belakang: putih untuk latar gelap, gelap untuk latar muda).
-    tile  kompositkan di atas tile squircle gelap. Wajib untuk ikon launcher
-          dan .ico Windows: peluncur lama tidak memberi latar, jadi logo
-          transparan bisa tenggelam di wallpaper terang.
+    mono  bila diisi, logo dijadikan siluet warna itu. Hanya untuk varian
+          monokrom yang disengaja (x-white/x-black) — JANGAN pernah diisi
+          otomatis dari hasil ukur.
+    tile  kompositkan di atas tile squircle TERANG (#F5F3FF). Wajib untuk ikon
+          launcher dan .ico Windows: peluncur lama tidak memberi latar, jadi
+          logo transparan bisa tenggelam di wallpaper. Warna logo asli selalu
+          dipertahankan apa adanya.
     """
     s = size * SS
     canvas = Image.new("RGBA", (s, s), (0, 0, 0, 0))
 
     if tile:
-        plate = Image.new("RGBA", (s, s), TILE_DARK)
+        if not source_is_dark():
+            raise SystemExit(
+                "Sumber logo terang tidak terbaca di tile terang. Ganti tile "
+                "atau gelapkan sumber secara eksplisit — jangan diam-diam "
+                "mengubah warna identitas."
+            )
+        plate = Image.new("RGBA", (s, s), TILE_LIGHT)
         canvas.paste(plate, (0, 0), _squircle(s, 0.22, 0.02))
         inner = 0.72  # logo duduk di dalam tile, tidak menyentuh tepi tile
-        # Tile-nya gelap (#0D0716), jadi logo gelap harus jadi siluet putih
-        # supaya tidak lenyap. Ini yang menjaga ikon tetap terbaca di
-        # wallpaper apa pun, berapa kali pun identitasnya berganti.
-        if source_is_dark():
-            mono = mono or WHITE
     else:
         inner = fill
 
@@ -327,11 +349,10 @@ def main() -> None:
         build_source(legacy, tile=True).save(base / "ic_launcher.png")
         # XML memberi inset 16%, jadi isi efektifnya 0.92 x (1 - 0.32) = 0.63
         # kanvas — aman di dalam zona aman 72dp adaptive icon.
-        # Latar adaptive icon ikut @color/ic_launcher_background (#0D0716),
-        # jadi logo gelap dipaksa jadi siluet putih (lihat build_source).
-        build_source(foreground, tile=source_is_dark()).save(
-            base / "ic_launcher_foreground.png"
-        )
+        # Foreground SELALU transparan tanpa tile: latarnya disediakan
+        # @color/ic_launcher_background (#F5F3FF). Memanggang tile ke sini
+        # adalah bug (ikon jadi opak dan menutup latar adaptif).
+        build_source(foreground).save(base / "ic_launcher_foreground.png")
         print(f"OK mipmap-{density:<8} legacy={legacy} foreground={foreground}")
 
     # Favicon multi-ukuran untuk peramban lama.

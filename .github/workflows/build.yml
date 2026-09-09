@@ -217,6 +217,11 @@ jobs:
           python3 -m pip install --quiet Pillow
           python3 tool/audit_assets.py
 
+      # Ikon launcher dua kali regresi ke varian hitam (Sep 2026) — gerbang
+      # ini mengunci fakta pikselnya (foreground transparan, tile terang).
+      - name: Verifikasi ikon launcher bukan varian hitam
+        run: python3 tool/check_icons.py
+
       # Aturan desain ditegakkan mesin, bukan sekadar ditulis di dokumen.
       - name: Verifikasi aturan seamless
         run: |

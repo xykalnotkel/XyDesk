@@ -1040,6 +1040,14 @@ _(kosong)_
 
 ## Selesai
 
+- [x] (dari Operator - XyDesk Team, 2026-09-09, sesi LOGO) — **Ikon hitam
+  diperbaiki di akar + dikunci CI:** `tool/gen_logo.py` tidak lagi memutihkan
+  sumber gelap / memanggang tile gelap (tile terang `#F5F3FF`, warna asli
+  dipertahankan, sumber diganjal persegi anti-melar, sumber terang digagalkan
+  eksplisit); 10 mipmap + 4 `.ico` + XML diregenerasi (lum tile 0.76,
+  foreground 43% opak transparan); gerbang baru `tool/check_icons.py` di
+  Build (uji negatif: ikon lama ditolak). Keluhan: "kok hitam, bukannya logo
+  asli".
 - [x] (dari Operator - XyDesk Team, 2026-09-09, sesi FIXPACK) — **Updater
   desktop end-to-end:** `update.json` rilis berikutnya membawa kunci `windows`
   (x64/arm64 + sha256/bytes; disimulasikan lokal, skema sah); shell Tauri

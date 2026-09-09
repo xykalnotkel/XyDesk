@@ -42,6 +42,11 @@ Kebijakan rilis:
   produksi — repo kembali jadi cermin penuh.
 - **`build-apk-only.yml`**: signing rilis + Google client id + hapus step
   license palsu (belum pernah jalan sebelum diperbaiki).
+- **Ikon launcher kembali ke logo asli**: tile terang `#F5F3FF` + X ungu
+  glossy di Android (legacy, adaptive, splash-safe), favicon web, dan
+  semua `.ico` Windows. Akar masalahnya di generator (`tile` gelap
+  dipanggang + sumber gelap diputihkan) sudah dicabut, dikunci gerbang CI
+  `tool/check_icons.py` supaya tidak hitam ketiga kalinya.
 
 ## [6.7.12] - 2026-09-09
 
