@@ -2222,7 +2222,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
   // Statistik live (tab Gambar di panel): baca getStats tiap detik hanya
   // saat panel terbuka supaya tidak bikin rame saat main.
   useEffect(() => {
-    if (!connected || !panelOpen) return;
+    if (!connected) return;
     let alive = true;
     const poll = async () => {
       const s = await sessionRef.current?.readStats();
@@ -2234,7 +2234,7 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
       alive = false;
       clearInterval(t);
     };
-  }, [connected, panelOpen]);
+  }, [connected]);
 
   // Toast HUD hilang sendiri setelah 4 detik.
   useEffect(() => {
@@ -2482,6 +2482,22 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
         <video ref={videoRef} autoPlay playsInline muted />
         {/* Audio sistem host (track Opus) — elemen terpisah, tidak di-mute. */}
         <audio ref={audioRef} autoPlay />
+        {connected && stats?.noFrameWarning && (
+          <div className="sesi-noframe-banner" role="alert">
+            <div className="sesi-noframe-text">
+              <strong>Belum ada gambar</strong>
+              <span>Host PC mungkin layar mati, terkunci, atau monitor belum dipilih.</span>
+            </div>
+            <button
+              type="button"
+              className="btn primary"
+              style={{ padding: '6px 14px', fontSize: '12px' }}
+              onClick={() => setPanelOpen(true)}
+            >
+              Pilih Layar
+            </button>
+          </div>
+        )}
         {connected && (
           <div
             className={`sesi-waktu${sisaDetik !== null && sisaDetik <= 300 ? ' kritis' : ''}`}

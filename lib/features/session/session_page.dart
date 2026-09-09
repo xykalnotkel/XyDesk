@@ -83,6 +83,10 @@ class _SessionPageState extends ConsumerState<SessionPage>
   /// Aliran meta dari host (hardware info, display list).
   StreamSubscription<HostMeta>? _metaSub;
 
+  /// Aliran statistik sesi (FPS, bitrate, noFrameWarning).
+  StreamSubscription<SessionStats>? _statsSub;
+  SessionStats? _lastStats;
+
   KbLayout _keyboardLayout = KbLayout.split;
   double _keyboardOpacity = 0.95;
   late final SessionTransport _transport;
@@ -237,6 +241,14 @@ class _SessionPageState extends ConsumerState<SessionPage>
         _clipboardSub = rtc.clipboardStream.listen(_onClipboardFromHost);
         // Listen ke meta stream untuk hardware info.
         _metaSub = rtc.hostMetaStream.listen(_onHostMeta);
+        // Listen ke stats stream untuk no-frame watchdog warning.
+        _statsSub = rtc.statsStream.listen((st) {
+          if (mounted && (_lastStats?.noFrameWarning != st.noFrameWarning)) {
+            setState(() => _lastStats = st);
+          } else {
+            _lastStats = st;
+          }
+        });
       }
     }
     // Saat transport tidak lagi live (retry, disconnect, dll), bersihkan
@@ -251,6 +263,11 @@ class _SessionPageState extends ConsumerState<SessionPage>
     if (!s.live && _metaSub != null) {
       unawaited(_metaSub!.cancel());
       _metaSub = null;
+    }
+    if (!s.live && _statsSub != null) {
+      unawaited(_statsSub!.cancel());
+      _statsSub = null;
+      _lastStats = null;
     }
     // Mulai hitung durasi sesi saat pertama kali live.
     if (s.live && _sessionStartedAt == null) {
@@ -379,6 +396,7 @@ class _SessionPageState extends ConsumerState<SessionPage>
     unawaited(DisplayControl.setKeepScreenOn(false));
     _clipboardSub?.cancel();
     _metaSub?.cancel();
+    _statsSub?.cancel();
     DevLog.i('sesi', 'Menutup sesi');
     super.dispose();
   }
@@ -625,6 +643,72 @@ class _SessionPageState extends ConsumerState<SessionPage>
                           objectFit:
                               RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                         ),
+                      ),
+                    ),
+                  ),
+                ),
+              // Watchdog banner: terhubung tapi belum ada frame video setelah 10 detik.
+              if (_transport.state.live && (_lastStats?.noFrameWarning ?? false))
+                Positioned(
+                  top: MediaQuery.paddingOf(context).top + 12,
+                  left: 20,
+                  right: 20,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xEB0D0716),
+                        borderRadius: BorderRadius.circular(R.lg),
+                        border: Border.all(color: const Color(0x59A78BFA)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(LucideIcons.circleAlert, size: 16, color: Color(0xFFA78BFA)),
+                          const SizedBox(width: Gap.sm),
+                          const Flexible(
+                            child: Text(
+                              'Belum ada gambar (periksa PC host)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: Gap.md),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _panelSection = SessionPanelSection.stream;
+                                _panelVisible = true;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(R.sm),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.accentDark,
+                                borderRadius: BorderRadius.circular(R.sm),
+                              ),
+                              child: const Text(
+                                'Pilih Layar',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
