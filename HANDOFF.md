@@ -104,13 +104,17 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   verifikasinya hanya untuk password yang tidak punya satu pun huruf kecil, dan
   pemulihannya `--new-password` di PC lalu pairing ulang.
 
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — **0x06 TEXT belum dibatasi
+- [x] (dari Galih - XySpace Team, 2026-09-03) — **0x06 TEXT belum dibatasi
   panjangnya di client.** `InputCodec.text()` (lib/webrtc/input_codec.dart)
   mengirim seluruh tempel sebagai SATU pesan, berbeda dari `clipboardSet()`
   yang memotong di 64 KiB. Host sekarang memotong di 4.096 unit UTF-16 per
   pesan — sisanya DIBUANG, tidak dipecah otomatis. Kalau mau menempel teks
   panjang bisa diketik, pecah di sisi client menjadi beberapa pesan TEXT
   (±2.000 karakter sudah aman), atau kirim sebagai CLIPBOARD_SET lalu Ctrl+V.
+  **SELESAI 2026-09-09 (sesi FIXPACK):** `InputCodec.textChunked()` memecah
+  per 2.000 unit UTF-16 tanpa membelah surrogate pair; `SessionTransport.
+  sendText()` + pemanggil IME memakainya. Dikunci 4 uji (`flutter test`
+  68/68, `dart analyze` bersih, toolchain 3.44.9 persis CI).
 
 - [x] (dari Danu - XySpace Team, 2026-09-03) — **Parity APK: total & sisa
   waktu sesi** (permintaan operator, "yang request kemarin"). → **SELESAI 3 Sep 2026 (Laras)**.
@@ -561,6 +565,10 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   Terverifikasi: `npm run build` (= `tsc -b && vite build`) hijau. Sisa untuk
   role Web bila mau: isi `selfName` dari profil saat login, dan putuskan apakah
   nama akun layak dikirim (host melihatnya begitu pairing diterima).
+  **SELESAI 2026-09-09 (sesi FIXPACK):** `RemoteApp` mengoper
+  `profile.name ?? profile.email` sebagai prop `accountName` ke
+  `ConnectScreen` → `session.selfName`; kosong = fallback tebakan browser+OS.
+  `tsc -b && vite build` hijau, `node --test` 7/7.
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** versi & berita = keputusan operator; saat menutup sesi fitur web, tulis bahan artikel kerjamu sendiri (dampak pengguna + screenshot asli, gaya `docs/NEWS_STYLE.md`) — role CI/Release menyatukan jadi SATU artikel saat rilis.
 
@@ -628,7 +636,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   menjawab 503 dan klien tetap jalan STUN saja. Prioritas penyedia ber-secret
   statis (ExpressTurn/coturn) — hanya jenis itu yang tidak butuh panggilan
   jaringan, jadi selalu hidup walau penyedia lain mogok.
-- [ ] (dari Galih - XySpace Team, 2026-09-03) — **`signaling/` (hub Go)
+- [x] (dari Galih - XySpace Team, 2026-09-03) — **`signaling/` (hub Go)
   MENGHAPUS field asing saat relay, jadi label perangkat tidak sampai ke host
   lewat hub dev.** `hub.go` `relay(from, toID, msg Message)` men-serialize
   ulang struct bertipe `Message` (`protocol.go`), sehingga `name`/`platform`
@@ -639,6 +647,9 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `Message` — atau relay payload mentah. Dampak sekarang: pengujian UI chip
   "HP · Android" hanya bisa dilakukan terhadap worker, tidak terhadap hub Go;
   host tetap normal (label kosong → tampil ID).
+  **SELESAI 2026-09-09 (sesi FIXPACK):** field `Name`/`Platform` ditambahkan
+  ke `Message` + `signaling/relay_label_test.go` (label selamat relay,
+  omitempty di pesan non-pair). `gofmt` bersih, `go vet` + `go test` hijau.
 
 - [x] (dari Danu - XySpace Team, 2026-09-03) — **INFO: kini ada jalur
   deploy cepat untuk worker signaling/edge & worker berita** (aturan
@@ -715,7 +726,7 @@ _(kosong)_
 
 ## Untuk: News & Konten
 
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Artikel Berita rilis 6.6.0
+- [x] (dari Operator - XyDesk Team, 2026-09-06) — **Artikel Berita rilis 6.6.0
   BELUM terbit, dan `docs/VERSIONING.md` §4 menyebutnya wajib.** Naskahnya
   SUDAH SIAP di `BAHAN_ARTIKEL_RILIS_6.6.0.md` (judul, excerpt 126 karakter,
   empat bagian sesuai §4, changelog lengkap, bagian "yang sedang kami siapkan",
@@ -739,7 +750,9 @@ _(kosong)_
   https://news.xydesk.my.id/api/news/changelog-v6-6-0` harus 200. Konsekuensi
   jalur D1 yang harus dikatakan jujur: notifikasi pelanggan tidak terkirim,
   sama seperti `rilis-654`/`rilis-653`.
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **ENAM rilis punya tautan
+  **SELESAI (terverifikasi sesi FIXPACK 2026-09-09):** `changelog-v6-6-0`
+  live HTTP 200 — artikelnya sudah terbit; item ini basi.
+- [x] (dari Operator - XyDesk Team, 2026-09-06) — **ENAM rilis punya tautan
   versi yang 404.** `CHANGELOG_SLUG` di `web/src/version.ts` menurunkan
   `changelog-v<major>-<minor>-<patch>` dari versi berjalan, dan footer web +
   layar "Tentang" menautkannya. Terverifikasi live 6 Sep: `changelog-v6-5-4`,
@@ -759,6 +772,12 @@ _(kosong)_
   memutus tautan lama yang sudah terlanjur tersebar di notifikasi), `UPDATE
   posts SET slug=…` langsung di D1 (cepat tapi memutus tautan lama), atau
   terbit ulang (menduplikasi isi). **Keputusan operator, bukan agent.**
+  **SELESAI 2026-09-09 (sesi FIXPACK):** opsi alias yang dipakai — tabel
+  `post_aliases` + resolver di worker; live: v6-5-4, v6-5-3, v6-4-0, v6-1-0,
+  v6-0-0 semua 200 ke artikel yang benar. `changelog-v6-5-2` diterbitkan
+  retroaktif (artikel dari `changelogs/6.5.2.md`, sampul
+  `changelog-652.jpg`); D1-direct = tanpa push/email, konsisten dengan
+  `rilis-65x`. `seed.sql` kini cermin penuh (16 artikel + 5 alias benar).
 
 - [ ] (dari Cakra - XySpace Team, 2026-09-03) — **Aturan rilis baru:** artikel per rilis = SATU artikel gabungan dari bahan tiap agent (role CI/Release menyatukan) — jangan menerbitkan artikel rilis yang isinya dikarang sendiri; versi & terbitnya berita = keputusan operator.
 
@@ -1021,6 +1040,34 @@ _(kosong)_
 
 ## Selesai
 
+- [x] (dari Operator - XyDesk Team, 2026-09-09, sesi FIXPACK) — **Updater
+  desktop end-to-end:** `update.json` rilis berikutnya membawa kunci `windows`
+  (x64/arm64 + sha256/bytes; disimulasikan lokal, skema sah); shell Tauri
+  punya `check_update`/`download_update`/`install_update` (manifest resmi,
+  URL persis + SHA-256 + ukuran, tolak path asing; 6 uji unit Rust, CI
+  `cargo test --release` x64 baru); kartu "Pembaruan aplikasi" di Pengaturan
+  (cek otomatis saat buka, unduh & pasang → installer admin → keluar).
+  Parser Android dikunci toleran terhadap kunci `windows` (4 uji).
+- [x] (dari Operator - XyDesk Team, 2026-09-09, sesi FIXPACK) — **Kontrak
+  `get_info` desktop diperbaiki:** Rust mengirim `version`/`signaling_http`/
+  `windows` padahal frontend membaca `appVersion`/`signalingHttp`/`win32` —
+  Profil selalu "v—". Kini rename serde + `win32` + versi dari
+  `CARGO_PKG_VERSION` (dulu hardcode basi "6.7.11").
+- [x] (dari Operator - XyDesk Team, 2026-09-09, sesi FIXPACK) — **`news/
+  seed.sql` jadi cermin produksi:** 5 baris alias yang GESER diluruskan ke
+  kebenaran D1 live, 5 artikel lama ditarik dari API ke seed, artikel
+  `changelog-v6-5-2` ditulis retroaktif dari `changelogs/6.5.2.md` +
+  sampul `changelog-652.jpg` 1424×752 (tanpa screenshot: tidak ada perubahan
+  visual di 6.5.2). Validasi sqlite: 16 artikel, 5 alias resolve benar.
+- [x] (dari Operator - XyDesk Team, 2026-09-09, sesi FIXPACK) — **`build-
+  apk-only.yml` diperbaiki sebelum pernah jalan:** tambah signing keystore
+  (rilis), `--dart-define=GOOGLE_CLIENT_ID` (rilis + debug), cache Gradle,
+  hapus step `tool/gen_licenses.dart` yang tidak ada. YAML valid; pembuktian
+  lewat dispatch (lihat papan).
+- [x] (dari Operator - XyDesk Team, 2026-09-09, sesi FIXPACK) — **Audit
+  menemukan + menutup satu false alarm:** `GOOGLE_CLIENT_ID`github var
+  TERNYATA sudah berisi dua client id (cetak terpotong 60 karakter saat
+  audit) — login Google Android/Web TIDAK rusak. Tidak ada perubahan prod.
 - [x] (dari Operator - XyDesk Team, 2026-09-07, sesi RILIS-670) — **Rilis
   6.7.0+35 tuntas end-to-end:** Build #244 hijau -> Release #188 (tag
   v6.7.0; APK arm64/v7a + installer x64/arm64 + update.json) -> Deploy Web

@@ -388,6 +388,12 @@ button.ghost {
 }
 button.ghost:hover { background: var(--raised); color: var(--text-hi); border-color: var(--line-strong); box-shadow: var(--shadow-xs); }
 
+/* Kartu pembaruan aplikasi (Pengaturan). */
+.row-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.form-error { color: var(--danger); font-size: 13px; margin: 8px 0 0; }
+.update-notes { margin: 10px 0 4px; padding-left: 20px; color: var(--text-mid); font-size: 13px; }
+.update-notes li { margin: 3px 0; }
+
 input[type='text'], input[type='password'], textarea, input[type='email'], input[type='number'] {
   font: inherit;
   background: var(--raised);

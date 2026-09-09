@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../core/devlog.dart';
 import '../features/auth/auth_service.dart';
+import 'input_codec.dart';
 import 'rtc_service.dart';
 import 'signaling_client.dart';
 
@@ -155,6 +156,16 @@ class SessionTransport extends ChangeNotifier {
 
   /// Kirim event input biner (lihat `input_codec.dart`).
   void sendInput(Uint8List event) => _rtc?.sendInput(event);
+
+  /// Kirim teks bebas (0x06 TEXT), dipecah otomatis per
+  /// [InputCodec.textMaxChars] supaya tempelan panjang tidak dipotong host.
+  void sendText(String text) {
+    final rtc = _rtc;
+    if (rtc == null) return;
+    for (final chunk in InputCodec.textChunked(text)) {
+      rtc.sendInput(chunk);
+    }
+  }
 
   Future<void> shutdown() async {
     await _phaseSub?.cancel();

@@ -2,6 +2,7 @@ pub mod auth;
 pub mod commands;
 pub mod engine;
 pub mod tray;
+pub mod update;
 
 use auth::AuthManager;
 use engine::EngineSupervisor;
@@ -49,6 +50,9 @@ pub fn run() {
             commands::auth_email_request,
             commands::auth_email_verify,
             commands::auth_logout,
+            commands::check_update,
+            commands::download_update,
+            commands::install_update,
         ])
         .run(tauri::generate_context!())
         .expect("gagal menjalankan aplikasi Tauri XyDesk");

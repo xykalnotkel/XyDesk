@@ -22,10 +22,16 @@ pub struct LogEntry {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct InfoPayload {
+    /// Dikirim sebagai `appVersion` — persis kontrak `global.d.ts`.
+    /// (Dulu `version`, sehingga Profil selalu menampilkan "v—".)
+    #[serde(rename = "appVersion")]
     pub version: String,
+    /// `win32` di Windows (kontrak warisan Electron: `process.platform`),
+    /// nama OS Rust (`linux`, `macos`) di tempat lain.
     pub platform: String,
     pub arch: String,
     pub packaged: bool,
+    #[serde(rename = "signalingHttp")]
     pub signaling_http: String,
     pub signaling_ws: String,
 }
@@ -453,9 +459,16 @@ impl EngineSupervisor {
     }
 
     pub fn get_info(&self) -> InfoPayload {
+        // Satu sumber kebenaran versi (dulu hardcode basi "6.7.11").
+        // Platform: kontrak frontend memakai `win32`, bukan `windows`.
+        let platform = match std::env::consts::OS {
+            "windows" => "win32",
+            other => other,
+        }
+        .to_string();
         InfoPayload {
-            version: "6.7.11".to_string(),
-            platform: std::env::consts::OS.to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            platform,
             arch: std::env::consts::ARCH.to_string(),
             packaged: true,
             signaling_http: SIGNALING_HTTP.to_string(),

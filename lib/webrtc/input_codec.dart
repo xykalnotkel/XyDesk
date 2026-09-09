@@ -91,6 +91,9 @@ class InputCodec {
 
   /// Teks bebas dari keyboard virtual — host mengetik sebagai unicode,
   /// tidak tergantung layout keyboard host.
+  ///
+  /// Satu pesan utuh: untuk tempelan panjang pakai [textChunked], karena
+  /// host memotong tiap pesan di 4.096 unit UTF-16 dan sisanya DIBUANG.
   static Uint8List text(String s) {
     final utf8Bytes = utf8.encode(s);
     final b = Uint8List(1 + utf8Bytes.length);
@@ -98,6 +101,37 @@ class InputCodec {
     b.setRange(1, b.length, utf8Bytes);
     return b;
   }
+
+  /// Pecah [s] menjadi beberapa pesan 0x06 TEXT, masing-masing paling
+  /// banyak [textMaxChars] unit UTF-16.
+  ///
+  /// Kenapa dipecah di client, bukan mengandalkan host: host memotong tiap
+  /// pesan di 4.096 unit dan MEMBUANG sisanya tanpa pesan lanjutan — tempel
+  /// 5.000 karakter sebagai satu pesan berarti 904 karakter hilang diam-diam.
+  /// Potongan tidak pernah membelah pasangan surrogate: kalau batas jatuh di
+  /// antara high dan low surrogate, high-nya ikut ke potongan berikut.
+  static List<Uint8List> textChunked(String s) {
+    if (s.isEmpty) return [text(s)];
+    final out = <Uint8List>[];
+    var start = 0;
+    while (start < s.length) {
+      var end = start + textMaxChars;
+      if (end >= s.length) {
+        end = s.length;
+      } else {
+        // Jangan belah pasangan surrogate (emoji dkk. di UTF-16).
+        final cu = s.codeUnitAt(end - 1);
+        final next = s.codeUnitAt(end);
+        if (_isHighSurrogate(cu) && _isLowSurrogate(next)) end--;
+      }
+      out.add(text(s.substring(start, end)));
+      start = end;
+    }
+    return out;
+  }
+
+  static bool _isHighSurrogate(int cu) => cu >= 0xD800 && cu <= 0xDBFF;
+  static bool _isLowSurrogate(int cu) => cu >= 0xDC00 && cu <= 0xDFFF;
 
   /// 0x08 CLIPBOARD_SET — isi papan klip, UTF-8 mulai byte 1, panjang
   /// variabel. Dipakai dua arah: HP mengirim isi papan klipnya ke PC, dan
@@ -169,4 +203,10 @@ class InputCodec {
   /// Sengaja publik: uji perlu merujuk angka yang sama, dan kalau batasnya
   /// berubah, uji ikut berubah — bukan diam-diam meleset.
   static const int clipboardMaxBytes = 64 * 1024;
+
+  /// Panjang maksimum satu potongan [textChunked], dalam unit UTF-16.
+  ///
+  /// 2.000 = setengah dari batas potong host (4.096) — margin dua kali lipat
+  /// supaya perubahan batas di satu sisi tidak langsung memakan data.
+  static const int textMaxChars = 2000;
 }

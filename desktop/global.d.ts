@@ -95,8 +95,12 @@ declare global {
   interface InfoPayload {
     appVersion: string;
     signalingHttp: string;
+    /** `win32` di Windows (kontrak warisan Electron), nama OS di tempat lain. */
     platform: string;
+    /** Arsitektur proses: `x86_64` / `aarch64` (dipakai pemilih aset update). */
+    arch: string;
     packaged: boolean;
+    signalingWs: string;
   }
 
   interface LogEntry {
@@ -139,6 +143,17 @@ declare global {
     detail?: Record<string, unknown> | null;
   }
 
+  /** Hasil `check_update`: manifest resmi vs versi berjalan. */
+  interface UpdateStatusPayload {
+    currentVersion: string;
+    latestVersion: string;
+    latestBuild: number;
+    updateAvailable: boolean;
+    notes: string[];
+    assetName: string | null;
+    assetBytes: number | null;
+  }
+
   interface Window {
     xydesk?: {
       getStatus(): Promise<StatusPayload>;
@@ -168,6 +183,16 @@ declare global {
       authEmailRequest(email: string, name?: string): Promise<AuthResultPayload>;
       authEmailVerify(email: string, otp: string, name?: string): Promise<AuthResultPayload>;
       authLogout(): Promise<AuthResultPayload>;
+      // ── Pembaruan aplikasi ──
+      /** Bandingkan versi berjalan dengan manifest rilis resmi. */
+      checkUpdate(): Promise<UpdateStatusPayload>;
+      /** Unduh + verifikasi installer; resolve = path berkas terverifikasi. */
+      downloadUpdate(): Promise<string>;
+      /**
+       * Jalankan installer lalu keluar. Janjinya TIDAK PERNAH resolve —
+       * proses mengakhiri dirinya sendiri setelah installer lahir.
+       */
+      installUpdate(path: string): Promise<void>;
     };
   }
 }

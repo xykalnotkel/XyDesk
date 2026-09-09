@@ -27,6 +27,9 @@ if (typeof window !== 'undefined') {
       authEmailVerify: (email: string, otp: string, name?: string) =>
         invoke('auth_email_verify', { email, otp, name }),
       authLogout: () => invoke('auth_logout'),
+      checkUpdate: () => invoke('check_update'),
+      downloadUpdate: () => invoke('download_update'),
+      installUpdate: (path: string) => invoke('install_update', { path }),
     };
   }
 }

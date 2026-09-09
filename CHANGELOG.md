@@ -22,6 +22,27 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [Belum terbit]
+
+### Ditambahkan
+- **Updater desktop (PC)**: kartu "Pembaruan aplikasi" di Pengaturan — cek
+  otomatis, unduh installer terverifikasi SHA-256, pasang lalu mulai ulang.
+  Manifest `update.json` kini membawa kunci `windows` (x64/arm64).
+- **Artikel arsip 6.5.2**: `changelog-v6-5-2` diterbitkan retroaktif —
+  tidak ada lagi tautan versi yang 404.
+
+### Diperbaiki
+- **Tempel teks panjang dari HP**: dipecah otomatis per 2.000 karakter
+  (tidak lagi dipotong host di 4.096).
+- **Profil desktop**: versi & server kini tampil (kontrak `get_info`
+  diluruskan; versi tidak lagi hardcode basi).
+- **Label perangkat**: nama akun tampil di pesan pairing web; hub Go tidak
+  lagi membuang `name`/`platform` saat relay.
+- **`news/seed.sql`**: 5 alias slug diluruskan + 5 artikel lama ditarik dari
+  produksi — repo kembali jadi cermin penuh.
+- **`build-apk-only.yml`**: signing rilis + Google client id + hapus step
+  license palsu (belum pernah jalan sebelum diperbaiki).
+
 ## [6.7.12] - 2026-09-09
 
 > Build 47. In-App Update Modal Portrait 3:4 AI, Background Android Notification Download, Splash Luminous Glow, Desktop Tauri v2 fixes, dan pembaruan README.

@@ -514,6 +514,14 @@ jobs:
       - name: Build shell Tauri (release)
         working-directory: desktop/src-tauri
         run: cargo build --release --target ${{ matrix.target }}
+      # Uji unit shell Tauri (logika murni updater: semver, validasi URL
+      # manifest, penolakan path asing — tanpa jaringan). Mode --release
+      # memakai ulang dependensi yang baru dibangun, jadi langkahnya murah.
+      # Hanya x64: logikanya tidak tergantung arsitektur.
+      - name: Uji unit shell Tauri
+        if: matrix.arch == 'x64'
+        working-directory: desktop/src-tauri
+        run: cargo test --release --target ${{ matrix.target }}
       - name: Kumpulkan output bundle Windows
         shell: pwsh
         env:

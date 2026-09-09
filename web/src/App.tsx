@@ -1780,7 +1780,10 @@ function RemoteApp() {
           <button className="text-action" onClick={() => setAuthStep('login')}>Masuk akun</button>
         )}
       </div>
-      <ConnectScreen ensureToken={ensureToken} />
+      <ConnectScreen
+        ensureToken={ensureToken}
+        accountName={(profile?.name || profile?.email || '').trim()}
+      />
       {editingName !== null && (
         <div className="modal-backdrop" onClick={() => setEditingName(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -1984,7 +1987,13 @@ function EyeOffIcon() {
   );
 }
 
-function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) {
+function ConnectScreen({
+  ensureToken,
+  accountName,
+}: {
+  ensureToken: () => Promise<string>;
+  accountName: string;
+}) {
   const [hostId, setHostId] = useState(() => localStorage.getItem(LAST_HOST_KEY) ?? '');
   const [pin, setPin] = useState('');
   const [phase, setPhase] = useState<RtcPhase | ''>('');
@@ -2128,6 +2137,9 @@ function ConnectScreen({ ensureToken }: { ensureToken: () => Promise<string> }) 
     try {
       const jwt = await ensureToken();
       const session = new RtcSession();
+      // Label perangkat untuk pesan `pair`: nama akun bila login, kalau
+      // tidak kosongkan supaya rtc.ts memakai tebakan browser + OS.
+      session.selfName = accountName;
       sessionRef.current = session;
       session.onPhase = (next) => {
         setPhase(next);

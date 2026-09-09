@@ -45,6 +45,8 @@ type Message struct {
 	Candidate json.RawMessage `json:"candidate,omitempty"` // ICE candidate (dict)
 	Accepted  *bool           `json:"accepted,omitempty"`  // jawaban pair
 	PIN       string          `json:"pin,omitempty"`       // PIN 6 digit saat pair
+	Name      string          `json:"name,omitempty"`      // label perangkat pengirim (pair)
+	Platform  string          `json:"platform,omitempty"`  // platform pengirim: android/ios/web/windows (pair)
 	Devices   []DeviceInfo    `json:"devices,omitempty"`   // hasil list
 	Error     string          `json:"error,omitempty"`
 	Reason    string          `json:"reason,omitempty"`

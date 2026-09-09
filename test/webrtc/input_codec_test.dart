@@ -51,7 +51,9 @@ void main() {
       // Papan klip orang Indonesia tidak selalu ASCII: emoji, tanda kutip
       // cantik, dan aksara lain harus sampai utuh, tidak jadi '?'.
       const isi = 'Gaskeun 🔥 — “mantap”';
-      final dipulihkan = InputCodec.decodeClipboardSet(InputCodec.clipboardSet(isi));
+      final dipulihkan = InputCodec.decodeClipboardSet(
+        InputCodec.clipboardSet(isi),
+      );
 
       expect(dipulihkan, isi);
     });
@@ -65,14 +67,19 @@ void main() {
 
     test('papan klip kosong dibaca sebagai string kosong, bukan null', () {
       // Membingungkan keduanya membuat pemanggil menulis null ke Clipboard.
-      final dipulihkan = InputCodec.decodeClipboardSet(Uint8List.fromList([0x08]));
+      final dipulihkan = InputCodec.decodeClipboardSet(
+        Uint8List.fromList([0x08]),
+      );
 
       expect(dipulihkan, '');
     });
 
     test('bukan CLIPBOARD_SET ditolak', () {
       expect(InputCodec.decodeClipboardSet(InputCodec.text('Halo')), isNull);
-      expect(InputCodec.decodeClipboardSet(InputCodec.clipboardRequest()), isNull);
+      expect(
+        InputCodec.decodeClipboardSet(InputCodec.clipboardRequest()),
+        isNull,
+      );
     });
 
     test('UTF-8 rusak ditolak, tidak ditulis ke papan klip', () {
@@ -94,7 +101,9 @@ void main() {
       // dan papan klip PC tidak terisi sama sekali — bukan cuma kehilangan
       // satu huruf di ujung.
       final panjang = 'é' * (200 * 1024);
-      final dipulihkan = InputCodec.decodeClipboardSet(InputCodec.clipboardSet(panjang));
+      final dipulihkan = InputCodec.decodeClipboardSet(
+        InputCodec.clipboardSet(panjang),
+      );
 
       expect(dipulihkan, isNotNull);
       expect(dipulihkan!.endsWith('é'), isTrue);
@@ -215,6 +224,53 @@ void main() {
       final msg = InputCodec.text('');
 
       expect(msg, [0x06]);
+    });
+  });
+
+  group('teks panjang (chunked)', () {
+    test('teks pendek tetap satu pesan, identik dengan text()', () {
+      final chunks = InputCodec.textChunked('Halo Bang');
+
+      expect(chunks, hasLength(1));
+      expect(chunks.single[0], 0x06);
+      expect(utf8.decode(chunks.single.sublist(1)), 'Halo Bang');
+    });
+
+    test('5.000 karakter jadi 3 potongan dan tersambung Utuh lagi', () {
+      final asli = 'a' * 5000;
+      final chunks = InputCodec.textChunked(asli);
+
+      expect(chunks, hasLength(3));
+      for (final c in chunks) {
+        expect(c[0], 0x06);
+        expect(
+          utf8.decode(c.sublist(1)).length,
+          lessThanOrEqualTo(InputCodec.textMaxChars),
+        );
+      }
+      final sambung = chunks.map((c) => utf8.decode(c.sublist(1))).join();
+      expect(sambung, asli);
+    });
+
+    test('batas potong tidak pernah membelah pasangan surrogate', () {
+      // Emoji tepat di batas 2.000: 1999 'a' + roket (2 unit UTF-16).
+      final asli = '${'a' * 1999}🚀${'b' * 10}';
+      final chunks = InputCodec.textChunked(asli);
+
+      expect(chunks.length, greaterThanOrEqualTo(2));
+      // Potongan pertama berhenti SEBELUM roket, bukan di tengahnya.
+      expect(utf8.decode(chunks.first.sublist(1)), 'a' * 1999);
+      // Tiap potongan adalah UTF-8 sah (decode tidak melempar) dan
+      // sambungannya sama persis dengan aslinya.
+      final sambung = chunks.map((c) => utf8.decode(c.sublist(1))).join();
+      expect(sambung, asli);
+    });
+
+    test('teks kosong jadi satu pesan tag saja', () {
+      final chunks = InputCodec.textChunked('');
+
+      expect(chunks, hasLength(1));
+      expect(chunks.single, [0x06]);
     });
   });
 

@@ -1342,6 +1342,116 @@ function ProfilePage({
 
 /* ── Settings ─────────────────────────────────────────────────────── */
 
+function fmtBytes(n: number | null | undefined): string {
+  if (n == null || n <= 0) return '—';
+  const mb = n / 1_000_000;
+  return mb >= 100 ? `${Math.round(mb)} MB` : `${mb.toFixed(1)} MB`;
+}
+
+function UpdateCard({
+  info,
+  flashMsg,
+}: {
+  info: InfoPayload | null;
+  flashMsg: (m: string) => void;
+}) {
+  const [st, setSt] = useState<UpdateStatusPayload | null>(null);
+  const [phase, setPhase] = useState<'idle' | 'checking' | 'downloading' | 'opening' | 'error'>(
+    'idle',
+  );
+  const [error, setError] = useState('');
+
+  const check = useCallback(async () => {
+    if (DEMO) {
+      flashMsg('Mode pratinjau — pembaruan hanya di aplikasi desktop.');
+      return;
+    }
+    setPhase('checking');
+    setError('');
+    try {
+      const r = await window.xydesk!.checkUpdate();
+      setSt(r);
+      setPhase('idle');
+      if (!r.updateAvailable) flashMsg(`Sudah versi terbaru (v${r.currentVersion}).`);
+    } catch (e) {
+      setPhase('error');
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, [flashMsg]);
+
+  useEffect(() => {
+    if (!DEMO) void check();
+  }, [check]);
+
+  const install = async () => {
+    setPhase('downloading');
+    setError('');
+    try {
+      // Unduh + verifikasi SHA-256 di proses utama, lalu…
+      const path = await window.xydesk!.downloadUpdate();
+      setPhase('opening');
+      flashMsg('Installer terverifikasi — membukanya sekarang.');
+      // …installer dibuka dan aplikasi keluar sendiri. Janji ini tidak
+      // pernah resolve; kalau resolve berarti gagal membuka.
+      await window.xydesk!.installUpdate(path);
+      setPhase('error');
+      setError('Installer tidak terbuka. Coba unduh manual dari GitHub Releases.');
+    } catch (e) {
+      setPhase('error');
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const busy = phase === 'checking' || phase === 'downloading' || phase === 'opening';
+  const current = st?.currentVersion ?? info?.appVersion ?? '—';
+
+  return (
+    <section className="card">
+      <h3>Pembaruan aplikasi</h3>
+      <div className="kv">
+        <span>Versi terpasang</span>
+        <strong>v{current}</strong>
+      </div>
+      {st && (
+        <div className="kv">
+          <span>Versi terbaru</span>
+          <strong>v{st.latestVersion}</strong>
+        </div>
+      )}
+      {st?.updateAvailable && (
+        <>
+          <ul className="update-notes">
+            {st.notes.map((n, i) => (
+              <li key={i}>{n}</li>
+            ))}
+          </ul>
+          <p className="hint">
+            {st.assetName} ({fmtBytes(st.assetBytes)}) — terverifikasi SHA-256 sebelum
+            dipasang. Installer meminta izin admin (UAC), lalu aplikasi dimulai ulang.
+          </p>
+        </>
+      )}
+      {phase === 'error' && error && <p className="form-error">{error}</p>}
+      {phase === 'downloading' && <p className="hint">Mengunduh installer terverifikasi…</p>}
+      {phase === 'opening' && <p className="hint">Membuka installer…</p>}
+      <div className="row-actions">
+        <button className="ghost" onClick={() => void check()} disabled={busy}>
+          {phase === 'checking' ? 'Memeriksa…' : 'Periksa pembaruan'}
+        </button>
+        {st?.updateAvailable && (
+          <button className="primary" onClick={() => void install()} disabled={busy}>
+            {phase === 'downloading'
+              ? 'Mengunduh…'
+              : phase === 'opening'
+                ? 'Membuka installer…'
+                : `Unduh & pasang v${st.latestVersion}`}
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function SettingsPage({
   status,
   info,
@@ -1417,6 +1527,7 @@ function SettingsPage({
 
   return (
     <div className="pg">
+      <UpdateCard info={info} flashMsg={flashMsg} />
       <section className="card">
         <h3>Umum</h3>
         <label className="switch-row">

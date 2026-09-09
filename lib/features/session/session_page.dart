@@ -430,8 +430,9 @@ class _SessionPageState extends ConsumerState<SessionPage>
       return;
     }
     // TEXT mengirim sebagai utf8 dan host mengetik apa adanya, tidak
-    // tergantung tata letak keyboard host.
-    _transport.sendInput(InputCodec.text(text));
+    // tergantung tata letak keyboard host. `sendText` memecah tempelan
+    // panjang menjadi beberapa pesan — satu pesan utuh akan dipotong host.
+    _transport.sendText(text);
   }
 
   /// Kirim isi papan klip perangkat ini ke PC (0x08 CLIPBOARD_SET).

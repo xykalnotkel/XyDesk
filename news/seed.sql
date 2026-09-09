@@ -588,11 +588,289 @@ ON CONFLICT(slug) DO UPDATE SET
   author = excluded.author,
   published = excluded.published;
 
--- Alias slug untuk artikel changelog terdahulu agar tautan footer/About tidak 404
+-- Artikel rilis 6.0.0 (slug hash era lama; alias changelog-v6-0-0 menunjuk ke sini).
+-- Ditarik dari D1 produksi 2026-09-09 (repo = cermin sumber kebenaran).
+INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+(
+  'p-d5b4512f7d17',
+  'XyDesk 6.0 — ungu jadi identitas, notifikasi nyata, komentar hidup',
+  'Pembaruan terbesar XyDesk: identitas ungu yang menonjol di semua platform, push notifikasi untuk rilis dan berita, langganan berita lewat email, balas komentar tanpa nama, serta navigasi geser antar halaman.',
+  'Versi 6.0 adalah lompatan terbesar XyDesk sejauh ini. Identitas visual. Ungu kini menonjol di semua platform sebagai warna khas XyDesk — dari hero web, tombol utama, sampai aksen di aplikasi Android dan desktop. Logo X memakai tile seperti di sampul berita, tanpa glow dan tanpa bayangan. Notifikasi yang benar-benar berfungsi. Push notifikasi kini aktif: rilis baru dan artikel berita dikirim lewat OneSignal. Berlangganan email berita juga tersedia di halaman Berita di semua platform — artikel baru dikirim langsung ke email kamu. Interaksi berita. Like dan komentar kini merespons seketika (optimistic update). Kamu bisa membalas komentar orang lain, dan tidak perlu mengisi nama — XyDesk membuatkan username acak per perangkat. Slug artikel kini berupa hash acak. Navigasi. Pindah halaman cukup digeser ke kanan-kiri di Android. Tombol kembali tidak langsung menutup aplikasi — tekan dua kali untuk keluar, biar tidak salah sentuh. Lisensi. XyDesk adalah perangkat lunak proprietary — bebas dipakai, tidak boleh di-clone sembarangan. Daftar lengkap lisensi pihak ketiga tersedia di Legal di semua platform. Versi: Android 6.0.0 (build 20), Web 6.0.0, Desktop 6.0.0. Setiap rilis akan selalu diumumkan lewat Berita — seperti artikel ini.',
+  'https://app.xydesk.my.id/news/covers/v6.jpg',
+  'rilis',
+  'Haekal Saputra',
+  1
+)
+ON CONFLICT(slug) DO UPDATE SET
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  cover = excluded.cover,
+  category = excluded.category,
+  author = excluded.author,
+  published = excluded.published;
+
+-- Artikel rilis 6.1.0 (slug hash era lama; alias changelog-v6-1-0 menunjuk ke sini).
+-- Ditarik dari D1 produksi 2026-09-09 (repo = cermin sumber kebenaran).
+INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+(
+  'p-66a4edde0222',
+  'XyDesk 6.1 — audio nyata, multi-monitor live, kontrol penuh',
+  'Suara PC kini terdengar di HP dan browser (WASAPI loopback → Opus), mic diteruskan ke host, monitor bisa diganti tanpa memutus sesi, volume host bisa diatur dari jauh — plus changelog wajib di setiap rilis.',
+  'Rilis 6.1 menghadirkan tiga fitur yang paling sering diminta. AUDIO FORWARD — suara PC terdengar di perangkat. Host Windows kini menangkap SEMUA bunyi yang keluar dari PC — musik, game, notifikasi — lewat WASAPI loopback langsung dari audio engine Windows, tanpa perangkat virtual tambahan. Audio di-encode menjadi Opus 48 kHz stereo (96 kbps) dan dikirim lewat track WebRTC yang sama dengan video. Di Android, suara diputar otomatis lewat pemutar audio tersembunyi; di web lewat elemen audio terpisah. Tombol Audio di HUD menyalakan/mematikannya seketika tanpa memutus sesi (cukup mengubah arah transceiver). MIC PASSTHROUGH — suara kamu terdengar di PC host. Mic perangkat (dengan echo cancellation dan noise suppression) dikirim sebagai track audio ke host, didecode, dan diputar ke perangkat output default Windows. Kalau kamu terhubung ke PC yang terpasang speaker, suaramu terdengar di sana. Jujur dan jelas: endpoint mikrofon virtual Windows (agar aplikasi di host melihat mic sebagai perangkat input) masih dalam antrean fase berikut — status ini ditulis terus terang di panel audio aplikasi. MULTI-MONITOR — pindah layar tanpa putus sesi. Host kini mendata semua monitor aktif (nama GDI + resolusi) dan mengirimkannya ke client. Di sesi Android muncul deretan chip layar di atas kontrol cepat; di web ada pemilih di pojok atas. Mengetuk layar lain membuat host menghentikan capture lama dan memulai capture baru di monitor pilihan — sesi tidak pernah putus. Kalau monitor pilihan tiba-tiba tidak tersedia, host otomatis jatuh ke monitor primer. VOLUME HOST DARI JAUH. Control API host kini punya aksi audio-volume (0-100%) dan melaporkan jumlah perangkat output yang terdeteksi. Ini dasar untuk slider volume di shell desktop pada pembaruan berikutnya. CHANGELOG WAJIB SETIAP RILIS. Mulai rilis ini, setiap build/compile/release wajib punya CHANGELOG.md yang diperbarui. File itu otomatis dilampirkan ke GitHub Release dan isinya dimuat ke catatan rilis — jadi tidak ada lagi rilis misterius tanpa penjelasan. Artikel Berita juga wajib ada untuk setiap rilis, seperti yang sedang kamu baca. SPLASH BARU. Splash screen kembali direvisi: cahaya ungu lembut di belakang tile logo, wordmark gradient ungu dengan letter-spacing yang mengendur, dan garis aksen yang tumbuh — koreografi 1700 ms dalam satu kurva halus. EMAIL BERITA LEBIH PREMIUM. Email langganan berita kini memakai header hitam dengan badge XySpace dan tanda tangan Haekal Saputra (Founder, XySpace). VERSI: Android 6.1.0 (build 21), Web 6.1.0, Desktop 6.1.0, Host 6.1.0. CATATAN JUJUR PENGUJIAN: jalur audio dan multi-monitor dibangun penuh dan ter-compile di CI Windows; pengujian pendengaran nyata (loopback terdengar, mic terdengar di speaker, pindah monitor saat sesi berjalan) adalah langkah berikutnya di lab Windows — semua jalur punya fallback dan log yang jelas bila ada yang tidak sesuai ekspektasi.',
+  'https://app.xydesk.my.id/news/covers/v61.jpg',
+  'rilis',
+  'Haekal Saputra',
+  1
+)
+ON CONFLICT(slug) DO UPDATE SET
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  cover = excluded.cover,
+  category = excluded.category,
+  author = excluded.author,
+  published = excluded.published;
+
+-- Artikel rilis 6.4.0 (terbit tanpa slug eksplisit; alias changelog-v6-4-0 menunjuk ke sini).
+-- Ditarik dari D1 produksi 2026-09-09 (repo = cermin sumber kebenaran).
+INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+(
+  'p-8f5aa26aa3bc',
+  'Sewa PC per jam, billing rapi, dan data akun lebih aman',
+  'Sekarang kamu bisa sewa PC dengan durasi bebas, lihat sisa waktu sesi, dan data perangkat dipisah rapi per akun.',
+  'Update 6.4.0 menghadirkan cara baru menyewa PC, billing yang lebih masuk akal, dan perbaikan keamanan data akun. Semua berangkat dari satu arah: kamu yang pegang kendali penuh.
+
+## Sewa PC jadi fleksibel
+
+Dulu durasi sewa PC hanya bisa dipilih dari paket tetap. Sekarang di halaman Sewa PC kamu bisa menentukan durasi sendiri — mulai dari 1 jam, paket umum (2, 3, 5, 10 jam), hingga isi angka jam sesukamu. Harga menyesuaikan otomatis dan terlihat jelas sebelum lanjut ke WhatsApp. Ada tiga pilihan paket: Regular untuk kebutuhan ringan, Gaming untuk frame rate tinggi, dan Pro untuk streaming serta multitasking berat.
+
+![Halaman Sewa PC dengan durasi custom](https://app.xydesk.my.id/news/shots/6.4.0-sewa-pc.jpg)
+
+## Sisa waktu sesi selalu terlihat
+
+Saat sedang remote, sekarang ada chip di pojok kiri atas layar sesi yang menampilkan total durasi dan sisa waktu. Kamu tidak perlu menebak kapan sesi akan berakhir — angka real-time ada di depan mata, baik lewat chip ringkas maupun panel pengaturan.
+
+## Data perangkat diisolasi per akun
+
+Sebelumnya, daftar perangkat dan data lokal yang tersimpan di aplikasi bisa tercampur antar akun di perangkat yang sama. Kini semua data diisolasi per akun: daftar perangkat, riwayat, dan pengaturan milik akunmu tidak akan muncul di akun lain. Ditambah tombol Billing baru di bar atas aplikasi yang membuka halaman pembayaran sekali klik, dan halaman pembaruan kini menampilkan catatan perubahan (changelog) lengkap — jadi kamu tahu persis apa yang baru di setiap versi.
+
+## Beranda: tombol ''Ingatkan saya''
+
+Tombol di beranda berubah dari ''Status rilis'' menjadi ''Ingatkan saya'' — sekali klik, muncul pilihan kanal untuk kabar rilis: email, WhatsApp, atau Telegram. Kamu akan dapat kabar saat versi baru siap diunduh, tanpa harus bolak-balik cek. Halaman beranda di perangkat kecil pun ikut dirapikan, termasuk tombol lompat ke komentar di artikel berita.
+
+![Beranda dengan tombol Ingatkan saya](https://app.xydesk.my.id/news/shots/6.4.0-hero-rahasia.jpg)
+
+## Host lebih stabil
+
+Sesi live streaming jadi jauh lebih andal: host tidak lagi hidup-mati sendiri (balasan ping + sambung ulang dalam proses), capture layar berhenti dengan benar saat sesi berakhir dan pulih otomatis bila tampilan ditutup OS, kunci mutex yang pernah gagal tidak merobohkan proses, dan supervisor kebal server hang. Sesi yang berjalan dari HP/paket-paket mahal tidak akan terputus di tengah jalan.
+
+## Semua perubahan di versi 6.4.0
+
+- Tombol Billing di bar atas aplikasi (klien Android).
+- Data daftar perangkat, riwayat, dan pengaturan diisolasi per akun.
+- Halaman pembaruan kini menampilkan changelog lengkap.
+- Sewa PC: durasi custom (1 jam, paket 2/3/5/10 jam, atau isi angka) di halaman Sewa PC web.
+- Chip durasi & sisa waktu sesi di layar sesi web (pojok kiri atas + panel).
+- Tombol beranda ''Status rilis'' → ''Ingatkan saya'' dengan pilihan kanal email/WhatsApp/Telegram.
+- Tombol lompat ke komentar di detail artikel berita (layar kecil).
+- Perbaikan deep link /billing yang jatuh ke beranda.
+- Perbaikan overflow horizontal di detail berita pada layar ≤ 390 px.
+- Host: tidak hidup-mati sendiri, capture berhenti benar saat sesi berakhir, pulih dari penutupan OS, mutex poison-safe, supervisor kebal hang.
+- Perbaikan foto profil ganda di komentar resmi dan normalisasi byline artikel lama.
+- Proses rilis diperketat: versi & berita dikendalikan operator, build/kompilasi hanya lewat jalur resmi yang disetujui.
+
+Terima kasih sudah bersama XyDesk. Update bisa diunduh dari halaman Unduh — untuk Android cek halaman pembaruan di aplikasi; di Windows cukup buka installer versi terbaru.',
+  'https://app.xydesk.my.id/news/covers/changelog-640r2.jpg',
+  'rilis',
+  'Haekal Saputra',
+  1
+)
+ON CONFLICT(slug) DO UPDATE SET
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  cover = excluded.cover,
+  category = excluded.category,
+  author = excluded.author,
+  published = excluded.published;
+
+-- Artikel rilis 6.5.3 (disisipkan langsung ke D1; alias changelog-v6-5-3 menunjuk ke sini).
+-- Ditarik dari D1 produksi 2026-09-09 (repo = cermin sumber kebenaran).
+INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+(
+  'rilis-653',
+  'XyDesk 6.5.3 — Jeda Nyaman: Splash Asli, Domain Baru, dan Jaringan yang Lebih Mudah Diatur',
+  'Jendela peluncuran asli menggantikan layar putih saat aplikasi dibuka, XyDesk pindah ke domain xydesk.my.id, dan pengaturan jaringan kini dibaca otomatis dari server.',
+  'Ada dua perubahan besar di pembaruan ini. Yang pertama menyentuh sesuatu yang mungkin pernah kamu alami: aplikasi dibuka, logo XyDesk muncul, lalu… berhenti di situ. Tidak masuk aplikasi, tidak muncul pesan galat, tidak juga tertutup sendiri. Yang kedua lebih kelihatan mata: XyDesk punya identitas baru.
+
+Keduanya ada di rilis 6.5.3, dan keduanya punya cerita yang layak diceritakan.
+
+## Kenapa aplikasi bisa berhenti di logo
+
+Layar logo yang kamu lihat saat aplikasi dibuka bukanlah bagian dari aplikasi — itu layar pembuka bawaan Android. Ia menunggu satu hal: aplikasi menggambar tampilan pertamanya. Begitu tampilan pertama muncul, layar pembuka itu menyingkir.
+
+Masalahnya, sebelum bisa menggambar apa pun, aplikasi kami menunggu tiga urusan selesai: membaca versi aplikasinya sendiri, menanyakan kemampuan layar ke sistem, dan membuka penyimpanan lokal. Ketiganya dilakukan dengan cara menunggu jawaban dari sistem HP. Kalau salah satu jawabannya tidak pernah datang — penyimpanan sedang terkunci, sistem sedang sibuk, atau ada keadaan khusus di perangkat tertentu — aplikasi akan menunggu selamanya.
+
+Bukan macet, bukan mogok. Ia hanya menunggu. Tanpa pesan galat, tanpa tombol, tanpa jejak yang bisa kamu laporkan.
+
+Yang membuatnya sulit ditemukan: kami sempat memperbaiki satu penyebab di pembaruan sebelumnya — layanan notifikasi yang ditunggu sebelum aplikasi boleh mulai — dan mengira urusannya selesai. Ternyata tiga penyebab lain masih menunggu giliran.
+
+## Sekarang: tampilan pertama muncul lebih dulu
+
+Urutannya dibalik. Aplikasi menggambar layar pembukanya sendiri **paling dulu** — murni, tanpa menunggu apa pun dari sistem. Baru setelah itu ketiga urusan tadi dijalankan, masing-masing dengan batas waktu sepuluh detik. Kalau ada yang tidak kunjung menjawab, ia dilewati dan dicatat, bukan ditunggu sampai kiamat.
+
+Satu pengecualian: kalau penyimpanan lokal benar-benar tidak bisa dibuka, aplikasi memang tidak bisa jalan. Tapi sekarang kegagalan itu **terlihat**: kamu mendapat layar berisi pesan yang jelas dan tombol coba lagi, bukan logo yang diam tanpa penjelasan.
+
+Buat kamu, ringkasnya: aplikasi selalu berhasil masuk. Skenario "berhenti di logo" tidak ada lagi.
+
+## Identitas baru: markah X
+
+XyDesk sekarang memakai markah baru: huruf X tebal berwarna ungu. Kamu akan melihatnya di ikon aplikasi, di layar pembuka, di situs, dan di aplikasi PC.
+
+Satu keputusan yang sengaja kami buat: warnanya tidak selalu sama. Di latar terang — termasuk layar pembuka HP kamu — warna ungunya tampil apa adanya. Di latar gelap, seperti ikon di layar utama HP dan ikon di baki sistem Windows, markahnya berubah jadi putih polos. Alasannya sederhana: ungu yang kami pakai terlalu gelap untuk terbaca di atas latar hitam. Bentuknya tetap sama di mana-mana; yang menyesuaikan hanya warnanya, supaya tetap terbaca di permukaan apa pun. Ini kelaziman yang dipakai banyak merek: satu logo untuk latar terang, satu lagi untuk latar gelap.
+
+Seluruhnya dihasilkan dari satu berkas sumber, jadi tidak ada lagi ikon yang ketinggalan dan memajang logo berbeda di tempat berbeda.
+
+## Yang berubah di 6.5.3
+
+- **Aplikasi tidak lagi bisa berhenti di layar logo.** Tampilan pertama digambar sebelum aplikasi menunggu apa pun dari sistem, dan setiap urusan saat mulai punya batas waktu.
+- **Penyimpanan yang gagal dibuka kini terlihat.** Pesan yang jelas dan tombol coba lagi, bukan layar diam tanpa penjelasan.
+- **Identitas visual baru.** Markah X ungu menggantikan logo lama di aplikasi Android, aplikasi PC, situs, dan ikon sistem — 27 berkas ikon diganti sekaligus.
+
+## Catatan jujur
+
+Perbaikan layar logo ini sudah melewati seluruh pemeriksaan otomatis: analisis kode bersih, 54 pengujian lolos, dan tidak ada satu pun peringatan tersisa. Tapi pengujian yang sesungguhnya adalah HP kamu. Kalau setelah pembaruan ini kamu masih menjumpai aplikasi yang berhenti di logo — atau tingkah aneh apa pun — kirim ke kami. Kami lebih ingin mendengarnya langsung daripada mengetahuinya enam hari kemudian.
+',
+  'https://app.xydesk.my.id/news/covers/changelog-653.jpg',
+  'rilis',
+  'Haekal Saputra',
+  1
+)
+ON CONFLICT(slug) DO UPDATE SET
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  cover = excluded.cover,
+  category = excluded.category,
+  author = excluded.author,
+  published = excluded.published;
+
+-- Artikel rilis 6.5.4 (disisipkan langsung ke D1; alias changelog-v6-5-4 menunjuk ke sini).
+-- Ditarik dari D1 produksi 2026-09-09 (repo = cermin sumber kebenaran).
+INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+(
+  'rilis-654',
+  'XyDesk 6.5.4 — Domain Baru xydesk.my.id Aktif Penuh, Plus Logo X dan Jaringan Otomatis',
+  'Seluruh layanan XyDesk kini berjalan di xydesk.my.id, logo X terpasang di aplikasi dan pemasang, dan koneksi jarak jauh punya jalur cadangan kalau jalur langsung gagal.',
+  'Mulai hari ini seluruh layanan XyDesk beralamat di **xydesk.my.id**. Aplikasi web, penghubung sesi jarak jauh, dan berita — semuanya pindah. Tidak ada fitur baru di rilis ini, tapi ada satu hal yang perlu kamu lakukan, dan sebaiknya dilakukan segera.
+
+## Yang perlu kamu lakukan: perbarui ke 6.5.4
+
+Alamat lama sudah kami matikan. Aplikasi XyDesk yang terpasang sebelum pembaruan ini masih mencari layanan di alamat lama, jadi dua hal akan berhenti bekerja: **menyambung ke PC** dan **membaca berita** dari dalam aplikasi.
+
+Pembaruannya sendiri tidak terpengaruh — berkas pembaruan kami ambil dari GitHub, bukan dari alamat yang kami pindahkan — jadi kamu bisa memperbarui dari dalam aplikasi seperti biasa lewat Pusat Update. Kalau jalur itu gagal, unduh langsung pemasang terbaru dan pasang secara manual.
+
+Begini ringkasnya:
+
+- **Sudah di 6.5.4 atau lebih baru:** tidak ada yang perlu dilakukan.
+- **Masih di versi lama:** buka Pusat Update, atau unduh pemasang terbaru.
+- **Kalau pemasangan ditolak dengan pesan "paket tidak valid":** copot XyDesk yang lama, lalu pasang ulang. Ini hanya perlu sekali, dan penyebabnya dijelaskan di bawah.
+
+## Kenapa pemasangan bisa ditolak
+
+Kami menyelidiki satu laporan pemasangan yang gagal sampai ke akar-akarnya, dan hasilnya justru melegakan: berkas pemasangnya tidak bermasalah. Kami periksa keutuhan berkasnya, cocokkan sidik jarinya dengan yang tercantum di catatan rilis, periksa tanda tangannya, lalu bandingkan sertifikat penandatanganan seluruh rilis — semuanya identik sejak lama.
+
+Jadi kalau pemasanganmu ditolak, penyebabnya hampir pasti: XyDesk yang sekarang terpasang di HP kamu berasal dari sumber lain — misalnya hasil build percobaan — sehingga tanda tangannya berbeda dari rilis resmi. Android menolak memperbarui aplikasi kalau tanda tangannya tidak cocok. Copot sekali, pasang ulang, dan setelah itu pembaruan akan lancar terus.
+
+## Kenapa pindah alamat
+
+Alamat baru ini kami siapkan supaya semua layanan XyDesk berada di satu nama yang sama dengan produk: `xydesk.my.id`. Selama ini aplikasi web, penghubung sesi, dan berita masing-masing memakai nama yang menempel pada nama lama ruang kerja kami.
+
+Pemindahannya menyentuh 127 tempat di 49 berkas — mulai dari aplikasi HP, aplikasi PC, mesin PC, situs, sampai pengaturan di balik layar. Kami juga memindahkan seluruh gambar sampul berita yang tersimpan dengan alamat lama, supaya tidak ada artikel yang kehilangan gambarnya.
+
+Yang tidak kami sentuh: layanan lain yang menempel di nama lama — halaman pemasaran, surat, dan lain-lain. Hanya tiga alamat milik XyDesk yang dibersihkan.
+
+## Yang berubah di 6.5.4
+
+- **Seluruh layanan kini beralamat di xydesk.my.id** — aplikasi web, penghubung sesi jarak jauh, dan berita.
+- **Aplikasi diarahkan ke alamat baru** di seluruh platform: HP, PC, dan situs.
+- **Gambar sampul berita dipindahkan** ke alamat baru, jadi tidak ada artikel yang gambarnya hilang.
+
+Tidak ada perubahan fitur, tidak ada perubahan cara memakai XyDesk.
+
+## Yang masih kami kejar
+
+Ada satu laporan yang belum selesai: sebagian pengguna PC menjumpai mesin XyDesk yang tidak mau tersambung. Kami sudah menyingkirkan dua penyebab besar — ganti kata sandi pasangan yang mengunci perangkat, dan mesin yang tersandung setiap kali jaringan kedip — keduanya sudah diperbaiki. Tapi kalau PC kamu masih belum tersambung, kami perlu melihat catatan jalannya: buka panel log di aplikasi PC, salin 5–10 baris terakhir (yang berawalan `[engine]` atau `[shell]`), dan kirim ke kami. Dari situ kami bisa menunjuk penyebabnya tanpa menebak.
+',
+  'https://app.xydesk.my.id/news/covers/changelog-654.jpg',
+  'rilis',
+  'Haekal Saputra',
+  1
+)
+ON CONFLICT(slug) DO UPDATE SET
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  cover = excluded.cover,
+  category = excluded.category,
+  author = excluded.author,
+  published = excluded.published;
+
+-- Changelog rilis 6.5.2 (terbit belakangan 2026-09-09 untuk menutup 404).
+-- Ditulis dari changelogs/6.5.2.md; tanpa screenshot karena tidak ada
+-- perubahan visual di rilis ini (semuanya di bawah permukaan).
+INSERT INTO posts (slug, title, excerpt, content, cover, category, author, published) VALUES
+(
+  'changelog-v6-5-2',
+  'XyDesk 6.5.2 — Tertahan di Logo Kini Sembuh, Ganti Password Tak Lagi Mengunci',
+  'Dua perbaikan penting: aplikasi Android yang kadang diam di layar peluncuran, dan password pairing baru yang dulu mengunci perangkat selamanya.',
+  'Pernah membuka XyDesk di HP lalu layarnya diam di logo — bukan crash, bukan pesan galat, cuma berhenti? Rilis ini menyembuhkan itu, plus satu luka lama: mengganti password pairing yang malah mengunci perangkat selamanya.
+
+**Aplikasi yang tertahan di layar peluncuran**
+
+Saat dibuka, aplikasi menyiapkan notifikasi dulu sebelum menampilkan layar pertama — dan penyiapan itu tidak punya batas waktu. Kalau satu langkahnya tidak kunjung menjawab, karena jaringan tersendat atau layanan HP bermasalah, aplikasi diam di logo tanpa akhir.
+
+Sekarang urutannya dibalik: layar tampil dulu, notifikasi disiapkan setelahnya dengan batas 10 detik. Kalau gagal, aplikasi tetap terbuka dan kamu bisa mencoba ulang dari Pengaturan. Pembacaan sesi tersimpan juga dibatasi 10 detik — kalau lewat, kamu diminta masuk ulang, bukan ditatapi logo.
+
+**Ganti password pairing tidak lagi mengunci perangkat**
+
+Dulu, mengganti password di PC membuat server menolak koneksi terus-menerus dan perangkat terkunci — praktis selamanya. Penyebabnya sederhana: server tidak pernah diberi tahu password barunya.
+
+Sekarang setiap PC membawa kartu identitas sendiri yang berlaku 90 hari. Saat password diganti, PC menunjukkan kartu itu dan server mengikat ulang perangkat ke password baru. Tanpa kartu itu, password yang benar sekalipun tetap ditolak — jadi tidak ada yang bisa membajak ikatan perangkatmu.
+
+Kartu identitas yang sama dipakai setiap kali PC menyambung: token sesi ditukar otomatis tanpa password dan tanpa antrean percobaan. Token sesinya sendiri tetap berumur pendek, 5 menit, seperti sebelumnya — yang berumur panjang hanya identitasnya.
+
+**Changelog — versi 6.5.2 (build 30)**
+
+- Diperbaiki: aplikasi Android yang bisa berhenti di layar peluncuran tanpa batas waktu.
+- Diperbaiki: mengganti password pairing yang mengunci perangkat selamanya.
+- Ditambahkan: identitas perangkat 90 hari untuk host — sambung ulang otomatis dan ikat ulang password yang aman.
+- Kompatibilitas: aplikasi lama tetap tersambung tanpa perlu diperbarui.
+
+Catatan kecil: artikel ini terbit belakangan untuk melengkapi arsip — tautan versi 6.5.2 sempat menunjuk ke halaman kosong. Isinya sama persis dengan yang dirilis 6 September 2026.',
+  'https://app.xydesk.my.id/news/covers/changelog-652.jpg',
+  'rilis',
+  'Haekal Saputra',
+  1
+)
+ON CONFLICT(slug) DO UPDATE SET
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  cover = excluded.cover,
+  category = excluded.category,
+  author = excluded.author,
+  published = excluded.published;
+
+-- Alias slug untuk artikel changelog terdahulu agar tautan footer/About tidak 404.
+-- Dipetakan persis ke isi D1 produksi (terverifikasi live 2026-09-09):
+-- rilis-654 = artikel 6.5.4, rilis-653 = 6.5.3, p-8f5aa26aa3bc = 6.4.0,
+-- p-66a4edde0222 = 6.1.0, p-d5b4512f7d17 = 6.0.0.
+-- 6.5.2 SENGAJA tanpa alias: artikelnya tidak pernah terbit (live 404).
 INSERT OR IGNORE INTO post_aliases (alias, slug) VALUES
   ('changelog-v6-5-4', 'rilis-654'),
   ('changelog-v6-5-3', 'rilis-653'),
-  ('changelog-v6-5-2', 'p-8f5aa26aa3bc'),
-  ('changelog-v6-4-0', 'p-66a4edde0222'),
-  ('changelog-v6-1-0', 'p-d5b4512f7d17'),
+  ('changelog-v6-4-0', 'p-8f5aa26aa3bc'),
+  ('changelog-v6-1-0', 'p-66a4edde0222'),
   ('changelog-v6-0-0', 'p-d5b4512f7d17');

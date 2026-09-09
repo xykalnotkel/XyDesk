@@ -98,3 +98,20 @@ pub async fn auth_email_verify(
 pub async fn auth_logout(auth: State<'_, Arc<AuthManager>>) -> Result<bool, String> {
     Ok(auth.logout().await)
 }
+
+// ── Pembaruan aplikasi ───────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn check_update() -> Result<crate::update::UpdateStatus, String> {
+    crate::update::check_update().await
+}
+
+#[tauri::command]
+pub async fn download_update() -> Result<String, String> {
+    crate::update::download_update().await
+}
+
+#[tauri::command]
+pub fn install_update(path: String) -> Result<(), String> {
+    crate::update::install_update(path)
+}

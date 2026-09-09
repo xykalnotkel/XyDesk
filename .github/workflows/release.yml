@@ -441,7 +441,12 @@ jobs:
           arm64_bytes="$(stat -c%s XyDesk-Android-arm64-v8a.apk)"
           armv7_sha="$(sha256sum XyDesk-Android-armeabi-v7a.apk | cut -d' ' -f1)"
           armv7_bytes="$(stat -c%s XyDesk-Android-armeabi-v7a.apk)"
+          winx64_sha="$(sha256sum XyDesk-x64.exe | cut -d' ' -f1)"
+          winx64_bytes="$(stat -c%s XyDesk-x64.exe)"
+          winarm64_sha="$(sha256sum XyDesk-arm64.exe | cut -d' ' -f1)"
+          winarm64_bytes="$(stat -c%s XyDesk-arm64.exe)"
           export arm64_sha arm64_bytes armv7_sha armv7_bytes
+          export winx64_sha winx64_bytes winarm64_sha winarm64_bytes
           python3 - <<'PY'
           import json, os
           repository = os.environ['GITHUB_REPOSITORY']
@@ -474,6 +479,20 @@ jobs:
                       "url": f"{base}/XyDesk-Android-armeabi-v7a.apk",
                       "sha256": os.environ["armv7_sha"],
                       "bytes": int(os.environ["armv7_bytes"]),
+                  },
+              },
+              # Installer Windows (Inno Setup) untuk updater shell desktop.
+              # Aditif: klien Android mengabaikan kunci ini.
+              "windows": {
+                  "x64": {
+                      "url": f"{base}/XyDesk-x64.exe",
+                      "sha256": os.environ["winx64_sha"],
+                      "bytes": int(os.environ["winx64_bytes"]),
+                  },
+                  "arm64": {
+                      "url": f"{base}/XyDesk-arm64.exe",
+                      "sha256": os.environ["winarm64_sha"],
+                      "bytes": int(os.environ["winarm64_bytes"]),
                   },
               },
               "release_url": f"https://github.com/{repository}/releases/tag/{tag}",
