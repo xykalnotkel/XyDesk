@@ -131,9 +131,8 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
         _liked = before;
         _likeCount = beforeCount;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _likeBusy = false);
     }
@@ -603,7 +602,9 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                           expand: false,
                           height: 42,
                           isLoading: _commentBusy,
-                          onPressed: _commentBusy || _commentText.text.trim().length < 2
+                          onPressed:
+                              _commentBusy ||
+                                  _commentText.text.trim().length < 2
                               ? null
                               : _sendComment,
                         ),

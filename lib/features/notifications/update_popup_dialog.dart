@@ -13,10 +13,7 @@ import 'update_repository.dart';
 /// dan tombol "X" melayang di pojok atas. Mengetuk gambar langsung membuka
 /// layar pembaruan (UpdatePage) untuk unduhan latar belakang dan instalasi APK.
 class UpdatePopupDialog extends StatefulWidget {
-  const UpdatePopupDialog({
-    super.key,
-    required this.result,
-  });
+  const UpdatePopupDialog({super.key, required this.result});
 
   final UpdateCheckResult result;
 
@@ -65,10 +62,7 @@ class _UpdatePopupDialogState extends State<UpdatePopupDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 360,
-            maxHeight: 520,
-          ),
+          constraints: const BoxConstraints(maxWidth: 360, maxHeight: 520),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -158,4 +152,3 @@ class _UpdatePopupDialogState extends State<UpdatePopupDialog> {
     );
   }
 }
-

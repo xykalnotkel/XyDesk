@@ -561,9 +561,8 @@ Future<void> _editName(
         );
   } on AuthException catch (error) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 }
@@ -877,9 +876,8 @@ Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
     await ref.read(authProvider.notifier).signOut();
   } on AuthException catch (error) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 }

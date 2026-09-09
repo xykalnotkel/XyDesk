@@ -424,10 +424,30 @@ class _AppShellState extends ConsumerState<AppShell> {
                 labelType: NavigationRailLabelType.all,
                 backgroundColor: Colors.transparent,
                 destinations: [
-                  _railDest(context, context.tr('nav_home'), LucideIcons.house, 0),
-                  _railDest(context, context.tr('nav_connect'), LucideIcons.cable, 1),
-                  _railDest(context, context.tr('nav_news'), LucideIcons.newspaper, 2),
-                  _railDest(context, context.tr('nav_account'), LucideIcons.user, 3),
+                  _railDest(
+                    context,
+                    context.tr('nav_home'),
+                    LucideIcons.house,
+                    0,
+                  ),
+                  _railDest(
+                    context,
+                    context.tr('nav_connect'),
+                    LucideIcons.cable,
+                    1,
+                  ),
+                  _railDest(
+                    context,
+                    context.tr('nav_news'),
+                    LucideIcons.newspaper,
+                    2,
+                  ),
+                  _railDest(
+                    context,
+                    context.tr('nav_account'),
+                    LucideIcons.user,
+                    3,
+                  ),
                 ],
               ),
               // Geser kanan-kiri untuk berpindah halaman — sama seperti
@@ -475,22 +495,38 @@ class _AppShellState extends ConsumerState<AppShell> {
           destinations: [
             NavigationDestination(
               icon: Icon(LucideIcons.house, size: 22, color: c.textLow),
-              selectedIcon: Icon(LucideIcons.house, size: 22, color: c.accentDeep),
+              selectedIcon: Icon(
+                LucideIcons.house,
+                size: 22,
+                color: c.accentDeep,
+              ),
               label: context.tr('nav_home'),
             ),
             NavigationDestination(
               icon: Icon(LucideIcons.cable, size: 22, color: c.textLow),
-              selectedIcon: Icon(LucideIcons.cable, size: 22, color: c.accentDeep),
+              selectedIcon: Icon(
+                LucideIcons.cable,
+                size: 22,
+                color: c.accentDeep,
+              ),
               label: context.tr('nav_connect'),
             ),
             NavigationDestination(
               icon: Icon(LucideIcons.newspaper, size: 22, color: c.textLow),
-              selectedIcon: Icon(LucideIcons.newspaper, size: 22, color: c.accentDeep),
+              selectedIcon: Icon(
+                LucideIcons.newspaper,
+                size: 22,
+                color: c.accentDeep,
+              ),
               label: context.tr('nav_news'),
             ),
             NavigationDestination(
               icon: Icon(LucideIcons.user, size: 22, color: c.textLow),
-              selectedIcon: Icon(LucideIcons.user, size: 22, color: c.accentDeep),
+              selectedIcon: Icon(
+                LucideIcons.user,
+                size: 22,
+                color: c.accentDeep,
+              ),
               label: context.tr('nav_account'),
             ),
           ],
@@ -512,9 +548,9 @@ class _AppShellState extends ConsumerState<AppShell> {
       // Ikon AI 3D ungu glossy untuk Billing / Sewa PC — buka layar
       // Langganan langsung dari topbar (bukan via menu Akun).
       _BillingIconButton(
-        onPressed: () => Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const BillingPage())),
+        onPressed: () =>
+            Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const BillingPage())),
       ),
       _DotIconButton(
         icon: LucideIcons.bell,
@@ -552,9 +588,9 @@ class _AppShellState extends ConsumerState<AppShell> {
         IconButton(
           tooltip: context.tr('connect_history'),
           icon: Icon(LucideIcons.history, size: 19, color: c.textMid),
-          onPressed: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const HistoryPage())),
+          onPressed: () =>
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const HistoryPage())),
         ),
       );
     } else if (_index == 2) {
@@ -607,11 +643,7 @@ class _BillingIconButton extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF8B5CF6),
-              Color(0xFF7C3AED),
-              Color(0xFF5B21B6),
-            ],
+            colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED), Color(0xFF5B21B6)],
           ),
           borderRadius: BorderRadius.circular(9),
           border: Border.all(

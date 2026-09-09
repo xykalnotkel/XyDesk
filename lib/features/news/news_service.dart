@@ -225,9 +225,8 @@ class NewsApi {
   /// Detail artikel. Sidik jari ikut dikirim supaya server bisa memberi tahu
   /// apakah perangkat ini sudah menyukai artikelnya.
   Future<(NewsPost, List<NewsComment>, bool)> detail(String slug) async {
-    final uri = Uri.parse(
-      '$newsBase/api/news/$slug',
-    ).replace(queryParameters: {'fp': fingerprint});
+    final uri = Uri.parse('$newsBase/api/news/$slug')
+        .replace(queryParameters: {'fp': fingerprint});
     final data = await _getJson(uri);
     final post = NewsPost.fromJson(data['post'] as Map<String, dynamic>);
     final comments = [

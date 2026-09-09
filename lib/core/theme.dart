@@ -156,7 +156,10 @@ class AppTheme {
           elevation: 2,
           shadowColor: const Color(0xFF26125C).withValues(alpha: 0.22),
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(

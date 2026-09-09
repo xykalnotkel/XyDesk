@@ -167,8 +167,9 @@ class SessionStats {
 
   bool get hasVideo => width != null && height != null;
 
-  String get resolutionLabel =>
-      hasVideo ? '$width x $height' : (noFrameWarning ? 'Belum ada gambar (periksa PC)' : 'Belum ada gambar');
+  String get resolutionLabel => hasVideo
+      ? '$width x $height'
+      : (noFrameWarning ? 'Belum ada gambar (periksa PC)' : 'Belum ada gambar');
 
   String get fpsLabel => fps == null ? '-' : '${fps!.round()} fps';
 
@@ -341,8 +342,7 @@ class RtcService {
         // tidak jadi oracle password). Ini dugaan paling umum di sisi kita:
         // sejak 3 Sep 2026 host membandingkan password PEKA-KASUS, sementara
         // papan ketik ponsel hobi mengkapital huruf pertama.
-        _lastError =
-            'Password ditolak host. Periksa huruf besar/kecil dan spasi di ujung \u2014 ketik ulang, jangan salin dari catatan yang sudah terkapitalisasi.';
+        _lastError = 'Password ditolak host. Periksa huruf besar/kecil dan spasi di ujung \u2014 ketik ulang, jangan salin dari catatan yang sudah terkapitalisasi.';
         _emit(RtcPhase.rejected);
         return;
       }

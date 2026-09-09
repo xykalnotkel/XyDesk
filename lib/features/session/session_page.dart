@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+
 import '../../core/permissions.dart';
+
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -649,14 +651,18 @@ class _SessionPageState extends ConsumerState<SessionPage>
                   ),
                 ),
               // Watchdog banner: terhubung tapi belum ada frame video setelah 10 detik.
-              if (_transport.state.live && (_lastStats?.noFrameWarning ?? false))
+              if (_transport.state.live &&
+                  (_lastStats?.noFrameWarning ?? false))
                 Positioned(
                   top: MediaQuery.paddingOf(context).top + 12,
                   left: 20,
                   right: 20,
                   child: Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xEB0D0716),
                         borderRadius: BorderRadius.circular(R.lg),
@@ -672,7 +678,11 @@ class _SessionPageState extends ConsumerState<SessionPage>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(LucideIcons.circleAlert, size: 16, color: Color(0xFFA78BFA)),
+                          const Icon(
+                            LucideIcons.circleAlert,
+                            size: 16,
+                            color: Color(0xFFA78BFA),
+                          ),
                           const SizedBox(width: Gap.sm),
                           const Flexible(
                             child: Text(
@@ -694,7 +704,10 @@ class _SessionPageState extends ConsumerState<SessionPage>
                             },
                             borderRadius: BorderRadius.circular(R.sm),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.accentDark,
                                 borderRadius: BorderRadius.circular(R.sm),
@@ -1299,8 +1312,7 @@ class _RemoteScreenPlaceholder extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          transport.message ??
-                              'HUD dapat dipreview, tetapi belum mengirim input atau audio.',
+                          transport.message ?? 'HUD dapat dipreview, tetapi belum mengirim input atau audio.',
                           style: const TextStyle(
                             fontSize: 10.5,
                             color: Color(0x66FFFFFF),
@@ -1861,10 +1873,7 @@ class _ActionButtonState extends State<_ActionButton> {
                 : const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Color(0x52181926),
-                      Color(0x330E1018),
-                    ],
+                    colors: [Color(0x52181926), Color(0x330E1018)],
                   ),
             shape: BoxShape.circle,
             border: Border.all(
@@ -1893,7 +1902,9 @@ class _ActionButtonState extends State<_ActionButton> {
             style: TextStyle(
               fontSize: widget.compact ? 13 : 14.5,
               fontWeight: FontWeight.w800,
-              color: _down ? Colors.white : Colors.white.withValues(alpha: 0.85),
+              color: _down
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.85),
             ),
           ),
         ),
