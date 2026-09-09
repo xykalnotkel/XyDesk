@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/store.dart';
 import '../../core/tokens.dart';
+import '../../widgets/seamless.dart';
 import '../auth/auth_service.dart';
 
 @immutable
@@ -310,17 +311,15 @@ class _HostModePageState extends ConsumerState<HostModePage> {
         Row(
           children: [
             Expanded(
-              child: FilledButton.icon(
+              child: PrimaryButton(
                 onPressed: state.busy
                     ? null
                     : state.running
                     ? controller.stop
                     : controller.start,
-                icon: Icon(
-                  state.running ? LucideIcons.square : LucideIcons.play,
-                  size: 17,
-                ),
-                label: Text(state.running ? 'Hentikan Host' : 'Aktifkan Host'),
+                icon: state.running ? LucideIcons.square : LucideIcons.play,
+                label: state.running ? 'Hentikan Host' : 'Aktifkan Host',
+                isLoading: state.busy,
               ),
             ),
             const SizedBox(width: Gap.sm),

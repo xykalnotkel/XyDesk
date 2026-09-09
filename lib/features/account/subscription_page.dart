@@ -157,18 +157,16 @@ class SubscriptionPage extends StatelessWidget {
                   style: TextStyle(fontSize: 12, color: c.textLow, height: 1.5),
                 ),
                 const SizedBox(height: Gap.lg),
-                SizedBox(
-                  width: 200,
+                PrimaryButton(
+                  label: 'Sewa PC Sekarang',
+                  icon: LucideIcons.monitor,
+                  expand: false,
                   height: 44,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const BillingPage()),
-                      );
-                    },
-                    icon: const Icon(LucideIcons.monitor, size: 18),
-                    label: const Text('Sewa PC Sekarang'),
-                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const BillingPage()),
+                    );
+                  },
                 ),
               ],
             ),

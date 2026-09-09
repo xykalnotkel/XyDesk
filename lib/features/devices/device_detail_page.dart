@@ -522,7 +522,11 @@ class _BottomActions extends StatelessWidget {
           stops: const [0.55, 1],
         ),
       ),
-      child: FilledButton(
+      child: PrimaryButton(
+        label: device.isOnline
+            ? context.tr('device_connect')
+            : context.tr('status_offline'),
+        icon: device.isOnline ? LucideIcons.play : null,
         onPressed: device.isOnline
             ? () => Navigator.of(context).push(
                 MaterialPageRoute(
@@ -531,11 +535,6 @@ class _BottomActions extends StatelessWidget {
                 ),
               )
             : null,
-        child: Text(
-          device.isOnline
-              ? context.tr('device_connect')
-              : context.tr('status_offline'),
-        ),
       ),
     );
   }

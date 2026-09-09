@@ -597,17 +597,15 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                       const SizedBox(height: Gap.sm),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: FilledButton(
-                          onPressed:
-                              _commentBusy ||
-                                  _commentText.text.trim().length < 2
+                        child: PrimaryButton(
+                          label: context.tr('news_comment_send'),
+                          icon: LucideIcons.send,
+                          expand: false,
+                          height: 42,
+                          isLoading: _commentBusy,
+                          onPressed: _commentBusy || _commentText.text.trim().length < 2
                               ? null
                               : _sendComment,
-                          child: Text(
-                            _commentBusy
-                                ? '…'
-                                : context.tr('news_comment_send'),
-                          ),
                         ),
                       ),
                     ],
@@ -805,11 +803,12 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
                             ),
                           ),
                           const SizedBox(width: Gap.sm),
-                          FilledButton(
+                          PrimaryButton(
+                            label: context.tr('news_subscribe_btn'),
+                            expand: false,
+                            height: 48,
+                            isLoading: _subBusy,
                             onPressed: _subBusy ? null : _subscribe,
-                            child: Text(
-                              _subBusy ? '…' : context.tr('news_subscribe_btn'),
-                            ),
                           ),
                         ],
                       ),

@@ -299,16 +299,10 @@ class _BillingPageState extends State<BillingPage> {
                 const SizedBox(height: Gap.lg),
 
                 // Tombol pesan.
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: FilledButton.icon(
-                    onPressed: stokPaket > 0 ? _pesan : null,
-                    icon: const Icon(LucideIcons.messageCircle, size: 18),
-                    label: Text(
-                      stokPaket > 0 ? 'Pesan via WhatsApp' : 'Stok habis',
-                    ),
-                  ),
+                PrimaryButton(
+                  label: stokPaket > 0 ? 'Pesan via WhatsApp' : 'Stok habis',
+                  icon: LucideIcons.messageCircle,
+                  onPressed: stokPaket > 0 ? _pesan : null,
                 ),
                 const SizedBox(height: Gap.md),
                 Text(
