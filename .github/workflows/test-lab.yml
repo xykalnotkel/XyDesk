@@ -107,8 +107,6 @@ jobs:
 
       - name: Install Virtual Display Driver (installer .exe itsmikethetech)
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           Write-Host "=== Install Virtual Display Driver (fix hitam VM/RDP) ===" -ForegroundColor Cyan
           # RIWAYAT KEGAGALAN (Sep 2026) — jangan diulang:
@@ -117,26 +115,23 @@ jobs:
           # - ge9/IddSampleDriver + pnputil: driver TERDAFTAR (oem13.inf) tapi
           #   TIDAK ADA devicenya — pnputil /install tidak membuat software
           #   devnode, jadi PnP tetap cuma Hyper-V Video = tetap headless.
-          # Jalur ini: installer .exe itsmikethetech (NSIS silent /S) yang
-          # membuat devicenya sendiri — rekomendasi host/driver/README.md.
-          # Nama aset dibaca dari API (nama file ganti tiap versi).
-          $relJson = gh api repos/itsmikethetech/Virtual-Display-Driver/releases/latest 2>$null
-          if ($LASTEXITCODE -ne 0 -or -not $relJson) {
-            Write-Host "::error::Gagal membaca release itsmikethetech."
-            exit 1
-          }
-          $rel = $relJson | ConvertFrom-Json
-          $asset = @($rel.assets | Where-Object { $_.name -match "Setup.*\.exe$" }) | Select-Object -First 1
-          if (-not $asset) {
-            Write-Host "::error::Tidak ada Setup .exe di release $($rel.tag_name)."
-            $rel.assets | ForEach-Object { Write-Host "  aset: $($_.name)" }
-            exit 1
-          }
-          Write-Host "Aset: $($asset.name) ($($rel.tag_name))"
+          # - Rilis latest itsmikethetech (25.7.23): TIDAK ADA Setup .exe lagi,
+          #   cuma Driver.Only.zip + VDD.Control.zip.
+          # Jalur ini: PIN ke rilis 25.5.2 yang masih punya Setup .exe (Inno
+          # Setup — terverifikasi dari strings `ArchitecturesInstallIn64BitMode`
+          # / `UninstallDisplayName`, engine Delphi). Repo pindah org:
+          # itsmikethetech/Virtual-Display-Driver -> VirtualDrivers/... (URL
+          # lama redirect, tapi pakai yang kanonik).
+          $url = "https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe"
           $setup = Join-Path $env:RUNNER_TEMP "VDD-Setup.exe"
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $setup -UseBasicParsing -ErrorAction Stop
-          Write-Host "Install silent (/S)..."
-          $p = Start-Process $setup -ArgumentList "/S" -Wait -PassThru
+          try {
+            Invoke-WebRequest -Uri $url -OutFile $setup -UseBasicParsing -ErrorAction Stop
+          } catch {
+            Write-Host "::error::Gagal unduh Setup VDD: $($_.Exception.Message)"
+            exit 1
+          }
+          Write-Host "Install silent (/VERYSILENT)..."
+          $p = Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
           Write-Host "Exit setup: $($p.ExitCode)"
           # Daftarkan 1 display virtual via manager CLI bila ada (best-effort).
           foreach ($mgr in @("C:\Program Files\Virtual Display Driver\VirtualDisplayDriver.exe",
