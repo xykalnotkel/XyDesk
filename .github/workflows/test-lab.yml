@@ -13,7 +13,9 @@ name: Test Lab (RDP via Tailscale)
 #      password = RDP_PASSWORD, alamat = IP Tailscale tersebut.
 #      JANGAN login sebagai runneradmin — itu akun milik runner GitHub;
 #      mengambil alih sesinya MEMBUNUH job (pelajaran dari lab pertama).
-#   5. Di dalam RDP: jalankan XyDesk (sudah terinstal), buka mode Host,
+#   5. Di dalam RDP: UNDUH + PASANG XyDesk dari rilis GitHub (.exe installer;
+#      workflow TIDAK memasang XyDesk — baru menyiapkan Tailscale+RDP+driver),
+#      buka mode Host,
 #      catat ID + password, lalu konek dari HP/web seperti biasa.
 #   6. Lab berjalan penuh sesuai durasi; hentikan hanya lewat Cancel run.
 #
@@ -106,13 +108,20 @@ jobs:
           }
 
       - name: Install Virtual Display Driver (installer .exe itsmikethetech)
+        id: vdd
         shell: pwsh
         # Jaring pengaman: installer driver tidak boleh menggantung job.
         # (Lab 9 Sep: setup 25.5.2 gantung >11 mnt tanpa timeout.)
         timeout-minutes: 12
+        # BEST-EFFORT (bukan gerbang): runner PUNYA 1 display dasar (Hyper-V
+        # Video) — video tetap bisa dites via GDI (RDP terbuka / sesudah tscon).
+        # Driver virtual = peningkatan (resolusi + DXGI), bukan syarat hidup lab.
+        # Status ditulis ke output `vdd_ok` dan dibaca step Info koneksi.
+        continue-on-error: true
         run: |
           Write-Host "=== Install Virtual Display Driver (fix hitam VM/RDP) ===" -ForegroundColor Cyan
           function Stamp($m) { Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $m" }
+          "vdd_ok=false" >> $env:GITHUB_OUTPUT
           # RIWAYAT KEGAGALAN (Sep 2026) — jangan diulang:
           # - Scoop `idd-sample-driver`: manifest sudah tidak ada di bucket
           #   extras ("Couldn't find manifest", lab 8 Sep).
@@ -132,8 +141,8 @@ jobs:
           try {
             Invoke-WebRequest -Uri $url -OutFile $setup -UseBasicParsing -ErrorAction Stop -TimeoutSec 180
           } catch {
-            Write-Host "::error::Gagal unduh Setup VDD: $($_.Exception.Message)"
-            exit 1
+            Write-Host "::warning::Gagal unduh Setup VDD: $($_.Exception.Message) — lab lanjut tanpa driver virtual."
+            exit 0
           }
           Stamp "Unduhan OK: $((Get-Item $setup).Length) byte"
           # Installer dengan BATAS TUNGGU 5 menit — JANGAN -Wait tanpa batas:
@@ -161,7 +170,9 @@ jobs:
             }
           }
           Start-Sleep -Seconds 10
-          Get-PnpDevice -Class Display -ErrorAction SilentlyContinue | Format-Table FriendlyName, Status
+          # Kolom Problem = kode error driver (mis. Code 52 = tanda tangan
+          # ditolak Secure Boot — info kunci bila adapter muncul tapi mati).
+          Get-PnpDevice -Class Display -ErrorAction SilentlyContinue | Format-Table FriendlyName, Status, Problem, InstanceId
           Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
           Write-Host "Layar sesi ini (INFO saja — sesi ini lahir sebelum driver, bisa basi): $(([System.Windows.Forms.Screen]::AllScreens).Count)"
           # Kebenaran sistem: adapter PnP (berlaku semua sesi, termasuk sesi
@@ -169,9 +180,10 @@ jobs:
           $vdd = @(Get-PnpDevice -Class Display -ErrorAction SilentlyContinue |
             Where-Object { $_.FriendlyName -like "*Virtual*" -or $_.FriendlyName -like "*IddSample*" -or $_.FriendlyName -like "*VDD*" })
           if ($vdd.Count -eq 0) {
-            Write-Host "::error::Adapter VDD tidak muncul di Display adapters."
-            exit 1
+            Write-Host "::warning::Adapter VDD tidak muncul di Display adapters — lab lanjut dengan display dasar (GDI). Jangan tutup RDP tanpa tscon."
+            exit 0
           }
+          "vdd_ok=true" >> $env:GITHUB_OUTPUT
           Write-Host "[OK] Virtual Display Driver terpasang." -ForegroundColor Green
 
       - name: Diagnostik prasyarat runtime + virtual devices untuk VM
@@ -233,10 +245,10 @@ jobs:
           Write-Host '   Lalu konek via XyDesk (bukan RDP) untuk tes capture beneran.'
           Write-Host ' - Audio: runner tidak punya sound card, WASAPI loopback mati wajar.'
           Write-Host '   Fix v6.7.1+ sudah deteksi device beneran, tidak bohong "tersedia".'
-          Write-Host ' - Virtual Display Driver: itsmikethetech via installer .exe silent (Scoop/ge9+pnputil terbukti gagal, Sep 2026)'
+          Write-Host ' - Virtual Display Driver: ${{ steps.vdd.outputs.vdd_ok }} (best-effort; false = pakai display dasar Hyper-V via GDI — tetap bisa tes video, JANGAN tutup RDP tanpa tscon)'
           Write-Host '   XyDesk v6.7.2+ deteksi via virtual_display.rs: needed/installed/isAdmin di /status'
           Write-Host '=========================================='
-          "## XyDesk Test Lab`n`n- RDP: ``$ip`` user ``xydesk```n- Durasi: ${{ inputs.duration }} menit`n`n### Kenapa hitam kalau tes lewat RDP?`n- Tutup RDP = lock sesi = capture hitam (BitBlt 0).`n- DXGI tidak jalan di RDP.`n- Fix v6.7.1+: GDI fallback GetDC(0) + DXGI fallback output pertama.`n- Fix v6.7.2+: Virtual Display Driver (seperti AnyDesk) di-install otomatis via installer .exe (itsmikethetech), deteksi di Beranda.`n- Cara tes benar: setup XyDesk di RDP, lalu `tscon `$env:SESSIONNAME /dest:console` (atau klik `Disconnect-tanpa-lock.bat` di Desktop), baru konek via XyDesk, bukan RDP.`n`n### Audio mati?`n- Runner Server tidak punya sound card, wajar. v6.7.1+ sekarang jujur: captureAvailable=false kalau tidak ada device.`n`n### Virtual Display (AnyDesk-style)?`n- Driver IddSampleDriver di-install otomatis, cek Device Manager -> Display adapters.`n- XyDesk Host -> Beranda -> Virtual Display Driver: installed=true berarti driver ada.`n" >> $env:GITHUB_STEP_SUMMARY
+          "## XyDesk Test Lab`n`n- RDP: ``$ip`` user ``xydesk```n- Durasi: ${{ inputs.duration }} menit`n`n### Kenapa hitam kalau tes lewat RDP?`n- Tutup RDP = lock sesi = capture hitam (BitBlt 0).`n- DXGI tidak jalan di RDP.`n- Fix v6.7.1+: GDI fallback GetDC(0) + DXGI fallback output pertama.`n- Driver virtual (best-effort): `${{ steps.vdd.outputs.vdd_ok }}`. false = display dasar Hyper-V via GDI; video tetap bisa dites — JANGAN tutup RDP tanpa tscon.`n- Cara tes benar: setup XyDesk di RDP, lalu `tscon `$env:SESSIONNAME /dest:console` (atau klik `Disconnect-tanpa-lock.bat` di Desktop), baru konek via XyDesk, bukan RDP.`n`n### Audio mati?`n- Runner Server tidak punya sound card, wajar. v6.7.1+ sekarang jujur: captureAvailable=false kalau tidak ada device.`n`n### Virtual Display (AnyDesk-style)?`n- Driver IddSampleDriver di-install otomatis, cek Device Manager -> Display adapters.`n- XyDesk Host -> Beranda -> Virtual Display Driver: installed=true berarti driver ada.`n" >> $env:GITHUB_STEP_SUMMARY
 
       - name: Tahan runner selama durasi lab
         shell: pwsh
