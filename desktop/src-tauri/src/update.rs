@@ -191,15 +191,19 @@ pub async fn check_update() -> Result<UpdateStatus, String> {
     // Rilis tanpa kunci `windows` (rilis lama) = tidak ada update untuk
     // desktop, bukan kegagalan.
     let picked = if newer { pick_asset(&m).ok() } else { None };
+    let available = newer && picked.is_some();
     let (asset_name, asset_bytes) = match &picked {
         Some((a, name)) => (Some(name.clone()), Some(a.bytes)),
         None => (None, None),
     };
+    // Akhiri pinjaman `&m` secara eksplisit sebelum memindahkan field-nya
+    // (E0505 kalau tidak: `picked` meminjam `m` lewat `pick_asset`).
+    drop(picked);
     Ok(UpdateStatus {
         current_version: current,
         latest_version: m.version,
         latest_build: m.build,
-        update_available: newer && picked.is_some(),
+        update_available: available,
         notes: m.notes.unwrap_or_default(),
         asset_name,
         asset_bytes,
