@@ -7,7 +7,9 @@ matematis yang konsisten:
   - `web/public/favicon.ico` (multi-resolusi 16, 32, 48)
   - `android/app/src/main/res/mipmap-*/ic_launcher.png` (legacy)
   - `android/app/src/main/res/mipmap-*/ic_launcher_foreground.png` (adaptive)
-  - `packaging/windows/app.ico` (Windows binary + installer)
+  - `packaging/windows/xydesk.ico`, `app.ico` (Windows installer & binary)
+  - `desktop/assets/icon.ico`, `desktop/electron/tray.ico`
+  - `desktop/src-tauri/icons/*` (icon.ico, tray.ico, PNGs)
 
 Aturan desain XyDesk:
   - Logo adalah glyph "X" futuristik berlapis ganda dengan gradien ungu neon.
@@ -45,11 +47,6 @@ def draw_cyber_x(size: int = 1024) -> Image.Image:
     cy = ss_size / 2.0
     span = ss_size * 0.38
     stroke_w = ss_size * 0.105
-    corner_r = stroke_w * 0.45
-
-    # Sudut 45 derajat untuk garis diagonal X
-    sin45 = math.sin(math.pi / 4.0)
-    cos45 = math.cos(math.pi / 4.0)
 
     # 1. Glow halus di belakang glyph (ambient luminous purple)
     glow_layer = Image.new("RGBA", (ss_size, ss_size), (0, 0, 0, 0))
@@ -69,7 +66,6 @@ def draw_cyber_x(size: int = 1024) -> Image.Image:
     im.alpha_composite(glow_layer)
 
     # 2. Diagonal Primer (\) — Gradien Ungu Elektrik ke Fuchsia
-    # Menggambar diagonal utama sebagai polygon berperekat halus
     d1_steps = 120
     for i in range(d1_steps):
         t0 = i / float(d1_steps)
@@ -101,10 +97,8 @@ def draw_cyber_x(size: int = 1024) -> Image.Image:
         x_end = cx + span - t1 * (2 * span)
         y_end = cy - span + t1 * (2 * span)
 
-        # Potong sedikit di persilangan agar menciptakan efek dimensi 3D "over-under"
         dist_from_center = abs(t0 - 0.5)
         if dist_from_center < 0.12:
-            # Bayangan kedalaman di bawah jembatan diagonal
             alpha = int(255 * (dist_from_center / 0.12 * 0.4 + 0.6))
         else:
             alpha = 255
@@ -160,7 +154,6 @@ def draw_cyber_x(size: int = 1024) -> Image.Image:
     spec_layer = spec_layer.filter(ImageFilter.GaussianBlur(radius=scale * 2.5))
     im.alpha_composite(spec_layer)
 
-    # Resize ke target menggunakan resampling Lanczos berkualitas tinggi
     return im.resize((size, size), Image.Resampling.LANCZOS)
 
 
@@ -173,11 +166,9 @@ def build_source(
     """Membangun kanvas dengan latar ubin squircle halus atau murni transparan."""
     out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     if tile:
-        # Gambar squircle piringan dengan sudut rounded halus
         draw = ImageDraw.Draw(out)
         margin = max(1, int(size * 0.04))
         r = int(size * 0.22)
-        # Bayangan halus piringan
         shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
         sdraw = ImageDraw.Draw(shadow)
         sdraw.rounded_rectangle(
@@ -194,7 +185,6 @@ def build_source(
             fill=bg_color,
         )
 
-    # Tempatkan glyph X di tengah
     glyph_sz = int(size * fill)
     glyph = draw_cyber_x(glyph_sz)
     offset = (size - glyph_sz) // 2
@@ -202,10 +192,23 @@ def build_source(
     return out
 
 
+def save_ico(path: Path, sizes: list[int] = [16, 32, 48, 64, 128, 256]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    imgs = [build_source(s, tile=True) for s in sizes]
+    imgs[0].save(
+        path,
+        format="ICO",
+        sizes=[(s, s) for s in sizes],
+        append_images=imgs[1:],
+    )
+    print(f"OK {path.relative_to(ROOT)}")
+
+
 def main() -> None:
     print("🎨 Menggenerasi seluruh aset logo kanonikal XyDesk...")
 
-    # 1. Logo Master Web / App (1024x1024)
+    # 1. Logo Master Web / App
+    ROOT.joinpath("web/public").mkdir(parents=True, exist_ok=True)
     logo_1024 = build_source(1024, tile=True)
     logo_1024.save(ROOT / "web/public/logo.png")
     logo_1024.save(ROOT / "web/public/logo-512.png")
@@ -230,37 +233,24 @@ def main() -> None:
         print(f"OK mipmap-{density:<8} legacy={legacy} foreground={foreground} (transparent)")
 
     # Favicon multi-ukuran untuk peramban lama.
-    ico = ROOT / "web/public/favicon.ico"
-    ico_imgs = [
-        build_source(16, tile=True),
-        build_source(32, tile=True),
-        build_source(48, tile=True),
-    ]
-    ico_imgs[0].save(
-        ico,
-        format="ICO",
-        sizes=[(16, 16), (32, 32), (48, 48)],
-        append_images=ico_imgs[1:],
-    )
-    print("OK web/public/favicon.ico")
+    save_ico(ROOT / "web/public/favicon.ico", [16, 32, 48])
 
-    # Windows App Icon (.ico)
-    win_ico = ROOT / "packaging/windows/app.ico"
-    win_ico_imgs = [
-        build_source(16, tile=True),
-        build_source(32, tile=True),
-        build_source(48, tile=True),
-        build_source(64, tile=True),
-        build_source(128, tile=True),
-        build_source(256, tile=True),
-    ]
-    win_ico_imgs[0].save(
-        win_ico,
-        format="ICO",
-        sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
-        append_images=win_ico_imgs[1:],
-    )
-    print("OK packaging/windows/app.ico")
+    # Windows App & Installer ICOs
+    save_ico(ROOT / "packaging/windows/xydesk.ico")
+    save_ico(ROOT / "packaging/windows/app.ico")
+    save_ico(ROOT / "desktop/assets/icon.ico")
+    save_ico(ROOT / "desktop/electron/tray.ico", [16, 32, 48])
+    save_ico(ROOT / "desktop/src-tauri/icons/icon.ico")
+    save_ico(ROOT / "desktop/src-tauri/icons/tray.ico", [16, 32, 48])
+
+    # Tauri PNG Icons
+    tauri_icons = ROOT / "desktop/src-tauri/icons"
+    tauri_icons.mkdir(parents=True, exist_ok=True)
+    build_source(32, tile=True).save(tauri_icons / "32x32.png")
+    build_source(128, tile=True).save(tauri_icons / "128x128.png")
+    build_source(256, tile=True).save(tauri_icons / "128x128@2x.png")
+    build_source(512, tile=True).save(tauri_icons / "icon.png")
+    print("OK desktop/src-tauri/icons/*.png")
 
     print("\n✅ Semua aset logo berhasil diperbarui!")
 
