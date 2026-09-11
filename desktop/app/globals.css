@@ -117,7 +117,7 @@ img { display: block; max-width: 100%; }
   padding: 4px 8px 2px;
 }
 .brand .mark {
-  width: 36px; height: 36px; flex-shrink: 0;
+  width: 28px; height: 28px; flex-shrink: 0;
   filter: drop-shadow(0 2px 12px rgba(124,58,237,0.35));
 }
 .brand h1 {

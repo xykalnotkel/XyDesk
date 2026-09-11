@@ -96,6 +96,10 @@ jobs:
           Copy-Item "desktop/src-tauri/target/release/xydesk-desktop.exe" "$bundle/XyDesk.exe" -Force
           Copy-Item "host/target/release/xydesk-host.exe" "$bundle/resources/engine/xydesk-host.exe" -Force
           Copy-Item "packaging/windows/drivers/*" "$bundle/drivers/" -Recurse -Force
+          if (Test-Path "desktop/out") {
+            Copy-Item "desktop/out" "$bundle/out" -Recurse -Force
+            Write-Host "[OK] frontend out disalin ke $bundle/out"
+          }
           Write-Host "[OK] Bundle siap: $bundle"
 
       - uses: actions/upload-artifact@v4

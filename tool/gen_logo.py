@@ -218,6 +218,22 @@ def main() -> None:
     logo_1024.save(ROOT / "web/public/logo.png")
     logo_1024.save(ROOT / "web/public/logo-512.png")
     print("OK web/public/logo.png (1024x1024)")
+    # Desktop logo: pakai versi tanpa tile & 256px agar tidak kegedean di header (README 128px)
+    # File design/logo-asli.png (tanpa tile) adalah acuan README — generate 256 tanpa tile untuk desktop
+    try:
+        from PIL import Image
+        src = Image.open(ROOT / "design/logo-asli.png").convert("RGBA")
+        # Resize ke 256 dengan LANCZOS, simpan sebagai desktop public logo (kecil, tidak overflow)
+        desktop_logo = src.resize((256, 256), Image.Resampling.LANCZOS)
+        # Pastikan desktop/public ada
+        (ROOT / "desktop/public").mkdir(parents=True, exist_ok=True)
+        desktop_logo.save(ROOT / "desktop/public/logo.png", "PNG")
+        print("OK desktop/public/logo.png (256x256 from design/logo-asli.png, no tile, tidak gede)")
+    except Exception as e:
+        print(f"[WARN] gagal generate desktop logo dari design/logo-asli.png: {e}")
+        # Fallback: generate 256 tile
+        build_source(256, tile=False, fill=0.88).save(ROOT / "desktop/public/logo.png")
+        print("OK desktop/public/logo.png (256 fallback)")
 
     # 2. PWA 192x192
     logo_192 = build_source(192, tile=True)

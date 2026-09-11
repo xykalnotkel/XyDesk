@@ -538,6 +538,13 @@ jobs:
           Copy-Item "desktop/src-tauri/target/${{ matrix.target }}/release/xydesk-desktop.exe" "$dir/XyDesk.exe" -Force
           Copy-Item "host/target/${{ matrix.target }}/release/xydesk-host.exe" "$dir/resources/engine/xydesk-host.exe" -Force
           Copy-Item "packaging/windows/drivers/*" "$dir/drivers/" -Recurse -Force
+          # Fallback: salin frontend static export untuk Tauri (jika bundle tidak embed, tetap bisa jalan)
+          if (Test-Path "desktop/out") {
+            Copy-Item "desktop/out" "$dir/out" -Recurse -Force
+            Write-Host "[OK] frontend out disalin ke $dir/out"
+          } else {
+            Write-Host "[WARN] desktop/out tidak ada — Tauri mungkin embed, tapi fallback tidak ada"
+          }
           if (-not (Test-Path "$dir/XyDesk.exe")) { throw "XyDesk.exe tidak ditemukan di $dir" }
           if (-not (Test-Path "$dir/resources/engine/xydesk-host.exe")) {
             throw "engine tidak dibundel (resources/engine/xydesk-host.exe hilang)"

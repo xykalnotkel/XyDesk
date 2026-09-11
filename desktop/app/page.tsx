@@ -368,7 +368,7 @@ export default function Page() {
               semua aset identitas lain (lihat docs/BRAND_ASSETS.md) — dulu di
               sini ada SVG "X" bikinan sendiri sehingga shell memajang logo yang
               berbeda dari web/APK. Berkasnya ikut dibundel ke `out/`. */}
-          <img className="mark" src="/logo.png" width={32} height={32} alt="Logo XyDesk" />
+          <img className="mark" src="/logo.png" width={24} height={24} alt="Logo XyDesk" />
           <div>
             <h1>XyDesk</h1>
             <span className="sub">Host Desktop</span>
@@ -481,7 +481,7 @@ function LoginScreen({ onDone }: { onDone: (s: AuthSessionPayload) => void }) {
     <div className="login-shell">
       <div className="login-hero">
         <div className="login-hero-top">
-          <img src="/logo.png" width={36} height={36} alt="Logo" />
+          <img src="/logo.png" width={28} height={28} alt="Logo" />
           <div>
             <h1>XyDesk</h1>
             <span>Remote Desktop • Low Latency</span>
@@ -530,7 +530,7 @@ function LoginScreen({ onDone }: { onDone: (s: AuthSessionPayload) => void }) {
           }}
         >
           <div className="logo-row">
-            <img src="/logo.png" width={40} height={40} alt="Logo XyDesk" />
+            <img src="/logo.png" width={32} height={32} alt="Logo XyDesk" />
             <div>
               <h2>Masuk ke Host</h2>
               <p>Identitas pemilik PC</p>
