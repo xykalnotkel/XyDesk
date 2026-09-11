@@ -219,11 +219,37 @@ def _from_design(size: int, fill: float = 0.82) -> Image.Image:
     return out
 
 
+def _from_design_tile(size: int, fill: float = 0.82, bg_color=(245, 243, 255, 255)) -> Image.Image:
+    """Tile #F5F3FF + glyph design/logo-asli.png (untuk legacy & ICO wajib terang)."""
+    from PIL import ImageDraw, ImageFilter
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(out)
+    margin = max(1, int(size * 0.04))
+    r = int(size * 0.22)
+    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    sdraw = ImageDraw.Draw(shadow)
+    sdraw.rounded_rectangle([margin+2, margin+4, size-margin-2, size-margin], radius=r, fill=(124,58,237,45))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=max(1, size//32)))
+    out.alpha_composite(shadow)
+    draw.rounded_rectangle([margin, margin, size-margin, size-margin], radius=r, fill=bg_color)
+    src_path = ROOT / "design/logo-asli.png"
+    src = Image.open(src_path).convert("RGBA")
+    sw, sh = src.size
+    target = int(size * fill)
+    scale = min(target / sw, target / sh)
+    nw, nh = int(sw * scale), int(sh * scale)
+    resized = src.resize((nw, nh), Image.Resampling.LANCZOS)
+    ox = (size - nw)//2
+    oy = (size - nh)//2
+    out.alpha_composite(resized, (ox, oy))
+    return out
+
+
 def save_ico(path: Path, sizes: list[int] = [16, 32, 48, 64, 128, 256]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     # Semua ICO sekarang dari design/logo-asli.png (README) — konsisten, transparan, no tile
     largest = max(sizes)
-    base = _from_design(largest)
+    base = _from_design_tile(largest)
     # Pillow akan resize otomatis dari base ke setiap ukuran di `sizes`
     base.save(
         path,
@@ -263,7 +289,7 @@ def main() -> None:
         base.mkdir(parents=True, exist_ok=True)
         # Legacy & adaptive SEMUA dari design/logo-asli.png (README) — konsisten
         # Legacy icon (Android < 8.0) dulu pakai tile, sekarang transparan dari design agar sama README
-        _from_design(legacy, fill=0.82).save(base / "ic_launcher.png")
+        _from_design_tile(legacy, fill=0.82).save(base / "ic_launcher.png")
         _from_design(foreground, fill=0.88).save(
             base / "ic_launcher_foreground.png"
         )
