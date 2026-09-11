@@ -192,21 +192,45 @@ def build_source(
     return out
 
 
+def _from_design(size: int, fill: float = 0.82) -> Image.Image:
+    """Render logo dari design/logo-asli.png (README 128) ke kanvas persegi transparan.
+    Sumber 768x729 di-fit ke kotak fill*size, center, tanpa tile/squircle.
+    Ini bikin SEMUA artefak (ICO, PNG, mipmap, favicon) identik README."""
+    src_path = ROOT / "design/logo-asli.png"
+    if not src_path.exists():
+        # fallback ke glyph matematis jika file hilang
+        return build_source(size, tile=False, fill=fill)
+    src = Image.open(src_path).convert("RGBA")
+    # Hitung ukuran agar proporsi tetap (fit, bukan stretch)
+    sw, sh = src.size
+    target = int(size * fill)
+    scale = min(target / sw, target / sh)
+    nw, nh = int(sw * scale), int(sh * scale)
+    # Resize dengan LANCZOS kualitas tinggi
+    # Pillow 10+: Resampling.LANCZOS
+    try:
+        resized = src.resize((nw, nh), Image.Resampling.LANCZOS)
+    except AttributeError:
+        resized = src.resize((nw, nh), Image.LANCZOS)
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    ox = (size - nw) // 2
+    oy = (size - nh) // 2
+    out.alpha_composite(resized, (ox, oy))
+    return out
+
+
 def save_ico(path: Path, sizes: list[int] = [16, 32, 48, 64, 128, 256]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Pillow ICO: gunakan gambar terbesar sebagai basis, `sizes` akan di-generate otomatis.
-    # `append_images` tidak dipakai untuk ICO (hanya untuk GIF/TIFF) — sebelumnya hanya 16px yang tersimpan.
-    # Build semua ukuran lalu simpan dari yang terbesar (256) agar multi-res.
-    imgs = {s: build_source(s, tile=True) for s in sizes}
+    # Semua ICO sekarang dari design/logo-asli.png (README) — konsisten, transparan, no tile
     largest = max(sizes)
-    base = imgs[largest]
+    base = _from_design(largest)
     # Pillow akan resize otomatis dari base ke setiap ukuran di `sizes`
     base.save(
         path,
         format="ICO",
         sizes=[(s, s) for s in sizes],
     )
-    print(f"OK {path.relative_to(ROOT)} ({len(sizes)} sizes, base {largest}px)")
+    print(f"OK {path.relative_to(ROOT)} ({len(sizes)} sizes, base {largest}px, from design/logo-asli.png)")
 
 
 def main() -> None:
@@ -214,41 +238,33 @@ def main() -> None:
 
     # 1. Logo Master Web / App
     ROOT.joinpath("web/public").mkdir(parents=True, exist_ok=True)
-    logo_1024 = build_source(1024, tile=True)
+    logo_1024 = _from_design(1024, fill=0.88)
     logo_1024.save(ROOT / "web/public/logo.png")
     logo_1024.save(ROOT / "web/public/logo-512.png")
-    print("OK web/public/logo.png (1024x1024)")
-    # Desktop logo: pakai versi tanpa tile & 256px agar tidak kegedean di header (README 128px)
-    # File design/logo-asli.png (tanpa tile) adalah acuan README — generate 256 tanpa tile untuk desktop
+    print("OK web/public/logo.png (1024x1024 from design/logo-asli.png)")
+    # Desktop logo: 256 dari design/logo-asli.png via _from_design (persegi, proporsional, transparan)
     try:
-        from PIL import Image
-        src = Image.open(ROOT / "design/logo-asli.png").convert("RGBA")
-        # Resize ke 256 dengan LANCZOS, simpan sebagai desktop public logo (kecil, tidak overflow)
-        desktop_logo = src.resize((256, 256), Image.Resampling.LANCZOS)
-        # Pastikan desktop/public ada
         (ROOT / "desktop/public").mkdir(parents=True, exist_ok=True)
-        desktop_logo.save(ROOT / "desktop/public/logo.png", "PNG")
-        print("OK desktop/public/logo.png (256x256 from design/logo-asli.png, no tile, tidak gede)")
+        _from_design(256, fill=0.82).save(ROOT / "desktop/public/logo.png", "PNG")
+        print("OK desktop/public/logo.png (256x256 from design/logo-asli.png via _from_design)")
     except Exception as e:
         print(f"[WARN] gagal generate desktop logo dari design/logo-asli.png: {e}")
-        # Fallback: generate 256 tile
         build_source(256, tile=False, fill=0.88).save(ROOT / "desktop/public/logo.png")
         print("OK desktop/public/logo.png (256 fallback)")
 
     # 2. PWA 192x192
-    logo_192 = build_source(192, tile=True)
+    logo_192 = _from_design(192, fill=0.88)
     logo_192.save(ROOT / "web/public/logo-192.png")
-    print("OK web/public/logo-192.png (192x192)")
+    print("OK web/public/logo-192.png (192x192 from design/logo-asli.png)")
 
     # 3. Android mipmaps
     for density, (legacy, foreground) in ANDROID_DENSITIES.items():
         base = ROOT / "android/app/src/main/res" / f"mipmap-{density}"
         base.mkdir(parents=True, exist_ok=True)
-        # Legacy icon (Android < 8.0) memakai tile squircle untuk launcher lama.
-        build_source(legacy, tile=True).save(base / "ic_launcher.png")
-        # Lapisan foreground adaptive icon MURNI TRANSPARAN tanpa background plate/tile apa pun.
-        # Latar sudah disediakan oleh @color/ic_launcher_background pada sistem Android.
-        build_source(foreground, tile=False, fill=0.88).save(
+        # Legacy & adaptive SEMUA dari design/logo-asli.png (README) — konsisten
+        # Legacy icon (Android < 8.0) dulu pakai tile, sekarang transparan dari design agar sama README
+        _from_design(legacy, fill=0.82).save(base / "ic_launcher.png")
+        _from_design(foreground, fill=0.88).save(
             base / "ic_launcher_foreground.png"
         )
         print(f"OK mipmap-{density:<8} legacy={legacy} foreground={foreground} (transparent)")
@@ -267,10 +283,10 @@ def main() -> None:
     # Tauri PNG Icons
     tauri_icons = ROOT / "desktop/src-tauri/icons"
     tauri_icons.mkdir(parents=True, exist_ok=True)
-    build_source(32, tile=True).save(tauri_icons / "32x32.png")
-    build_source(128, tile=True).save(tauri_icons / "128x128.png")
-    build_source(256, tile=True).save(tauri_icons / "128x128@2x.png")
-    build_source(512, tile=True).save(tauri_icons / "icon.png")
+    _from_design(32, fill=0.82).save(tauri_icons / "32x32.png")
+    _from_design(128, fill=0.82).save(tauri_icons / "128x128.png")
+    _from_design(256, fill=0.82).save(tauri_icons / "128x128@2x.png")
+    _from_design(512, fill=0.88).save(tauri_icons / "icon.png")
     print("OK desktop/src-tauri/icons/*.png")
 
     print("\n✅ Semua aset logo berhasil diperbarui!")
