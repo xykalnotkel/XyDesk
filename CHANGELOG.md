@@ -22,6 +22,12 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [6.7.13] - 2026-09-11
+
+> Build 48. Installer Windows (Inno Setup), Logo README identik all platform, Windows blink fix, Pengaturan lengkap (Tampilan/Bahasa, Kontrol/Pintasan, Jaringan/Keamanan), Guard tile #F5F3FF lolos.
+
+Lihat detail di [changelogs/6.7.13.md](changelogs/6.7.13.md).
+
 ## [6.7.12] - 2026-09-09
 
 > Build 47. In-App Update Modal Portrait 3:4 AI, Background Android Notification Download, Splash Luminous Glow, Desktop Tauri v2 fixes, 1-Click Virtual Driver Installers, dan pembaruan README.
