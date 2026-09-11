@@ -194,14 +194,19 @@ def build_source(
 
 def save_ico(path: Path, sizes: list[int] = [16, 32, 48, 64, 128, 256]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    imgs = [build_source(s, tile=True) for s in sizes]
-    imgs[0].save(
+    # Pillow ICO: gunakan gambar terbesar sebagai basis, `sizes` akan di-generate otomatis.
+    # `append_images` tidak dipakai untuk ICO (hanya untuk GIF/TIFF) — sebelumnya hanya 16px yang tersimpan.
+    # Build semua ukuran lalu simpan dari yang terbesar (256) agar multi-res.
+    imgs = {s: build_source(s, tile=True) for s in sizes}
+    largest = max(sizes)
+    base = imgs[largest]
+    # Pillow akan resize otomatis dari base ke setiap ukuran di `sizes`
+    base.save(
         path,
         format="ICO",
         sizes=[(s, s) for s in sizes],
-        append_images=imgs[1:],
     )
-    print(f"OK {path.relative_to(ROOT)}")
+    print(f"OK {path.relative_to(ROOT)} ({len(sizes)} sizes, base {largest}px)")
 
 
 def main() -> None:
