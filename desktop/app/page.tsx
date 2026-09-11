@@ -1915,6 +1915,103 @@ function SettingsPage({
       </section>
 
       <section className="card">
+        <h3>Tampilan &amp; bahasa</h3>
+        <div className="kv-grid">
+          <div className="kv">
+            <span>Tema</span>
+            <div className="chip-row">
+              <button className="chip select on" title="Tema gelap - Void #0d0716 (default)">🌙 Gelap</button>
+              <button className="chip" title="Tema terang - akan datang" onClick={() => flashMsg('Tema terang akan datang di update berikutnya.')}>☀️ Terang</button>
+            </div>
+            <span className="hint" style={{ display: 'block', marginTop: 4 }}>Void #0d0716 + Accent #7c3aed konsisten all platform</span>
+          </div>
+          <div className="kv">
+            <span>Bahasa</span>
+            <div className="chip-row">
+              <button className="chip select on">🇮🇩 Indonesia</button>
+              <button className="chip" onClick={() => flashMsg('English akan datang — sekarang 100% Indonesia.')}>🇬🇧 English</button>
+            </div>
+          </div>
+          <div className="kv">
+            <span>Ukuran antarmuka</span>
+            <div className="chip-row">
+              <button className="chip select on">Normal</button>
+              <button className="chip" onClick={() => flashMsg('Skala besar/kecil akan datang.')}>Besar</button>
+              <button className="chip" onClick={() => flashMsg('Skala besar/kecil akan datang.')}>Kecil</button>
+            </div>
+          </div>
+          <div className="kv">
+            <span>Warna aksen</span>
+            <strong>#7C3AED — ungu XyDesk (tetap)</strong>
+            <span className="hint" style={{ display: 'block', marginTop: 4 }}>Logo, tombol, topbar seragam di Web/Android/Desktop</span>
+          </div>
+        </div>
+        <p className="hint" style={{ marginTop: 8 }}>Pengaturan tampilan disimpan lokal di shell; tidak memengaruhi host engine.</p>
+      </section>
+
+      <section className="card">
+        <h3>Kontrol &amp; pintasan</h3>
+        <div className="kv-grid">
+          <div className="kv">
+            <span>Mode input remote</span>
+            <div className="chip-row">
+              <button className="chip select on">🖱️ Mouse + Keyboard</button>
+              <button className="chip" onClick={() => flashMsg('Mode touch akan datang untuk Android viewer.')}>👆 Touch</button>
+              <button className="chip" onClick={() => flashMsg('Gamepad akan datang.')}>🎮 Gamepad</button>
+            </div>
+          </div>
+          <div className="kv">
+            <span>Keyboard layout</span>
+            <strong>US QWERTY — ikuti host</strong>
+            <span className="hint" style={{ display: 'block', marginTop: 4 }}>Remap via profil kontrol desktop (ROADMAP: CONTROL_MAPPING_PROFILE.md)</span>
+          </div>
+          <div className="kv">
+            <span>Pintasan host</span>
+            <strong>Ctrl+Alt+Del → dikirim ke host • Alt+Tab passthrough</strong>
+            <span className="hint" style={{ display: 'block', marginTop: 4 }}>Pintasan Windows+T utk grab/ungrab — ubah di profil kontrol</span>
+          </div>
+          <div className="kv">
+            <span>Sensitivitas mouse</span>
+            <strong>100% (host raw)</strong>
+            <span className="hint" style={{ display: 'block', marginTop: 4 }}>Slider akan datang — sekarang mouse 1:1 tanpa akselerasi</span>
+          </div>
+        </div>
+        <div className="set-row" style={{ marginTop: 10 }}>
+          <button className="ghost" onClick={() => flashMsg('Editor profil kontrol akan buka di update 6.9 — lihat docs/CONTROL_MAPPING_PROFILE.md')}>⚙️ Buka Editor Mapping</button>
+          <a className="btn-ghost-link" href="https://github.com/xykalnotkel/XyDesk/blob/main/CONTROL_MAPPING_PROFILE.md" target="_blank" rel="noreferrer"><ExternalLink size={14} /> Docs</a>
+        </div>
+      </section>
+
+      <section className="card">
+        <h3>Jaringan &amp; keamanan</h3>
+        <div className="kv-grid">
+          <div className="kv">
+            <span>Relay / TURN</span>
+            <strong>{status?.signalingUrl?.includes('xydesk') ? 'Auto (TURN Cloudflare)' : status?.signalingUrl || '—'}</strong>
+            <span className="hint" style={{ display: 'block', marginTop: 4 }}>Peer-to-peer WebRTC, fallback relay bila NAT simetris</span>
+          </div>
+          <div className="kv">
+            <span>Password pairing</span>
+            <strong>{status?.password ? '•••••••• (min 6, case-sensitive)' : '—'}</strong>
+            <span className="hint" style={{ display: 'block', marginTop: 4 }}>Ubah di Connect → Atur. Legacy tanpa huruf kecil = tidak case-sensitive</span>
+          </div>
+          <div className="kv">
+            <span>Auto-lock saat terhubung</span>
+            <div className="chip-row">
+              <button className="chip" onClick={() => flashMsg('Auto-lock will dim coming — now manual lock only.')}>🔒 Kunci layar</button>
+              <button className="chip select on">🔓 Biarkan</button>
+            </div>
+          </div>
+          <div className="kv">
+            <span>Sesi tamu</span>
+            <strong>Hanya 1 sesi aktif — koneksi lain ditolak</strong>
+            <span className="hint" style={{ display: 'block', marginTop: 4 }}>Lihat docs/GUEST_SESSION_COUNTDOWN.md utk flow tamu</span>
+          </div>
+        </div>
+        <p className="hint" style={{ marginTop: 8 }}>Semua kontrol jaringan baca dari engine; perubahan butuh restart engine (Pengaturan → Engine).</p>
+      </section>
+
+      <section className="card">
         <h3>Lisensi &amp; legal</h3>
         <p className="hint">
           XyDesk adalah perangkat lunak <strong>proprietary</strong> — bebas dipakai,
