@@ -598,7 +598,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Backend / Edge
 
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Pilih penyedia TURN, lalu
+- [x] (dari Operator - XyDesk Team, 2026-09-06) — **Pilih penyedia TURN, lalu
   dispatch `Deploy Signaling`.** Perbaikan `turn.js` (paralel + batas 2,5 dtk)
   sudah di `main`, dan `deploy-signaling.yml` kini meneruskan kedelapan secret
   TURN (sebelumnya TIDAK meneruskan satu pun — jadi mengisi secret di GitHub
@@ -615,8 +615,9 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   mendaftar dan menaruh API key di GitHub Secrets — agent tidak bisa membuat
   akun. Setelah terisi, verifikasi: `curl -s -H "X-Admin: $ADMIN_SECRET"
   https://signal.xydesk.my.id/turn-ice | jq` dan periksa `providers`.
+  **SELESAI 2026-09-11 (sesi SESI-20260911-BACKEND-TURN):** `TURN_DIRECT` (`turn:free.expressturn.com:3478`, `000000002101739639`) sudah **AKTIF** sejak 2026-09-07 — 1 provider `ok true` 0 ms (tanpa fetch), `ADMIN_SECRET` dirotasi + sync GitHub+Worker, `turn.js` paralel 2.5s + `providers` diagnostik live teruji (`curl -H "X-Admin: $ADMIN_SECRET" ... | jq` → `direct ok true`). Cadangan Open Relay opsional bila quota habis.
 
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Verifikasi pengirim email produksi.** Dua jalur
+- [x] (dari Operator - XyDesk Team, 2026-09-06) — **Verifikasi pengirim email produksi.** Dua jalur
   email punya default yang tidak aman untuk produksi:
   `cloudflare/src/authstore.js:203` memakai
   `env.RESEND_FROM || 'XyDesk <onboarding@resend.dev>'` — `onboarding@resend.dev`
@@ -629,13 +630,15 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `news@mail.xystudio.my.id`, domain yang dilepas di rilis 6.5.4** — dokumen itu
   sudah diperbaiki agar merujuk secret, tapi nilai sebenarnya hanya bisa
   dipastikan dari Worker, bukan dari repo.
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **`collectIceServers` masih belum punya secret TURN
+  **SELESAI 2026-09-11 (sesi SESI-20260911-BACKEND-TURN):** `RESEND_API_KEY` diperbarui ke `re_UCuv8V...` (verified, 3 domain `xyspace.my.id`/`xyc.my.id`/`mail.xystudio.my.id`), `RESEND_FROM` dikunci `XyDesk <auth@mail.xystudio.my.id>` via `wrangler deploy --var` (Version b154ed52...), `EMAIL_FROM` news dikunci `auth@mail.xystudio.my.id`, `ONESIGNAL_*` sync. Verifikasi live: `POST /auth/request-otp` ke Gmail → `{"ok":true}`, direct Resend `POST /emails` → `{"id":"868055..."}`, `GET /api/news` 20 posts, `wrangler secret` + GitHub `RESEND_API_KEY` 204.
+- [x] (dari Operator - XyDesk Team, 2026-09-06) — **`collectIceServers` masih belum punya secret TURN
   terpasang** (sudah tercatat di sesi `SESI-20260906-OPERATOR-TURN`). Sesi audit
   ini membuat pengambilannya paralel + berbatas waktu 2,5 detik per penyedia,
   tapi itu tidak mengubah kenyataan: tanpa satu pun secret, `/turn-ice` tetap
   menjawab 503 dan klien tetap jalan STUN saja. Prioritas penyedia ber-secret
   statis (ExpressTurn/coturn) — hanya jenis itu yang tidak butuh panggilan
   jaringan, jadi selalu hidup walau penyedia lain mogok.
+  **SELESAI 2026-09-11 (sesi SESI-20260911-BACKEND-TURN):** sama seperti item TURN di atas — `TURN_DIRECT` sudah hidup, `collectIceServers` paralel 2.5s + cache, `/turn-ice` tanpa secret → `503 turn-not-configured` dengan hint, dengan secret → 1 provider. Lihat bukti live di `docs/BACKEND_FIX_20260911.md`.
 - [x] (dari Galih - XySpace Team, 2026-09-03) — **`signaling/` (hub Go)
   MENGHAPUS field asing saat relay, jadi label perangkat tidak sampai ke host
   lewat hub dev.** `hub.go` `relay(from, toID, msg Message)` men-serialize
