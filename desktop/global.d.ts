@@ -68,11 +68,19 @@ declare global {
     framesCaptured?: number;
     /** Benar bila host jalan di RDP session — penyebab #1 hitam di lab Actions */
     isRdpSession?: boolean;
-    /** Status virtual display driver seperti AnyDesk */
+    /** Status virtual display driver seperti AnyDesk — driver-first (IddCx) untuk headless/RDP */
     virtualDisplay?: {
       needed: boolean;
       installed: boolean;
       isAdmin: boolean;
+      /** true bila adapternya sudah ada di dxgi / PnP (bukan hanya SERVICE terpasang) */
+      hasVirtualDisplay?: boolean;
+      /** indeks monitor virtual bila ada, null bila belum dibuat */
+      virtualIndex?: number | null;
+      /** backend capture aktif: 'virtual-display-driver' | 'dxgi-duplication' | 'wgc' | 'gdi' */
+      backend?: string | null;
+      /** snapshot displays untuk build UI selector */
+      displays?: DisplayPayload[] | null;
     };
     /** Status virtual mic driver — biar denyut di Recording */
     virtualMic?: {
@@ -168,6 +176,12 @@ declare global {
         bitrateMbps?: number;
         /** aksi `video-quality`: auto/medium/high/ultra */
         quality?: string;
+        /** aksi `driver-install` */
+        driverType?: string;
+        /** aksi `virtual-display-create` */
+        width?: number;
+        height?: number;
+        count?: number;
       }): Promise<ActionPayload>;
       getLogs(): Promise<LogEntry[]>;
       getInfo(): Promise<InfoPayload>;

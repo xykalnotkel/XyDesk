@@ -187,13 +187,17 @@ pub struct Status {
     pub last_error: Option<String>,
 }
 
-/// Status virtual display driver
+/// Status virtual display driver — driver-first untuk headless/RDP
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VirtualDisplayStatus {
     pub needed: bool,
     pub installed: bool,
     pub is_admin: bool,
+    pub has_virtual_display: bool,
+    pub virtual_index: Option<usize>,
+    pub backend: String,
+    pub displays: usize,
 }
 
 /// Status virtual mic driver — biar mic denyut di Control Panel
@@ -266,10 +270,17 @@ impl ControlState {
             capture_backend: crate::screen::backend_label().to_string(),
             frames_captured: crate::screen::frames_captured(),
             is_rdp_session: crate::screen::is_rdp_session(),
-            virtual_display: VirtualDisplayStatus {
-                needed: crate::virtual_display::needs_virtual_display(),
-                installed: crate::virtual_display::is_driver_installed(),
-                is_admin: crate::virtual_display::is_admin(),
+            virtual_display: {
+                let vd = crate::virtual_display::find_virtual_display();
+                VirtualDisplayStatus {
+                    needed: crate::virtual_display::needs_virtual_display(),
+                    installed: crate::virtual_display::is_driver_installed(),
+                    is_admin: crate::virtual_display::is_admin(),
+                    has_virtual_display: vd.is_some(),
+                    virtual_index: vd.as_ref().map(|d| d.index),
+                    backend: crate::screen::backend_label().to_string(),
+                    displays: displays.len(),
+                }
             },
             virtual_mic: {
                 let s = crate::virtual_mic::get_status();
@@ -381,6 +392,18 @@ pub struct ActionRequest {
     /// Quality preset untuk aksi `video-quality`: auto, medium, high, ultra
     #[serde(default, alias = "quality")]
     pub quality: Option<String>,
+    /// Tipe driver untuk aksi `driver-install`.
+    #[serde(default)]
+    pub driver_type: Option<String>,
+    /// Lebar virtual display untuk `virtual-display-create`.
+    #[serde(default)]
+    pub width: Option<u32>,
+    /// Tinggi virtual display.
+    #[serde(default)]
+    pub height: Option<u32>,
+    /// Jumlah display.
+    #[serde(default)]
+    pub count: Option<u32>,
 }
 
 /// Jawaban aksi. `password` berisi nilai baru untuk `new-password` dan
@@ -671,6 +694,63 @@ async fn action(
                 }))
             } else {
                 Ok(Json(ActionResponse::err(format!("gagal set quality {q}"))))
+            }
+        }
+        // Install virtual display driver (butuh admin)
+        "driver-install" => {
+            let driver_type = req.driver_type.as_deref().unwrap_or("display");
+            if driver_type != "display" && driver_type != "virtual" {
+                return Ok(Json(ActionResponse::err("driver_type harus display/virtual")));
+            }
+            match crate::virtual_display::try_install_driver() {
+                Ok(_msg) => Ok(Json(ActionResponse {
+                    ok: true,
+                    error: None,
+                    password: None,
+                    stopped: None,
+                })),
+                Err(e) => Ok(Json(ActionResponse::err(e))),
+            }
+        }
+        // Buat virtual display baru (width, height, count opsional)
+        "virtual-display-create" => {
+            let w = req.width.unwrap_or(1920);
+            let h = req.height.unwrap_or(1080);
+            let c = req.count.unwrap_or(1);
+            match crate::virtual_display::create_virtual_display(w, h, c) {
+                Ok(_msg) => Ok(Json(ActionResponse {
+                    ok: true,
+                    error: None,
+                    password: None,
+                    stopped: None,
+                })),
+                Err(e) => Ok(Json(ActionResponse::err(e))),
+            }
+        }
+        // Pastikan virtual display ada (auto-create kalau driver ada)
+        "virtual-display-ensure" => {
+            if crate::virtual_display::ensure_virtual_display_created() {
+                Ok(Json(ActionResponse {
+                    ok: true,
+                    error: None,
+                    password: None,
+                    stopped: None,
+                }))
+            } else {
+                // Coba ensure_display yang lebih lengkap (install kalau perlu)
+                crate::virtual_display::ensure_display();
+                if crate::virtual_display::find_virtual_display().is_some() {
+                    Ok(Json(ActionResponse {
+                        ok: true,
+                        error: None,
+                        password: None,
+                        stopped: None,
+                    }))
+                } else {
+                    Ok(Json(ActionResponse::err(
+                        "virtual display belum ada — driver belum terpasang atau butuh admin/reboot",
+                    )))
+                }
             }
         }
         other => Ok(Json(ActionResponse::err(format!(

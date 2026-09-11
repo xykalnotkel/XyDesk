@@ -358,8 +358,27 @@ pub fn spawn_frame_source() -> FrameSource {
             if is_rdp_session() {
                 eprintln!("[xydesk-host] RDP session terdeteksi (SM_REMOTESESSION=1) — DXGI tidak akan jalan, GDI fallback GetDC(0) aktif. Tutup RDP = lock = hitam, pakai tscon /dest:console untuk disconnect tanpa lock.");
             }
-            // Virtual display driver — seperti AnyDesk/RustDesk
+            // Virtual display driver — driver-first untuk headless/RDP (jangan DXGI fisik)
             crate::virtual_display::ensure_display();
+            // Jika headless/RDP dan driver ada, pakai virtual display sebagai backend utama (bukan DXGI fisik)
+            if crate::virtual_display::needs_virtual_display() && crate::virtual_display::is_driver_installed() {
+                // Coba buat virtual display kalau belum ada
+                crate::virtual_display::ensure_virtual_display_created();
+                if let Some(v_idx) = crate::virtual_display::virtual_display_index() {
+                    eprintln!(
+                        "[xydesk-host] HEADLESS+driver → pakai virtual display driver (index {}, bukan DXGI fisik) agar work di RDP/headless kayak RDP",
+                        v_idx
+                    );
+                    current = v_idx;
+                    BACKEND.store(BACKEND_VIRTUAL, std::sync::atomic::Ordering::Relaxed);
+                } else {
+                    // Driver ada tapi virtual display belum muncul — tetap pakai VIRTUAL backend, nanti akan coba buat lagi di loop
+                    if BACKEND.load(std::sync::atomic::Ordering::Relaxed) == BACKEND_DXGI {
+                        BACKEND.store(BACKEND_VIRTUAL, std::sync::atomic::Ordering::Relaxed);
+                        eprintln!("[xydesk-host] headless+driver → set backend ke virtual-display-driver (menunggu virtual display muncul)");
+                    }
+                }
+            }
             // Throttle peringatan "semua backend gagal" (lihat watchdog).
             let mut log_semua_gagal = std::time::Instant::now()
                 .checked_sub(std::time::Duration::from_secs(30))
@@ -382,6 +401,21 @@ pub fn spawn_frame_source() -> FrameSource {
                 let hasil = match backend {
                     BACKEND_GDI => windows::start_gdi_monitor(tx.clone(), current),
                     BACKEND_DXGI => windows::start_dxgi_monitor(tx.clone(), current),
+                    BACKEND_VIRTUAL => {
+                        // Driver capture langsung: pastikan virtual display ada, lalu capture via DXGI pada adapter virtual
+                        // Ini work di RDP/headless/lock — seperti RDP yang bikin sesi virtual sendiri
+                        if crate::virtual_display::find_virtual_display().is_none() {
+                            crate::virtual_display::ensure_virtual_display_created();
+                        }
+                        if let Some(v_idx) = crate::virtual_display::virtual_display_index() {
+                            // Pakai DXGI tapi targetkan virtual display, bukan fisik
+                            windows::start_dxgi_monitor(tx.clone(), v_idx)
+                        } else {
+                            // Fallback: virtual display belum ada → GDI GetDC(0) sementara
+                            eprintln!("[xydesk-host] virtual backend: virtual display belum ada, fallback GDI GetDC(0)");
+                            windows::start_gdi_monitor(tx.clone(), current)
+                        }
+                    }
                     _ => windows::start_monitor(tx.clone(), current),
                 };
                 let gagal = hasil.err();
@@ -670,6 +704,13 @@ pub const BACKEND_GDI: u8 = 1;
 /// dan watchdog tetap siap menurunkan ke WGC lalu GDI.
 pub const BACKEND_DXGI: u8 = 2;
 
+/// Virtual Display Driver — backend driver-first untuk headless/RDP.
+/// Bukan DXGI fisik yang gagal di RDP/lock, tapi DXGI pada adapter virtual
+/// IddSampleDriver / VirtualDisplayDriver. Framebuffer tetap ada walau
+/// sesi RDP disconnect atau VM tanpa monitor (seperti RDP/AnyDesk).
+/// Dipilih otomatis bila `needs_virtual_display()` true dan driver terpasang.
+pub const BACKEND_VIRTUAL: u8 = 3;
+
 /// Backend yang sedang dipakai. Diubah watchdog bila backend aktif terbukti
 /// tidak mengirim frame — jadi nilainya hasil pengukuran, bukan preferensi.
 static BACKEND: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(BACKEND_DXGI);
@@ -679,6 +720,7 @@ pub fn label_backend(id: u8) -> &'static str {
     match id {
         BACKEND_GDI => "gdi-bitblt",
         BACKEND_DXGI => "dxgi-duplication",
+        BACKEND_VIRTUAL => "virtual-display-driver",
         _ => "windows-graphics-capture",
     }
 }
@@ -772,7 +814,8 @@ pub fn is_rdp_session() -> bool {
 #[cfg(target_os = "windows")]
 fn backend_berikutnya(now: u8) -> Option<u8> {
     match now {
-        BACKEND_DXGI => Some(BACKEND_WGC),
+        BACKEND_DXGI => Some(BACKEND_VIRTUAL),
+        BACKEND_VIRTUAL => Some(BACKEND_WGC),
         BACKEND_WGC => Some(BACKEND_GDI),
         _ => None,
     }

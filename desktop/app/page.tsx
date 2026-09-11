@@ -77,7 +77,7 @@ const DEMO_STATUS: StatusPayload = {
   framesCaptured: 214400,
   isRdpSession: false,
   captureBackend: 'dxgi-duplication',
-  virtualDisplay: { needed: false, installed: true, isAdmin: true },
+  virtualDisplay: { needed: false, installed: true, isAdmin: true, hasVirtualDisplay: true, virtualIndex: 1, backend: 'virtual-display-driver', displays: [{ index: 0, name: '\\\\.\\DISPLAY1', width: 2560, height: 1440 }, { index: 1, name: '\\\\.\\DISPLAY2 (XyDesk Virtual)', width: 1920, height: 1080 }] },
   virtualMic: { needed: false, installed: true, hasVirtualInput: true, hasVirtualOutput: true, renderTarget: 'CABLE Input (VB-Audio Virtual Cable)' },
   lastError: null,
 };
@@ -493,7 +493,7 @@ function LoginScreen({ onDone }: { onDone: (s: AuthSessionPayload) => void }) {
           <div className="login-hero-illust">
             <div className="row">
               <div className="dot">🖥️</div>
-              <div className="txt"><strong>DXGI + GDI Fallback</strong><span>Anti hitam di VM/RDP — GetDC(0) aktif v6.7.1+</span></div>
+              <div className="txt"><strong>Virtual Display Driver (IddCx) + DXGI/WGC/GDI fallback</strong><span>Driver-first anti hitam di headless/RDP/lock — kayak RDP loopback v6.7.12+</span></div>
             </div>
             <div className="row">
               <div className="dot">🔊</div>
@@ -634,6 +634,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
   const v = status?.video;
   const [installingVdd, setInstallingVdd] = useState(false);
   const [vddMsg, setVddMsg] = useState<string | null>(null);
+  const [ensuringVdd, setEnsuringVdd] = useState(false);
 
   const handleInstallVdd = async () => {
     if (DEMO || !window.xydesk?.installDriver) return;
@@ -646,6 +647,19 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
       setVddMsg(`Gagal: ${e?.message || e}`);
     } finally {
       setInstallingVdd(false);
+    }
+  };
+  const handleEnsureVdd = async () => {
+    if (DEMO || !window.xydesk?.runAction) return;
+    setEnsuringVdd(true);
+    setVddMsg(null);
+    try {
+      const r: any = await window.xydesk.runAction({ action: 'virtual-display-ensure' });
+      setVddMsg(r?.ok ? 'Virtual display dipastikan aktif.' : (r?.error || 'Gagal memastikan virtual display.'));
+    } catch (e: any) {
+      setVddMsg(`Gagal: ${e?.message || e}`);
+    } finally {
+      setEnsuringVdd(false);
     }
   };
   return (
@@ -670,8 +684,8 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
               </div>
               <div className="kv">
                 <span>Backend capture</span>
-                <strong title="Hasil pengukuran watchdog, bukan preferensi">
-                  {status?.captureBackend || '—'}
+                <strong title="Hasil pengukuran watchdog, bukan preferensi" style={{ color: status?.captureBackend === 'virtual-display-driver' ? '#16a34a' : undefined }}>
+                  {status?.captureBackend || '—'}{status?.captureBackend === 'virtual-display-driver' ? ' ✅ driver-first' : ''}
                 </strong>
               </div>
               <div className="kv">
@@ -695,52 +709,88 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
                 </div>
               </div>
             )}
-            {/* Virtual Display Driver — seperti AnyDesk/RustDesk */}
+            {/* Virtual Display Driver — driver-first IddCx (work di RDP / headless / lock kayak AnyDesk) */}
             {status?.virtualDisplay && (
-              <div className="vm-warning" style={{ marginTop: 14, background: status.virtualDisplay.installed ? 'linear-gradient(135deg, rgba(22,115,71,0.10), rgba(22,115,71,0.06))' : 'linear-gradient(135deg, rgba(124,58,237,0.14), rgba(91,33,182,0.10))' }}>
-                <span className="icon">{status.virtualDisplay.installed ? '✅' : '🖥️'}</span>
+              <div className="vm-warning" style={{ marginTop: 14, background: status.virtualDisplay.installed ? (status.virtualDisplay.hasVirtualDisplay ? 'linear-gradient(135deg, rgba(22,115,71,0.14), rgba(22,115,71,0.08))' : 'linear-gradient(135deg, rgba(22,115,71,0.10), rgba(22,115,71,0.06))') : 'linear-gradient(135deg, rgba(124,58,237,0.14), rgba(91,33,182,0.10))', borderLeft: status.captureBackend === 'virtual-display-driver' ? '3px solid #16a34a' : undefined }}>
+                <span className="icon">{status.captureBackend === 'virtual-display-driver' ? '🎬' : status.virtualDisplay.installed ? (status.virtualDisplay.hasVirtualDisplay ? '✅' : '🟡') : '🖥️'}</span>
                 <div className="text">
-                  <strong>Virtual Display Driver: {status.virtualDisplay.installed ? 'Terpasang (seperti AnyDesk)' : 'Belum terpasang'}</strong><br />
-                  {status.virtualDisplay.needed ? (
+                  <strong>
+                    {status.captureBackend === 'virtual-display-driver'
+                      ? 'Virtual Display Driver: AKTIF — driver-first (anti hitam)'
+                      : status.virtualDisplay.installed
+                        ? (status.virtualDisplay.hasVirtualDisplay ? 'Virtual Display Driver: Terpasang + Display aktif' : 'Virtual Display Driver: Terpasang (menunggu display)')
+                        : 'Virtual Display Driver: Belum terpasang'}
+                  </strong><br />
+                  {status.captureBackend === 'virtual-display-driver' ? (
                     <>
-                      Headless/RDP terdeteksi — butuh driver biar tidak hitam seperti AnyDesk.<br />
-                      Status: {status.virtualDisplay.installed ? 'Driver ada, DISPLAY virtual seharusnya muncul' : 'Driver belum ada'} • Admin: {status.virtualDisplay.isAdmin ? 'Ya' : 'Bukan (butuh admin untuk install)'}<br />
-                      {!status.virtualDisplay.installed && (
+                      Capture pakai <code>virtual-display-driver</code> (IddCx) — framebuffer dari driver, bukan DXGI/WGC. Tetap jalan saat RDP putus, headless VM, atau sesi terkunci — mirip RDP loopback.<br />
+                      Display virtual: <code>{status.virtualDisplay.displays?.find((d) => d.name.toLowerCase().includes('virtual') || d.name.toLowerCase().includes('idd'))?.name || `DISPLAY${(status.virtualDisplay.virtualIndex ?? 0) + 1}`}</code> {status.virtualDisplay.virtualIndex != null ? `(idx ${status.virtualDisplay.virtualIndex}) ` : ''}• Res: {(() => { const vd = status.virtualDisplay.displays?.find((d) => d.name.toLowerCase().includes('virtual') || d.name.toLowerCase().includes('idd')) || status.displays?.list?.[status.virtualDisplay.virtualIndex ?? -1]; return vd ? `${vd.width}×${vd.height}` : `${status.displays?.list?.[status.virtualDisplay.virtualIndex ?? 0]?.width || 1920}×${status.displays?.list?.[status.virtualDisplay.virtualIndex ?? 0]?.height || 1080}`; })()} • Admin: {status.virtualDisplay.isAdmin ? 'Ya' : 'Bukan'}<br />
+                      <span style={{ color: '#16a34a', fontWeight: 600 }}>✔️ Host sudah driver-first — tidak perlu HDMI dummy.</span>
+                    </>
+                  ) : status.virtualDisplay.needed ? (
+                    <>
+                      Headless/RDP terdeteksi — butuh driver biar tidak hitam (DXGI/WGC mati saat RDP/lock).<br />
+                      Status: {status.virtualDisplay.installed ? (status.virtualDisplay.hasVirtualDisplay ? `Driver ada + virtual DISPLAY${(status.virtualDisplay.virtualIndex ?? 0)+1} terdeteksi` : 'Driver ada, tapi display virtual belum muncul') : 'Driver belum ada'} • Admin: {status.virtualDisplay.isAdmin ? 'Ya' : 'Bukan (butuh admin)'}<br />
+                      {!status.virtualDisplay.installed ? (
                         <>
-                          Install: <code>host/driver/install.ps1</code> (PowerShell admin) atau download dari <code>github.com/itsmikethetech/Virtual-Display-Driver</code><br />
+                          Install: <code>host/driver/install.ps1</code> (PowerShell admin) atau dari <code>github.com/itsmikethetech/Virtual-Display-Driver</code><br />
                           Atau Scoop: <code>scoop install idd-sample-driver</code> • Setelah install, restart XyDesk
-                          <div style={{ marginTop: 8 }}>
-                            <button
-                              type="button"
-                              className="btn primary mini"
-                              disabled={installingVdd}
-                              onClick={handleInstallVdd}
-                            >
+                          <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button type="button" className="btn primary mini" disabled={installingVdd} onClick={handleInstallVdd}>
                               {installingVdd ? '⏳ Memasang Driver…' : '⚙️ Pasang Driver Virtual (1-Klik Admin)'}
                             </button>
-                            {vddMsg && <p style={{ marginTop: 4, fontSize: 12, color: '#8b5cf6' }}>{vddMsg}</p>}
+                          </div>
+                          {vddMsg && <p style={{ marginTop: 6, fontSize: 12, color: '#8b5cf6' }}>{vddMsg}</p>}
+                        </>
+                      ) : !status.virtualDisplay.hasVirtualDisplay ? (
+                        <>
+                          <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button type="button" className="btn primary mini" disabled={ensuringVdd} onClick={handleEnsureVdd}>
+                              {ensuringVdd ? '⏳ Membuat Display…' : '🖥️ Buat / Aktifkan Virtual Display (1080p)'}
+                            </button>
+                          </div>
+                          {vddMsg && <p style={{ marginTop: 6, fontSize: 12, color: '#8b5cf6' }}>{vddMsg}</p>}
+                          <span className="hint" style={{ display: 'block', marginTop: 6 }}>Driver sudah terpasang tapi Windows belum membuat adapternya. Klik tombol di atas (butuh admin) — XyDesk akan panggil exe + PnP scan otomatis. Tidak perlu reboot di 10/11.</span>
+                        </>
+                      ) : (
+                        <>
+                          Virtual display siap di <code>DISPLAY{(status.virtualDisplay.virtualIndex ?? 0)+1}</code> — engine akan otomatis pakai itu (driver-first) saat next capture. Backend sekarang masih <code>{status.captureBackend || 'menyiapkan...'}</code>.
+                          <div style={{ marginTop: 8 }}>
+                            <button type="button" className="btn ghost mini" disabled={ensuringVdd} onClick={handleEnsureVdd}>
+                              {ensuringVdd ? '⏳ Memastikan…' : '🔄 Pastikan Virtual Display Aktif'}
+                            </button>
+                            {vddMsg && <p style={{ marginTop: 6, fontSize: 12, color: '#8b5cf6' }}>{vddMsg}</p>}
                           </div>
                         </>
                       )}
                     </>
                   ) : (
-                    <>Tidak butuh driver — {status?.displays?.list?.length ?? 0} monitor terdeteksi, capture jalan normal</>
+                    <>
+                      Tidak butuh driver untuk sesi ini — {status?.displays?.list?.length ?? 0} monitor terdeteksi, capture jalan normal via <code>{status.captureBackend || 'dxgi'}</code>.<br />
+                      {status.virtualDisplay.installed && (
+                        <span style={{ color: '#15803d' }}>Driver virtual tetap terpasang sebagai cadangan headless — engine akan auto pakai saat headless/RDP terdeteksi.</span>
+                      )}
+                      {!status.virtualDisplay.installed && status.virtualDisplay.isAdmin && (
+                        <span className="hint">Pasang driver sekarang biar headless nanti tidak hitam (opsional).</span>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
             )}
-            {/* VM headless warning — hitam tapi tersambung */}
+            {/* VM headless warning — hitam tapi tersambung (driver-first) */}
             {status?.framesCaptured === 0 && (status?.uptimeMs ?? 0) > 8000 && (
               <div className="vm-warning" style={{ marginTop: 14 }}>
                 <span className="icon">⚠️</span>
                 <div className="text">
-                  <strong>Belum ada frame — kemungkinan VM tanpa display aktif.</strong><br />
+                  <strong>Belum ada frame — kemungkinan VM tanpa display aktif atau backend belum switch ke virtual driver.</strong><br />
                   Host mendeteksi {status?.displays?.list?.length ?? 0} monitor. Di GPU VM (Paperspace, RunPod, Vast) atau sesi RDP terkunci,
-                  Windows tidak punya desktop yang bisa di-capture. Solusi:<br />
-                  • Pasang <code>virtual display driver</code> (iddSampleDriver) atau colok HDMI dummy<br />
-                  • Pastikan sesi tidak terkunci (Win+L = hitam) dan tidak lewat RDP headless<br />
-                  • Backend sekarang: <code>{status?.captureBackend || 'mencoba...'}</code> — fallback GDI <code>GetDC(0)</code> sudah aktif di v6.7.1+
-                  {status?.isRdpSession && ' — RDP terdeteksi, ini yang bikin hitam di lab!'}
+                  DXGI/WGC tidak punya desktop. Solusi driver-first (v6.7.12+):<br />
+                  • Pasang <code>virtual display driver</code> (IddCx, seperti AnyDesk) — engine akan auto pakai <code>virtual-display-driver</code> dan tetap jalan saat RDP putus/lock<br />
+                  • Jika driver sudah terpasang tapi frame 0, klik <code>Buat Virtual Display</code> di atas / kirim <code>virtual-display-ensure</code> via control API<br />
+                  • Fallback lama tetap ada: GDI <code>GetDC(0)</code>, tapi driver jauh lebih andal untuk headless<br />
+                  • Backend sekarang: <code>{status?.captureBackend || 'mencoba...'}</code>{status?.virtualDisplay?.hasVirtualDisplay ? ` — virtual DISPLAY${(status.virtualDisplay.virtualIndex ?? 0)+1} ${status.virtualDisplay.installed ? 'siap' : ''}` : ''} — status driver: {status?.virtualDisplay?.installed ? (status?.virtualDisplay?.hasVirtualDisplay ? 'aktif' : 'terpasang tapi display belum ada') : 'belum terpasang'}
+                  {status?.isRdpSession && ' — RDP terdeteksi, tutup RDP via tscon /dest:console biar tidak lock!'}
                 </div>
               </div>
             )}
@@ -1330,7 +1380,7 @@ function ProfilePage({
           </div>
           <div className="kv">
             <span>Sumber video</span>
-            <strong>DXGI Desktop Duplication</strong>
+            <strong title="{status?.captureBackend}">{status?.captureBackend === 'virtual-display-driver' ? 'Virtual Display Driver (IddCx) — driver-first' : status?.captureBackend === 'dxgi-duplication' ? 'DXGI Desktop Duplication' : status?.captureBackend || 'DXGI Desktop Duplication'}</strong>
           </div>
         </div>
       </section>
@@ -1791,20 +1841,31 @@ function SettingsPage({
       </section>
 
       <section className="card">
-        <h3>Driver &amp; Integrasi Perangkat Virtual (Windows)</h3>
+        <h3>Driver &amp; Integrasi Perangkat Virtual (Windows) — driver-first</h3>
         <p className="hint">
-          Driver bawaan memungkinkan display virtual headless (mencegah layar hitam saat RDP/VM) dan mikrofon virtual terintegrasi (suara mic HP terbaca di Discord/Zoom PC).
+          <strong>Driver-first:</strong> IddCx Virtual Display jadi backend utama di headless/RDP/lock (framebuffer dari driver, bukan DXGI/WGC → tidak hitam seperti RDP). Audio virtual bikin mic HP denyut di Recording.
         </p>
         <div className="kv-grid" style={{ marginBottom: 12 }}>
           <div className="kv">
-            <span>Virtual Display Driver (IddSampleDriver)</span>
-            <strong>{status?.virtualDisplay?.installed ? '✅ Terpasang' : '⚠️ Belum Terpasang'}</strong>
+            <span>Virtual Display Driver (IddSampleDriver — IddCx)</span>
+            <strong>{status?.virtualDisplay?.installed ? (status?.virtualDisplay?.hasVirtualDisplay ? `✅ Aktif (DISPLAY${(status?.virtualDisplay?.virtualIndex ?? 0)+1})` : '✅ Terpasang — display belum dibuat') : '⚠️ Belum Terpasang'}</strong>
+            {status?.virtualDisplay && <span className="hint" style={{ display: 'block', marginTop: 4 }}>Backend: <code>{status?.virtualDisplay?.backend || status?.captureBackend || '—'}</code> • Admin: {status.virtualDisplay.isAdmin ? 'Ya' : 'Bukan'} • Butuh: {status.virtualDisplay.needed ? 'Ya (headless/RDP)' : 'Tidak (monitor fisik ada)'} • {status?.displays?.list?.length ?? 0} monitor</span>}
           </div>
           <div className="kv">
             <span>Virtual Audio &amp; Mic (VB-CABLE)</span>
             <strong>{status?.virtualMic?.installed ? '✅ Terpasang' : '⚠️ Belum Terpasang'}</strong>
+            {status?.virtualMic && <span className="hint" style={{ display: 'block', marginTop: 4 }}>{status.virtualMic.renderTarget}</span>}
           </div>
         </div>
+        {status?.virtualDisplay?.installed && status?.virtualDisplay?.hasVirtualDisplay && status?.virtualDisplay?.displays && (
+          <div className="chip-row" style={{ marginBottom: 10 }}>
+            {status.virtualDisplay.displays.map((d) => (
+              <span key={d.index} className={`chip${status.virtualDisplay?.virtualIndex === d.index ? ' on' : ''}`} title={d.name}>
+                DISPLAY{d.index + 1} {d.width}×{d.height}{d.name.toLowerCase().includes('virtual') || d.name.toLowerCase().includes('idd') ? ' (virtual)' : ''}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="set-row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <button
             onClick={() => handleInstallDriver('all')}
@@ -1821,6 +1882,19 @@ function SettingsPage({
               Pasang Display Saja
             </button>
           )}
+          {status?.virtualDisplay?.installed && !status?.virtualDisplay?.hasVirtualDisplay && (
+            <button
+              onClick={() => onAction('virtual-display-ensure')}
+              disabled={busy}
+            >
+              🖥️ Buat Virtual Display
+            </button>
+          )}
+          {status?.virtualDisplay?.installed && status?.virtualDisplay?.hasVirtualDisplay && (
+            <button onClick={() => onAction('virtual-display-ensure')} disabled={busy}>
+              🔄 Pastikan Virtual Display
+            </button>
+          )}
           {!status?.virtualMic?.installed && (
             <button
               onClick={() => handleInstallDriver('audio')}
@@ -1835,6 +1909,9 @@ function SettingsPage({
             {driverInstallMsg}
           </p>
         )}
+        <p className="hint" style={{ marginTop: 10 }}>
+          Headless test yang benar: setup ID di RDP → <code>tscon %SESSIONNAME% /dest:console</code> atau <code>Disconnect-tanpa-lock.bat</code> di Desktop → konek via XyDesk (bukan RDP). Virtual display tetap hidup setelah disconnect, jadi tidak hitam.
+        </p>
       </section>
 
       <section className="card">
