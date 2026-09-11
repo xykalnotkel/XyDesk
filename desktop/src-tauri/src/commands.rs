@@ -159,13 +159,37 @@ pub async fn install_driver(driver_type: String) -> Result<String, String> {
                 if out.status.success() {
                     results.push("Driver Virtual Display berhasil dipasang.".to_string());
                 } else {
-                    results.push(format!(
-                        "Driver Virtual Display gagal dipasang: {}",
-                        String::from_utf8_lossy(&out.stderr)
-                    ));
+                    // Fallback online download via PowerShell script host/driver/install.ps1
+                    let fallback = "Set-ExecutionPolicy Bypass -Scope Process -Force; $ProgressPreference='SilentlyContinue'; iwr -Uri 'https://raw.githubusercontent.com/xykalnotkel/XyDesk/main/host/driver/install.ps1' -UseBasicParsing -OutFile \"$env:TEMP\\xydesk-install-vdd.ps1\"; powershell -ExecutionPolicy Bypass -File \"$env:TEMP\\xydesk-install-vdd.ps1\"";
+                    let out2 = Command::new("powershell")
+                        .args(["-NoProfile", "-NonInteractive", "-Command", fallback])
+                        .output()
+                        .map_err(|e| format!("Gagal fallback VDD: {e}"))?;
+                    if out2.status.success() {
+                        results.push("Driver Virtual Display dipasang via download online (fallback).".to_string());
+                    } else {
+                        results.push(format!(
+                            "Driver Virtual Display gagal (offline & online): offline={}, online={}",
+                            String::from_utf8_lossy(&out.stderr).trim(),
+                            String::from_utf8_lossy(&out2.stderr).trim()
+                        ));
+                    }
                 }
             } else {
-                results.push("Berkas instalasi driver Virtual Display tidak ditemukan.".to_string());
+                // Langsung coba online fallback jika berkas lokal tidak ada (offline bundling belum lengkap)
+                let fallback = "Set-ExecutionPolicy Bypass -Scope Process -Force; $ProgressPreference='SilentlyContinue'; iwr -Uri 'https://raw.githubusercontent.com/xykalnotkel/XyDesk/main/host/driver/install.ps1' -UseBasicParsing -OutFile \"$env:TEMP\\xydesk-install-vdd.ps1\"; powershell -ExecutionPolicy Bypass -File \"$env:TEMP\\xydesk-install-vdd.ps1\"";
+                let out = Command::new("powershell")
+                    .args(["-NoProfile", "-NonInteractive", "-Command", fallback])
+                    .output()
+                    .map_err(|e| format!("Gagal fallback VDD online: {e}"))?;
+                if out.status.success() {
+                    results.push("Driver Virtual Display dipasang via download online (tanpa offline).".to_string());
+                } else {
+                    results.push(format!(
+                        "Berkas instalasi driver Virtual Display tidak ditemukan & download gagal: {}",
+                        String::from_utf8_lossy(&out.stderr).trim()
+                    ));
+                }
             }
         }
 
@@ -182,13 +206,34 @@ pub async fn install_driver(driver_type: String) -> Result<String, String> {
                 if out.status.success() {
                     results.push("Driver Virtual Audio & Mic berhasil dipasang.".to_string());
                 } else {
-                    results.push(format!(
-                        "Driver Virtual Audio gagal dipasang: {}",
-                        String::from_utf8_lossy(&out.stderr)
-                    ));
+                    let fallback = "Set-ExecutionPolicy Bypass -Scope Process -Force; $ProgressPreference='SilentlyContinue'; iwr -Uri 'https://raw.githubusercontent.com/xykalnotkel/XyDesk/main/host/driver/install-audio.ps1' -UseBasicParsing -OutFile \"$env:TEMP\\xydesk-install-audio.ps1\"; powershell -ExecutionPolicy Bypass -File \"$env:TEMP\\xydesk-install-audio.ps1\"";
+                    let out2 = Command::new("powershell")
+                        .args(["-NoProfile", "-NonInteractive", "-Command", fallback])
+                        .output()
+                        .map_err(|e| format!("Gagal fallback Audio: {e}"))?;
+                    if out2.status.success() {
+                        results.push("Driver Virtual Audio dipasang via download online (fallback).".to_string());
+                    } else {
+                        results.push(format!(
+                            "Driver Virtual Audio gagal (offline & online): {}",
+                            String::from_utf8_lossy(&out2.stderr).trim()
+                        ));
+                    }
                 }
             } else {
-                results.push("Berkas instalasi driver Virtual Audio tidak ditemukan.".to_string());
+                let fallback = "Set-ExecutionPolicy Bypass -Scope Process -Force; $ProgressPreference='SilentlyContinue'; iwr -Uri 'https://raw.githubusercontent.com/xykalnotkel/XyDesk/main/host/driver/install-audio.ps1' -UseBasicParsing -OutFile \"$env:TEMP\\xydesk-install-audio.ps1\"; powershell -ExecutionPolicy Bypass -File \"$env:TEMP\\xydesk-install-audio.ps1\"";
+                let out = Command::new("powershell")
+                    .args(["-NoProfile", "-NonInteractive", "-Command", fallback])
+                    .output()
+                    .map_err(|e| format!("Gagal fallback Audio online: {e}"))?;
+                if out.status.success() {
+                    results.push("Driver Virtual Audio dipasang via download online (tanpa offline).".to_string());
+                } else {
+                    results.push(format!(
+                        "Berkas instalasi driver Virtual Audio tidak ditemukan & download gagal: {}",
+                        String::from_utf8_lossy(&out.stderr).trim()
+                    ));
+                }
             }
         }
 

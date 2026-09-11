@@ -1,6 +1,6 @@
 [package]
 name = "xydesk-desktop"
-version = "6.7.13"
+version = "6.7.14"
 description = "XyDesk Desktop — shell Tauri + Next.js untuk host Windows."
 authors = ["XySpace Tch"]
 edition = "2021"

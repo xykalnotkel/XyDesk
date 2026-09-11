@@ -22,6 +22,12 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [6.7.14] - 2026-09-11
+
+> Build 49. Driver Offline Bundle + 1-Klik Auto-Download (No Manual) — fix hitam tapi konek tanpa PowerShell manual.
+
+Lihat detail di [changelogs/6.7.14.md](changelogs/6.7.14.md).
+
 ## [6.7.13] - 2026-09-11
 
 > Build 48. Installer Windows (Inno Setup), Logo README identik all platform, Windows blink fix, Pengaturan lengkap (Tampilan/Bahasa, Kontrol/Pintasan, Jaringan/Keamanan), Guard tile #F5F3FF lolos.
