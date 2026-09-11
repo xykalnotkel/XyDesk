@@ -700,7 +700,9 @@ async fn action(
         "driver-install" => {
             let driver_type = req.driver_type.as_deref().unwrap_or("display");
             if driver_type != "display" && driver_type != "virtual" {
-                return Ok(Json(ActionResponse::err("driver_type harus display/virtual")));
+                return Ok(Json(ActionResponse::err(
+                    "driver_type harus display/virtual",
+                )));
             }
             match crate::virtual_display::try_install_driver() {
                 Ok(_msg) => Ok(Json(ActionResponse {

@@ -361,7 +361,9 @@ pub fn spawn_frame_source() -> FrameSource {
             // Virtual display driver — driver-first untuk headless/RDP (jangan DXGI fisik)
             crate::virtual_display::ensure_display();
             // Jika headless/RDP dan driver ada, pakai virtual display sebagai backend utama (bukan DXGI fisik)
-            if crate::virtual_display::needs_virtual_display() && crate::virtual_display::is_driver_installed() {
+            if crate::virtual_display::needs_virtual_display()
+                && crate::virtual_display::is_driver_installed()
+            {
                 // Coba buat virtual display kalau belum ada
                 crate::virtual_display::ensure_virtual_display_created();
                 if let Some(v_idx) = crate::virtual_display::virtual_display_index() {

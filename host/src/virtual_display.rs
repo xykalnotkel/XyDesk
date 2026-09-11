@@ -60,10 +60,19 @@ fn is_basic_render_driver() -> bool {
     // Cek via hwinfo: kalau semua adapter vendor 0x1414 atau tidak ada adapter aktif
     // Simpler: cek apakah list_displays kosong atau GDI fallback akan hitam
     // Untuk sekarang, pakai heuristic: cek registry Display adapters
-    if let Ok(output) = Command::new("pnputil").arg("/enum-devices").arg("/class").arg("Display").output() {
+    if let Ok(output) = Command::new("pnputil")
+        .arg("/enum-devices")
+        .arg("/class")
+        .arg("Display")
+        .output()
+    {
         let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
         // Kalau hanya Microsoft Basic Display Adapter terdeteksi
-        if stdout.contains("microsoft basic display") && !stdout.contains("nvidia") && !stdout.contains("amd") && !stdout.contains("intel") {
+        if stdout.contains("microsoft basic display")
+            && !stdout.contains("nvidia")
+            && !stdout.contains("amd")
+            && !stdout.contains("intel")
+        {
             return true;
         }
     }
@@ -99,9 +108,16 @@ pub fn is_driver_installed() -> bool {
         // Untuk virtual display ge9, nama biasanya \\.\DISPLAYx dengan driver IddSampleDriver
     }
     // 3. Cek via PnP devices
-    if let Ok(output) = Command::new("pnputil").arg("/enum-devices").arg("/present").output() {
+    if let Ok(output) = Command::new("pnputil")
+        .arg("/enum-devices")
+        .arg("/present")
+        .output()
+    {
         let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
-        if stdout.contains("iddsampledriver") || stdout.contains("virtualdisplaydriver") || stdout.contains("xydesk virtual") {
+        if stdout.contains("iddsampledriver")
+            || stdout.contains("virtualdisplaydriver")
+            || stdout.contains("xydesk virtual")
+        {
             return true;
         }
     }
@@ -237,9 +253,7 @@ pub fn try_install_driver() -> Result<String, String> {
             } else {
                 eprintln!("[xydesk-host] pnputil gagal untuk {inf}: {stdout} {stderr}");
                 // Coba fallback: pnputil tanpa /install lalu devcon
-                let _ = Command::new("pnputil")
-                    .args(["/add-driver", inf])
-                    .output();
+                let _ = Command::new("pnputil").args(["/add-driver", inf]).output();
             }
         }
     }
@@ -371,7 +385,9 @@ pub fn ensure_display() {
 
     // Driver belum ada
     if is_admin() {
-        println!("[xydesk-host] headless terdeteksi + admin → coba install virtual display driver...");
+        println!(
+            "[xydesk-host] headless terdeteksi + admin → coba install virtual display driver..."
+        );
         match try_install_driver() {
             Ok(msg) => {
                 println!("[xydesk-host] {}", msg);
@@ -469,10 +485,14 @@ pub fn create_virtual_display(width: u32, height: u32, count: u32) -> Result<Str
 
     // 3. Fallback: coba via registry / config file driver itsmikethetech
     // Driver baca config dari %PROGRAMDATA%\VirtualDisplayDriver\config.json
-    let program_data = std::env::var("PROGRAMDATA").unwrap_or_else(|_| r"C:\ProgramData".to_string());
+    let program_data =
+        std::env::var("PROGRAMDATA").unwrap_or_else(|_| r"C:\ProgramData".to_string());
     let config_path = format!("{}\\VirtualDisplayDriver\\config.json", program_data);
     if std::path::Path::new(&config_path).exists() {
-        return Ok(format!("config ditemukan di {} — driver itsmikethetech akan baca otomatis", config_path));
+        return Ok(format!(
+            "config ditemukan di {} — driver itsmikethetech akan baca otomatis",
+            config_path
+        ));
     }
 
     Err("virtual display manager tidak ditemukan — install driver dulu dari https://github.com/itsmikethetech/Virtual-Display-Driver (atau ge9 IddSampleDriver sudah terpasang tapi virtual display belum muncul, coba reboot)".to_string())
