@@ -41,7 +41,7 @@ vars: CORS_ORIGINS, GOOGLE_DESKTOP_CLIENT_ID
 1. **Perbarui `RESEND_API_KEY`** ke token verified dari `my-binimbg.txt`:
    `re_*** (lihat uploads/my-binimbg.txt / GitHub Secrets)` — teruji `GET /domains` → 3 domain verified (`xyspace.my.id`, `xyc.my.id`, `mail.xystudio.my.id`).
    ```bash
-   printf '%s' 're_***1h_...' | wrangler secret put RESEND_API_KEY
+   printf '%s' 're_***' | wrangler secret put RESEND_API_KEY
    wrangler deploy --var RESEND_FROM:"XyDesk <auth@mail.xystudio.my.id>"
    # => Deployed Version b154ed52... (signaling)
    ```
@@ -85,7 +85,7 @@ secrets: ADMIN_TOKEN, EMAIL_FROM, FOUNDER_EMAIL, GOOGLE_CLIENT_ID,
 
 **Tindakan:**
 ```bash
-printf '%s' 're_***1h_...' | wrangler secret put RESEND_API_KEY --config news/wrangler.toml
+printf '%s' 're_***' | wrangler secret put RESEND_API_KEY --config news/wrangler.toml
 printf '%s' 'auth@mail.xystudio.my.id' | wrangler secret put EMAIL_FROM --config news/wrangler.toml
 printf '%s' 'e3d5adea-****-****-****-**********' | wrangler secret put ONESIGNAL_APP_ID
 printf '%s' 'os_v2_app_***' | wrangler secret put ONESIGNAL_API_KEY
@@ -191,7 +191,7 @@ curl -s -X POST https://signal.xydesk.my.id/auth/verify-otp \
 curl -s https://news.xydesk.my.id/api/news | jq '.posts | length'
 
 # 4. Resend domain
-curl -s -H "Authorization: Bearer re_***1h_..." https://api.resend.com/domains | jq '.data[] | {name, status}'
+curl -s -H "Authorization: Bearer re_***" https://api.resend.com/domains | jq '.data[] | {name, status}'
 
 # 5. Cloudflare token
 curl -s -H "Authorization: Bearer cfut_***" \
