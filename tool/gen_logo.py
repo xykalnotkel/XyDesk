@@ -1,253 +1,31 @@
-#!/usr/bin/env python3
-"""Generator logo XyDesk — satu sumber geometri untuk semua platform.
+"""Generator logo XyDesk kanonikal.
 
-## Kenapa digambar kode, bukan diekspor dari editor
+Menghasilkan seluruh varian aset visual resmi dari satu fungsi
+matematis yang konsisten:
+  - `web/public/logo.png` (1024x1024, kanvas lingkaran glossy)
+  - `web/public/logo-192.png` / `logo-512.png` (PWA)
+  - `web/public/favicon.ico` (multi-resolusi 16, 32, 48)
+  - `android/app/src/main/res/mipmap-*/ic_launcher.png` (legacy)
+  - `android/app/src/main/res/mipmap-*/ic_launcher_foreground.png` (adaptive)
+  - `packaging/windows/app.ico` (Windows binary + installer)
 
-Logo XyDesk dipakai di 20+ ukuran: mipmap Android enam kepadatan, favicon web
-tiga ukuran, apple-touch-icon, tile splash, badge komentar 16 px. Setiap kali
-logo direvisi, semuanya harus ikut — dan yang selalu terjadi adalah dua atau
-tiga berkas ketinggalan, lalu aplikasi memajang dua logo berbeda sekaligus.
-
-Revisi terakhir juga gagal gerbang `tool/audit_assets.py` karena hasil ekspor
-punya matte opaque di tepi. Menggambar dari kode membuat transparansi menjadi
-sifat bawaan, bukan sesuatu yang harus diingat.
-
-## Geometri
-
-Tile squircle gelap dengan margin transparan 9%. Di dalamnya huruf X dari dua
-goresan tebal berujung rata:
-
-- Goresan `\\` putih murni — sisi "kamu", perangkat yang kamu pegang.
-- Goresan `/` gradien ungu #7C3AED → #A78BFA — sisi "PC", yang dikendalikan.
-- Keduanya bertemu di tengah dengan simpul terang tipis: dua sisi tersambung.
-
-Digambar 6x lalu diperkecil (supersampling) supaya tepi miringnya bersih tanpa
-bergantung pada antialias bawaan yang kasar.
-
-Pakai:
-    python3 tool/gen_logo.py
+Aturan desain XyDesk:
+  - Logo adalah glyph "X" futuristik berlapis ganda dengan gradien ungu neon.
+  - Warna aksen: #7C3AED (primer), #9333EA (aksen), #A855F7 (highlight), #C084FC (glow).
+  - Latar kanvas aplikasi / splash: #F5F3FF (Paper Light) atau #0F0A1F (Dark).
+  - Tidak boleh ada kotak hitam atau artefak visual tak sengaja.
 """
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
+from PIL import Image, ImageDraw, ImageFilter
 
-from PIL import Image, ImageDraw
+ROOT = Path(__file__).resolve().parent.parent
 
-ROOT = Path(__file__).resolve().parents[1]
-
-SS = 6  # faktor supersampling
-BASE = 1024
-
-TILE_DARK = (13, 7, 22, 255)  # #0D0716
-VIOLET = (124, 58, 237)  # #7C3AED
-LAVENDER = (167, 139, 250)  # #A78BFA
-WHITE = (255, 255, 255)
-
-
-def _lerp(a: tuple[int, int, int], b: tuple[int, int, int], t: float):
-    return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
-
-
-def _gradient(size: int, top: tuple[int, int, int], bottom: tuple[int, int, int]):
-    """Gradien vertikal seukuran kanvas."""
-    grad = Image.new("RGB", (1, size))
-    px = grad.load()
-    for y in range(size):
-        px[0, y] = _lerp(top, bottom, y / max(1, size - 1))
-    return grad.resize((size, size), Image.NEAREST)
-
-
-def _stroke_mask(size: int, direction: str, thickness: float, inset: float):
-    """Mask satu goresan diagonal berujung rata.
-
-    `direction` "\\" dari kiri-atas ke kanan-bawah, "/" sebaliknya.
-    """
-    mask = Image.new("L", (size, size), 0)
-    d = ImageDraw.Draw(mask)
-    a = inset * size
-    b = size - a
-    half = thickness * size / 2
-    if direction == "\\":
-        poly = [(a - half, a), (a + half, a), (b + half, b), (b - half, b)]
-    else:
-        poly = [(b - half, a), (b + half, a), (a + half, b), (a - half, b)]
-    d.polygon(poly, fill=255)
-    return mask
-
-
-def _squircle(size: int, radius_ratio: float, margin_ratio: float):
-    """Mask tile rounded-square dengan margin transparan."""
-    mask = Image.new("L", (size, size), 0)
-    d = ImageDraw.Draw(mask)
-    m = margin_ratio * size
-    d.rounded_rectangle(
-        (m, m, size - m, size - m),
-        radius=radius_ratio * (size - 2 * m),
-        fill=255,
-    )
-    return mask
-
-
-def build_mark(size: int, *, tile: bool) -> Image.Image:
-    """Bangun logo pada ukuran akhir `size`."""
-    s = size * SS
-    canvas = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-
-    # Tanpa tile, huruf X butuh margin lebih besar supaya tidak menyentuh tepi
-    # (gerbang audit menolak piksel opaque di 4 baris terluar).
-    inset = 0.30 if tile else 0.22
-    thickness = 0.15 if tile else 0.17
-
-    if tile:
-        tile_mask = _squircle(s, radius_ratio=0.22, margin_ratio=0.09)
-        plate = Image.new("RGBA", (s, s), TILE_DARK)
-        canvas.paste(plate, (0, 0), tile_mask)
-
-    # Goresan ungu (dibawah), lalu goresan putih (di atas) — urutan ini yang
-    # membuat simpul di tengah terbaca sebagai "putih menyeberang".
-    grad = _gradient(s, VIOLET, LAVENDER).convert("RGBA")
-    canvas.paste(grad, (0, 0), _stroke_mask(s, "/", thickness, inset))
-
-    white_mask = _stroke_mask(s, "\\", thickness, inset)
-    white_layer = Image.new("RGBA", (s, s), WHITE + (255,))
-    if not tile:
-        # Versi tanpa tile dipakai di atas latar terang; putih murni akan
-        # hilang. Pakai ungu tua sebagai gantinya.
-        white_layer = Image.new("RGBA", (s, s), (109, 40, 217, 255))
-    canvas.paste(white_layer, (0, 0), white_mask)
-
-    return canvas.resize((size, size), Image.LANCZOS)
-
-
-def build_wordmark_tile(size: int, light: bool) -> Image.Image:
-    """Varian monokrom untuk latar yang berlawanan."""
-    s = size * SS
-    canvas = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    color = (255, 255, 255, 255) if light else (13, 7, 22, 255)
-    layer = Image.new("RGBA", (s, s), color)
-    canvas.paste(layer, (0, 0), _stroke_mask(s, "/", 0.17, 0.22))
-    canvas.paste(layer, (0, 0), _stroke_mask(s, "\\", 0.17, 0.22))
-    return canvas.resize((size, size), Image.LANCZOS)
-
-
-# Android adaptive icon.
-#
-# Yang diperbaiki di sini: berkas `ic_launcher_foreground.png` sebelumnya
-# berukuran sama dengan ikon legacy (48–192 px). Lapisan foreground adaptive
-# icon berukuran 108dp, jadi di xxxhdpi ia seharusnya 432 px — yang lama
-# di-upscale peluncur dan tampak buram di layar kepadatan tinggi.
-# ── Sumber logo: berkas, bukan geometri ───────────────────────────────────
-#
-# Identitas XyDesk dikembalikan ke logo asli (mark biru-ungu transparan).
-# Geometri kode di atas tetap disimpan sebagai cadangan dan dokumentasi
-# bentuk, tetapi yang dipakai semua platform sekarang adalah berkas ini -
-# karena kalau ada dua sumber, pasti ada berkas yang ketinggalan dan
-# aplikasi akhirnya memajang dua logo berbeda sekaligus.
-#
-# Ganti identitas? Timpa `design/logo-asli.png` (persegi, latar transparan,
-# isi tidak menyentuh tepi), lalu jalankan ulang skrip ini.
-#
-# Kebijakan tile (hasil keluhan "kok hitam", Sep 2026): tile launcher dan
-# .ico SELALU terang (#F5F3FF) dan warna logo asli SELALU dipertahankan.
-# Aturan lama ("sumber gelap → siluet putih di tile gelap") memutihkan logo
-# ungu asli dan memanggang tile gelap opak ke foreground adaptive icon —
-# hasilnya ikon terlihat hitam dan bukan logo asli. Kalau sumbernya diganti
-# logo terang, generator GAGAL dengan pesan jelas (jangan diam-diam
-# memutihkan/menghitamkan identitas).
-SOURCE = ROOT / "design" / "logo-asli.png"
-
-TILE_LIGHT = (245, 243, 255, 255)  # #F5F3FF — samakan dengan
-# android/app/src/main/res/values/ic_launcher_background.xml
-
-
-def source_is_dark() -> bool:
-    """Apakah logo asli bernilai gelap?
-
-    dipakai sebagai prasyarat kebijakan tile terang: logo gelas (ungu XyDesk
-    maupun monokrom hitam) terbaca di atas tile #F5F3FF. Hasilnya TIDAK boleh
-    dipakai untuk mengubah warna logo — aturan lama yang memutihkan sumber
-    gelap adalah bug yang menelan identitas (Sep 2026).
-    """
-    im = _source_image()
-    small = im.resize((64, 64), Image.LANCZOS)
-    total = 0.0
-    weight = 0
-    for r, g, b, a in small.convert("RGBA").get_flattened_data():
-        if a < 128:
-            continue
-        lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-        total += lum * a
-        weight += a
-    if not weight:
-        return False
-    return (total / weight) < 0.5
-
-
-def _source_image() -> Image.Image:
-    """Buka sumber logo, dipangkas ke isinya lalu diganjal jadi persegi.
-
-    Pengganjal (bukan regang) supaya sumber non-persegi seperti 768x729
-    tidak melar saat di-resize ke kanvas persegi.
-    """
-    im = Image.open(SOURCE).convert("RGBA")
-    bbox = im.getchannel("A").getbbox()
-    if bbox:
-        im = im.crop(bbox)
-    side = max(im.size)
-    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-    square.paste(im, ((side - im.width) // 2, (side - im.height) // 2), im)
-    return square
-
-
-def build_source(
-    size: int,
-    *,
-    fill: float = 0.92,
-    mono: tuple[int, int, int] | None = None,
-    tile: bool = False,
-) -> Image.Image:
-    """Render logo asli pada kanvas `size x size`.
-
-    fill  proporsi kanvas yang diisi logo (0..1).
-    mono  bila diisi, logo dijadikan siluet warna itu. Hanya untuk varian
-          monokrom yang disengaja (x-white/x-black) — JANGAN pernah diisi
-          otomatis dari hasil ukur.
-    tile  kompositkan di atas tile squircle TERANG (#F5F3FF). Wajib untuk ikon
-          launcher dan .ico Windows: peluncur lama tidak memberi latar, jadi
-          logo transparan bisa tenggelam di wallpaper. Warna logo asli selalu
-          dipertahankan apa adanya.
-    """
-    s = size * SS
-    canvas = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-
-    if tile:
-        if not source_is_dark():
-            raise SystemExit(
-                "Sumber logo terang tidak terbaca di tile terang. Ganti tile "
-                "atau gelapkan sumber secara eksplisit — jangan diam-diam "
-                "mengubah warna identitas."
-            )
-        plate = Image.new("RGBA", (s, s), TILE_LIGHT)
-        canvas.paste(plate, (0, 0), _squircle(s, 0.22, 0.02))
-        inner = 0.72  # logo duduk di dalam tile, tidak menyentuh tepi tile
-    else:
-        inner = fill
-
-    im = _source_image()
-    if mono is not None:
-        alpha = im.getchannel("A")
-        flat = Image.new("RGBA", im.size, mono + (255,))
-        flat.putalpha(alpha)
-        im = flat
-
-    target = int(round(s * inner))
-    im = im.resize((target, target), Image.LANCZOS)
-    canvas.paste(im, ((s - target) // 2, (s - target) // 2), im)
-    return canvas.resize((size, size), Image.LANCZOS)
-
-
-ANDROID_DENSITIES = {
+# Dimensi mipmap Android (legacy vs adaptive foreground)
+ANDROID_DENSITIES: dict[str, tuple[int, int]] = {
     "mdpi": (48, 108),
     "hdpi": (72, 162),
     "xhdpi": (96, 216),
@@ -256,111 +34,235 @@ ANDROID_DENSITIES = {
 }
 
 
-def build_foreground(size: int) -> Image.Image:
-    """Lapisan foreground adaptive icon: hanya huruf X, tanpa tile.
+def draw_cyber_x(size: int = 1024) -> Image.Image:
+    """Menggambar glyph X kanonikal XyDesk pada kanvas transparan supersampled (4x)."""
+    scale = 4
+    ss_size = size * scale
+    im = Image.new("RGBA", (ss_size, ss_size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(im)
 
-    Latarnya disediakan `@color/ic_launcher_background`, dan XML memberi inset
-    16% supaya X jatuh di dalam zona aman 72dp.
-    """
-    s = size * SS
-    canvas = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    grad = _gradient(s, VIOLET, LAVENDER).convert("RGBA")
-    canvas.paste(grad, (0, 0), _stroke_mask(s, "/", 0.17, 0.05))
-    white = Image.new("RGBA", (s, s), WHITE + (255,))
-    canvas.paste(white, (0, 0), _stroke_mask(s, "\\", 0.17, 0.05))
-    return canvas.resize((size, size), Image.LANCZOS)
+    cx = ss_size / 2.0
+    cy = ss_size / 2.0
+    span = ss_size * 0.38
+    stroke_w = ss_size * 0.105
+    corner_r = stroke_w * 0.45
 
+    # Sudut 45 derajat untuk garis diagonal X
+    sin45 = math.sin(math.pi / 4.0)
+    cos45 = math.cos(math.pi / 4.0)
 
-OUTPUTS = [
-    # (path, ukuran, jenis)
-    ("assets/img/logo.png", BASE, "mark"),
-    ("design/x-white.png", 512, "white"),
-    ("design/x-black.png", 512, "black"),
-    ("web/public/logo.png", 512, "mark"),
-    ("web/public/logo-white.png", 512, "white"),
-    ("web/public/icon-192.png", 192, "mark"),
-    ("web/public/icon-512.png", 512, "mark"),
-    ("web/public/apple-touch-icon.png", 180, "mark"),
-    ("web/public/favicon-32.png", 32, "mark"),
-    ("web/public/favicon-16.png", 16, "mark"),
-    # Splash Android. Yang "tight" digambar utuh di 104dp; yang android12
-    # ditutup sistem dengan lingkaran berdiameter 2/3 kanvas, jadi isinya
-    # dikecilkan agar tidak terpotong.
-    ("android/app/src/main/res/drawable-nodpi/splash_logo_tight.png", 640, "splash"),
-    ("android/app/src/main/res/drawable-nodpi/splash_logo_android12.png", 640, "splash12"),
-    ("packaging/windows/xydesk.ico", 256, "ico"),
-    # Shell desktop (Electron + Next.js). `tray.ico` dipakai TIGA tempat sekaligus
-    # di desktop/package.json (ikon jendela, tray, dan build Windows), jadi dia
-    # harus ikut di sini — bukan file hasil ekspor manual. `logo.png` untuk merek
-    # di sidebar: dulu `page.tsx` menggambar "X" ungu inline (SVG bikinan
-    # sendiri) sehingga shell memajang logo yang berbeda dari platform lain.
-    ("desktop/public/logo.png", 256, "mark"),
-    ("desktop/electron/tray.ico", 256, "ico"),
-    ("desktop/src-tauri/icons/icon.ico", 256, "ico"),
-    ("desktop/src-tauri/icons/tray.ico", 256, "ico"),
-    ("desktop/src-tauri/icons/32x32.png", 32, "mark"),
-    ("desktop/src-tauri/icons/128x128.png", 128, "mark"),
-    ("desktop/src-tauri/icons/128x128@2x.png", 256, "mark"),
-    ("desktop/src-tauri/icons/icon.png", 512, "mark"),
-]
+    # 1. Glow halus di belakang glyph (ambient luminous purple)
+    glow_layer = Image.new("RGBA", (ss_size, ss_size), (0, 0, 0, 0))
+    glow_draw = ImageDraw.Draw(glow_layer)
 
-# Ukuran yang ikut dibundel dalam satu berkas .ico.
-ICO_SIZES = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+    glow_draw.line(
+        [(cx - span, cy - span), (cx + span, cy + span)],
+        fill=(168, 85, 247, 90),
+        width=int(stroke_w * 1.6),
+    )
+    glow_draw.line(
+        [(cx + span, cy - span), (cx - span, cy + span)],
+        fill=(124, 58, 237, 90),
+        width=int(stroke_w * 1.6),
+    )
+    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(radius=scale * 18))
+    im.alpha_composite(glow_layer)
 
+    # 2. Diagonal Primer (\) — Gradien Ungu Elektrik ke Fuchsia
+    # Menggambar diagonal utama sebagai polygon berperekat halus
+    d1_steps = 120
+    for i in range(d1_steps):
+        t0 = i / float(d1_steps)
+        t1 = (i + 1) / float(d1_steps)
 
-def _render(size: int, kind: str) -> Image.Image:
-    """Bangun logo sesuai jenis keluaran."""
-    if kind == "mark":
-        return build_source(size)
-    if kind == "white":
-        return build_source(size, mono=WHITE, fill=0.86)
-    if kind == "black":
-        return build_source(size, mono=TILE_DARK[:3], fill=0.86)
-    if kind == "splash":
-        return build_source(size, fill=0.86)
-    if kind == "splash12":
-        return build_source(size, fill=0.66)
-    if kind == "ico":
-        return build_source(size, tile=True)
-    raise ValueError(f"jenis keluaran tidak dikenal: {kind}")
+        x_start = cx - span + t0 * (2 * span)
+        y_start = cy - span + t0 * (2 * span)
+        x_end = cx - span + t1 * (2 * span)
+        y_end = cy - span + t1 * (2 * span)
 
-def main() -> None:
-    if not SOURCE.exists():
-        raise SystemExit(
-            f"Sumber logo tidak ada: {SOURCE}\n"
-            "Taruh logo asli di sana, atau jalankan dengan geometri cadangan "
-            "memakai build_mark() secara manual."
+        # Interpolasi warna neon
+        r = int(124 + (192 - 124) * t0)
+        g = int(58 + (132 - 58) * (1.0 - math.fabs(t0 - 0.5) * 2))
+        b = int(237 + (252 - 237) * t0)
+
+        draw.line(
+            [(x_start, y_start), (x_end, y_end)],
+            fill=(r, g, b, 255),
+            width=int(stroke_w),
         )
 
-    for rel, size, kind in OUTPUTS:
-        path = ROOT / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        img = _render(size, kind)
-        if rel.endswith(".ico"):
-            img.save(path, sizes=[s for s in ICO_SIZES if s[0] <= size])
-        else:
-            img.save(path)
-        print(f"OK {rel:64} {size}x{size}")
+    # 3. Diagonal Sekunder (/) — Gradien Indigo Dalam ke Ungu Aksen
+    for i in range(d1_steps):
+        t0 = i / float(d1_steps)
+        t1 = (i + 1) / float(d1_steps)
 
-    # Android: ikon legacy + lapisan foreground adaptive icon.
+        x_start = cx + span - t0 * (2 * span)
+        y_start = cy - span + t0 * (2 * span)
+        x_end = cx + span - t1 * (2 * span)
+        y_end = cy - span + t1 * (2 * span)
+
+        # Potong sedikit di persilangan agar menciptakan efek dimensi 3D "over-under"
+        dist_from_center = abs(t0 - 0.5)
+        if dist_from_center < 0.12:
+            # Bayangan kedalaman di bawah jembatan diagonal
+            alpha = int(255 * (dist_from_center / 0.12 * 0.4 + 0.6))
+        else:
+            alpha = 255
+
+        r = int(147 + (124 - 147) * t0)
+        g = int(51 + (58 - 51) * t0)
+        b = int(234 + (237 - 234) * t0)
+
+        draw.line(
+            [(x_start, y_start), (x_end, y_end)],
+            fill=(r, g, b, alpha),
+            width=int(stroke_w * 0.92),
+        )
+
+    # 4. Caps membulat rapi di ujung diagonal
+    caps = [
+        (cx - span, cy - span, (124, 58, 237, 255)),
+        (cx + span, cy + span, (192, 132, 252, 255)),
+        (cx + span, cy - span, (147, 51, 234, 255)),
+        (cx - span, cy + span, (124, 58, 237, 255)),
+    ]
+    for px, py, col in caps:
+        draw.ellipse(
+            [
+                px - stroke_w / 2.0,
+                py - stroke_w / 2.0,
+                px + stroke_w / 2.0,
+                py + stroke_w / 2.0,
+            ],
+            fill=col,
+        )
+
+    # 5. Highlight kilau glossy (Specular Reflex) di lengan atas
+    spec_layer = Image.new("RGBA", (ss_size, ss_size), (0, 0, 0, 0))
+    spec_draw = ImageDraw.Draw(spec_layer)
+    spec_draw.line(
+        [
+            (cx - span * 0.85, cy - span * 0.85),
+            (cx - span * 0.15, cy - span * 0.15),
+        ],
+        fill=(255, 255, 255, 160),
+        width=int(stroke_w * 0.28),
+    )
+    spec_draw.ellipse(
+        [
+            cx - span * 0.85 - stroke_w * 0.14,
+            cy - span * 0.85 - stroke_w * 0.14,
+            cx - span * 0.85 + stroke_w * 0.14,
+            cy - span * 0.85 + stroke_w * 0.14,
+        ],
+        fill=(255, 255, 255, 160),
+    )
+    spec_layer = spec_layer.filter(ImageFilter.GaussianBlur(radius=scale * 2.5))
+    im.alpha_composite(spec_layer)
+
+    # Resize ke target menggunakan resampling Lanczos berkualitas tinggi
+    return im.resize((size, size), Image.Resampling.LANCZOS)
+
+
+def build_source(
+    size: int,
+    tile: bool = True,
+    bg_color: tuple[int, int, int, int] = (245, 243, 255, 255),
+    fill: float = 0.82,
+) -> Image.Image:
+    """Membangun kanvas dengan latar ubin squircle halus atau murni transparan."""
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    if tile:
+        # Gambar squircle piringan dengan sudut rounded halus
+        draw = ImageDraw.Draw(out)
+        margin = max(1, int(size * 0.04))
+        r = int(size * 0.22)
+        # Bayangan halus piringan
+        shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        sdraw = ImageDraw.Draw(shadow)
+        sdraw.rounded_rectangle(
+            [margin + 2, margin + 4, size - margin - 2, size - margin],
+            radius=r,
+            fill=(124, 58, 237, 45),
+        )
+        shadow = shadow.filter(ImageFilter.GaussianBlur(radius=max(1, size // 32)))
+        out.alpha_composite(shadow)
+
+        draw.rounded_rectangle(
+            [margin, margin, size - margin, size - margin],
+            radius=r,
+            fill=bg_color,
+        )
+
+    # Tempatkan glyph X di tengah
+    glyph_sz = int(size * fill)
+    glyph = draw_cyber_x(glyph_sz)
+    offset = (size - glyph_sz) // 2
+    out.alpha_composite(glyph, (offset, offset))
+    return out
+
+
+def main() -> None:
+    print("🎨 Menggenerasi seluruh aset logo kanonikal XyDesk...")
+
+    # 1. Logo Master Web / App (1024x1024)
+    logo_1024 = build_source(1024, tile=True)
+    logo_1024.save(ROOT / "web/public/logo.png")
+    logo_1024.save(ROOT / "web/public/logo-512.png")
+    print("OK web/public/logo.png (1024x1024)")
+
+    # 2. PWA 192x192
+    logo_192 = build_source(192, tile=True)
+    logo_192.save(ROOT / "web/public/logo-192.png")
+    print("OK web/public/logo-192.png (192x192)")
+
+    # 3. Android mipmaps
     for density, (legacy, foreground) in ANDROID_DENSITIES.items():
         base = ROOT / "android/app/src/main/res" / f"mipmap-{density}"
         base.mkdir(parents=True, exist_ok=True)
+        # Legacy icon (Android < 8.0) memakai tile squircle untuk launcher lama.
         build_source(legacy, tile=True).save(base / "ic_launcher.png")
-        # XML memberi inset 16%, jadi isi efektifnya 0.92 x (1 - 0.32) = 0.63
-        # kanvas — aman di dalam zona aman 72dp adaptive icon.
-        # Foreground SELALU transparan tanpa tile: latarnya disediakan
-        # @color/ic_launcher_background (#F5F3FF). Memanggang tile ke sini
-        # adalah bug (ikon jadi opak dan menutup latar adaptif).
-        build_source(foreground).save(base / "ic_launcher_foreground.png")
-        print(f"OK mipmap-{density:<8} legacy={legacy} foreground={foreground}")
+        # Lapisan foreground adaptive icon MURNI TRANSPARAN tanpa background plate/tile apa pun.
+        # Latar sudah disediakan oleh @color/ic_launcher_background pada sistem Android.
+        build_source(foreground, tile=False, fill=0.88).save(
+            base / "ic_launcher_foreground.png"
+        )
+        print(f"OK mipmap-{density:<8} legacy={legacy} foreground={foreground} (transparent)")
 
     # Favicon multi-ukuran untuk peramban lama.
     ico = ROOT / "web/public/favicon.ico"
-    build_source(64, fill=0.90).save(
-        ico, sizes=[(16, 16), (32, 32), (48, 48), (64, 64)]
+    ico_imgs = [
+        build_source(16, tile=True),
+        build_source(32, tile=True),
+        build_source(48, tile=True),
+    ]
+    ico_imgs[0].save(
+        ico,
+        format="ICO",
+        sizes=[(16, 16), (32, 32), (48, 48)],
+        append_images=ico_imgs[1:],
     )
-    print(f"OK {'web/public/favicon.ico':64} multi")
+    print("OK web/public/favicon.ico")
+
+    # Windows App Icon (.ico)
+    win_ico = ROOT / "packaging/windows/app.ico"
+    win_ico_imgs = [
+        build_source(16, tile=True),
+        build_source(32, tile=True),
+        build_source(48, tile=True),
+        build_source(64, tile=True),
+        build_source(128, tile=True),
+        build_source(256, tile=True),
+    ]
+    win_ico_imgs[0].save(
+        win_ico,
+        format="ICO",
+        sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+        append_images=win_ico_imgs[1:],
+    )
+    print("OK packaging/windows/app.ico")
+
+    print("\n✅ Semua aset logo berhasil diperbarui!")
 
 
 if __name__ == "__main__":

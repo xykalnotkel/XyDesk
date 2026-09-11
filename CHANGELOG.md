@@ -22,7 +22,20 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
-## [Belum terbit]
+## [6.7.12] - 2026-09-09
+
+> Build 47. In-App Update Modal Portrait 3:4 AI, Background Android Notification Download, Splash Luminous Glow, Desktop Tauri v2 fixes, 1-Click Virtual Driver Installers, dan pembaruan README.
+
+### Ditambahkan
+- **In-App Update Experience (AI Portrait Modal 3:4)**: Dialog visual pembaruan murni rasio 3:4 portrait AI dengan elemen 3D gaming morphing, motion blur, dan tombol floating close `X`.
+- **Background Download Progress Notification (Android)**: Notifikasi progress unduh APK pada drawer sistem Android, memungkinkan download tetap jalan di background.
+- **Direct APK Install Flow**: Pemasangan langsung APK terverifikasi setelah unduhan selesai.
+- **Splash Screen Luminous Ambient Glow (Flutter)**: Aura ambient bloom violet lembut di belakang logo watermark dengan kurva transisi halus.
+- **1-Click Elevated Driver Installer (Desktop)**: Dukungan instalasi instan untuk Virtual Display Driver (IddSampleDriver) dan Virtual Mic/Audio (VB-CABLE) langsung via Tauri backend dengan PowerShell UAC elevation.
+- **Updater desktop (PC)**: kartu "Pembaruan aplikasi" di Pengaturan — cek otomatis, unduh installer terverifikasi SHA-256, pasang lalu mulai ulang. Manifest `update.json` kini membawa kunci `windows` (x64/arm64).
+- **Artikel arsip 6.5.2**: `changelog-v6-5-2` diterbitkan retroaktif — tidak ada lagi tautan versi yang 404.
+- **README.md Komprehensif**: Penambahan badge status CI/CD lengkap, dukungan platform, matriks teknologi, dan panduan kontribusi komunitas.
+- **Panduan Update Popup Guide (`docs/APP_UPDATE_POPUP_GUIDE.md`)**: Dokumentasi arsitektur, prompt template, dan alur notifikasi.
 
 ### Diperbaiki
 - **Unifikasi UI/UX tiga platform** (operator: web = acuan): token Paper mengikuti web — `bg #ffffff`,
@@ -35,44 +48,12 @@ Kebijakan rilis:
   dari logo asli — bukan lagi default polos Inno Setup.
 - **Korupsi CSS web**: blok `@media` rusak di `web/src/style.css` (~L1067) dihapus; ~10 deklarasi yatim
   (`margin`, `padding`, `border`, `grid-*`) ikut terbuang, aturan `.sesi-panel h2` duplikat digabung.
-
-### Ditambahkan
-- **Updater desktop (PC)**: kartu "Pembaruan aplikasi" di Pengaturan — cek
-  otomatis, unduh installer terverifikasi SHA-256, pasang lalu mulai ulang.
-  Manifest `update.json` kini membawa kunci `windows` (x64/arm64).
-- **Artikel arsip 6.5.2**: `changelog-v6-5-2` diterbitkan retroaktif —
-  tidak ada lagi tautan versi yang 404.
-
-### Diperbaiki
-- **Tempel teks panjang dari HP**: dipecah otomatis per 2.000 karakter
-  (tidak lagi dipotong host di 4.096).
-- **Profil desktop**: versi & server kini tampil (kontrak `get_info`
-  diluruskan; versi tidak lagi hardcode basi).
-- **Label perangkat**: nama akun tampil di pesan pairing web; hub Go tidak
-  lagi membuang `name`/`platform` saat relay.
-- **`news/seed.sql`**: 5 alias slug diluruskan + 5 artikel lama ditarik dari
-  produksi — repo kembali jadi cermin penuh.
-- **`build-apk-only.yml`**: signing rilis + Google client id + hapus step
-  license palsu (belum pernah jalan sebelum diperbaiki).
-- **Ikon launcher kembali ke logo asli**: tile terang `#F5F3FF` + X ungu
-  glossy di Android (legacy, adaptive, splash-safe), favicon web, dan
-  semua `.ico` Windows. Akar masalahnya di generator (`tile` gelap
-  dipanggang + sumber gelap diputihkan) sudah dicabut, dikunci gerbang CI
-  `tool/check_icons.py` supaya tidak hitam ketiga kalinya.
-
-## [6.7.12] - 2026-09-09
-
-> Build 47. In-App Update Modal Portrait 3:4 AI, Background Android Notification Download, Splash Luminous Glow, Desktop Tauri v2 fixes, dan pembaruan README.
-
-### Ditambahkan
-- **In-App Update Experience (AI Portrait Modal 3:4)**: Dialog visual pembaruan murni rasio 3:4 portrait AI dengan elemen 3D gaming morphing, motion blur, dan tombol floating close `X`.
-- **Background Download Progress Notification (Android)**: Notifikasi progress unduh APK pada drawer sistem Android, memungkinkan download tetap jalan di background.
-- **Direct APK Install Flow**: Pemasangan langsung APK terverifikasi setelah unduhan selesai.
-- **Splash Screen Luminous Ambient Glow (Flutter)**: Aura ambient bloom violet lembut di belakang logo watermark dengan kurva transisi halus.
-- **README.md Komprehensif**: Penambahan badge status CI/CD lengkap, dukungan platform, matriks teknologi, dan panduan kontribusi komunitas.
-- **Panduan Update Popup Guide (`docs/APP_UPDATE_POPUP_GUIDE.md`)**: Dokumentasi arsitektur, prompt template, dan alur notifikasi.
-
-### Diperbaiki
+- **Tempel teks panjang dari HP**: dipecah otomatis per 2.000 karakter (tidak lagi dipotong host di 4.096).
+- **Profil desktop**: versi & server kini tampil (kontrak `get_info` diluruskan; versi tidak lagi hardcode basi).
+- **Label perangkat**: nama akun tampil di pesan pairing web; hub Go tidak lagi membuang `name`/`platform` saat relay.
+- **`news/seed.sql`**: 5 alias slug diluruskan + 5 artikel lama ditarik dari produksi — repo kembali jadi cermin penuh.
+- **`build-apk-only.yml`**: signing rilis + Google client id + hapus step license palsu (belum pernah jalan sebelum diperbaiki).
+- **Ikon launcher kembali ke logo asli**: tile terang `#F5F3FF` + X ungu glossy di Android (legacy, adaptive, splash-safe), favicon web, dan semua `.ico` Windows. Lapisan foreground adaptive icon dibuat murni transparan (100% alpha = 0 di luar glyph X) agar serasi sempurna dengan adaptive system background plate di Android.
 - **Desktop Tauri v2 Config**: Konfigurasi bundle targets pada `desktop/src-tauri/tauri.conf.json` untuk stabilitas kompilasi release Windows x64 & arm64.
 - **Inventaris Lisensi Pihak Ketiga**: Sinkronisasi seluruh dependensi lockfile ke 509 komponen resmi.
 

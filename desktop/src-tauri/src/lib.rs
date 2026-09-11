@@ -45,6 +45,8 @@ pub fn run() {
             commands::set_autostart,
             commands::restart_engine,
             commands::set_hint,
+            commands::check_drivers_status,
+            commands::install_driver,
             commands::auth_session,
             commands::auth_google,
             commands::auth_email_request,

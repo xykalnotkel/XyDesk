@@ -19,6 +19,7 @@ import {
   User,
   ExternalLink,
   LogOut,
+  Shield,
 } from 'lucide-react';
 import {
   fetchNewsList,
@@ -631,6 +632,22 @@ function LoginScreen({ onDone }: { onDone: (s: AuthSessionPayload) => void }) {
 function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: () => void }) {
   const s = status?.session;
   const v = status?.video;
+  const [installingVdd, setInstallingVdd] = useState(false);
+  const [vddMsg, setVddMsg] = useState<string | null>(null);
+
+  const handleInstallVdd = async () => {
+    if (DEMO || !window.xydesk?.installDriver) return;
+    setInstallingVdd(true);
+    setVddMsg(null);
+    try {
+      const res = await window.xydesk.installDriver('all');
+      setVddMsg(res || 'Instalasi driver selesai.');
+    } catch (e: any) {
+      setVddMsg(`Gagal: ${e?.message || e}`);
+    } finally {
+      setInstallingVdd(false);
+    }
+  };
   return (
     <div className="pg">
       <section className="card">
@@ -692,6 +709,17 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
                         <>
                           Install: <code>host/driver/install.ps1</code> (PowerShell admin) atau download dari <code>github.com/itsmikethetech/Virtual-Display-Driver</code><br />
                           Atau Scoop: <code>scoop install idd-sample-driver</code> • Setelah install, restart XyDesk
+                          <div style={{ marginTop: 8 }}>
+                            <button
+                              type="button"
+                              className="btn primary mini"
+                              disabled={installingVdd}
+                              onClick={handleInstallVdd}
+                            >
+                              {installingVdd ? '⏳ Memasang Driver…' : '⚙️ Pasang Driver Virtual (1-Klik Admin)'}
+                            </button>
+                            {vddMsg && <p style={{ marginTop: 4, fontSize: 12, color: '#8b5cf6' }}>{vddMsg}</p>}
+                          </div>
                         </>
                       )}
                     </>
@@ -1474,6 +1502,28 @@ function SettingsPage({
   const [quality, setQuality] = useState<string>('auto');
   const volume = status?.audio?.volume ?? null;
   const [vol, setVol] = useState<number>(volume == null ? 60 : Math.round(volume * 100));
+  const [installingDriver, setInstallingDriver] = useState(false);
+  const [driverInstallMsg, setDriverInstallMsg] = useState<string | null>(null);
+
+  const handleInstallDriver = async (driverType: string = 'all') => {
+    if (DEMO || !window.xydesk?.installDriver) {
+      flashMsg('Pemasangan driver hanya dapat dijalankan di aplikasi desktop Windows.');
+      return;
+    }
+    setInstallingDriver(true);
+    setDriverInstallMsg(null);
+    try {
+      const res = await window.xydesk.installDriver(driverType);
+      setDriverInstallMsg(res || 'Proses instalasi driver selesai.');
+      flashMsg('Instalasi driver diproses.');
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      setDriverInstallMsg(`Gagal: ${msg}`);
+      flashMsg(`Gagal: ${msg}`);
+    } finally {
+      setInstallingDriver(false);
+    }
+  };
   useEffect(() => {
     // Jangan timpa angka yang sedang digeser pengguna dengan nilai hasil polling.
     if (volume != null && Math.round(volume * 100) !== volRef.current) setVol(Math.round(volume * 100));
@@ -1737,6 +1787,53 @@ function SettingsPage({
           </>
         ) : (
           <p className="dim">Status audio belum terbaca dari engine.</p>
+        )}
+      </section>
+
+      <section className="card">
+        <h3>Driver &amp; Integrasi Perangkat Virtual (Windows)</h3>
+        <p className="hint">
+          Driver bawaan memungkinkan display virtual headless (mencegah layar hitam saat RDP/VM) dan mikrofon virtual terintegrasi (suara mic HP terbaca di Discord/Zoom PC).
+        </p>
+        <div className="kv-grid" style={{ marginBottom: 12 }}>
+          <div className="kv">
+            <span>Virtual Display Driver (IddSampleDriver)</span>
+            <strong>{status?.virtualDisplay?.installed ? '✅ Terpasang' : '⚠️ Belum Terpasang'}</strong>
+          </div>
+          <div className="kv">
+            <span>Virtual Audio &amp; Mic (VB-CABLE)</span>
+            <strong>{status?.virtualMic?.installed ? '✅ Terpasang' : '⚠️ Belum Terpasang'}</strong>
+          </div>
+        </div>
+        <div className="set-row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => handleInstallDriver('all')}
+            disabled={installingDriver || busy}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <Shield size={14} /> {installingDriver ? 'Memasang Driver (Admin)…' : 'Pasang Semua Driver (1-Klik Admin)'}
+          </button>
+          {!status?.virtualDisplay?.installed && (
+            <button
+              onClick={() => handleInstallDriver('vdd')}
+              disabled={installingDriver || busy}
+            >
+              Pasang Display Saja
+            </button>
+          )}
+          {!status?.virtualMic?.installed && (
+            <button
+              onClick={() => handleInstallDriver('audio')}
+              disabled={installingDriver || busy}
+            >
+              Pasang Audio Saja
+            </button>
+          )}
+        </div>
+        {driverInstallMsg && (
+          <p style={{ marginTop: 8, fontSize: 12.5, color: 'var(--accent, #8b5cf6)', fontWeight: 500 }}>
+            {driverInstallMsg}
+          </p>
         )}
       </section>
 
