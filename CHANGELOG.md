@@ -22,6 +22,12 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [6.8.2] - 2026-09-13
+
+> Build 56. Rebuild admin — Vite kotak, no rounded, lucide, login Turnstile nyata, konek web+apk.
+
+Lihat detail di [changelogs/6.8.2.md](changelogs/6.8.2.md).
+
 ## [6.8.1] - 2026-09-13
 
 > Build 55. Fix E0599 Write import — `use std::io::Write` untuk `writeln!`.
