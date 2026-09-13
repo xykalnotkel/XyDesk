@@ -15,7 +15,7 @@ routes = [
 # Browser produksi yang boleh memanggil API. Klien native tidak mengirim
 # Origin, jadi pembatasan ini tidak mengganggu Android/desktop.
 [vars]
-CORS_ORIGINS = "https://app.xydesk.my.id"
+CORS_ORIGINS = "https://app.xydesk.my.id,https://xydesk-admin.pages.dev,https://admin.xydesk.my.id"
 # Client ID OAuth tipe "Desktop app" untuk shell Electron. Client ID bukan
 # rahasia (ia ikut terkirim di URL browser pengguna), jadi aman sebagai var.
 # Pasangannya, GOOGLE_DESKTOP_CLIENT_SECRET, adalah secret wrangler dan

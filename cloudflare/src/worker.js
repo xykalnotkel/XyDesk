@@ -19,6 +19,7 @@ import { Hub } from './hub.js';
 import { AuthStore } from './authstore.js';
 import { verifyJwt } from './auth.js';
 import { collectIceServers, TURN_PROVIDERS } from './turn.js';
+import { handleAdmin } from './admin.js';
 
 // Wrangler mewajibkan kelas Durable Object diekspor dari entrypoint.
 export { Hub, AuthStore };
@@ -55,6 +56,10 @@ export default {
 
     if (path === '/turn-ice') {
       return corsResponse(await handleTurnIce(request, url, env), request, env);
+    }
+
+    if (path.startsWith('/admin/')) {
+      return handleAdmin(request, env, url);
     }
 
     if (path.startsWith('/auth/')) {

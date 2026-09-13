@@ -22,6 +22,12 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [6.8.3] - 2026-09-13
+
+> Build 57. Admin endpoint nyata — Worker `/admin/*` live, login Turnstile + Google, stats/devices/maintenance konek web+apk.
+
+Lihat detail di [changelogs/6.8.3.md](changelogs/6.8.3.md).
+
 ## [6.8.2] - 2026-09-13
 
 > Build 56. Rebuild admin — Vite kotak, no rounded, lucide, login Turnstile nyata, konek web+apk.
