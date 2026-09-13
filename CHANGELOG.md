@@ -22,6 +22,12 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [6.7.17] - 2026-09-13
+
+> Build 52. Fix Build Desktop writeln — `writeln!` macro, bukan trait. PowerShell quote fix.
+
+Lihat detail di [changelogs/6.7.17.md](changelogs/6.7.17.md).
+
 ## [6.7.16] - 2026-09-13
 
 > Build 51. Windows Tauri Debug + License English + Adaptive No Box — window log, license EN, adaptive transparan.
