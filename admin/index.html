@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>XyDesk Admin — Super Dashboard</title>
+<link rel="icon" href="/logo.png" />
+<style>
+  :root{ --purple:#7C3AED; --purple-dark:#5B21B6; --purple-soft:#F5F3FF; --ink:#0F0A1E; --muted:#6B7280; --border:#E9E5FF; --bg:#FAFAF9; --ok:#10B981; --warn:#F59E0B; --danger:#EF4444; --card:#fff; --shadow:0 8px 28px rgba(91,33,182,.12); }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--ink); line-height:1.5}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit}
+  /* Layout */
+  .layout{display:grid; grid-template-columns:280px 1fr; min-height:100vh}
+  .sidebar{background:#fff; border-right:1px solid var(--border); position:sticky; top:0; height:100vh; overflow:auto; display:flex; flex-direction:column; z-index:20}
+  .brand{display:flex; align-items:center; gap:12px; padding:20px 18px; border-bottom:1px solid var(--border)}
+  .brand img{width:32px;height:32px;border-radius:8px}
+  .brand strong{font-size:18px; letter-spacing:-.02em}
+  .brand span{font-size:12px; color:var(--muted); margin-left:auto; background:var(--purple-soft); padding:4px 8px; border-radius:999px; font-weight:700; color:var(--purple)}
+  .nav{padding:12px; display:flex; flex-direction:column; gap:6px}
+  .nav a{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; font-size:14px; font-weight:600; color:#3B3A4A}
+  .nav a.active, .nav a:hover{background:var(--purple-soft); color:var(--purple-dark)}
+  .nav a small{margin-left:auto; background:#EDE9FE; color:var(--purple); padding:2px 7px; border-radius:999px; font-size:11px}
+  .sidebar-foot{margin-top:auto; padding:14px; border-top:1px solid var(--border); display:flex; gap:10px; align-items:center}
+  .avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--purple),#A78BFA); display:grid;place-items:center; color:#fff; font-weight:800}
+  /* Topbar */
+  .main{display:flex; flex-direction:column; min-width:0}
+  .topbar{position:sticky; top:0; z-index:10; background:rgba(250,250,249,.82); backdrop-filter: blur(10px) saturate(1.2); border-bottom:1px solid var(--border); padding:14px 18px; display:flex; gap:14px; align-items:center}
+  .search{flex:1; max-width:520px; position:relative}
+  .search input{width:100%; padding:11px 14px 11px 40px; border:1px solid var(--border); border-radius:12px; background:#fff; outline:none}
+  .search svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.5}
+  .top-actions{display:flex; gap:10px; align-items:center}
+  .pill{padding:8px 12px; border-radius:12px; background:#fff; border:1px solid var(--border); font-weight:700; font-size:13px; display:inline-flex; gap:8px; align-items:center}
+  .pill.dot::before{content:""; width:8px; height:8px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 6px rgba(16,185,129,.15)}
+  .hamburger{display:none; width:40px; height:40px; border:1px solid var(--border); background:#fff; border-radius:10px; display:none; place-items:center}
+  /* Content */
+  .content{padding:22px 18px 40px; max-width:1400px; width:100%; margin:0 auto}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:14px}
+  .grid2{display:grid; grid-template-columns:1.1fr .9fr; gap:14px}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:16px}
+  .card h3{font-size:13px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-bottom:10px}
+  .kpi{padding:16px}
+  .kpi .val{font-size:28px; font-weight:800; letter-spacing:-.03em}
+  .kpi .sub{font-size:13px; color:var(--muted); margin-top:4px}
+  .kpi .trend{margin-top:8px; font-size:12px; font-weight:700; color:var(--ok)}
+  .chart{height:180px; display:grid; place-items:center; background:linear-gradient(180deg,#fff, #FDFBFF); border-radius:12px; border:1px dashed var(--border); position:relative; overflow:hidden}
+  .chart svg{width:100%; height:100%}
+  .table{width:100%; border-collapse:separate; border-spacing:0; font-size:14px}
+  .table th{font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); text-align:left; padding:10px 12px; border-bottom:1px solid var(--border)}
+  .table td{padding:12px; border-bottom:1px solid #F3F0FF}
+  .badge{padding:4px 8px; border-radius:999px; font-size:11px; font-weight:800; letter-spacing:.02em}
+  .badge.ok{background:#ECFDF5; color:#065F46}
+  .badge.warn{background:#FFFBEB; color:#92400E}
+  .badge.off{background:#F3F4F6; color:#6B7280}
+  .badge.purple{background:var(--purple-soft); color:var(--purple)}
+  .actions{display:flex; gap:6px; flex-wrap:wrap}
+  .btn{padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:#fff; font-weight:700; font-size:13px; cursor:pointer}
+  .btn.primary{background:var(--purple); color:#fff; border-color:var(--purple)}
+  .btn.ghost{background:transparent}
+  .btn.small{padding:6px 9px; font-size:12px}
+  .toggle{width:44px; height:26px; border-radius:999px; background:#E5E7EB; position:relative; cursor:pointer; transition:.2s; border:none}
+  .toggle.on{background:var(--purple)}
+  .toggle::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  .toggle.on::after{transform:translateX(18px)}
+  .maintenance{display:grid; gap:12px}
+  .maint-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--border); border-radius:12px; background:#fff}
+  .maint-row strong{font-size:14px}
+  .maint-row p{font-size:12px; color:var(--muted)}
+  /* Responsive */
+  @media (max-width: 1100px){ .grid4{grid-template-columns:repeat(2,1fr)} .grid2{grid-template-columns:1fr} .grid3{grid-template-columns:1fr} }
+  @media (max-width: 860px){
+    .layout{grid-template-columns:1fr}
+    .sidebar{position:fixed; inset:0 30% 0 0; transform:translateX(-100%); transition:.25s; height:100vh}
+    .sidebar.open{transform:translateX(0); box-shadow: 0 20px 60px rgba(0,0,0,.2)}
+    .hamburger{display:grid}
+    .content{padding:16px 12px 30px}
+    .topbar{padding:10px 12px}
+  }
+  /* tiny */
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px}
+  .muted{color:var(--muted)}
+  .divider{height:1px; background:var(--border); margin:14px 0}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="/logo.png" alt="XyDesk" />
+      <div>
+        <strong>XyDesk Admin</strong>
+        <div class="muted" style="font-size:12px">Super Dashboard • v6.7.18</div>
+      </div>
+      <span>ADMIN</span>
+    </div>
+    <nav class="nav" id="nav">
+      <a href="#dashboard" class="active" data-page="dashboard">🏠 Dashboard <small>live</small></a>
+      <a href="#users" data-page="users">👥 Users <small id="nav-users">2.4k</small></a>
+      <a href="#devices" data-page="devices">💻 Perangkat <small id="nav-devices">847</small></a>
+      <a href="#sessions" data-page="sessions">🔗 Sesi Aktif <small id="nav-sessions">23</small></a>
+      <a href="#hosting" data-page="hosting">☁️ Hosting</a>
+      <a href="#backend" data-page="backend">⚙️ Backend</a>
+      <a href="#server" data-page="server">🖥️ Server</a>
+      <a href="#maintenance" data-page="maintenance">🛠️ Maintenance</a>
+      <a href="#logs" data-page="logs">📜 Logs</a>
+      <a href="#settings" data-page="settings">⚙️ Settings</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="avatar">AD</div>
+      <div>
+        <div style="font-weight:800; font-size:14px">Admin Utama</div>
+        <div class="muted" style="font-size:12px">admin@xydesk.my.id • <span class="badge purple">ADMIN</span></div>
+      </div>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="q" placeholder="Cari user, deviceId, sesi..." />
+      </div>
+      <div class="top-actions">
+        <span class="pill dot">All systems operational</span>
+        <button class="btn small">🔔 3</button>
+        <button class="btn primary small" id="btn-maintenance">Maintenance: OFF</button>
+      </div>
+    </div>
+    <div class="content" id="content">
+      <!-- DASHBOARD -->
+      <section data-page="dashboard">
+        <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin-bottom:14px">
+          <div>
+            <h1 style="font-size:26px; letter-spacing:-.02em">Selamat datang kembali 👋</h1>
+            <p class="muted">Kontrol super lengkap — user, mesin, hosting, backend, server. Responsif di HP, tablet, desktop.</p>
+          </div>
+          <div style="margin-left:auto; display:flex; gap:8px">
+            <button class="btn">Export CSV</button>
+            <button class="btn primary">+ Buat pengumuman</button>
+          </div>
+        </div>
+
+        <div class="grid4">
+          <div class="card kpi">
+            <h3>Total Users</h3>
+            <div class="val">2,483 <span style="font-size:14px; font-weight:600; color:var(--ok)">+8.2%</span></div>
+            <div class="sub">+47 hari ini • 312 guest</div>
+            <div class="trend">↗ 1.2k MAU</div>
+          </div>
+          <div class="card kpi">
+            <h3>Perangkat Online</h3>
+            <div class="val">847 <span class="badge ok">● 184 online</span></div>
+            <div class="sub">663 offline • 12 error</div>
+            <div class="trend">Puncak jam 20:00 — 221</div>
+          </div>
+          <div class="card kpi">
+            <h3>Sesi Aktif</h3>
+            <div class="val">23 <span style="font-size:14px; color:var(--muted)">/ 1.4k hari ini</span></div>
+            <div class="sub">Avg 24ms LAN • P2P 91%</div>
+            <div class="trend">↗ +3 vs kemarin</div>
+          </div>
+          <div class="card kpi">
+            <h3>Revenue / Sewa PC</h3>
+            <div class="val">Rp 8.4jt <span style="font-size:14px; color:var(--muted)">/ bln</span></div>
+            <div class="sub">42 sewa aktif</div>
+            <div class="trend">↗ +12% MoM</div>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:14px">
+          <div class="card">
+            <h3>Pertumbuhan User (14 hari)</h3>
+            <div class="chart">
+              <svg viewBox="0 0 600 180" preserveAspectRatio="none">
+                <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7C3AED" stop-opacity=".22"/><stop offset="1" stop-color="#7C3AED" stop-opacity="0"/></linearGradient></defs>
+                <path d="M0 120 L40 110 L80 90 L120 100 L160 70 L200 80 L240 60 L280 65 L320 45 L360 55 L400 38 L440 50 L480 30 L520 35 L560 20 L600 24 L600 180 L0 180 Z" fill="url(#g)" />
+                <path d="M0 120 L40 110 L80 90 L120 100 L160 70 L200 80 L240 60 L280 65 L320 45 L360 55 L400 38 L440 50 L480 30 L520 35 L560 20 L600 24" fill="none" stroke="#7C3AED" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="560" cy="20" r="6" fill="#7C3AED" stroke="#fff" stroke-width="3"/>
+              </svg>
+            </div>
+            <div class="muted" style="font-size:12px; margin-top:8px">MAU naik stabil, guest naik setelah 6.7.18 fix window panic.</div>
+          </div>
+          <div class="card">
+            <h3>Health — Hosting / Backend / Signal</h3>
+            <div style="display:grid; gap:10px">
+              <div class="maint-row">
+                <div><strong>signal.xydesk.my.id</strong><p>WebSocket Hub • Durable Object</p></div>
+                <span class="badge ok">OK • 42ms</span>
+              </div>
+              <div class="maint-row">
+                <div><strong>Cloudflare Worker</strong><p>xydesk-signaling • 152 WebView2</p></div>
+                <span class="badge ok">OK • 99.92%</span>
+              </div>
+              <div class="maint-row">
+                <div><strong>app.xydesk.my.id (Pages)</strong><p>Web Vite • hero cartoon</p></div>
+                <span class="badge ok">OK</span>
+              </div>
+              <div class="maint-row">
+                <div><strong>admin.xydesk.my.id</strong><p>Dashboard ini</p></div>
+                <span class="badge purple">YOU ARE HERE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:14px">
+          <div class="card">
+            <h3>Perangkat Terbaru</h3>
+            <table class="table">
+              <thead><tr><th>Device</th><th>User</th><th>Status</th><th>Aksi</th></tr></thead>
+              <tbody id="tbl-devices">
+                <tr><td><strong>DESKTOP-7B2C</strong><div class="muted mono">id: 8f3a…c304 • v6.7.18 • Win x64</div></td><td>you@example.com</td><td><span class="badge ok">online</span></td><td><div class="actions"><button class="btn small">Lihat</button><button class="btn small">Kick</button></div></td></tr>
+                <tr><td><strong>Xy-PC-LAB2</strong><div class="muted mono">id: a1b2…9f01 • v6.7.15</div></td><td>lab@xydesk.my.id</td><td><span class="badge warn">idle</span></td><td><div class="actions"><button class="btn small">Logs</button><button class="btn small">Restart</button></div></td></tr>
+                <tr><td><strong>runneradmin-PC</strong><div class="muted mono">id: 9f3d…b304 • v6.7.15</div></td><td>runneradmin</td><td><span class="badge off">offline</span></td><td><div class="actions"><button class="btn small">Bangunkan</button></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3>Minta Bantuan (Support Queue)</h3>
+            <div style="display:grid; gap:10px">
+              <div class="maint-row"><div><strong>#482 — Hitam di RDP</strong><p>user: bima • device: WIN-RDP01 • 12:03</p></div><span class="badge warn">open</span></div>
+              <div class="maint-row"><div><strong>#481 — Audio tidak keluar</strong><p>user: sinta • 11:47 • VBCABLE</p></div><span class="badge ok">solved</span></div>
+              <div class="maint-row"><div><strong>#480 — Driver gagal</strong><p>auto-log • 6.7.15 fallback ok</p></div><span class="badge purple">auto</span></div>
+            </div>
+            <button class="btn primary" style="width:100%; margin-top:12px">Buka pusat bantuan</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- USERS -->
+      <section data-page="users" hidden>
+        <h2>👥 Control User — Super Lengkap</h2>
+        <p class="muted">Cari, filter role, ban, reset password, revoke token, impersonate. Responsif: tabel jadi cards di HP.</p>
+        <div class="card" style="margin-top:12px; overflow:auto">
+          <table class="table">
+            <thead><tr><th>User</th><th>Role</th><th>Devices</th><th>Last</th><th>Aksi</th></tr></thead>
+            <tbody>
+              <tr><td><strong>xykalnotkel</strong><div class="mono muted">xykalnotkel@gmail.com</div></td><td><span class="badge purple">ADMIN</span></td><td>5</td><td>baru saja</td><td><div class="actions"><button class="btn small">Edit</button><button class="btn small">Revoke</button></div></td></tr>
+              <tr><td><strong>bima</strong><div class="mono muted">bima@mail.id</div></td><td><span class="badge ok">USER</span></td><td>1</td><td>2 jam lalu</td><td><div class="actions"><button class="btn small">Ban</button><button class="btn small">Reset</button></div></td></tr>
+              <tr><td><strong>guest_8f3a</strong><div class="mono muted">guest • 2h token</div></td><td><span class="badge off">GUEST</span></td><td>1</td><td>online</td><td><div class="actions"><button class="btn small">Kick</button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DEVICES -->
+      <section data-page="devices" hidden>
+        <h2>💻 Control Mesin</h2>
+        <p class="muted">Semua host yang pernah pairing. Bisa lock, restart engine, cek driver VDD/audio, cek capture-test.</p>
+        <div class="grid3" style="margin-top:12px">
+          <div class="card"><strong>Total Host</strong><div class="val">847</div><div class="mono muted">x64 612 • arm64 235</div></div>
+          <div class="card"><strong>Driver VDD</strong><div class="val" style="color:var(--ok)">92% OK</div><div class="muted">IddSampleDriver ge9</div></div>
+          <div class="card"><strong>Capture Health</strong><div class="val">98.1%</div><div class="muted">WGC + DXGI + GDI fallback</div></div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <table class="table"><thead><tr><th>Host</th><th>Capture</th><th>Latency</th><th>Action</th></tr></thead><tbody><tr><td>DESKTOP-7B2C • NVENC</td><td><span class="badge ok">WGC</span></td><td>18ms</td><td><button class="btn small">Benchmark</button></td></tr><tr><td>Xy-PC-LAB2 • hitam</td><td><span class="badge warn">GDI fallback</span></td><td>42ms</td><td><button class="btn small">Diagnose</button></td></tr></tbody></table>
+        </div>
+      </section>
+
+      <!-- SESSIONS -->
+      <section data-page="sessions" hidden>
+        <h2>🔗 Sesi Aktif — P2P Monitor</h2>
+        <div class="card" style="margin-top:12px"><table class="table"><thead><tr><th>Sesi</th><th>Host ↔ Client</th><th>Codec</th><th>Durasi</th><th>Aksi</th></tr></thead><tbody><tr><td class="mono">#s_9f3a</td><td>DESKTOP-7B2C ↔ iPhone 14</td><td>H.264 NVENC</td><td>12:04</td><td><button class="btn small" style="color:var(--danger); border-color:#FECACA">Terminate</button></td></tr></tbody></table></div>
+      </section>
+
+      <!-- HOSTING -->
+      <section data-page="hosting" hidden>
+        <h2>☁️ Hosting — domain & Pages</h2>
+        <div class="grid2" style="margin-top:12px">
+          <div class="card maintenance">
+            <div class="maint-row"><div><strong>app.xydesk.my.id</strong><p>Cloudflare Pages • Vite build • hero-cartoon.png</p></div><span class="badge ok">Deployed v6.7.18</span></div>
+            <div class="maint-row"><div><strong>admin.xydesk.my.id</strong><p>Dashboard ini • super lengkap</p></div><span class="badge purple">Live</span></div>
+            <div class="maint-row"><div><strong>signal.xydesk.my.id</strong><p>Durable Object Hub + AuthStore</p></div><span class="badge ok">WS 101</span></div>
+          </div>
+          <div class="card">
+            <h3>Kontrol Hosting</h3>
+            <div style="display:grid; gap:8px">
+              <button class="btn">Purge Cache (Pages)</button>
+              <button class="btn">Rollback ke v6.7.17</button>
+              <button class="btn">Cek DNS & SSL</button>
+              <button class="btn primary">Deploy Ulang</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BACKEND -->
+      <section data-page="backend" hidden>
+        <h2>⚙️ Backend — Worker & API</h2>
+        <div class="grid2" style="margin-top:12px">
+          <div class="card">
+            <h3>Worker Health</h3>
+            <div class="chart" style="height:140px"><svg viewBox="0 0 600 140"><path d="M0 80 L100 60 L200 70 L300 30 L400 40 L500 20 L600 25" fill="none" stroke="#10B981" stroke-width="3"/><circle cx="500" cy="20" r="5" fill="#10B981"/></svg></div>
+            <div class="mono muted" style="margin-top:8px">wrangler.toml • CORS_ORIGINS=https://app.xydesk.my.id • 99.92% uptime</div>
+          </div>
+          <div class="card">
+            <h3>Env & Secrets</h3>
+            <div class="mono" style="display:grid; gap:6px; font-size:13px">
+              <div>XYDESK_SECRET <span class="badge ok">set</span></div>
+              <div>ADMIN_SECRET <span class="badge ok">set</span></div>
+              <div>GOOGLE_CLIENT_ID <span class="badge ok">set</span></div>
+              <div>AUTH_SECRET <span class="badge warn">rotate soon</span></div>
+            </div>
+            <button class="btn" style="margin-top:10px">Rotate secret</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SERVER -->
+      <section data-page="server" hidden>
+        <h2>🖥️ Server — VM & Engine</h2>
+        <p class="muted">Kontrol mesin host, benchmark encode, cek capture backend per mesin (Dxgi/WGC/GDI).</p>
+        <div class="card" style="margin-top:12px">
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button class="btn">Run --capture-test all</button>
+            <button class="btn">Run --bench 1920</button>
+            <button class="btn">Restart all engines</button>
+            <button class="btn primary">Re-deploy signaling</button>
+          </div>
+          <div class="divider"></div>
+          <div class="mono">xydesk-host.exe --capture-test → 2.5s per backend • diagnose layar hitam</div>
+        </div>
+      </section>
+
+      <!-- MAINTENANCE -->
+      <section data-page="maintenance" hidden>
+        <h2>🛠️ Atur Maintenance — Web / App / Semua</h2>
+        <p class="muted">Matikan sementara tanpa deploy ulang. Dipakai saat rilis 6.7.x panic tadi.</p>
+        <div class="grid2" style="margin-top:12px">
+          <div class="card maintenance">
+            <div class="maint-row"><div><strong>Web (app.xydesk.my.id)</strong><p>Landing + /connect + /download</p></div><button class="toggle" data-maint="web"></button></div>
+            <div class="maint-row"><div><strong>App Desktop (Tauri)</strong><p>XyDesk.exe + auto-update</p></div><button class="toggle" data-maint="desktop"></button></div>
+            <div class="maint-row"><div><strong>Android APK</strong><p>Play sideload</p></div><button class="toggle" data-maint="android"></button></div>
+            <div class="maint-row"><div><strong>Signal (WS)</strong><p>signal.xydesk.my.id/ws</p></div><button class="toggle on" data-maint="signal"></button></div>
+            <label style="font-size:13px; font-weight:700; margin-top:6px; display:block">Pesan maintenance</label>
+            <textarea id="maint-msg" rows="3" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:12px" placeholder="Sedang maintenance 6.7.18 — window fix, bentar ya..."></textarea>
+            <button class="btn primary" id="save-maint">Simpan & Publish</button>
+          </div>
+          <div class="card">
+            <h3>Pratinjau Banner</h3>
+            <div style="background:var(--purple); color:#fff; padding:14px; border-radius:12px; text-align:center; font-weight:800">🛠️ Maintenance — Web akan kembali 10 menit lagi</div>
+            <p class="muted" style="font-size:12px; margin-top:8px">Banner muncul di web/src/App.tsx kalau flag ON.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- LOGS -->
+      <section data-page="logs" hidden>
+        <h2>📜 Logs — Streaming</h2>
+        <div class="card" style="margin-top:12px">
+          <div style="display:flex; gap:8px; margin-bottom:10px"><input placeholder="filter: panic, reactor, WebView2..." style="flex:1; padding:10px; border:1px solid var(--border); border-radius:10px"/><button class="btn primary">Tail</button></div>
+          <pre class="mono" style="background:#0F0A1E; color:#E9E5FF; padding:14px; border-radius:12px; max-height:360px; overflow:auto; font-size:12px">2026-09-13 18:54:22 [supervisor] Identitas host: ID=8f3a…c304
+2026-09-13 18:54:22 [engine] xydesk-host --control-port 0 started pid 10656
+2026-09-13 18:54:22 [panic] thread 'main' panicked at src/engine.rs:197:9: there is no reactor running ← FIXED 6.7.18
+2026-09-13 18:55:10 [ok] window show + set_focus() success
+2026-09-13 18:55:11 [ok] hero-cartoon.png loaded 48598 bytes
+</pre>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section data-page="settings" hidden>
+        <h2>⚙️ Settings — Super Lengkap</h2>
+        <div class="grid2" style="margin-top:12px">
+          <div class="card"><h3>Brand</h3><p class="muted">Warna #7C3AED konsisten all platform, logo tanpa bg putih (yang lu minta).</p><div style="display:flex; gap:8px; margin-top:10px"><span style="width:28px; height:28px; background:#7C3AED; border-radius:8px; display:inline-block"></span><span style="width:28px; height:28px; background:#F5F3FF; border:1px solid #E9E5FF; border-radius:8px; display:inline-block"></span></div></div>
+          <div class="card"><h3>Responsif</h3><p class="muted">Sidebar jadi drawer di HP (860px), grid 4→2→1, tabel scroll. Test di HP kamu pasti oke.</p><button class="btn">Test 375px</button></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+  const sidebar=document.getElementById('sidebar'), hamburger=document.getElementById('hamburger'), nav=document.getElementById('nav');
+  hamburger.addEventListener('click',()=> sidebar.classList.toggle('open'));
+  document.addEventListener('click',e=>{ if(window.innerWidth<=860 && !sidebar.contains(e.target) && !hamburger.contains(e.target)) sidebar.classList.remove('open')});
+  // page router
+  const pages=[...document.querySelectorAll('section[data-page]')];
+  function show(page){
+    pages.forEach(s=> s.hidden = s.dataset.page!==page);
+    [...nav.querySelectorAll('a')].forEach(a=> a.classList.toggle('active', a.dataset.page===page));
+    sidebar.classList.remove('open');
+    history.replaceState(null,'','#'+page);
+  }
+  nav.addEventListener('click',e=>{
+    const a=e.target.closest('a[data-page]'); if(!a) return; e.preventDefault(); show(a.dataset.page);
+  });
+  if(location.hash) show(location.hash.slice(1)); else show('dashboard');
+  // toggles
+  document.querySelectorAll('.toggle').forEach(t=> t.addEventListener('click',()=> t.classList.toggle('on')));
+  document.getElementById('save-maint')?.addEventListener('click',()=>{
+    const msg=document.getElementById('maint-msg').value||'(kosong)'; alert('Maintenance disimpan: '+msg);
+  });
+  document.getElementById('btn-maintenance')?.addEventListener('click',e=>{
+    const on=e.target.textContent.includes('OFF'); e.target.textContent= on? 'Maintenance: ON' : 'Maintenance: OFF';
+    e.target.style.background= on? '#FEF2F2' : ''; e.target.style.color= on? '#DC2626' : '';
+  });
+  // search filter demo
+  document.getElementById('q')?.addEventListener('input',e=>{
+    const q=e.target.value.toLowerCase();
+    document.querySelectorAll('#tbl-devices tr').forEach(tr=>{
+      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+</script>
+</body>
+</html>

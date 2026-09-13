@@ -336,49 +336,26 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
   color: var(--text-low);
 }
 
-/* Logo asli mengambang di atas kolam cahaya — tanpa layar tiruan,
-   tanpa angka pura-pura. */
+/* Ilustrasi 2D kartun — ganti animasi orbs, clean & fast */
 .hero-art {
   position: relative;
-  min-height: 460px;
+  min-height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 1000px;
-  transform-style: preserve-3d;
   overflow: visible;
 }
-.hero-glow {
-  position: absolute;
-  width: min(520px, 95%);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgba(167,139,250,0.32) 0%, rgba(139,92,246,0.18) 28%, rgba(124,58,237,0.08) 52%, rgba(124,58,237,0) 72%);
-  filter: blur(2px);
-  animation: hero-glow-morph 9s ease-in-out infinite;
-}
-.hero-logo {
-  width: min(340px, 70%);
-  position: relative;
-  z-index: 3;
-  filter: drop-shadow(0 28px 56px rgba(91,33,182,0.38)) drop-shadow(0 8px 18px rgba(124,58,237,0.22));
-  animation: hero-float 7s ease-in-out infinite;
-  transform: translateZ(20px);
-  will-change: transform;
-}
-@keyframes hero-float {
-  0%, 100% { transform: translateY(0) translateZ(20px) rotateX(2deg) rotateY(-2deg); }
-  50% { transform: translateY(-16px) translateZ(32px) rotateX(-2deg) rotateY(2deg); }
-}
-@keyframes hero-glow-morph {
-  0%, 100% { transform: scale(1) translateZ(0); border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%; }
-  25% { transform: scale(1.06, 0.96) translateZ(0); border-radius: 58% 42% 62% 38% / 38% 62% 42% 58%; }
-  50% { transform: scale(0.96, 1.06) translateZ(0); border-radius: 42% 58% 38% 62% / 62% 38% 58% 42%; }
-  75% { transform: scale(1.04, 0.98) translateZ(0); border-radius: 52% 48% 54% 46% / 46% 54% 48% 52%; }
+.hero-cartoon {
+  width: min(640px, 100%);
+  height: auto;
+  border-radius: 20px;
+  box-shadow: 0 20px 48px rgba(91,33,182,0.18), 0 8px 16px rgba(124,58,237,0.12);
+  object-fit: cover;
+  aspect-ratio: 16/10;
 }
 
 /* Orbs melayang — 3D glossy morphing + motion blur (sesuai NEWS_STYLE.md §11 lock) */
-.hero-orb {
+/* REMOVED hero-orb — ganti ilustrasi */ .hero-orb-old {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
@@ -427,7 +404,7 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; }
 }
 
 /* Kartu melayang motion blur — kata nyata seperti Founder menyampaikan */
-.hero-float-card {
+/* REMOVED hero-float-card */ .hero-float-card-old {
   position: absolute;
   z-index: 4;
   padding: 8px 14px;
@@ -2806,5 +2783,5 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   .hero-orb.orb-1 { width: 96px; height: 96px; }
   .hero-orb.orb-2 { width: 72px; height: 72px; }
   .hero-orb.orb-3 { width: 52px; height: 52px; }
-  .hero-float-card { padding: 6px 10px; font-size: 11px; }
+  /* REMOVED hero-float-card */ .hero-float-card-old { padding: 6px 10px; font-size: 11px; }
 }

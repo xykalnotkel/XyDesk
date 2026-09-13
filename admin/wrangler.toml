@@ -1,0 +1,5 @@
+name = "xydesk-admin"
+type = "javascript"
+compatibility_date = "2026-08-17"
+# Deploy ke admin.xydesk.my.id via Pages
+# npx wrangler pages deploy ./ --project-name=xydesk-admin

@@ -377,14 +377,7 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           </p>
         </div>
         <div className="hero-art" aria-hidden="true">
-          <div className="hero-glow" />
-          <div className="hero-orb orb-1" />
-          <div className="hero-orb orb-2" />
-          <div className="hero-orb orb-3" />
-          <div className="hero-float-card card-1"><span>◧ 1080p60</span></div>
-          <div className="hero-float-card card-2"><span>● LIVE · 24ms</span></div>
-          <div className="hero-float-card card-3"><span>▶ NVENC</span></div>
-          <img className="hero-logo" src="/logo.png" alt="" />
+          <img className="hero-cartoon" src="/hero-cartoon.png" alt="Ilustrasi remote desktop XyDesk — kontrol PC dari HP" width="640" height="360" loading="eager" decoding="async" />
         </div>
       </section>
 
