@@ -153,4 +153,4 @@ export async function fetchMaintenance() {
 }
 
 // Turnstile sitekey — ganti dengan sitekey Cloudflare kamu (dashboard > Turnstile)
-export const TURNSTILE_SITEKEY = import.meta.env.VITE_TURNSTILE_SITEKEY || '1x00000000000000000000AA'
+export const TURNSTILE_SITEKEY = (import.meta as any).env?.VITE_TURNSTILE_SITEKEY || '1x00000000000000000000AA'

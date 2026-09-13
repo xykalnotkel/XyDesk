@@ -292,7 +292,6 @@ function Login({onLogin}:{onLogin:(t:string)=>void}){
   const [turnstileToken,setTurnstileToken]=useState('')
   const [err,setErr]=useState('')
   const [loading,setLoading]=useState(false)
-  const turnstileId=useState(()=> `ts-${Math.random().toString(36).slice(2)}`)[0]
 
   useEffect(()=>{
     if(!window.turnstile) return

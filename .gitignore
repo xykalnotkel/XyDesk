@@ -80,3 +80,6 @@ ios/Runner/GoogleService-Info.plist
 
 # Output build web — CI mengunggahnya sebagai artefak, bukan dari git.
 /web/dist/
+admin/dist
+admin/node_modules
+admin/package-lock.json

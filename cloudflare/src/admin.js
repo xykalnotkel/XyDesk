@@ -2,7 +2,7 @@
 // Konek ke web + apk via Durable Object yang sama
 import { signJwt, verifyJwt, verifyGoogleIdToken } from './auth.js'
 
-const ADMIN_EMAILS = ['xykalnotkel@gmail.com', 'akuntiktok76y@gmail.com']
+const ADMIN_EMAILS = ['xykalnotkel@gmail.com', 'akuntiktok76y@gmail.com', 'xycdigital@gmail.co', 'xycdigital@gmail.com']
 
 function isAdminEmail(email, env) {
   const list = (env.ADMIN_EMAILS || env.ADMIN_EMAIL || '').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean)
