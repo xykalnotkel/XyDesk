@@ -22,6 +22,12 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [6.7.16] - 2026-09-13
+
+> Build 51. Windows Tauri Debug + License English + Adaptive No Box — window log, license EN, adaptive transparan.
+
+Lihat detail di [changelogs/6.7.16.md](changelogs/6.7.16.md).
+
 ## [6.7.15] - 2026-09-13
 
 > Build 50. Tauri Window Fix + Logo Transparan (No White BG) — window pasti show, semua logo transparan identik README.

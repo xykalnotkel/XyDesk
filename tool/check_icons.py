@@ -28,7 +28,7 @@ ICOS = (
     "desktop/src-tauri/icons/tray.ico",
 )
 BG_XML = RES / "values" / "ic_launcher_background.xml"
-BG_COLOR = "#F5F3FF"
+BG_COLOR = "#00000000"
 
 # Ambang dipilih dari celah yang lebar: tile terang lum ~0.76, tile gelap
 # #0D0716 lum ~0.05 (campur siluet putih pun cuma ~0.34).

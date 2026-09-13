@@ -94,7 +94,7 @@ const DEMO_LOGS: LogEntry[] = [
 
 type Page = 'home' | 'connect' | 'news' | 'profile' | 'settings';
 
-/// Lisensi pihak ketiga — data statis, ditampilkan di Pengaturan.
+/// Third-party licenses — static data, shown in Settings.
 const LICENSES: [string, string, string][] = [
   ['Flutter SDK', 'BSD-3-Clause', 'Google'],
   ['Dart SDK', 'BSD-3-Clause', 'Google'],
@@ -105,9 +105,9 @@ const LICENSES: [string, string, string][] = [
   ['Inter', 'SIL OFL 1.1', 'Rasmus Andersson'],
   ['flutter_riverpod', 'MIT', 'Remi Rousselet'],
   ['flutter_webrtc & libwebrtc', 'MIT / BSD-3', 'Flutter WebRTC / Google'],
-  ['OneSignal SDK', 'Ketentuan OneSignal', 'OneSignal'],
-  ['NVENC SDK', 'Lisensi SDK NVIDIA', 'NVIDIA'],
-  ['Cloudflare Workers & D1', 'Layanan', 'Cloudflare'],
+  ['OneSignal SDK', 'OneSignal Terms', 'OneSignal'],
+  ['NVENC SDK', 'NVIDIA SDK License', 'NVIDIA'],
+  ['Cloudflare Workers & D1', 'Service', 'Cloudflare'],
 ];
 
 // Label navigasi seragam bahasa Indonesia (konsisten dengan seluruh produk:
@@ -2012,11 +2012,11 @@ function SettingsPage({
       </section>
 
       <section className="card">
-        <h3>Lisensi &amp; legal</h3>
+        <h3>License & Legal</h3>
         <p className="hint">
-          XyDesk adalah perangkat lunak <strong>proprietary</strong> — bebas dipakai,
-          dilarang di-clone / direkayasa balik tanpa izin tertulis. Seluruh UI/UX
-          dirancang sendiri oleh tim; berikut perangkat lunak pihak ketiga yang dipakai:
+          XyDesk is <strong>proprietary</strong> software — free to use,
+          cloning / reverse engineering without written permission is prohibited. All UI/UX
+          is designed in-house; below are third-party software used:
         </p>
         <div className="kv-grid">
           {LICENSES.map((l) => (
