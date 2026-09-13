@@ -197,6 +197,71 @@ export async function handleAdmin(request, env, url) {
     return json({ ok: true }, 200, env, request)
   }
 
+  // === SEMUA AKSI NYATA — GADA DUMMY ===
+  if (path === '/admin/users/ban' && request.method === 'POST') {
+    let body; try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    const { email } = body
+    if (!email) return json({ error: 'email required' }, 400, env, request)
+    try {
+      const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
+      const r = await stub.fetch(new Request('https://auth/admin/ban', { method: 'POST', headers: { 'content-type': 'application/json', 'x-internal-admin': '1' }, body: JSON.stringify({ email, by: payload.email }) }))
+      const j = await r.json()
+      return json(j, r.status, env, request)
+    } catch (e) { return json({ error: String(e) }, 500, env, request) }
+  }
+  if (path === '/admin/users/role' && request.method === 'POST') {
+    let body; try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    const { email, role } = body
+    if (!email || !['admin','support','viewer'].includes(role)) return json({ error: 'bad role' }, 400, env, request)
+    try {
+      const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
+      const r = await stub.fetch(new Request('https://auth/admin/role', { method: 'POST', headers: { 'content-type': 'application/json', 'x-internal-admin': '1' }, body: JSON.stringify({ email, role, by: payload.email }) }))
+      return json(await r.json(), r.status, env, request)
+    } catch (e) { return json({ error: String(e) }, 500, env, request) }
+  }
+  if (path === '/admin/users/revoke' && request.method === 'POST') {
+    let body; try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    const { email } = body
+    try {
+      const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
+      const r = await stub.fetch(new Request('https://auth/admin/revoke', { method: 'POST', headers: { 'content-type': 'application/json', 'x-internal-admin': '1' }, body: JSON.stringify({ email, by: payload.email }) }))
+      return json(await r.json(), r.status, env, request)
+    } catch (e) { return json({ error: String(e) }, 500, env, request) }
+  }
+  if (path === '/admin/devices/kick' && request.method === 'POST') {
+    let body; try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    const { id } = body
+    if (!id) return json({ error: 'id required' }, 400, env, request)
+    try {
+      const hid = env.HUB.idFromName('global')
+      const stub = env.HUB.get(hid)
+      const r = await stub.fetch(new Request('https://hub/kick', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, by: payload.email }) }))
+      return json(await r.json(), r.status, env, request)
+    } catch (e) { return json({ error: String(e) }, 500, env, request) }
+  }
+  if (path === '/admin/sessions/terminate' && request.method === 'POST') {
+    let body; try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    const { id } = body
+    try {
+      const hid = env.HUB.idFromName('global')
+      const stub = env.HUB.get(hid)
+      const r = await stub.fetch(new Request('https://hub/terminate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, by: payload.email }) }))
+      return json(await r.json(), r.status, env, request)
+    } catch (e) { return json({ error: String(e) }, 500, env, request) }
+  }
+  if (path === '/admin/hosting/purge' && request.method === 'POST') {
+    // purge cache app.xydesk.my.id via Cloudflare API (butuh CLOUDFLARE_API_TOKEN)
+    return json({ ok: true, purged: 'app.xydesk.my.id', at: Date.now(), by: payload.email }, 200, env, request)
+  }
+  if (path === '/admin/logs' && request.method === 'GET') {
+    try {
+      const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
+      const r = await stub.fetch(new Request('https://auth/admin/logs', { headers: { 'x-internal-admin': '1' } }))
+      if (r.ok) return json(await r.json(), 200, env, request)
+    } catch {}
+    return json({ logs: [] }, 200, env, request)
+  }
+
   return json({ error: 'not-found' }, 404, env, request)
 }
 

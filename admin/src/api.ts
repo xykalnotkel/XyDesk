@@ -108,31 +108,52 @@ export async function fetchStats(): Promise<Stats> {
 }
 
 export async function fetchUsers(q?: string): Promise<UserRow[]> {
-  try {
-    const r = await adminFetch(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`)
-    if (r.ok) return (await r.json()) as UserRow[]
-  } catch {}
-  const all: UserRow[] = [
-    { id: 'u1', email: 'xykalnotkel@gmail.com', role: 'admin', devices: 5, lastSeen: 'baru saja', status: 'active' },
-    { id: 'u2', email: 'bima@mail.id', role: 'viewer', devices: 1, lastSeen: '2 jam lalu', status: 'active' },
-    { id: 'u3', email: 'guest_8f3a', role: 'viewer', devices: 1, lastSeen: 'online', status: 'active' },
-  ]
-  if (!q) return all
-  return all.filter(u => u.email.toLowerCase().includes(q.toLowerCase()))
+  const r = await adminFetch(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`)
+  if (!r.ok) throw new Error(await r.text().catch(()=> 'gagal fetch users'))
+  return (await r.json()) as UserRow[]
 }
 
 export async function fetchDevices(q?: string): Promise<DeviceRow[]> {
-  try {
-    const r = await adminFetch(`/admin/devices${q ? `?q=${encodeURIComponent(q)}` : ''}`)
-    if (r.ok) return (await r.json()) as DeviceRow[]
-  } catch {}
-  const all: DeviceRow[] = [
-    { id: '8f3a…c304', name: 'DESKTOP-7B2C', version: '6.8.1', arch: 'x64', user: 'you@example.com', capture: 'WGC', status: 'online', latency: 18 },
-    { id: 'a1b2…9f01', name: 'Xy-PC-LAB2', version: '6.7.15', arch: 'x64', user: 'lab@xydesk.my.id', capture: 'GDI', status: 'idle', latency: 42 },
-    { id: '9f3d…b304', name: 'runneradmin-PC', version: '6.7.15', arch: 'arm64', user: 'runneradmin', capture: 'DXGI', status: 'offline' },
-  ]
-  if (!q) return all
-  return all.filter(d => `${d.name} ${d.id}`.toLowerCase().includes(q.toLowerCase()))
+  const r = await adminFetch(`/admin/devices${q ? `?q=${encodeURIComponent(q)}` : ''}`)
+  if (!r.ok) throw new Error(await r.text().catch(()=> 'gagal fetch devices'))
+  return (await r.json()) as DeviceRow[]
+}
+
+export async function banUser(email: string) {
+  const r = await adminFetch('/admin/users/ban', { method: 'POST', body: JSON.stringify({ email }) })
+  if (!r.ok) throw new Error(await r.text())
+  return await r.json()
+}
+export async function setUserRole(email: string, role: AdminRole) {
+  const r = await adminFetch('/admin/users/role', { method: 'POST', body: JSON.stringify({ email, role }) })
+  if (!r.ok) throw new Error(await r.text())
+  return await r.json()
+}
+export async function revokeUser(email: string) {
+  const r = await adminFetch('/admin/users/revoke', { method: 'POST', body: JSON.stringify({ email }) })
+  if (!r.ok) throw new Error(await r.text())
+  return await r.json()
+}
+export async function kickDevice(id: string) {
+  const r = await adminFetch('/admin/devices/kick', { method: 'POST', body: JSON.stringify({ id }) })
+  if (!r.ok) throw new Error(await r.text())
+  return await r.json()
+}
+export async function terminateSession(id: string) {
+  const r = await adminFetch('/admin/sessions/terminate', { method: 'POST', body: JSON.stringify({ id }) })
+  if (!r.ok) throw new Error(await r.text())
+  return await r.json()
+}
+export async function purgeHosting() {
+  const r = await adminFetch('/admin/hosting/purge', { method: 'POST', body: JSON.stringify({}) })
+  if (!r.ok) throw new Error(await r.text())
+  return await r.json()
+}
+export async function fetchLogs(): Promise<{key:string, action:string, email?:string, id?:string, at:number, by:string}[]> {
+  const r = await adminFetch('/admin/logs')
+  if (!r.ok) return []
+  const j = await r.json()
+  return (j.logs || []) as any
 }
 
 export async function setMaintenance(service: 'web'|'desktop'|'android'|'signal', enabled: boolean, message: string) {
@@ -145,11 +166,9 @@ export async function setMaintenance(service: 'web'|'desktop'|'android'|'signal'
 }
 
 export async function fetchMaintenance() {
-  try {
-    const r = await adminFetch('/admin/maintenance')
-    if (r.ok) return await r.json()
-  } catch {}
-  return { web:false, desktop:false, android:false, signal:true, message:'' }
+  const r = await adminFetch('/admin/maintenance')
+  if (!r.ok) return { web:false, desktop:false, android:false, signal:false, message:'' }
+  return await r.json()
 }
 
 // Turnstile sitekey — ganti dengan sitekey Cloudflare kamu (dashboard > Turnstile)

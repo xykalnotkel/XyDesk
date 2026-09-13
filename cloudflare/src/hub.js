@@ -105,6 +105,19 @@ export class Hub {
         }).filter(Boolean);
         return new Response(JSON.stringify(devices), { headers: { 'content-type': 'application/json' } });
       }
+      if ((url.pathname === '/kick' || url.pathname === '/terminate') && request.method === 'POST') {
+        let body; try { body = await request.json(); } catch { return new Response(JSON.stringify({ error: 'bad-json' }), { status: 400, headers: { 'content-type': 'application/json' } }); }
+        const id = body.id || body.deviceId || '';
+        if (!id) return new Response(JSON.stringify({ error: 'id required' }), { status: 400, headers: { 'content-type': 'application/json' } });
+        const target = this.sockets().find(ws => {
+          try { const a = ws.deserializeAttachment(); return a && a.id === id; } catch { return false; }
+        });
+        if (!target) return new Response(JSON.stringify({ error: 'not-online', id }), { status: 404, headers: { 'content-type': 'application/json' } });
+        try { target.close(1000, 'kicked by admin ' + (body.by || '')); } catch {}
+        // log admin action
+        await this.ctx.storage.put(`admin:log:${Date.now()}:${id}`, { action: url.pathname.slice(1), id, by: body.by || 'admin', at: Date.now() });
+        return new Response(JSON.stringify({ ok: true, kicked: id }), { headers: { 'content-type': 'application/json' } });
+      }
       return new Response('not found', { status: 404 });
     }
     const pair = new WebSocketPair();

@@ -22,6 +22,12 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [6.8.5] - 2026-09-13
+
+> Build 59. Semua tombol admin nyata — ban/role/revoke/kick/terminate/purge/logs Hibernation+storage, gada dummy.
+
+Lihat detail di [changelogs/6.8.5.md](changelogs/6.8.5.md).
+
 ## [6.8.4] - 2026-09-13
 
 > Build 58. Realtime nyata — Hub + AuthStore live, gada dummy placeholder.

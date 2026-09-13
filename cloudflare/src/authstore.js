@@ -131,13 +131,56 @@ export class AuthStore {
     if (path === '/admin/maintenance' && request.headers.get('x-internal-admin') === '1') {
       if (request.method === 'GET') {
         const stored = await this.ctx.storage.get('admin:maintenance');
-        return json(stored || { web:false, desktop:false, android:false, signal:true, message:'' }, 200);
+        return json(stored || { web:false, desktop:false, android:false, signal:false, message:'' }, 200);
       }
       if (request.method === 'POST') {
         let body; try { body = await request.json(); } catch { return json({ error: 'bad-json' }, 400); }
         await this.ctx.storage.put('admin:maintenance', body);
         return json({ ok: true }, 200);
       }
+    }
+    if (path === '/admin/ban' && request.headers.get('x-internal-admin') === '1' && request.method === 'POST') {
+      let body; try { body = await request.json(); } catch { return json({ error: 'bad-json' }, 400); }
+      const email = String(body.email||'').toLowerCase();
+      if (!email) return json({ error: 'email required' }, 400);
+      const user = await this.ctx.storage.get(`user:${email}`);
+      if (!user) return json({ error: 'user not found' }, 404);
+      user.banned = true;
+      user.banned_at = Date.now();
+      user.banned_by = body.by || 'admin';
+      await this.ctx.storage.put(`user:${email}`, user);
+      await this.ctx.storage.put(`admin:log:${Date.now()}:ban:${email}`, { action: 'ban', email, by: body.by || 'admin', at: Date.now() });
+      return json({ ok: true, banned: email }, 200);
+    }
+    if (path === '/admin/role' && request.headers.get('x-internal-admin') === '1' && request.method === 'POST') {
+      let body; try { body = await request.json(); } catch { return json({ error: 'bad-json' }, 400); }
+      const email = String(body.email||'').toLowerCase();
+      const role = body.role;
+      if (!['admin','support','viewer'].includes(role)) return json({ error: 'bad role' }, 400);
+      const user = await this.ctx.storage.get(`user:${email}`);
+      if (!user) return json({ error: 'user not found' }, 404);
+      user.role = role;
+      await this.ctx.storage.put(`user:${email}`, user);
+      await this.ctx.storage.put(`admin:log:${Date.now()}:role:${email}`, { action: 'role', email, role, by: body.by || 'admin', at: Date.now() });
+      return json({ ok: true, email, role }, 200);
+    }
+    if (path === '/admin/revoke' && request.headers.get('x-internal-admin') === '1' && request.method === 'POST') {
+      let body; try { body = await request.json(); } catch { return json({ error: 'bad-json' }, 400); }
+      const email = String(body.email||'').toLowerCase();
+      const user = await this.ctx.storage.get(`user:${email}`);
+      if (!user) return json({ error: 'user not found' }, 404);
+      // revoke = hapus semua otp/session? untuk sekarang reset token dengan bump versi
+      user.token_version = (user.token_version||0)+1;
+      await this.ctx.storage.put(`user:${email}`, user);
+      await this.ctx.storage.put(`admin:log:${Date.now()}:revoke:${email}`, { action: 'revoke', email, by: body.by || 'admin', at: Date.now() });
+      return json({ ok: true, revoked: email }, 200);
+    }
+    if (path === '/admin/logs' && request.headers.get('x-internal-admin') === '1' && request.method === 'GET') {
+      const map = await this.ctx.storage.list({ prefix: 'admin:log:' });
+      const logs = [];
+      for (const [k,v] of map) logs.push({ key: k, ...v });
+      logs.sort((a,b)=> (b.at||0)-(a.at||0));
+      return json({ logs: logs.slice(0,100) }, 200);
     }
     return json({ error: 'not-found' }, 404);
   }
