@@ -1,6 +1,8 @@
 // Matikan jendela konsol cmd di Windows release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::io::Write;
+
 fn main() {
     // Log startup for debugging Windows launch issues (since Tauri window hidden)
     if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(std::env::temp_dir().join("xydesk-main.log")) {
