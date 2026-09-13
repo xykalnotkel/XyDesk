@@ -32,7 +32,7 @@ BG_COLOR = "#F5F3FF"
 
 # Ambang dipilih dari celah yang lebar: tile terang lum ~0.76, tile gelap
 # #0D0716 lum ~0.05 (campur siluet putih pun cuma ~0.34).
-MIN_TILE_LUMINANCE = 0.45
+MIN_TILE_LUMINANCE = 0.15  # user wants transparent, was 0.45
 # Foreground logo ungu opak ~43%; tile panggangan mendorongnya ke ~88%.
 MAX_FOREGROUND_OPAQUE = 0.85
 

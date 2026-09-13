@@ -22,6 +22,12 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [6.7.15] - 2026-09-13
+
+> Build 50. Tauri Window Fix + Logo Transparan (No White BG) — window pasti show, semua logo transparan identik README.
+
+Lihat detail di [changelogs/6.7.15.md](changelogs/6.7.15.md).
+
 ## [6.7.14] - 2026-09-11
 
 > Build 49. Driver Offline Bundle + 1-Klik Auto-Download (No Manual) — fix hitam tapi konek tanpa PowerShell manual.

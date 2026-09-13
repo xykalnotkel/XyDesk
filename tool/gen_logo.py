@@ -249,7 +249,7 @@ def save_ico(path: Path, sizes: list[int] = [16, 32, 48, 64, 128, 256]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     # Semua ICO sekarang dari design/logo-asli.png (README) — konsisten, transparan, no tile
     largest = max(sizes)
-    base = _from_design_tile(largest)
+    base = _from_design(largest)
     # Pillow akan resize otomatis dari base ke setiap ukuran di `sizes`
     base.save(
         path,
@@ -289,7 +289,7 @@ def main() -> None:
         base.mkdir(parents=True, exist_ok=True)
         # Legacy & adaptive SEMUA dari design/logo-asli.png (README) — konsisten
         # Legacy icon (Android < 8.0) dulu pakai tile, sekarang transparan dari design agar sama README
-        _from_design_tile(legacy, fill=0.82).save(base / "ic_launcher.png")
+        _from_design(legacy, fill=0.82).save(base / "ic_launcher.png")
         _from_design(foreground, fill=0.88).save(
             base / "ic_launcher_foreground.png"
         )

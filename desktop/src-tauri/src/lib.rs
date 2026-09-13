@@ -27,6 +27,17 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle();
             let _ = tray::setup_tray(handle);
+            // Pastikan window utama nampak (fix Tauri pindah: window kadang hidden)
+            if let Some(win) = handle.get_webview_window("main") {
+                let _ = win.show();
+                let _ = win.set_focus();
+                // Log untuk diagnosa: tulis ke file temp kalau gagal
+                if let Err(e) = win.show() {
+                    eprintln!("[XyDesk] gagal show window: {e}");
+                }
+            } else {
+                eprintln!("[XyDesk] window 'main' tidak ditemukan di setup");
+            }
             Ok(())
         })
         .on_window_event(|window, event| {
