@@ -194,7 +194,7 @@ impl EngineSupervisor {
         let client = self.http_client.clone();
         let stop_tx = self.stop_tx.clone();
 
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             let (tx, mut rx) = tokio::sync::oneshot::channel::<()>();
             {
                 let mut guard = stop_tx.lock().await;
@@ -302,7 +302,7 @@ impl EngineSupervisor {
 
                 let state_clone = state.clone();
                 if let Some(out) = stdout {
-                    tokio::spawn(async move {
+                    tauri::async_runtime::spawn(async move {
                         let mut reader = BufReader::new(out).lines();
                         while let Ok(Some(line)) = reader.next_line().await {
                             if line.starts_with("[control]") {
@@ -327,7 +327,7 @@ impl EngineSupervisor {
 
                 let state_err = state.clone();
                 if let Some(err) = stderr {
-                    tokio::spawn(async move {
+                    tauri::async_runtime::spawn(async move {
                         let mut reader = BufReader::new(err).lines();
                         while let Ok(Some(line)) = reader.next_line().await {
                             Self::add_log(&state_err, line);

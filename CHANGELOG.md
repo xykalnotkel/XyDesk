@@ -22,6 +22,12 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [6.7.18] - 2026-09-13
+
+> Build 53. CRITICAL — Fix panic no reactor running, window gagal kebuka. `tokio::spawn` → `tauri::async_runtime::spawn` + `start()` di `setup`.
+
+Lihat detail di [changelogs/6.7.18.md](changelogs/6.7.18.md).
+
 ## [6.7.17] - 2026-09-13
 
 > Build 52. Fix Build Desktop writeln — `writeln!` macro, bukan trait. PowerShell quote fix.

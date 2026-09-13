@@ -12,8 +12,6 @@ use tauri::{Manager, WindowEvent};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let engine_supervisor = Arc::new(EngineSupervisor::new());
-    engine_supervisor.start();
-
     let auth_manager = Arc::new(AuthManager::new());
 
     tauri::Builder::default()
@@ -22,9 +20,11 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--minimized"]),
         ))
-        .manage(engine_supervisor)
+        .manage(engine_supervisor.clone())
         .manage(auth_manager)
-        .setup(|app| {
+        .setup(move |app| {
+            // Start engine supervisor inside Tauri runtime (fix panic: no reactor running)
+            engine_supervisor.start();
             let handle = app.handle();
             let _ = tray::setup_tray(handle);
             // Pastikan window utama nampak (fix Tauri pindah: window kadang hidden)
