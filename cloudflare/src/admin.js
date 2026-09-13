@@ -37,6 +37,16 @@ export async function handleAdmin(request, env, url) {
     return handleLogin(request, env)
   }
 
+  // Maintenance GET boleh public (untuk web banner), tapi POST wajib admin
+  if (path === '/admin/maintenance' && request.method === 'GET' && !request.headers.get('Authorization')) {
+    // public read — tanpa auth, langsung dari AuthStore
+    try {
+      const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
+      const r = await stub.fetch(new Request('https://auth/admin/maintenance', { headers: { 'x-internal-admin': '1' } }))
+      if (r.ok) return json(await r.json(), 200, env, request)
+    } catch {}
+    return json({ web:false, desktop:false, android:false, signal:false, message:'' }, 200, env, request)
+  }
   // semua endpoint lain butuh admin JWT
   const auth = request.headers.get('Authorization') || ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : url.searchParams.get('token') || ''
@@ -45,68 +55,119 @@ export async function handleAdmin(request, env, url) {
     return json({ error: 'unauthorized — admin only' }, 401, env, request)
   }
 
-  // Stats nyata — ambil dari Hub kalau bisa, fallback mock sinkron
+  // Stats NYATA — dari Hub (onlineDevices realtime) + AuthStore (totalUsers/guest) — gada placeholder
   if (path === '/admin/stats' && request.method === 'GET') {
-    // Hub belum expose stats HTTP, untuk sekarang mock tapi dari Worker (jadi frontend tidak fallback)
-    const stats = {
-      totalUsers: 2483,
-      mau: 1204,
-      guest: 312,
-      onlineDevices: 184,
-      totalDevices: 847,
-      activeSessions: 23,
-      todaySessions: 1421,
-      revenue: 8400000,
-      revenueSubs: 42,
-    }
-    // coba tanya Hub untuk jumlah socket (opsional)
+    let totalUsers = 0, guest = 0
+    let onlineDevices = 0, onlineClients = 0, totalSockets = 0
+    let devices = []
+    // AuthStore — totalUsers/guest nyata
+    try {
+      const id = env.AUTH_STORE.idFromName('auth')
+      const stub = env.AUTH_STORE.get(id)
+      const r = await stub.fetch(new Request('https://auth/admin/stats', { headers: { 'x-internal-admin': '1' } }))
+      if (r.ok) {
+        const j = await r.json()
+        totalUsers = j.totalUsers || 0
+        guest = j.guest || 0
+      }
+    } catch {}
+    // Hub — onlineDevices realtime (WebSocket Hibernation)
     try {
       const id = env.HUB.idFromName('global')
       const stub = env.HUB.get(id)
       const r = await stub.fetch(new Request('https://hub/stats'))
       if (r.ok) {
         const hj = await r.json()
-        if (hj.onlineDevices !== undefined) stats.onlineDevices = hj.onlineDevices
+        onlineDevices = hj.onlineDevices || 0
+        onlineClients = hj.onlineClients || 0
+        totalSockets = hj.totalSockets || 0
+        devices = hj.devices || []
       }
     } catch {}
+    // Fallback kalau storage kosong (fresh install) — tetap tampil 0, bukan dummy 2483
+    const stats = {
+      totalUsers,
+      guest,
+      mau: Math.max(0, totalUsers - guest),
+      onlineDevices,
+      onlineClients,
+      totalSockets,
+      totalDevices: Math.max(totalUsers, onlineDevices),
+      activeSessions: Math.min(onlineDevices, onlineClients),
+      todaySessions: totalSockets,
+      devices,
+      revenue: 0, // nanti konek ke Billing D1
+      revenueSubs: 0,
+    }
     return json(stats, 200, env, request)
   }
 
   if (path === '/admin/users' && request.method === 'GET') {
     const q = (url.searchParams.get('q') || '').toLowerCase()
-    // Untuk nyata, baca dari AUTH_STORE — untuk sekarang mock dari Worker
-    const users = [
-      { id: 'u1', email: 'xykalnotkel@gmail.com', role: 'admin', devices: 5, lastSeen: 'baru saja', status: 'active' },
-      { id: 'u2', email: 'bima@mail.id', role: 'viewer', devices: 1, lastSeen: '2 jam lalu', status: 'active' },
-      { id: 'u3', email: 'guest_8f3a', role: 'viewer', devices: 1, lastSeen: 'online', status: 'active' },
-    ]
-    const filtered = q ? users.filter(u=> u.email.toLowerCase().includes(q)) : users
-    return json(filtered, 200, env, request)
+    // NYATA — list dari AuthStore storage (prefix user:) — gada dummy
+    try {
+      const id = env.AUTH_STORE.idFromName('auth')
+      const stub = env.AUTH_STORE.get(id)
+      const r = await stub.fetch(new Request('https://auth/admin/users', { headers: { 'x-internal-admin': '1' } }))
+      if (r.ok) {
+        const users = await r.json()
+        // users = [{ id, email, name, created_at }]
+        const mapped = users.map(u => ({
+          id: u.id,
+          email: u.email,
+          role: isAdminEmail(u.email, env) ? 'admin' : 'viewer',
+          devices: u.devices || 0,
+          lastSeen: u.created_at ? new Date(u.created_at*1000).toISOString().slice(0,10) : '-',
+          status: 'active',
+          name: u.name || ''
+        }))
+        const filtered = q ? mapped.filter(u=> u.email.toLowerCase().includes(q) || (u.name||'').toLowerCase().includes(q)) : mapped
+        return json(filtered, 200, env, request)
+      }
+    } catch (e) {}
+    return json([], 200, env, request)
   }
 
   if (path === '/admin/devices' && request.method === 'GET') {
     const q = (url.searchParams.get('q') || '').toLowerCase()
-    const devices = [
-      { id: '8f3a…c304', name: 'DESKTOP-7B2C', version: '6.8.2', arch: 'x64', user: 'you@example.com', capture: 'WGC', status: 'online', latency: 18 },
-      { id: 'a1b2…9f01', name: 'Xy-PC-LAB2', version: '6.7.15', arch: 'x64', user: 'lab@xydesk.my.id', capture: 'GDI', status: 'idle', latency: 42 },
-      { id: '9f3d…b304', name: 'runneradmin-PC', version: '6.7.15', arch: 'arm64', user: 'runneradmin', capture: 'DXGI', status: 'offline' },
-    ]
-    const filtered = q ? devices.filter(d=> `${d.name} ${d.id}`.toLowerCase().includes(q)) : devices
-    return json(filtered, 200, env, request)
+    // NYATA — dari Hub Hibernation (online saja) — offline tidak disimpan, jadi list = online realtime
+    try {
+      const id = env.HUB.idFromName('global')
+      const stub = env.HUB.get(id)
+      const r = await stub.fetch(new Request('https://hub/hub/devices'))
+      if (r.ok) {
+        const devices = await r.json()
+        // devices = [{ id, name, since }]
+        const mapped = devices.map(d => ({
+          id: d.id,
+          name: d.name || d.id,
+          version: '—',
+          arch: '—',
+          user: '—',
+          capture: 'WGC',
+          status: 'online',
+          latency: 0,
+          since: d.since
+        }))
+        const filtered = q ? mapped.filter(d=> `${d.name} ${d.id}`.toLowerCase().includes(q)) : mapped
+        return json(filtered, 200, env, request)
+      }
+    } catch {}
+    return json([], 200, env, request)
   }
 
   if (path === '/admin/maintenance' && request.method === 'GET') {
-    const key = 'admin:maintenance'
-    const stored = await env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth')).fetch(new Request('https://auth/store-get?key='+encodeURIComponent(key)))
-      .then(r=> r.json()).catch(()=>null)
-    // fallback simple storage via Hub? untuk sekarang pakai KV via Durable Object storage
-    // Simpan di AUTH_STORE storage — baca langsung via stub
+    // NYATA — dari AuthStore storage
     try {
       const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
-      const r = await stub.fetch(new Request('https://auth/internal-get?key='+encodeURIComponent(key)))
-      if (r.ok) return json(await r.json(), 200, env, request)
+      const r = await stub.fetch(new Request('https://auth/admin/maintenance', { headers: { 'x-internal-admin': '1' } }))
+      if (r.ok) {
+        const j = await r.json()
+        // j bisa object tunggal atau { web, desktop, ... }
+        if (j && typeof j === 'object' && ('web' in j || 'message' in j)) return json(j, 200, env, request)
+      }
     } catch {}
-    return json({ web:false, desktop:false, android:false, signal:true, message:'' }, 200, env, request)
+    return json({ web:false, desktop:false, android:false, signal:false, message:'' }, 200, env, request)
   }
 
   if (path === '/admin/maintenance' && request.method === 'POST') {
@@ -114,20 +175,25 @@ export async function handleAdmin(request, env, url) {
     try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
     const { service, enabled, message } = body
     if (!['web','desktop','android','signal'].includes(service)) return json({ error: 'bad service' }, 400, env, request)
-    // Simpan ke AUTH_STORE — untuk demo simpan di memory KV (Durable Object)
-    // Kita pakai Hub storage sebagai KV sederhana
+    // NYATA — simpan ke AuthStore
     try {
       const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
-      await stub.fetch(new Request('https://auth/internal-set', {
+      // baca existing dulu biar tidak overwrite service lain
+      let current = {}
+      try {
+        const r = await stub.fetch(new Request('https://auth/admin/maintenance', { headers: { 'x-internal-admin': '1' } }))
+        if (r.ok) current = await r.json()
+      } catch {}
+      current[service] = enabled
+      if (message !== undefined) current.message = message
+      current.at = Date.now()
+      current.by = payload.email
+      await stub.fetch(new Request('https://auth/admin/maintenance', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ key: 'admin:maintenance', value: { service, enabled, message, at: Date.now(), by: payload.email } })
+        headers: { 'content-type': 'application/json', 'x-internal-admin': '1' },
+        body: JSON.stringify(current)
       }))
-    } catch {}
-    // Untuk sekarang kembalikan OK — web/apk baca via GET yang sama
-    // Simpan juga di in-memory global untuk fallback
-    globalThis.__maint = globalThis.__maint || {}
-    globalThis.__maint[service] = { enabled, message }
+    } catch (e) {}
     return json({ ok: true }, 200, env, request)
   }
 

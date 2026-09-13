@@ -79,6 +79,34 @@ export class Hub {
   // Upgrade WebSocket dari Worker. Attachment menyimpan metadata per koneksi
   // yang bertahan melewati hibernasi (jadi tak butuh Map yang mudah hilang).
   async fetch(request) {
+    const url = new URL(request.url);
+    // HTTP admin query (bukan WebSocket) — untuk dashboard realtime nyata
+    if (request.headers.get('Upgrade') !== 'websocket') {
+      if (url.pathname === '/stats' || url.pathname === '/hub/stats') {
+        const all = this.sockets();
+        const hosts = all.filter(ws => {
+          try { const a = ws.deserializeAttachment(); return a && a.registered && a.role === 'host'; } catch { return false; }
+        });
+        const clients = all.filter(ws => {
+          try { const a = ws.deserializeAttachment(); return a && a.registered && a.role !== 'host'; } catch { return false; }
+        });
+        const devices = hosts.map(ws => {
+          try { const a = ws.deserializeAttachment(); return { id: a.id, name: a.name, since: a.since, ip: a.ip ? '***' : '' }; } catch { return null; }
+        }).filter(Boolean);
+        return new Response(JSON.stringify({ onlineDevices: hosts.length, onlineClients: clients.length, totalSockets: all.length, devices }), { headers: { 'content-type': 'application/json' } });
+      }
+      if (url.pathname === '/hub/devices') {
+        const all = this.sockets();
+        const hosts = all.filter(ws => {
+          try { const a = ws.deserializeAttachment(); return a && a.registered && a.role === 'host'; } catch { return false; }
+        });
+        const devices = hosts.map(ws => {
+          try { const a = ws.deserializeAttachment(); return { id: a.id, name: a.name, since: a.since }; } catch { return null; }
+        }).filter(Boolean);
+        return new Response(JSON.stringify(devices), { headers: { 'content-type': 'application/json' } });
+      }
+      return new Response('not found', { status: 404 });
+    }
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
 

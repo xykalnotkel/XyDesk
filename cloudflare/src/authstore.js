@@ -103,6 +103,42 @@ export class AuthStore {
     if (path === '/auth/delete' && request.method === 'POST') {
       return this.deleteAccount(request);
     }
+    // Admin internal — list users nyata (dipanggil dari admin.js via stub.fetch)
+    if (path === '/admin/users' && request.headers.get('x-internal-admin') === '1') {
+      const map = await this.ctx.storage.list({ prefix: 'user:' });
+      const users = [];
+      for (const [key, val] of map) {
+        // val = { email, name, created_at, ... }
+        if (!val || !val.email) continue;
+        const email = String(val.email).toLowerCase();
+        // hitung devices per user? untuk sekarang 0, nanti join dari Hub
+        users.push({ id: key.slice(5), email: val.email, name: val.name || '', created_at: val.created_at || 0, devices: 0, status: 'active' });
+      }
+      // sort terbaru dulu
+      users.sort((a,b)=> (b.created_at||0)-(a.created_at||0));
+      return json(users, 200);
+    }
+    if (path === '/admin/stats' && request.headers.get('x-internal-admin') === '1') {
+      const map = await this.ctx.storage.list({ prefix: 'user:' });
+      let totalUsers = 0;
+      let guest = 0;
+      for (const [k,v] of map) {
+        totalUsers++;
+        if (String(v.email||'').startsWith('guest_')) guest++;
+      }
+      return json({ totalUsers, guest }, 200);
+    }
+    if (path === '/admin/maintenance' && request.headers.get('x-internal-admin') === '1') {
+      if (request.method === 'GET') {
+        const stored = await this.ctx.storage.get('admin:maintenance');
+        return json(stored || { web:false, desktop:false, android:false, signal:true, message:'' }, 200);
+      }
+      if (request.method === 'POST') {
+        let body; try { body = await request.json(); } catch { return json({ error: 'bad-json' }, 400); }
+        await this.ctx.storage.put('admin:maintenance', body);
+        return json({ ok: true }, 200);
+      }
+    }
     return json({ error: 'not-found' }, 404);
   }
 
