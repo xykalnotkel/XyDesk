@@ -1,5 +1,12 @@
 name = "xydesk-admin"
-type = "javascript"
+main = "./worker.js"
 compatibility_date = "2026-08-17"
-# Deploy ke admin.xydesk.my.id via Pages
-# npx wrangler pages deploy ./ --project-name=xydesk-admin
+
+routes = [
+  { pattern = "admin.xydesk.my.id", custom_domain = true }
+]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
