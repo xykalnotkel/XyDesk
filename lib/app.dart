@@ -624,8 +624,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
-/// Tombol Billing di topbar — memakai aksen ungu glossy selaras logo X
-/// dan ikon Lucide sparkles yang tajam.
+/// Tombol Billing di topbar — aset 3D glossy "Sewa PC" yang dirender
+/// konsisten di semua density (bukan glyph kode yang berbeda-beda hasil
+/// generate), dengan fallback glyph bila aset gagal dimuat.
 class _BillingIconButton extends StatelessWidget {
   const _BillingIconButton({required this.onPressed});
 
@@ -636,29 +637,33 @@ class _BillingIconButton extends StatelessWidget {
     return IconButton(
       tooltip: 'Sewa PC',
       onPressed: onPressed,
-      icon: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED), Color(0xFF5B21B6)],
-          ),
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.25),
-            width: 0.8,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF26125C).withValues(alpha: 0.18),
-              offset: const Offset(0, 2),
-              blurRadius: 6,
+      icon: SizedBox(
+        width: 26,
+        height: 26,
+        child: Image.asset(
+          'assets/img/nav/billing.png',
+          fit: BoxFit.contain,
+          semanticLabel: 'Sewa PC',
+          errorBuilder: (_, __, ___) => Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF8B5CF6),
+                  Color(0xFF7C3AED),
+                  Color(0xFF5B21B6),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(9),
             ),
-          ],
+            child: const Icon(
+              LucideIcons.sparkles,
+              size: 15,
+              color: Colors.white,
+            ),
+          ),
         ),
-        child: const Icon(LucideIcons.sparkles, size: 16, color: Colors.white),
       ),
     );
   }

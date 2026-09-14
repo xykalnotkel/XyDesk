@@ -23,6 +23,7 @@ import 'permissions_page.dart';
 import 'subscription_page.dart';
 import '../../core/display_control.dart';
 import '../../core/haptics.dart';
+import '../../webrtc/session_transport.dart';
 
 /// Ringkasan akun. Pengaturan tidak lagi ditumpuk di halaman profil; setiap
 /// kategori membuka layar fokusnya sendiri agar lebih mudah dipindai.
@@ -73,6 +74,12 @@ class AccountPage extends ConsumerWidget {
           subtitle: 'Kualitas gambar, suara, dan cara mengontrol',
           icon: LucideIcons.monitorCog,
           onTap: () => _open(context, const StreamingSettingsPage()),
+        ),
+        _CategoryRow(
+          title: 'Server & koneksi',
+          subtitle: 'Endpoint signaling & relay sesi remote',
+          icon: LucideIcons.server,
+          onTap: () => _open(context, const ServerSettingsPage()),
         ),
         _CategoryRow(
           title: 'Notifikasi',
@@ -359,6 +366,64 @@ class SystemSettingsPage extends ConsumerWidget {
           icon: LucideIcons.rotateCcw,
           trailing: _chevron(context),
           onTap: () => _confirmReset(context, ref),
+        ),
+      ],
+    );
+  }
+}
+
+/// Endpoint yang benar-benar dipakai sesi remote, dibaca dari satu sumber
+/// (`SignalingConfig`), plus catatan jujur soal gerbang resmi — supaya
+/// pertanyaan "servernya yang mana?" terjawab dari dalam aplikasi.
+class ServerSettingsPage extends StatelessWidget {
+  const ServerSettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    const ws = SignalingConfig.wsUrl;
+    final uri = Uri.tryParse(ws);
+    final httpBase = uri == null
+        ? ws
+        : '${uri.scheme == 'wss' ? 'https' : 'http'}://${uri.host}'
+              '${uri.hasPort ? ':${uri.port}' : ''}';
+
+    return _SettingsScaffold(
+      title: 'Server & koneksi',
+      description: 'Endpoint signaling, API, dan relay untuk sesi remote.',
+      children: [
+        const SectionLabel('Endpoint aktif', top: 0),
+        const ListRow(
+          title: 'Signaling (WebSocket)',
+          subtitle: ws,
+          icon: LucideIcons.radio,
+        ),
+        ListRow(
+          title: 'API & token (HTTPS)',
+          subtitle: httpBase,
+          icon: LucideIcons.globe,
+        ),
+        const ListRow(
+          title: 'TURN / relay',
+          subtitle: 'Diambil otomatis dari server bila dikonfigurasi',
+          icon: LucideIcons.network,
+        ),
+        const SectionLabel('Catatan'),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: c.raised,
+            borderRadius: BorderRadius.circular(R.md),
+          ),
+          child: Text(
+            'Sesi remote memakai satu gerbang resmi di '
+            'signal.xydesk.my.id — API HTTPS dan WebSocket pada host yang '
+            'sama. Subdomain terpisah (mis. p2p.xydesk.my.id atau '
+            'wss.xydesk.my.id) belum diaktifkan; bila nanti diaktifkan, '
+            'endpoint di atas diganti saat build lewat '
+            '--dart-define XYDESK_SIGNALING_URL tanpa mengubah kode.',
+            style: TextStyle(color: c.textMid, fontSize: 12.5, height: 1.55),
+          ),
         ),
       ],
     );

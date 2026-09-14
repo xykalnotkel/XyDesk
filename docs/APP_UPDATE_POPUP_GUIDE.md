@@ -43,26 +43,35 @@
 
 ## 2. Standar Desain Visual Banner Pembaruan (AI Generated)
 
-Setiap pembaruan resmi XyDesk menggunakan modal popup visual murni (**Pure Image + Tombol X di Pojok**) dengan orientasi tinggi (**Portrait 3:4**).
+Setiap pembaruan resmi XyDesk menampilkan kartu popup: **banner visual 4:3
+di atas + isi terstruktur di bawah** (chip versi, judul, pesan singkat, aksi
+"Nanti" / "Perbarui Sekarang") + tombol X melayang di pojok. Desain
+"pure image 3:4 tanpa teks UI" dipakai sampai 13 Sep 2026 dan **dipensiunkan
+14 Sep 2026 atas umpan balik operator**: popup yang hanya gambar + tombol X
+tidak memberi konteks versi maupun jalan aksi yang jelas; aset lamanya
+(`update_popup_banner.jpg`) bahkan tidak pernah masuk git sehingga dialog
+jatuh ke fallback kosong.
 
-### A. Karakteristik Utama Banner
-1. **Rasio Aspek & Orientasi**: **Portrait 3:4** (Tinggi/Vertikal, misal $900 \times 1200$ atau $1080 \times 1440$).
-2. **Struktur Popup Modal**:
-   - **Pure Image**: Modal menampilkan banner visual penuh tanpa kotak teks atau tombol duplikat di bawahnya.
-   - **Tipografi 3D di Dalam Gambar**: Teks sudah tertanam langsung di gambar dengan kontras tinggi dan jelas: *"NEW UPDATE AVAILABLE"*, *"TAP TO UPDATE NOW"*, dan logo mark *"X XyDesk Next-Gen Engine"*.
-   - **Tombol X di Pojok**: Tombol tutup melayang di pojok kanan atas dengan latar transparan gelap dan ikon `LucideIcons.x`.
-   - **Aksi Sentuh**: Mengetuk di area mana saja pada poster gambar langsung memicu haptik dan membuka layar `UpdatePage`.
-3. **Gaya Visual**:
-   - **3D Morphing Glass Geometry**: Bentuk kristal/kaca violet transparan organik yang membiaskan cahaya secara dinamis.
-   - **Floating Holographic Cards**: Kartu UI melayang dengan indikator performa dan efek *motion blur*.
-   - **Glowing Chrome Spheres**: Bola logam krom reflektif dengan pendaran neon violet dan magenta pekat.
-   - **Energy Trails & Particle Dust**: Jejak cahaya orbit berkecepatan tinggi.
+### A. Karakteristik Utama Kartu
+1. **Banner atas (rasio 4:3)**: ilustrasi 3D glossy ungu (kanonik:
+   `assets/img/update_popup_banner.jpg`), ketuk banner = buka `UpdatePage`.
+   Gradien lembut ke warna permukaan kartu di tepi bawahnya.
+2. **Isi terstruktur**: chip `v<versi> • build <n>` + chip "Release resmi",
+   judul "Pembaruan tersedia", pesan singkat dari manifest, lalu dua aksi
+   ("Nanti" menutup, "Perbarui Sekarang" membuka `UpdatePage`).
+3. **Tombol X di Pojok**: tombol tutup melayang di pojok kanan atas dengan
+   latar transparan gelap dan ikon `LucideIcons.x`.
+4. **Gaya Visual banner**: 3D morphing glass violet, monitor menyala,
+   panah upgrade kaca, energy trails — tanpa teks tertanam di gambar
+   (teks kini hidup di lapisan UI, jadi selalu benar dan terlokalisasi).
 
 ### B. Variasi Tema per Rilis
-Setiap versi baru dapat mengusung aksen tema unik sesuai fokus rilis:
-- **Gaming & Low-Latency Release**: Latar *void* gelap pekat dengan pendaran kristal violet menyala, kartu UI framerate/bitrate, dan bola energi berkecepatan tinggi.
-- **Konektivitas & Network Release**: Gelombang frekuensi neon biru-violet, partikel kabel serat optik melayang, dan kartu status transmisi data.
-- **UI & Redesign Release**: Formasi kaca morfis lembut, bevel transparan berkilau, dan kartu palet warna lavender yang mengambang elegan.
+Banner boleh diganti per rilis selama mengikuti palet Quiet Surface
+(void gelap + violet #7C3AED/#A78BFA) dan menyisakan ruang gelap di tepi
+atas/bawah untuk gradien permukaan. Contoh tema:
+- **Gaming & Low-Latency Release**: kartu UI framerate/bitrate melayang.
+- **Konektivitas & Network Release**: gelombang frekuensi neon biru-violet.
+- **UI & Redesign Release**: formasi kaca morfis lembut palet lavender.
 
 ---
 
