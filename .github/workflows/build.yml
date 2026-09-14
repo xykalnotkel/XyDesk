@@ -521,12 +521,19 @@ jobs:
       # preload Electron, sehingga di Tauri UI berjalan dalam MODE DEMO
       # (data contoh), plus protokol asetnya gagal di mesin ber-WebView2
       # tua ("localhost refused to connect" di mesin operator).
-      - name: Build engine Rust (release)
+      # x64 (Electron) butuh hasil di host/target/release/xydesk-host.exe
+      # persis seperti yang dirujuk extraResources package.json — TANPA
+      # folder target arsitektur. Dua langkah terpisah (jangan pakai
+      # ternary ekspresi: '' itu falsy di GitHub Actions, pernah bikin
+      # --target ikut terbawa dan electron-builder kehilangan engine).
+      - name: Build engine Rust (release, x64 Electron)
+        if: matrix.arch == 'x64'
         working-directory: host
-        # x64 (Electron) butuh hasil di host/target/release/xydesk-host.exe
-        # persis seperti yang dirujuk extraResources package.json — tanpa
-        # folder target arsitektur.
-        run: cargo build --release ${{ matrix.arch == 'x64' && '' || format('--target {0}', matrix.target) }} --bin xydesk-host
+        run: cargo build --release --bin xydesk-host
+      - name: Build engine Rust (release, non-x64)
+        if: matrix.arch != 'x64'
+        working-directory: host
+        run: cargo build --release --target ${{ matrix.target }} --bin xydesk-host
       # ── Jalur x64: Electron ──
       - name: Pasang dependensi shell (Electron, x64)
         if: matrix.arch == 'x64'
