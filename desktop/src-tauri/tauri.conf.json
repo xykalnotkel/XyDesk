@@ -26,12 +26,6 @@
         "shadow": true
       }
     ],
-    "trayIcon": {
-      "id": "xydesk-tray",
-      "iconPath": "icons/tray.ico",
-      "iconAsTemplate": true,
-      "tooltip": "XyDesk Host"
-    },
     "security": {
       "csp": null
     }
