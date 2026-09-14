@@ -222,12 +222,5 @@ Lihat detail di [changelogs/6.7.13.md](changelogs/6.7.13.md).
 - [6.5.2](./changelogs/6.5.2.md) - 2026-09-03
 - [6.5.1](./changelogs/6.5.1.md) - 2026-09-02
 - [6.5.0](./changelogs/6.5.0.md) - 2026-09-01
-- [6.4.0](./changelogs/6.4.0.md) - 2026-08-30
-- [6.3.0](./changelogs/6.3.0.md) - 2026-08-25
-- [6.2.2](./changelogs/6.2.2.md) - 2026-08-20
-- [6.2.1](./changelogs/6.2.1.md) - 2026-08-18
-- [6.2.0](./changelogs/6.2.0.md) - 2026-08-15
-- [6.1.0](./changelogs/6.1.0.md) - 2026-08-10
-- [6.0.0](./changelogs/6.0.0.md) - 2026-08-01
-- [2.5.0](./changelogs/2.5.0.md) - 2026-07-20
-- [2.4.0](./changelogs/2.4.0.md) - 2026-07-15
+- [ARSIP 2.4.0 – 6.4.0](./changelogs/ARSIP-2.4.0-6.4.0.md) — versi awal
+  (Juli–Agustus 2026) digabung jadi satu berkas biar index ringkas.

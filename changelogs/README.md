@@ -4,39 +4,45 @@ Setiap versi punya file sendiri biar ga numpuk (kebijakan Founder 2026-09-07). F
 
 ## Daftar versi (baru ke lama)
 
-- [6.7.11](./6.7.11.md) - 2026-09-07 — Fix CI Windows PROPERTYKEY Foundation
-- [6.7.10](./6.7.10.md) - 2026-09-07 — Fix CI Windows cargo build 8 errors (Win32, PROPERTYKEY, PWSTR)
-- [6.7.9](./6.7.9.md) - 2026-09-07 — Fix CI Windows cargo build 4 errors
-- [6.7.8](./6.7.8.md) - 2026-09-07 — Fix CI seamless Divider + clippy
-- [6.7.7](./6.7.7.md) - 2026-09-07 — Fix CI flutter analyze unused + host bitrate 0 auto
-- [6.7.6](./6.7.6.md) - 2026-09-07 — Hotfix CI: format Dart + Rust + CHANGELOG + TURN direct kind
-- [6.7.5](./6.7.5.md) - 2026-09-07 — Web Perfection: fix NEWS_IMAGE_BLOCK, quality Auto/Medium/High/Ultra + bitrate Auto web, spacious 380-480, hero 3D glossy morphing + floating motion blur, routing /n/:slug, download ABI
-- [6.7.4](./6.7.4.md) - 2026-09-07 — License EN + Admin Auto + Simple Splash + Quality Auto/Medium/High/Ultra + Spacious Panel + Control Mapping + Realtime MS + Keyboard Picker
-- [6.7.3](./6.7.3.md) - 2026-09-07 — Fix Android update check + Session Loading + Banner lock + Changelog split
-- [6.7.2](./6.7.2.md) - 2026-09-07 — Virtual Display + Virtual Mic + NSIS auto-installer + auto-skip jika sudah ada
-- [6.7.1](./6.7.1.md) - 2026-09-07 — Fix VM/RDP hitam + audio mati + GDI fallback
-- [6.7.0](./6.7.0.md) - 2026-09-07 — DXGI utama, audio 0x88890008 fix, auth desktop, pairguard
-- [6.6.1](./6.6.1.md) - 2026-09-06 — Fix layar hitam saat diam + kredensial block
-- [6.6.0](./6.6.0.md) - 2026-09-06 — Fix Android splash stuck + CSP web
-- [6.5.4](./6.5.4.md) - 2026-09-05
-- [6.5.3](./6.5.3.md) - 2026-09-04
-- [6.5.2](./6.5.2.md) - 2026-09-03
-- [6.5.1](./6.5.1.md) - 2026-09-02
-- [6.5.0](./6.5.0.md) - 2026-09-01
-- [6.4.0](./6.4.0.md) - 2026-08-30
-- [6.3.0](./6.3.0.md) - 2026-08-25
-- [6.2.2](./6.2.2.md) - 2026-08-20
-- [6.2.1](./6.2.1.md) - 2026-08-18
-- [6.2.0](./6.2.0.md) - 2026-08-15
-- [6.1.0](./6.1.0.md) - 2026-08-10
-- [6.0.0](./6.0.0.md) - 2026-08-01
-- [2.5.0](./2.5.0.md) - 2026-07-20
-- [2.4.0](./2.4.0.md) - 2026-07-15
+- [6.8.5](./6.8.5.md) - 2026-09-13 — Semua Tombol Admin Nyata — Gada Dummy
+- [6.8.4](./6.8.4.md) - 2026-09-13 — Realtime Nyata Gada Dummy
+- [6.8.3](./6.8.3.md) - 2026-09-13 — Admin Endpoint Nyata Signal Worker
+- [6.8.2](./6.8.2.md) - 2026-09-13 — Admin Vite Kotak No Rounded + Login Turnstile Nyata
+- [6.8.1](./6.8.1.md) - 2026-09-13 — Fix main.rs Write import (E0599)
+- [6.8.0](./6.8.0.md) - 2026-09-13 — Admin Super Dashboard + Hero 2D Kartun Responsif
+- [6.7.18](./6.7.18.md) - 2026-09-13 — Fix Panic No Reactor Running (Tauri Window Gagal Kebuka)
+- [6.7.17](./6.7.17.md) - 2026-09-13 — Fix Build Desktop writeln + PowerShell Quote
+- [6.7.16](./6.7.16.md) - 2026-09-13 — Windows Tauri Debug + License English + Adaptive No Box
+- [6.7.15](./6.7.15.md) - 2026-09-13 — Tauri Window Fix + Logo Transparan (No White BG)
+- [6.7.14](./6.7.14.md) - 2026-09-11 — Driver Offline Bundle + 1-Klik Auto-Download (No Manual)
+- [6.7.13](./6.7.13.md) - 2026-09-11 — Installer Windows & Logo README Fix
+- [6.7.12](./6.7.12.md) - ? — 2026-09-09
+- [6.7.11](./6.7.11.md) - 2026-09-07 — Changelog 6.7.11 - 2026-09-07
+- [6.7.10](./6.7.10.md) - 2026-09-07 — Changelog 6.7.10 - 2026-09-07
+- [6.7.9](./6.7.9.md) - 2026-09-07 — Changelog 6.7.9 - 2026-09-07
+- [6.7.8](./6.7.8.md) - 2026-09-07 — Changelog 6.7.8 - 2026-09-07
+- [6.7.7](./6.7.7.md) - 2026-09-07 — Changelog 6.7.7 - 2026-09-07
+- [6.7.6](./6.7.6.md) - 2026-09-07 — Changelog 6.7.6 - 2026-09-07
+- [6.7.5](./6.7.5.md) - 2026-09-07 — Changelog 6.7.5 - 2026-09-07
+- [6.7.4](./6.7.4.md) - 2026-09-07 — Changelog 6.7.4 - 2026-09-07
+- [6.7.3](./6.7.3.md) - 2026-09-07 — Changelog 6.7.3 - 2026-09-07
+- [6.7.2](./6.7.2.md) - 2026-09-07 — Changelog 6.7.2 - 2026-09-07
+- [6.7.1](./6.7.1.md) - 2026-09-07 — Changelog 6.7.1 - 2026-09-07
+- [6.7.0](./6.7.0.md) - 2026-09-07 — Changelog 6.7.0 - 2026-09-07
+- [6.6.1](./6.6.1.md) - 2026-09-06 — Changelog 6.6.1 - 2026-09-06
+- [6.6.0](./6.6.0.md) - 2026-09-06 — Changelog 6.6.0 - 2026-09-06
+- [6.5.4](./6.5.4.md) - 2026-09-06 — Changelog 6.5.4 - 2026-09-06
+- [6.5.3](./6.5.3.md) - 2026-09-06 — Changelog 6.5.3 - 2026-09-06
+- [6.5.2](./6.5.2.md) - 2026-09-06 — Changelog 6.5.2 - 2026-09-06
+- [6.5.1](./6.5.1.md) - 2026-09-06 — Changelog 6.5.1 - 2026-09-06
+- [6.5.0](./6.5.0.md) - 2026-09-03 — Changelog 6.5.0 - 2026-09-03
+- [ARSIP 2.4.0 – 6.4.0](./ARSIP-2.4.0-6.4.0.md) — versi awal digabung
 
 ## Kebijakan (Founder Lock 2026-09-07)
 
 - Setiap rilis baru = 1 file baru di sini, jangan append ke file lama
 - Nama file: `<version>.md` (contoh: `6.7.3.md`)
-- Format: `# Changelog <version> - YYYY-MM-DD` + Ringkasan Founder + Ditambahkan/Diperbaiki/Diubah
+- Format: heading + `**Tanggal:** YYYY-MM-DD` + Ringkasan + Ditambahkan/Diperbaiki/Diubah
 - `CHANGELOG.md` di root hanya index ringan yang link ke file-file ini
+- Versi lama (≤ 6.4.0) tidak dihapus — digabung ke berkas ARSIP biar index ringkas
 - Banner artikel wajib 3D glossy morphing + floating motion blur — lihat `docs/NEWS_STYLE.md` §11
