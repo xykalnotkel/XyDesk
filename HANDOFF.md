@@ -29,23 +29,6 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Client Flutter
 
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Pendeteksi "sudah connected tapi belum ada frame
-  video"** di `lib/webrtc/rtc_service.dart` — watchdog yang ada sekarang
-  dimatikan begitu `RTCPeerConnectionStateConnected` tiba
-  (`_emit` membatalkan `_watchdog` untuk semua fase selain pairing/negotiating),
-  padahal fase itu dipicu oleh transport ICE/DTLS, BUKAN oleh frame video
-  pertama. Kalau track video tidak pernah sampai, pengguna menatap layar hitam
-  yang mengklaim tersambung dan tidak ada batas waktunya. Repo ini pernah kena
-  persis bug ini (README: "koneksi sukses tapi layar kosong") tapi jaringnya
-  hanya di sisi host (`host/tests/loopback.rs`). Bahan sudah ada:
-  `SessionStats.hasVideo` dan `resolutionLabel` = 'Belum ada gambar' — tinggal
-  dijadikan pemicu, bukan cuma label. Usulan: setelah `connected`, timer 10
-  detik; bila `hasVideo` masih false, tampilkan banner jujur + tawarkan
-  `selectDisplay`/retry, JANGAN meruntuhkan sesi (transport-nya hidup, bisa jadi
-  hanya monitor sumbernya salah). **Tidak dikerjakan di sesi audit ini karena
-  toolchain Flutter tidak ada di lingkungannya** — perubahan Dart di sana hanya
-  bisa diverifikasi lewat CI, dan menambah logika timer tanpa bisa menjalankan
-  `flutter test` lebih berisiko daripada meninggalkannya tercatat.
 - [x] (dari Operator - XyDesk Team, 2026-09-06) — **Verifikasi kompilator untuk
   perubahan Dart sesi audit 6 Sep — TERPENUHI lewat CI.** Sesi itu mengubah
   `lib/main.dart`, `lib/core/pip_controller.dart`,
@@ -223,6 +206,18 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Desktop Shell
 
+- [ ] (dari Operator - XyDesk Team, 2026-09-14, sesi LANJUT) — **Bukti nyata
+  fix "Windows kedip" butuh mesin Windows.** Commit `405a94c` menambah deteksi
+  WebView2 (kotak pesan + tautan penginstal), panic hook ke
+  `%TEMP%/xydesk-startup.log`, dan perbaikan tray ganda — tetapi baru
+  diverifikasi sebaris demi sebaris, BELUM dikompilasi (sandbox tanpa MSVC).
+  Langkah buktinya: (1) Build CI job Windows harus hijau dulu; (2) jalankan
+  installer di mesin Windows TANPA WebView2 (VM segar cocok) — harus muncul
+  kotak pesan "XyDesk butuh WebView2", bukan kedip; (3) bila masih ada
+  kedip, baca `%TEMP%/xydesk-startup.log` + `xydesk-main.log` — sekarang
+  ada jejak run()/setup() di sana. Catatan sisa: fallback salin `out/` di
+  build.yml/build-desktop.yml tetap ada walau Tauri meng-embed frontend —
+  tidak berbahaya, boleh dibersihkan lain kali.
 - [x] (dari Operator - XyDesk Team, 2026-09-09) — **Migrasi ke Tauri v2 + Penanaman Driver Display, Audio, & Mic.**
   Shell desktop sekarang berjalan di atas Tauri v2 (Rust + native WebView2)
   dengan direktori `desktop/src-tauri/`. Frontend Next.js dihubungkan lewat
@@ -322,6 +317,14 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
+- [ ] (dari Operator - XyDesk Team, 2026-09-14, sesi LANJUT) — **Worker admin
+  belum punya jalur CI apa pun.** `admin/` tidak disebut satu pun workflow;
+  deploy ke `admin.xydesk.my.id` selama ini manual dari mesin operator.
+  Sejak sesi ini lockfile-nya sudah masuk git, jadi gerbang murah bisa
+  dipasang: `npm ci` + `npm run build` (tsc -b && vite build — diverifikasi
+  hijau lokal 14 Sep) di job Linux, plus opsi lint Inno-style untuk
+  `worker.js`. Sekalian: `tool/check_version.py` belum memeriksa
+  `admin/package.json` (kini 6.8.5, sinkron — tapi tidak dijaga).
 - [x] (dari Operator - XyDesk Team, 2026-09-06) — **Fix boot Android sudah
   sampai ke pengguna lewat rilis 6.6.0.** Operator memilih nomornya di chat
   ("Langsung rilis 6.6.0+33"), jadi aturan #1 terpenuhi — agent tidak memilih
@@ -333,28 +336,6 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
   `9643e07` sukses; bundle live `index-2y3GUrl3.js` memuat 6.6.0 dan nol
   sisa 6.5.4. **Yang tetap terbuka: bukti boot di HP nyata** (lihat item Client
   Flutter di atas) dan **artikel Berita 6.6.0 yang belum terbit** (lihat News).
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **`update.json` tidak
-  disajikan dari domain mana pun.** Sesi ini sempat menyimpulkan salah bahwa ia
-  404 di `signal.xydesk.my.id/update.json` dan `app.xydesk.my.id/update.json` —
-  keduanya memang menjawab "not found", dan itu BUKAN bug: `release.yml` hanya
-  mengunggahnya sebagai aset GitHub Release (`releases/download/v6.6.0/
-  update.json`). Perlu dipastikan klien membaca dari URL yang benar; kalau ada
-  klien yang mengharapkan ia di domain sendiri, itu akan gagal diam-diam dan
-  pembaruan tidak pernah ditawarkan.
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **Empat cabang mati, semuanya tertinggal ~100 ribu
-  baris dari `main`**: `feat/nvenc`, `feat/installer-vdd-modern`,
-  `fix/video-loopback-fase0`, `audit/perbaikan-2026-09-01`. Isi `feat/nvenc`
-  SUDAH ada di `main` (`host/src/nvenc.rs` 428 baris + `nvenc_types.rs` 2296
-  baris + `nvenc_config.rs` 353 baris, dipakai `screen.rs:568` dengan fallback
-  openh264) — cabangnya sisa sejarah, bukan pekerjaan aktif. Hapus atau rebase;
-  kalau dibiarkan, agent berikutnya akan mengira hardware encode belum
-  dikerjakan padahal sudah.
-- [ ] (dari Operator - XyDesk Team, 2026-09-06) — **`desktop/tsconfig.tsbuildinfo` dan
-  `web_deploy/.wrangler/` dikeluarkan dari git di sesi ini** (`git rm --cached`
-  + entri `.gitignore`). Bukan penghapusan dari disk — hanya dari indeks.
-  Efeknya ke CI: tidak ada, karena deploy memakai artefak build, bukan isi git.
-  Perlu diperhatikan kalau ada skrip yang mengandaikan berkas itu ada di
-  checkout segar.
 - [ ] (dari Operator - XyDesk Team, 2026-09-06) — **INFO: Dart/Flutter bisa
   diverifikasi di mesin Linux biasa, tanpa Android Studio.** Resepnya: unduh
   Flutter persis versi `env.FLUTTER_VERSION` di `build.yml` (saat ini 3.44.9
@@ -1032,7 +1013,70 @@ _(kosong)_
 
 ## Selesai
 
-- [x] (dari Operator - XyDesk Team, 2026-09-09, sesi LOGO) — **Ikon hitam
+- [x] (dari Operator - XyDesk Team, 2026-09-06; ditutup 2026-09-14, sesi
+  LANJUT) — **Pendeteksi "sudah connected tapi belum ada frame video"**
+  (dari antrean Client Flutter) — selesai di commit `e2a373a` (9 Sep) namun
+  belum dicatat. Watchdog 10 detik `_noFrameWatchdog` di
+  `lib/webrtc/rtc_service.dart` menyala saat fase `connected` dan menyetel
+  `SessionStats.noFrameWarning` bila dimensi frame belum ada; banner jujur
+  "Belum ada gambar (periksa PC host)" + tombol "Pilih Layar" tampil di
+  `lib/features/session/session_page.dart` tanpa meruntuhkan sesi (sesuai
+  usulan awal). Paritas web: `armNoFrameWatchdog` di `web/src/rtc.ts` +
+  banner di `web/src/App.tsx`. Bendera pulih otomatis begitu frame pertama
+  tiba. Dikunci uji tambahan: `test/webrtc/session_stats_test.dart`.
+- [x] (dari Operator - XyDesk Team, 2026-09-06; ditutup 2026-09-14, sesi
+  LANJUT) — **`update.json` dibaca dari URL yang benar** (dari antrean CI /
+  Release). Kekhawatiran "klien mengharapkan ia di domain sendiri" tidak
+  terbukti: kedua pembaca memakai
+  `https://github.com/xykalnotkel/XyDesk/releases/latest/download/update.json`
+  — `lib/features/notifications/update_repository.dart:13` (Android) dan
+  `desktop/src-tauri/src/update.rs:14` (shell) — persis tempat
+  `release.yml` mengunggahnya sebagai aset rilis. Tidak ada klien yang
+  menanyakannya ke domain xydesk.my.id; 404 di sana memang by design.
+- [x] (dari Operator - XyDesk Team, 2026-09-06; ditutup 2026-09-14, sesi
+  LANJUT) — **Empat cabang mati sudah tidak ada** (dari antrean CI /
+  Release). `git ls-remote --heads origin` (14 Sep) hanya memuat `main` —
+  `feat/nvenc`, `feat/installer-vdd-modern`, `fix/video-loopback-fase0`,
+  dan `audit/perbaikan-2026-09-01` sudah dihapus dari remote. Isi NVENC
+  memang hidup di `main`; hardware encode tidak lagi terlihat "belum
+  dikerjakan" dari daftar cabang.
+- [x] (dari Operator - XyDesk Team, 2026-09-06; ditutup 2026-09-14, sesi
+  LANJUT) — **`tsconfig.tsbuildinfo` & `.wrangler/` tetap di luar git**
+  (dari antrean CI / Release). Verifikasi 14 Sep: `.gitignore` memuat
+  `*.tsbuildinfo` dan `**/.wrangler/`, dan `git ls-files` tidak memuat
+  satu pun dari keduanya. Tidak ada skrip build yang mengandaikan berkas
+  itu dari checkout (`npm run build` menghasilkan keduanya segar).
+- [x] (dari Operator - XyDesk Team, 2026-09-14, sesi
+  LANJUT) — **Popup pembaruan jadi kartu sungguhan (Client Flutter).**
+  Keluhan operator: "banner pembaruan cuma gambar + tombol X". Akar
+  kedua: `assets/img/update_popup_banner.jpg` tidak pernah masuk git
+  sehingga dialog selalu jatuh ke fallback gelap. Kini banner 3D glossy
+  ADA di git (4:3, ruang gelap untuk gradien), dialog menambah chip
+  versi+build, chip "Release resmi", pesan ringkas, dan aksi "Nanti" /
+  "Perbarui Sekarang"; `docs/APP_UPDATE_POPUP_GUIDE.md` §2 ditulis ulang
+  (desain pure-image 3:4 dipensiunkan). Ikon billing topbar ikut
+  distabilkan: pakai aset `assets/img/nav/billing.png` (26dp, contain,
+  fallback glyph) — render identik di semua density. Halaman "Server &
+  koneksi" baru di Pengaturan menampilkan endpoint aktif dari
+  `SignalingConfig` + catatan jujur soal subdomain p2p/wss yang belum
+  ada dan override `--dart-define XYDESK_SIGNALING_URL`.
+  `flutter analyze --fatal-infos --fatal-warnings` + format bersih.
+- [x] (dari Operator - XyDesk Team, 2026-09-14, sesi
+  LANJUT) — **Ukuran logo adaptive diluruskan (Client Flutter).**
+  Generator mengisi kanvas foreground 88% padahal safe-zone launcher
+  Android 66/108 (~61%) — logo terpotong masker launcher bertema.
+  `tool/gen_logo.py` kini mengisi 66%; 5 mipmap foreground diregenerasi;
+  gerbang `tool/check_icons.py` tetap hijau (10 mipmap + 4 ico + XML).
+- [x] (dari Operator - XyDesk Team, 2026-09-14, sesi
+  LANJUT) — **Repo dibersihkan (semua area).** 4 dokumen root tanpa
+  rujukan dihapus (`GUEST_SESSION_COUNTDOWN`, `HANDOFF_CLIENT_SUMMARY`,
+  `UPDATE_SUMMARY`, `CONTROL_MAPPING_PROFILE`); 9 aset
+  `assets/img/nav/*` tak terpakai dihapus (billing.png tetap — kini
+  dipakai topbar); changelog ≤ 6.4.0 (9 berkas) digabung ke
+  `changelogs/ARSIP-2.4.0-6.4.0.md`; index `CHANGELOG.md` +
+  `changelogs/README.md` dibangun ulang (README sebelumnya ketinggalan
+  sampai 6.7.11). Berkas yang masih dirujuk papan/HANDOFF sebagai bukti
+  (`BAHAN_ARTIKEL_*`, `DIAGNOSIS_VM_FIX.md`) dipertahankan.
   diperbaiki di akar + dikunci CI:** `tool/gen_logo.py` tidak lagi memutihkan
   sumber gelap / memanggang tile gelap (tile terang `#F5F3FF`, warna asli
   dipertahankan, sumber diganjal persegi anti-melar, sumber terang digagalkan
