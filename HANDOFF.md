@@ -317,6 +317,13 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
+- [ ] (dari Operator - XyDesk Team, 2026-09-14, sesi LANJUT) — **Rencana
+  rilis bersih (keputusan operator di chat):** saat rilis baru terbit dan
+  lulus tes perangkat, SEMUA rilis + tag lama dihapus — GitHub tinggal satu
+  entri. Alat: `tool/cleanup_releases.py` (dry-run default; `--keep <tag>`
+  wajib; menolak jalan bila `--keep` bukan `/releases/latest`, supaya
+  updater klien tidak pernah 404). Urutan WAJIB: terbitkan rilis baru DULU,
+  baru bersihkan. Butuh restu operator lagi di chat sebelum `--yes`.
 - [ ] (dari Operator - XyDesk Team, 2026-09-14, sesi LANJUT) — **Worker admin
   belum punya jalur CI apa pun.** `admin/` tidak disebut satu pun workflow;
   deploy ke `admin.xydesk.my.id` selama ini manual dari mesin operator.
