@@ -53,6 +53,28 @@ let trayNoticeShown = false;
 
 const logs = [];
 
+// Windows PowerShell 5.1 menulis Tee-Object sebagai UTF-16LE. Membacanya
+// langsung sebagai UTF-8 menghasilkan karakter "��" di kartu hasil installer
+// dan sering menyamarkan penyebab sebenarnya. Terima BOM UTF-16/UTF-8 dan
+// fallback ke UTF-8 untuk PowerShell 7.
+function readDriverOutput(file) {
+  const bytes = fs.readFileSync(file);
+  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return bytes.subarray(2).toString('utf16le');
+  }
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    const swapped = Buffer.alloc(bytes.length - 2);
+    for (let i = 2; i + 1 < bytes.length; i += 2) {
+      swapped[i - 2] = bytes[i + 1];
+      swapped[i - 1] = bytes[i];
+    }
+    return swapped.toString('utf16le');
+  }
+  const utf8 = bytes.toString('utf8');
+  // PowerShell can omit the BOM for UTF-16 in a redirected pipeline.
+  return utf8.includes('\u0000') ? bytes.toString('utf16le') : utf8;
+}
+
 function addLog(line) {
   const clean = String(line).replace(/\r?\n$/, '');
   if (!clean) return;
@@ -616,7 +638,7 @@ function registerIpc() {
             (err) => (err ? reject(err) : resolve()),
           );
         });
-        const out = fs.existsSync(outFile) ? fs.readFileSync(outFile, 'utf8').trim() : '';
+        const out = fs.existsSync(outFile) ? readDriverOutput(outFile).trim() : '';
         const ekor = out.split(/\r?\n/).slice(-6).join(' | ');
         hasil.push(`${d.nama}: selesai dijalankan. ${ekor ? 'Output: ' + ekor : ''}`);
         addLog(`[driver] ${d.nama} selesai`);
@@ -627,7 +649,7 @@ function registerIpc() {
         let ekor = '';
         try {
           if (fs.existsSync(outFile)) {
-            ekor = fs.readFileSync(outFile, 'utf8').trim().split(/\r?\n/).slice(-8).join('\n');
+            ekor = readDriverOutput(outFile).trim().split(/\r?\n/).slice(-8).join('\n');
           }
         } catch { /* abaikan */ }
         let sebab;
