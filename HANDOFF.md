@@ -206,6 +206,16 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Desktop Shell
 
+- [x] (dari Operator - XyDesk Team, 2026-09-14, sesi LANJUT) — **AKAR
+  "Windows kedip" KETEMU lewat panic hook + tes installer operator.**
+  Pesan panic nyata dari mesin operator: `Plugin Initialization("autostart",
+  "Error deserializing 'plugins.autostart': invalid type: map, expected
+  unit")` — blok `"plugins": {"autostart": {}}` di `tauri.conf.json` bikin
+  Tauri panic saat runtime (CI compile selalu hijau karena galatnya baru
+  muncul saat `run()`). Inilah penyebab semua episode "exe kedip" sejak
+  migrasi Tauri. Fix: blok `plugins` dibuang (plugin autostart di-init di
+  kode, tidak butuh entri config). Commit fix menyusul di branch LANJUT;
+  sisa pembuktian: installer build berikutnya harus kebuka normal.
 - [ ] (dari Operator - XyDesk Team, 2026-09-14, sesi LANJUT) — **Bukti nyata
   fix "Windows kedip" butuh mesin Windows.** Commit `405a94c` menambah deteksi
   WebView2 (kotak pesan + tautan penginstal), panic hook ke
