@@ -556,6 +556,45 @@ jobs:
           # langsung oleh tester tanpa installer.
           New-Item -ItemType Directory -Force -Path "$dir/drivers" | Out-Null
           Copy-Item "packaging/windows/drivers/*" "$dir/drivers/" -Recurse -Force
+
+          # Driver display virtual OFFLINE di resources/driver/IddSampleDriver:
+          # tanpa inf+cer dari rilis upstream ge9, install.ps1 hanya bisa
+          # berharap pada download GitHub yang ternyata gagal di mesin tes
+          # operator (14 Sep: "Virtual Display Driver: GAGAL" tanpa sebab).
+          $idd = "$dir/resources/driver/IddSampleDriver"
+          New-Item -ItemType Directory -Force -Path $idd | Out-Null
+          $iddZip = "$env:RUNNER_TEMP\idd.zip"
+          $urls = @(
+            "https://github.com/ge9/IddSampleDriver/releases/download/0.0.1.4/IddSampleDriver.zip",
+            "https://github.com/ge9/IddSampleDriver/releases/download/0.0.1.3/IddSampleDriver.zip"
+          )
+          $punya = $false
+          foreach ($u in $urls) {
+            try {
+              Invoke-WebRequest -Uri $u -OutFile $iddZip -UseBasicParsing -ErrorAction Stop
+              $stage = "$env:RUNNER_TEMP\idd-stage"
+              Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+              Expand-Archive $iddZip -DestinationPath $stage -Force
+              $inner = Join-Path $stage "IddSampleDriver"
+              if (Test-Path $inner) { Copy-Item "$inner\*" $idd -Recurse -Force }
+              else { Copy-Item "$stage\*" $idd -Recurse -Force }
+              $punya = $true
+              break
+            } catch {
+              Write-Host "[WARN] unduh $u gagal: $($_.Exception.Message)"
+            }
+          }
+          if (-not $punya) { throw "Driver VDD gagal diunduh dari semua URL upstream." }
+          Copy-Item "packaging/windows/drivers/IddSampleDriver/install.bat" $idd -Force
+          Copy-Item "packaging/windows/drivers/IddSampleDriver/uninstall.bat" $idd -Force
+          Copy-Item "packaging/windows/drivers/IddSampleDriver/option.txt" $idd -Force
+          foreach ($need in @("iddsampledriver.inf", "iddsampledriver.cer")) {
+            if (-not (Test-Path (Join-Path $idd $need))) {
+              throw "Berkas driver $need tidak ada setelah ekstraksi."
+            }
+          }
+          Write-Host "[OK] Driver VDD offline siap di resources/driver/IddSampleDriver"
+
           Get-ChildItem $dir | ForEach-Object { Write-Host "OUT: $($_.Name)" }
       - name: Unggah installer Electron (x64)
         if: matrix.arch == 'x64'

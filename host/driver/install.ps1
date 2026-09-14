@@ -44,8 +44,14 @@ if ((Test-Path $driverInf) -or (Test-Path $iddInf)) {
     exit 0
 }
 
-# Cek apakah ada driver lokal bawaan (offline bundling)
-$localBat = Join-Path $PSScriptRoot "..\..\packaging\windows\drivers\IddSampleDriver\install.bat"
+# Cek apakah ada driver lokal bawaan (offline bundling).
+# Layout aplikasi terpaket: resources/driver/IddSampleDriver/ (berdampingan
+# dengan skrip ini — dibundel CI dari rilis upstream ge9). Layout repo:
+# packaging/windows/drivers/IddSampleDriver/.
+$localBat = Join-Path $PSScriptRoot "IddSampleDriver\install.bat"
+if (-not (Test-Path $localBat)) {
+    $localBat = Join-Path $PSScriptRoot "..\..\packaging\windows\drivers\IddSampleDriver\install.bat"
+}
 if (Test-Path $localBat) {
     Write-Host "Memasang driver display bawaan lokal..." -ForegroundColor Cyan
     & cmd.exe /c $localBat /silent

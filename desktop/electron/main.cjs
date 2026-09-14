@@ -622,13 +622,24 @@ function registerIpc() {
         addLog(`[driver] ${d.nama} selesai`);
       } catch (e) {
         const msg = String(e && e.message ? e.message : e);
-        // 1223 = ERROR_CANCELLED: user menolak UAC.
-        if (/cancel|1223/i.test(msg)) {
-          hasil.push(`${d.nama}: DIBATALKAN — permintaan admin (UAC) ditolak.`);
+        // Output PROSES ELEVATE tetap berharga saat gagal — dibaca dari
+        // berkas temp (Tee-Object menulisnya apa pun exit code-nya).
+        let ekor = '';
+        try {
+          if (fs.existsSync(outFile)) {
+            ekor = fs.readFileSync(outFile, 'utf8').trim().split(/\r?\n/).slice(-8).join('\n');
+          }
+        } catch { /* abaikan */ }
+        let sebab;
+        if (/cancel|dibatalkan|1223/i.test(msg)) {
+          sebab = 'DIBATALKAN — permintaan admin (UAC) ditolak/ditutup. Klik pasang lagi lalu pilih Yes.';
+        } else if (/740|elevation/i.test(msg)) {
+          sebab = 'GAGAL — butuh elevasi admin tapi tidak bisa diminta di mesin ini. Jalankan XyDesk sebagai Administrator lalu coba lagi.';
         } else {
-          hasil.push(`${d.nama}: GAGAL — ${msg.split('\n')[0]}`);
+          sebab = 'GAGAL — installer berhenti dengan error.' + (ekor ? '\nOutput installer:\n' + ekor : ' (tidak ada output tertangkap)');
         }
-        addLog(`[driver] ${d.nama} gagal: ${msg.split('\n')[0]}`);
+        hasil.push(`${d.nama}: ${sebab}`);
+        addLog(`[driver] ${d.nama} gagal: ${msg.split('\n')[0].slice(0, 200)}`);
       } finally {
         try { fs.unlinkSync(wrapper); } catch { /* abaikan */ }
       }
