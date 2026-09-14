@@ -20,6 +20,16 @@ import {
   ExternalLink,
   LogOut,
   Shield,
+  Volume2,
+  VolumeX,
+  Zap,
+  Film,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  Mic,
+  HardDrive,
+  ScrollText,
 } from 'lucide-react';
 import {
   fetchNewsList,
@@ -92,7 +102,7 @@ const DEMO_LOGS: LogEntry[] = [
   { t: Date.now() - 1000, line: '[engine] track video siap — streaming' },
 ];
 
-type Page = 'home' | 'connect' | 'news' | 'profile' | 'settings';
+type Page = 'home' | 'connect' | 'news' | 'driver' | 'log' | 'profile' | 'settings';
 
 /// Third-party licenses — static data, shown in Settings.
 const LICENSES: [string, string, string][] = [
@@ -117,6 +127,8 @@ const NAV: { id: Page; label: string; icon: typeof Home }[] = [
   { id: 'home', label: 'Beranda', icon: Home },
   { id: 'connect', label: 'Hubungkan', icon: Cable },
   { id: 'news', label: 'Berita', icon: Newspaper },
+  { id: 'driver', label: 'Driver', icon: HardDrive },
+  { id: 'log', label: 'Log', icon: ScrollText },
 ];
 
 const NAV_BOTTOM: { id: Page; label: string; icon: typeof Home }[] = [
@@ -128,6 +140,8 @@ const PAGE_TITLE: Record<Page, string> = {
   home: 'Beranda',
   connect: 'Hubungkan',
   news: 'Berita',
+  driver: 'Driver Virtual',
+  log: 'Log Engine',
   profile: 'Profil',
   settings: 'Pengaturan',
 };
@@ -440,6 +454,8 @@ export default function Page() {
               }}
             />
           )}
+          {page === 'driver' && <DriverPage status={st} />}
+          {page === 'log' && <LogPage logs={logs} />}
           {page === 'settings' && (
             <SettingsPage
               status={st}
@@ -492,22 +508,22 @@ function LoginScreen({ onDone }: { onDone: (s: AuthSessionPayload) => void }) {
           <p>Host desktop untuk gaming & kerja. Enkripsi end-to-end, NVENC hardware, dan audio loopback — semua di mesin ini.</p>
           <div className="login-hero-illust">
             <div className="row">
-              <div className="dot">🖥️</div>
+              <div className="dot"><Monitor size={16} /></div>
               <div className="txt"><strong>Virtual Display Driver (IddCx) + DXGI/WGC/GDI fallback</strong><span>Driver-first anti hitam di headless/RDP/lock — kayak RDP loopback v6.7.12+</span></div>
             </div>
             <div className="row">
-              <div className="dot">🔊</div>
+              <div className="dot"><Volume2 size={16} /></div>
               <div className="txt"><strong>WASAPI Loopback</strong><span>Suara PC → HP, mic HP → PC</span></div>
             </div>
             <div className="row">
-              <div className="dot">⚡</div>
+              <div className="dot"><Zap size={16} /></div>
               <div className="txt"><strong>NVENC H264</strong><span>Hardware encode 1080p60 &lt;10ms</span></div>
             </div>
           </div>
         </div>
         <div className="login-hero-foot">
           <span>© 2026 XyDesk • Proprietary</span>
-          <span>Void #0d0716 + Accent #7c3aed</span>
+          <span>Paper + Accent #7c3aed</span>
         </div>
       </div>
 
@@ -685,7 +701,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
               <div className="kv">
                 <span>Backend capture</span>
                 <strong title="Hasil pengukuran watchdog, bukan preferensi" style={{ color: status?.captureBackend === 'virtual-display-driver' ? '#16a34a' : undefined }}>
-                  {status?.captureBackend || '—'}{status?.captureBackend === 'virtual-display-driver' ? ' ✅ driver-first' : ''}
+                  {status?.captureBackend || '—'}{status?.captureBackend === 'virtual-display-driver' ? ' — driver-first' : ''}
                 </strong>
               </div>
               <div className="kv">
@@ -698,7 +714,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
             {/* RDP session warning — penyebab #1 hitam di lab Actions */}
             {status?.isRdpSession && (
               <div className="vm-warning" style={{ marginTop: 14, background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(167,139,250,0.12))' }}>
-                <span className="icon">🖥️</span>
+                <span className="icon"><Monitor size={18} /></span>
                 <div className="text">
                   <strong>RDP session terdeteksi (SM_REMOTESESSION=1) — ini lab Actions?</strong><br />
                   DXGI tidak jalan di RDP, tutup RDP = lock = hitam total (BitBlt 0).<br />
@@ -712,7 +728,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
             {/* Virtual Display Driver — driver-first IddCx (work di RDP / headless / lock kayak AnyDesk) */}
             {status?.virtualDisplay && (
               <div className="vm-warning" style={{ marginTop: 14, background: status.virtualDisplay.installed ? (status.virtualDisplay.hasVirtualDisplay ? 'linear-gradient(135deg, rgba(22,115,71,0.14), rgba(22,115,71,0.08))' : 'linear-gradient(135deg, rgba(22,115,71,0.10), rgba(22,115,71,0.06))') : 'linear-gradient(135deg, rgba(124,58,237,0.14), rgba(91,33,182,0.10))', borderLeft: status.captureBackend === 'virtual-display-driver' ? '3px solid #16a34a' : undefined }}>
-                <span className="icon">{status.captureBackend === 'virtual-display-driver' ? '🎬' : status.virtualDisplay.installed ? (status.virtualDisplay.hasVirtualDisplay ? '✅' : '🟡') : '🖥️'}</span>
+                <span className="icon">{status.captureBackend === 'virtual-display-driver' ? <Film size={18} /> : status.virtualDisplay.installed ? (status.virtualDisplay.hasVirtualDisplay ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />) : <Monitor size={18} />}</span>
                 <div className="text">
                   <strong>
                     {status.captureBackend === 'virtual-display-driver'
@@ -725,7 +741,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
                     <>
                       Capture pakai <code>virtual-display-driver</code> (IddCx) — framebuffer dari driver, bukan DXGI/WGC. Tetap jalan saat RDP putus, headless VM, atau sesi terkunci — mirip RDP loopback.<br />
                       Display virtual: <code>{status.virtualDisplay.displays?.find((d) => d.name.toLowerCase().includes('virtual') || d.name.toLowerCase().includes('idd'))?.name || `DISPLAY${(status.virtualDisplay.virtualIndex ?? 0) + 1}`}</code> {status.virtualDisplay.virtualIndex != null ? `(idx ${status.virtualDisplay.virtualIndex}) ` : ''}• Res: {(() => { const vd = status.virtualDisplay.displays?.find((d) => d.name.toLowerCase().includes('virtual') || d.name.toLowerCase().includes('idd')) || status.displays?.list?.[status.virtualDisplay.virtualIndex ?? -1]; return vd ? `${vd.width}×${vd.height}` : `${status.displays?.list?.[status.virtualDisplay.virtualIndex ?? 0]?.width || 1920}×${status.displays?.list?.[status.virtualDisplay.virtualIndex ?? 0]?.height || 1080}`; })()} • Admin: {status.virtualDisplay.isAdmin ? 'Ya' : 'Bukan'}<br />
-                      <span style={{ color: '#16a34a', fontWeight: 600 }}>✔️ Host sudah driver-first — tidak perlu HDMI dummy.</span>
+                      <span style={{ color: '#16a34a', fontWeight: 600 }}>Host sudah driver-first — tidak perlu HDMI dummy.</span>
                     </>
                   ) : status.virtualDisplay.needed ? (
                     <>
@@ -737,7 +753,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
                           Atau Scoop: <code>scoop install idd-sample-driver</code> • Setelah install, restart XyDesk
                           <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             <button type="button" className="btn primary mini" disabled={installingVdd} onClick={handleInstallVdd}>
-                              {installingVdd ? '⏳ Memasang Driver…' : '⚙️ Pasang Driver Virtual (1-Klik Admin)'}
+                              {installingVdd ? 'Memasang driver… (setujui UAC)' : 'Pasang Driver Virtual (1-Klik Admin)'}
                             </button>
                           </div>
                           {vddMsg && <p style={{ marginTop: 6, fontSize: 12, color: '#8b5cf6' }}>{vddMsg}</p>}
@@ -746,7 +762,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
                         <>
                           <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             <button type="button" className="btn primary mini" disabled={ensuringVdd} onClick={handleEnsureVdd}>
-                              {ensuringVdd ? '⏳ Membuat Display…' : '🖥️ Buat / Aktifkan Virtual Display (1080p)'}
+                              {ensuringVdd ? 'Membuat display…' : 'Buat / Aktifkan Virtual Display (1080p)'}
                             </button>
                           </div>
                           {vddMsg && <p style={{ marginTop: 6, fontSize: 12, color: '#8b5cf6' }}>{vddMsg}</p>}
@@ -757,7 +773,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
                           Virtual display siap di <code>DISPLAY{(status.virtualDisplay.virtualIndex ?? 0)+1}</code> — engine akan otomatis pakai itu (driver-first) saat next capture. Backend sekarang masih <code>{status.captureBackend || 'menyiapkan...'}</code>.
                           <div style={{ marginTop: 8 }}>
                             <button type="button" className="btn ghost mini" disabled={ensuringVdd} onClick={handleEnsureVdd}>
-                              {ensuringVdd ? '⏳ Memastikan…' : '🔄 Pastikan Virtual Display Aktif'}
+                              {ensuringVdd ? 'Memastikan…' : 'Pastikan Virtual Display Aktif'}
                             </button>
                             {vddMsg && <p style={{ marginTop: 6, fontSize: 12, color: '#8b5cf6' }}>{vddMsg}</p>}
                           </div>
@@ -781,7 +797,7 @@ function HomePage({ status, onStop }: { status: StatusPayload | null; onStop: ()
             {/* VM headless warning — hitam tapi tersambung (driver-first) */}
             {status?.framesCaptured === 0 && (status?.uptimeMs ?? 0) > 8000 && (
               <div className="vm-warning" style={{ marginTop: 14 }}>
-                <span className="icon">⚠️</span>
+                <span className="icon"><AlertTriangle size={18} /></span>
                 <div className="text">
                   <strong>Belum ada frame — kemungkinan VM tanpa display aktif atau backend belum switch ke virtual driver.</strong><br />
                   Host mendeteksi {status?.displays?.list?.length ?? 0} monitor. Di GPU VM (Paperspace, RunPod, Vast) atau sesi RDP terkunci,
@@ -1111,7 +1127,7 @@ function NewsPage() {
                 <h4>{p.title}</h4>
                 <p>{p.excerpt}</p>
                 <span className="news-meta">
-                  {formatNewsDate(p.createdAt)} · ♥ {p.likeCount} · 💬 {p.commentCount}
+                  {formatNewsDate(p.createdAt)} · {p.likeCount} suka · {p.commentCount} komentar
                 </span>
               </div>
             </article>
@@ -1412,6 +1428,180 @@ function ProfilePage({
           <a className="btn-ghost-link" href="https://app.xydesk.my.id/news" target="_blank" rel="noreferrer">
             <ExternalLink size={14} /> Berita di Web
           </a>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ── Driver ─────────────────────────────────────────────────────────
+   Pusat driver virtual (Display VDD + Audio VB-CABLE). Dulu tombol
+   "pasang driver" tidak berbuat apa-apa karena preload Electron tidak
+   mengekspos installDriver — sekarang tiap tombol punya status loading,
+   hasil sukses/gagal/dibatalkan yang ditampilkan gamblang. */
+
+type DriverKind = 'all' | 'display' | 'audio';
+
+function DriverPage({ status }: { status: StatusPayload | null }) {
+  const [busy, setBusy] = useState<DriverKind | null>(null);
+  const [hasil, setHasil] = useState<string | null>(null);
+  const [gagal, setGagal] = useState(false);
+
+  const pasang = async (kind: DriverKind) => {
+    setHasil(null);
+    setGagal(false);
+    if (DEMO) {
+      setGagal(true);
+      setHasil('Mode pratinjau — instalasi driver hanya tersedia di aplikasi desktop XyDesk.');
+      return;
+    }
+    if (!window.xydesk?.installDriver) {
+      setGagal(true);
+      setHasil('Bridge instalasi driver tidak tersedia di build ini. Pakai rilis resmi XyDesk.');
+      return;
+    }
+    setBusy(kind);
+    try {
+      const res = await window.xydesk.installDriver(kind);
+      const teks = typeof res === 'string' ? res : JSON.stringify(res);
+      setGagal(/GAGAL|DIBATALKAN/i.test(teks));
+      setHasil(teks || 'Instalasi selesai.');
+    } catch (e: any) {
+      setGagal(true);
+      setHasil(`Gagal: ${e?.message || e}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const vd = status?.virtualDisplay;
+  const vm = status?.virtualMic;
+
+  return (
+    <div className="pg">
+      <section className="card">
+        <h3>Driver display virtual (IddCx)</h3>
+        <p className="dim">
+          Wajib untuk host headless / RDP / layar terkunci — capture tetap jalan tanpa monitor
+          fisik, seperti RDP loopback.
+        </p>
+        <div className="kv" style={{ marginTop: 8 }}>
+          <span>Status</span>
+          <strong style={{ color: vd?.installed ? 'var(--success)' : 'var(--text-mid)' }}>
+            {vd == null ? 'Menunggu status engine…' : vd.installed
+              ? (vd.hasVirtualDisplay ? 'Terpasang + display aktif' : 'Terpasang (display belum dibuat)')
+              : 'Belum terpasang'}
+          </strong>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          <button className="btn primary" disabled={busy !== null} onClick={() => pasang('display')}>
+            {busy === 'display' ? 'Memasang… (setujui UAC)' : 'Pasang driver display'}
+          </button>
+          <button className="btn primary" disabled={busy !== null || DEMO} onClick={() => pasang('all')}>
+            {busy === 'all' ? 'Memasang… (setujui UAC)' : 'Pasang semua driver'}
+          </button>
+        </div>
+      </section>
+
+      <section className="card">
+        <h3>Driver audio virtual (VB-CABLE)</h3>
+        <p className="dim">
+          Membuat mic client "berdenyut" di Recording Control Panel, sehingga Discord/Zoom/game
+          bisa memakai suara dari HP sebagai mikrofon.
+        </p>
+        <div className="kv" style={{ marginTop: 8 }}>
+          <span>Status</span>
+          <strong style={{ color: vm?.installed ? 'var(--success)' : 'var(--text-mid)' }}>
+            {vm == null ? 'Menunggu status engine…' : vm.installed ? 'Terpasang' : 'Belum terpasang'}
+          </strong>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <button className="btn primary" disabled={busy !== null} onClick={() => pasang('audio')}>
+            {busy === 'audio' ? 'Memasang… (setujui UAC)' : 'Pasang driver audio'}
+          </button>
+        </div>
+      </section>
+
+      {busy !== null && (
+        <section className="card" style={{ borderColor: 'var(--accent)', boxShadow: 'var(--shadow-accent)' }}>
+          <h3>Sedang berjalan</h3>
+          <p className="dim">
+            Installer PowerShell dijalankan sebagai administrator. Setujui prompt UAC yang muncul —
+            tanpa persetujuan instalasi akan dibatalkan. Proses bisa memakan waktu sampai beberapa
+            menit.
+          </p>
+        </section>
+      )}
+
+      {hasil !== null && (
+        <section
+          className="card"
+          style={{
+            borderColor: gagal ? 'var(--danger)' : 'var(--success)',
+            background: gagal ? 'var(--danger-soft)' : 'var(--success-soft)',
+          }}
+        >
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {gagal ? <AlertTriangle size={17} /> : <CheckCircle2 size={17} />}
+            {gagal ? 'Ada masalah' : 'Hasil instalasi'}
+          </h3>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12.5, marginTop: 6 }}>{hasil}</pre>
+          {gagal ? (
+            <p className="hint" style={{ marginTop: 6 }}>
+              Coba lagi, atau jalankan manual: buka folder aplikasi → <code>driver\install.ps1</code>{' '}
+              (klik kanan → Run with PowerShell, sebagai Administrator).
+            </p>
+          ) : (
+            <p className="hint" style={{ marginTop: 6 }}>
+              Restart XyDesk bila status di atas belum berubah — engine mendeteksi driver saat mulai.
+            </p>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+/* ── Log ──────────────────────────────────────────────────────────── */
+
+function LogPage({ logs }: { logs: LogEntry[] }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [logs]);
+
+  const salin = async () => {
+    try {
+      const teks = logs
+        .map((l) => `[${new Date(l.t).toLocaleTimeString('id-ID', { hour12: false })}] ${l.line}`)
+        .join('\n');
+      await navigator.clipboard.writeText(teks);
+    } catch {
+      /* clipboard tidak tersedia — abaikan */
+    }
+  };
+
+  return (
+    <div className="pg" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <section className="card logs-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h3>Log engine</h3>
+          <button className="btn ghost mini" style={{ marginLeft: 'auto' }} onClick={salin}>
+            Salin semua
+          </button>
+        </div>
+        <div className="logs" ref={boxRef} style={{ flex: 1 }}>
+          {logs.length === 0 ? (
+            <p className="hint">— belum ada log —</p>
+          ) : (
+            logs.map((l, i) => (
+              <div key={i}>
+                <span className="t">{new Date(l.t).toLocaleTimeString('id-ID', { hour12: false })}</span>
+                {l.line}
+              </div>
+            ))
+          )}
         </div>
       </section>
     </div>
@@ -1784,7 +1974,7 @@ function SettingsPage({
             </div>
             {status.audio.outputs === 0 && (
               <div className="vm-warning" style={{ marginTop: 14 }}>
-                <span className="icon">🔇</span>
+                <span className="icon"><VolumeX size={18} /></span>
                 <div className="text">
                   <strong>Tidak ada perangkat audio terdeteksi — ini VM/GPU VM?</strong><br />
                   WASAPI butuh output device aktif. Di VM tanpa sound card, loopback & mic akan mati.<br />
@@ -1796,13 +1986,13 @@ function SettingsPage({
             {/* Virtual Mic Driver — biar mic client denyut di Control Panel seperti AnyDesk */}
             {status?.virtualMic && (
               <div className="vm-warning" style={{ marginTop: 14, background: status.virtualMic.installed ? 'linear-gradient(135deg, rgba(22,115,71,0.10), rgba(22,115,71,0.06))' : 'linear-gradient(135deg, rgba(124,58,237,0.14), rgba(91,33,182,0.10))' }}>
-                <span className="icon">{status.virtualMic.installed ? '🎙️' : '🔈'}</span>
+                <span className="icon">{status.virtualMic.installed ? <Mic size={18} /> : <Volume2 size={18} />}</span>
                 <div className="text">
                   <strong>Virtual Mic: {status.virtualMic.installed ? 'Terpasang — mic client akan denyut di Recording' : 'Belum terpasang — mic client cuma ke speaker'}</strong><br />
                   Render target sekarang: <code>{status.virtualMic.renderTarget}</code><br />
                   {status.virtualMic.installed ? (
                     <>
-                      ✅ Driver virtual audio ada — CABLE Input/Output terdeteksi.<br />
+                      Driver virtual audio ada — CABLE Input/Output terdeteksi.<br />
                       Di Control Panel → Sound → Recording → <code>CABLE Output</code> akan denyut kalau HP ngomong.<br />
                       Di Discord/Zoom/Game, pilih mic = <code>CABLE Output</code> biar suara HP masuk sebagai mic.
                     </>
@@ -1848,12 +2038,12 @@ function SettingsPage({
         <div className="kv-grid" style={{ marginBottom: 12 }}>
           <div className="kv">
             <span>Virtual Display Driver (IddSampleDriver — IddCx)</span>
-            <strong>{status?.virtualDisplay?.installed ? (status?.virtualDisplay?.hasVirtualDisplay ? `✅ Aktif (DISPLAY${(status?.virtualDisplay?.virtualIndex ?? 0)+1})` : '✅ Terpasang — display belum dibuat') : '⚠️ Belum Terpasang'}</strong>
+            <strong>{status?.virtualDisplay?.installed ? (status?.virtualDisplay?.hasVirtualDisplay ? `Aktif (DISPLAY${(status?.virtualDisplay?.virtualIndex ?? 0)+1})` : 'Terpasang — display belum dibuat') : 'Belum Terpasang'}</strong>
             {status?.virtualDisplay && <span className="hint" style={{ display: 'block', marginTop: 4 }}>Backend: <code>{status?.virtualDisplay?.backend || status?.captureBackend || '—'}</code> • Admin: {status.virtualDisplay.isAdmin ? 'Ya' : 'Bukan'} • Butuh: {status.virtualDisplay.needed ? 'Ya (headless/RDP)' : 'Tidak (monitor fisik ada)'} • {status?.displays?.list?.length ?? 0} monitor</span>}
           </div>
           <div className="kv">
             <span>Virtual Audio &amp; Mic (VB-CABLE)</span>
-            <strong>{status?.virtualMic?.installed ? '✅ Terpasang' : '⚠️ Belum Terpasang'}</strong>
+            <strong>{status?.virtualMic?.installed ? 'Terpasang' : 'Belum Terpasang'}</strong>
             {status?.virtualMic && <span className="hint" style={{ display: 'block', marginTop: 4 }}>{status.virtualMic.renderTarget}</span>}
           </div>
         </div>
@@ -1887,12 +2077,12 @@ function SettingsPage({
               onClick={() => onAction('virtual-display-ensure')}
               disabled={busy}
             >
-              🖥️ Buat Virtual Display
+              Buat Virtual Display
             </button>
           )}
           {status?.virtualDisplay?.installed && status?.virtualDisplay?.hasVirtualDisplay && (
             <button onClick={() => onAction('virtual-display-ensure')} disabled={busy}>
-              🔄 Pastikan Virtual Display
+              Pastikan Virtual Display
             </button>
           )}
           {!status?.virtualMic?.installed && (
@@ -1920,16 +2110,16 @@ function SettingsPage({
           <div className="kv">
             <span>Tema</span>
             <div className="chip-row">
-              <button className="chip select on" title="Tema gelap - Void #0d0716 (default)">🌙 Gelap</button>
-              <button className="chip" title="Tema terang - akan datang" onClick={() => flashMsg('Tema terang akan datang di update berikutnya.')}>☀️ Terang</button>
+              <button className="chip" title="Tema gelap - akan datang" onClick={() => flashMsg('Tema gelap akan datang di update berikutnya.')}>Gelap</button>
+              <button className="chip select on" title="Tema terang - Paper #ffffff (default)">Terang</button>
             </div>
             <span className="hint" style={{ display: 'block', marginTop: 4 }}>Void #0d0716 + Accent #7c3aed konsisten all platform</span>
           </div>
           <div className="kv">
             <span>Bahasa</span>
             <div className="chip-row">
-              <button className="chip select on">🇮🇩 Indonesia</button>
-              <button className="chip" onClick={() => flashMsg('English akan datang — sekarang 100% Indonesia.')}>🇬🇧 English</button>
+              <button className="chip select on">Indonesia</button>
+              <button className="chip" onClick={() => flashMsg('English akan datang — sekarang 100% Indonesia.')}>English</button>
             </div>
           </div>
           <div className="kv">
@@ -1955,9 +2145,9 @@ function SettingsPage({
           <div className="kv">
             <span>Mode input remote</span>
             <div className="chip-row">
-              <button className="chip select on">🖱️ Mouse + Keyboard</button>
-              <button className="chip" onClick={() => flashMsg('Mode touch akan datang untuk Android viewer.')}>👆 Touch</button>
-              <button className="chip" onClick={() => flashMsg('Gamepad akan datang.')}>🎮 Gamepad</button>
+              <button className="chip select on">Mouse + Keyboard</button>
+              <button className="chip" onClick={() => flashMsg('Mode touch akan datang untuk Android viewer.')}>Touch</button>
+              <button className="chip" onClick={() => flashMsg('Gamepad akan datang.')}>Gamepad</button>
             </div>
           </div>
           <div className="kv">
@@ -1977,7 +2167,7 @@ function SettingsPage({
           </div>
         </div>
         <div className="set-row" style={{ marginTop: 10 }}>
-          <button className="ghost" onClick={() => flashMsg('Editor profil kontrol akan buka di update 6.9 — lihat docs/CONTROL_MAPPING_PROFILE.md')}>⚙️ Buka Editor Mapping</button>
+          <button className="ghost" onClick={() => flashMsg('Editor profil kontrol akan buka di update 6.9 — lihat docs/CONTROL_MAPPING_PROFILE.md')}>Buka Editor Mapping</button>
           <a className="btn-ghost-link" href="https://github.com/xykalnotkel/XyDesk/blob/main/CONTROL_MAPPING_PROFILE.md" target="_blank" rel="noreferrer"><ExternalLink size={14} /> Docs</a>
         </div>
       </section>
@@ -1998,8 +2188,8 @@ function SettingsPage({
           <div className="kv">
             <span>Auto-lock saat terhubung</span>
             <div className="chip-row">
-              <button className="chip" onClick={() => flashMsg('Auto-lock will dim coming — now manual lock only.')}>🔒 Kunci layar</button>
-              <button className="chip select on">🔓 Biarkan</button>
+              <button className="chip" onClick={() => flashMsg('Auto-lock will dim coming — now manual lock only.')}>Kunci layar</button>
+              <button className="chip select on">Biarkan</button>
             </div>
           </div>
           <div className="kv">

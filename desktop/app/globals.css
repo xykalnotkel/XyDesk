@@ -1,6 +1,8 @@
-/* XyDesk Desktop — redesign v3.0 "Paper + Void"
+/* XyDesk Desktop — redesign v3.1 "Paper" (keputusan operator 14 Sep 2026)
    - Sumber kebenaran token: docs/DESIGN.md (acuan = web sejak Sep 2026)
-   - Sidebar: Void #0d0716 (bukan #0a0a0a), aksen ungu kaca #7c3aed
+   - Sidebar: Paper terang + aksen ungu halus. Dulu "Void" hitam pekat —
+     operator menolaknya saat tes UI ("sidebar nya hitam + ga lengkap"),
+     jadi sidebar kini satu nada dengan body: putih/ungu lembut.
    - Main: Paper #ffffff dengan radial ungu halus (paritas web)
    - Kartu: putih, TANPA border (hukum Quiet Surface), shadow ungu halus, radius 16
    - Tombol primary: gradient ungu seperti web, bukan flat #7c3aed
@@ -99,16 +101,17 @@ img { display: block; max-width: 100%; }
   flex-direction: column;
   padding: 20px 14px 16px;
   gap: 22px;
-  background: var(--void);
+  background: var(--raised);
   background-image:
-    radial-gradient(420px 280px at 30% -10%, rgba(124,58,237,0.22) 0%, transparent 60%),
-    radial-gradient(300px 200px at 90% 110%, rgba(91,33,182,0.18) 0%, transparent 50%);
+    radial-gradient(420px 280px at 30% -10%, rgba(124,58,237,0.07) 0%, transparent 60%),
+    radial-gradient(300px 200px at 90% 110%, rgba(91,33,182,0.05) 0%, transparent 50%);
+  border-right: 1px solid rgba(124,58,237,0.12);
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 .sidebar::-webkit-scrollbar { width: 6px; }
-.sidebar::-webkit-scrollbar-thumb { background: #2a2540; border-radius: 999px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.25); border-radius: 999px; }
 
 .brand {
   display: flex;
@@ -118,16 +121,16 @@ img { display: block; max-width: 100%; }
 }
 .brand .mark {
   width: 28px; height: 28px; flex-shrink: 0;
-  filter: drop-shadow(0 2px 12px rgba(124,58,237,0.35));
+  filter: drop-shadow(0 2px 8px rgba(124,58,237,0.22));
 }
 .brand h1 {
   font-size: 17px; font-weight: 800; line-height: 1.1;
   letter-spacing: -0.02em;
-  color: #ffffff;
+  color: var(--ink);
 }
 .brand .sub {
   font-size: 11px; font-weight: 600;
-  color: #8b85a0;
+  color: var(--text-mid);
   letter-spacing: 0.4px;
 }
 
@@ -138,23 +141,24 @@ img { display: block; max-width: 100%; }
   display: flex; align-items: center; gap: 11px;
   padding: 10.5px 12px;
   border-radius: var(--r-md);
-  color: #9a96b0;
+  color: var(--text-mid);
   font-size: 13.5px; font-weight: 500;
   transition: all 140ms cubic-bezier(.2,.8,.2,1);
   text-align: left; width: 100%;
   position: relative;
 }
 .nav button:hover {
-  background: rgba(255,255,255,0.06);
-  color: #e8e6f0;
+  background: var(--accent-softer);
+  color: var(--ink);
   transform: translateX(1px);
 }
 .nav button.active {
-  background: linear-gradient(135deg, rgba(124,58,237,0.28) 0%, rgba(91,33,182,0.32) 100%);
-  color: #ffffff;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 12px rgba(124,58,237,0.18);
+  background: linear-gradient(135deg, rgba(124,58,237,0.14) 0%, rgba(91,33,182,0.10) 100%);
+  color: var(--accent-deep);
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 6px rgba(124,58,237,0.10);
 }
-.nav button.active svg { color: var(--accent-2); }
+.nav button.active svg { color: var(--accent); }
 .nav button.active::before {
   content: '';
   position: absolute;

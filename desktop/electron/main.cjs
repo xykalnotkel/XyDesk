@@ -575,6 +575,146 @@ function registerIpc() {
     scheduleRestart();
     return { ok: true, restarted: wasAlive, wasBlocked };
   });
+
+  // ── Driver virtual (VDD + VB-CABLE) ────────────────────────────────
+  // Sebelumnya tombol "Pasang semua driver" di renderer TIDAK berbuat apa
+  // pun: preload tidak pernah mengekspos installDriver dan tidak ada
+  // handler di sini (laporan operator 14 Sep 2026). Sekarang: skrip ps1
+  // di resources/driver dijalankan lewat PowerShell TER-ELEVATE (UAC).
+  // Proses elevate tidak bisa menyerahkan stdout ke parent, jadi output
+  // ditulis ke berkas temp lalu dibaca kembali — renderer mendapat hasil
+  // nyata (sukses / gagal / dibatalkan) untuk ditampilkan.
+  ipcMain.handle('driver:install', async (_event, kind = 'all') => {
+    const base = driverResourcesPath();
+    const daftar = [];
+    if (kind !== 'audio') daftar.push({ nama: 'Virtual Display Driver', file: 'install.ps1' });
+    if (kind !== 'display') daftar.push({ nama: 'Virtual Audio (VB-CABLE)', file: 'install-audio.ps1' });
+    const hasil = [];
+    for (const d of daftar) {
+      const script = path.join(base, d.file);
+      if (!fs.existsSync(script)) {
+        addLog(`[driver] ${d.file} tidak ditemukan di ${base}`);
+        hasil.push(`${d.nama}: GAGAL — skrip ${d.file} tidak ada di folder aplikasi.`);
+        continue;
+      }
+      const stamp = Date.now();
+      const outFile = path.join(app.getPath('temp'), `xydesk-driver-out-${stamp}.log`);
+      const wrapper = path.join(app.getPath('temp'), `xydesk-driver-run-${stamp}.ps1`);
+      fs.writeFileSync(
+        wrapper,
+        `& '${script.replace(/'/g, "''")}' *>&1 | Tee-Object -FilePath '${outFile.replace(/'/g, "''")}'\nexit $LASTEXITCODE\n`,
+        'utf8',
+      );
+      addLog(`[driver] memasang ${d.nama} — menunggu persetujuan UAC`);
+      try {
+        await new Promise((resolve, reject) => {
+          execFile(
+            'powershell.exe',
+            ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+              `$p = Start-Process powershell -Verb RunAs -Wait -PassThru -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','${wrapper.replace(/'/g, "''")}'; exit $p.ExitCode`],
+            { windowsHide: true, timeout: 600000 },
+            (err) => (err ? reject(err) : resolve()),
+          );
+        });
+        const out = fs.existsSync(outFile) ? fs.readFileSync(outFile, 'utf8').trim() : '';
+        const ekor = out.split(/\r?\n/).slice(-6).join(' | ');
+        hasil.push(`${d.nama}: selesai dijalankan. ${ekor ? 'Output: ' + ekor : ''}`);
+        addLog(`[driver] ${d.nama} selesai`);
+      } catch (e) {
+        const msg = String(e && e.message ? e.message : e);
+        // 1223 = ERROR_CANCELLED: user menolak UAC.
+        if (/cancel|1223/i.test(msg)) {
+          hasil.push(`${d.nama}: DIBATALKAN — permintaan admin (UAC) ditolak.`);
+        } else {
+          hasil.push(`${d.nama}: GAGAL — ${msg.split('\n')[0]}`);
+        }
+        addLog(`[driver] ${d.nama} gagal: ${msg.split('\n')[0]}`);
+      } finally {
+        try { fs.unlinkSync(wrapper); } catch { /* abaikan */ }
+      }
+    }
+    return hasil.join('\n');
+  });
+
+  // Status driver ringan (pnputil) — untuk tampilan tanpa biaya besar.
+  ipcMain.handle('driver:status', () => new Promise((resolve) => {
+    execFile('pnputil', ['/enum-drivers'], { windowsHide: true, timeout: 15000 }, (err, stdout) => {
+      const text = err ? '' : String(stdout || '');
+      resolve({
+        virtualDisplay: /IddSampleDriver|Virtual Display/i.test(text),
+        virtualAudio: /VB-Audio|CABLE/i.test(text),
+      });
+    });
+  }));
+
+  // ── Pembaruan aplikasi (paritas update.rs shell Tauri) ─────────────
+  // Rilis resmi = GitHub Releases; aset installer Windows = XyDesk-x64.exe
+  // (dibungkus Inno oleh release.yml). Versi dibandingkan semver terhadap
+  // app.getVersion() (package.json desktop).
+  const RELEASES_LATEST = 'https://api.github.com/repos/xykalnotkel/XyDesk/releases/latest';
+  const ghHeaders = { 'User-Agent': 'XyDesk-Desktop', Accept: 'application/vnd.github+json' };
+  const semverLebihBaru = (baruLama, kini) => {
+    const a = String(baruLama).replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
+    const b = String(kini).replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
+    for (let i = 0; i < 3; i += 1) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0);
+    return false;
+  };
+  const cariAsetInstaller = (rel) => {
+    const assets = (rel && rel.assets) || [];
+    return assets.find((a) => /^XyDesk-x64\.exe$/i.test(a.name))
+      || assets.find((a) => /setup.*\.exe$/i.test(a.name))
+      || assets.find((a) => /\.exe$/i.test(a.name))
+      || null;
+  };
+  const unduhKe = async (url, dest) => {
+    const res = await fetch(url, { headers: ghHeaders, redirect: 'follow' });
+    if (!res.ok) throw new Error(`Unduhan gagal (HTTP ${res.status}).`);
+    await fs.promises.writeFile(dest, Buffer.from(await res.arrayBuffer()));
+  };
+
+  ipcMain.handle('update:check', async () => {
+    const current = app.getVersion();
+    const res = await fetch(RELEASES_LATEST, { headers: ghHeaders });
+    if (!res.ok) throw new Error(`Gagal menghubungi GitHub Releases (HTTP ${res.status}).`);
+    const rel = await res.json();
+    const latest = String(rel.tag_name || '').replace(/^v/, '');
+    const asset = cariAsetInstaller(rel);
+    return {
+      currentVersion: current,
+      latestVersion: latest || current,
+      latestBuild: 0,
+      updateAvailable: !!latest && semverLebihBaru(latest, current),
+      notes: String(rel.body || '').split(/\r?\n/).filter(Boolean).slice(0, 20),
+      assetName: asset ? asset.name : null,
+      assetBytes: asset ? (asset.size || null) : null,
+    };
+  });
+
+  ipcMain.handle('update:download', async () => {
+    const res = await fetch(RELEASES_LATEST, { headers: ghHeaders });
+    if (!res.ok) throw new Error(`Gagal menghubungi GitHub Releases (HTTP ${res.status}).`);
+    const rel = await res.json();
+    const asset = cariAsetInstaller(rel);
+    if (!asset || !asset.browser_download_url) throw new Error('Aset installer tidak ditemukan di rilis terbaru.');
+    const dir = path.join(app.getPath('userData'), 'update');
+    fs.mkdirSync(dir, { recursive: true });
+    const dest = path.join(dir, asset.name);
+    addLog(`[update] mengunduh ${asset.name}`);
+    await unduhKe(asset.browser_download_url, dest);
+    addLog(`[update] unduhan selesai: ${dest}`);
+    return dest;
+  });
+
+  ipcMain.handle('update:install', (_event, installerPath) => {
+    if (!installerPath || !fs.existsSync(installerPath)) {
+      throw new Error('Berkas installer tidak ditemukan.');
+    }
+    const child = spawn(installerPath, [], { detached: true, stdio: 'ignore' });
+    child.unref();
+    addLog(`[update] installer dibuka (${installerPath}) — aplikasi keluar.`);
+    setTimeout(() => app.quit(), 800);
+    return { ok: true };
+  });
 }
 
 // ── Renderer: server statis (produksi) / URL dev ────────────────────────

@@ -14,6 +14,14 @@ contextBridge.exposeInMainWorld('xydesk', {
   setAutostart: (enable) => ipcRenderer.invoke('autostart:set', enable),
   restartEngine: () => ipcRenderer.invoke('engine:restart'),
   setHint: (hint) => ipcRenderer.invoke('window:hint', hint),
+  // ── Driver virtual ──
+  // 'all' | 'display' | 'audio' → string hasil per driver (sukses/gagal/dibatalkan).
+  installDriver: (kind) => ipcRenderer.invoke('driver:install', kind),
+  checkDriversStatus: () => ipcRenderer.invoke('driver:status'),
+  // ── Pembaruan aplikasi ──
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
+  downloadUpdate: () => ipcRenderer.invoke('update:download'),
+  installUpdate: (p) => ipcRenderer.invoke('update:install', p),
   // ── Login ──
   // authSession() → { masuk, user, metode, exp, tersimpan }; tanpa token.
   authSession: () => ipcRenderer.invoke('auth:session'),

@@ -167,18 +167,23 @@ kelupaan. Kalau suatu hari mau disamakan, hapus barisnya dari bagian ini dulu.
 | Platform | Item |
 |---|---|
 | Aplikasi (HP) | Beranda · Hubungkan · Berita · **Akun** |
-| Desktop | Beranda · Hubungkan · Berita · **Profil · Pengaturan** |
+| Desktop | Beranda · Hubungkan · Berita · **Driver · Log** · **Profil · Pengaturan** |
 | Web | Beranda · Berita (Unduh dan Hubungkan sebagai halaman, bukan nav) |
 
 Desktop memecah Profil dan Pengaturan; aplikasi menggabungnya jadi Akun. Ini
 keputusan struktur informasi, bukan token — perlu diputuskan operator.
 
-### 2. Aksen Void (gelap) di desktop + web
+### 2. Aksen Void (gelap) — hanya web, desktop sudah Paper
 
-Sidebar + hero login desktop dan footer/seksi gelap web memakai Void `#0D0716`
-dengan radial ungu. Aplikasi tidak punya permukaan gelap sama sekali (hukum #2).
-Ini bahasa bersama web + desktop, bukan drift — menghapusnya = mendesain ulang
-kedua sisi, bukan menyamakan token.
+Dulu sidebar + hero login desktop memakai Void `#0D0716` (hitam) dengan radial
+ungu. Saat tes UI 14 Sep 2026 operator menolak sidebar hitam ("sidebar nya
+hitam + ga lengkap"), jadi shell desktop kini **Paper**: sidebar terang
+`var(--raised)` dengan radial ungu halus + border kanan tipis, teks `--ink`.
+Hero login masih boleh gelap (itu layar terpisah). Web tetap memakai Void untuk
+footer/seksi gelap — itu bahasa web, bukan desktop.
+
+> Keputusan operator 14 Sep 2026: shell desktop = terang menyeluruh. Jangan
+> kembalikan sidebar ke Void tanpa persetujuan eksplisit.
 
 ## Yang sudah paritas (contoh baik)
 
