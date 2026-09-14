@@ -2,14 +2,16 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, Wry};
 
-/// Ikon tray: pakai `icons/tray.ico` yang ikut terkompilasi, jatuh ke ikon
-/// jendela bawaan bila parsing gagal. Jangan `unwrap` di sini — panic di
-/// setup membuat seluruh aplikasi keluar tanpa pesan.
-fn tray_icon(app: &AppHandle) -> Option<tauri::image::Image<'static>> {
+/// Ikon tray: pakai `icons/tray.ico` yang ikut terkompilasi, jatuh ke
+/// `icons/icon.png` bila parsing gagal. Keduanya `include_bytes` sehingga
+/// 'static — jangan ambil dari `default_window_icon()` (pinjaman dari
+/// AppHandle, lifetimes-nya tidak lolos). Jangan `unwrap` di sini — panic
+/// di setup membuat seluruh aplikasi keluar tanpa pesan.
+fn tray_icon() -> Option<tauri::image::Image<'static>> {
     if let Ok(img) = tauri::image::Image::from_bytes(include_bytes!("../icons/tray.ico")) {
         return Some(img);
     }
-    app.default_window_icon().cloned()
+    tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png")).ok()
 }
 
 pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
@@ -19,7 +21,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 
     let menu = Menu::with_items(app, &[&show_i, &stop_i, &quit_i])?;
 
-    let icon = tray_icon(app).ok_or("ikon tray tidak tersedia (tray.ico maupun ikon jendela)")?;
+    let icon = tray_icon().ok_or("ikon tray tidak tersedia (tray.ico maupun icon.png)")?;
 
     let _tray = TrayIconBuilder::<Wry>::with_id("xydesk-tray")
         .tooltip("XyDesk Host")
