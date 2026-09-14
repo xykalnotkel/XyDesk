@@ -82,4 +82,3 @@ ios/Runner/GoogleService-Info.plist
 /web/dist/
 admin/dist
 admin/node_modules
-admin/package-lock.json
