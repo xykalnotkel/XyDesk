@@ -206,6 +206,25 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Desktop Shell
 
+- [x] (dari Operator - XyDesk Team, 2026-09-14, sesi LANJUT) — **KEPUTUSAN
+  HIBRIDA: shell Windows x64 balik ke ELECTRON, arm64 tetap Tauri.**
+  Dua temuan audit yang memaksa balik arah: (1) shell Tauri TIDAK
+  menyambung ke engine — renderer cuma mengenal bridge `window.xydesk`
+  yang disediakan `desktop/electron/preload.cjs`, dan src-tauri tidak
+  meng-inject padanannya, jadi UI Tauri jalan dalam MODE DEMO (data
+  contoh) — migrasi Tauri ternyata belum selesai; (2) protokol aset
+  WebView2 gagal di mesin ber-runtime tua: halaman error "localhost
+  refused to connect" di mesin operator (Electron kebal: Chromium
+  bawaan + renderer disajikan HTTP lokal oleh main.cjs). Perubahan:
+  job `windows` build.yml cabang x64 kini `npm run package`
+  (electron-builder) → artefak `XyDesk-Installer-x64` (Setup NSIS wizard
+  + Portable) dan bundle `win-unpacked` dengan layout lama (XyDesk.exe
+  + resources/engine + drivers/); langkah Tauri dipagari
+  `if: matrix.arch != 'x64'`. Rilis v6.8.5+ berikutnya memakai jalur ini.
+  Tauri arm64 + `desktop/src-tauri` dipertahankan; engine spawn Tauri
+  kini memakai CREATE_NO_WINDOW (fix "terminal kedip"). PR ke depannya:
+  kalau mau lanjut Tauri, WAJIB bikin bridge window.xydesk (shim invoke)
+  dulu sebelum dipakai pengguna.
 - [x] (dari Operator - XyDesk Team, 2026-09-14, sesi LANJUT) — **AKAR
   "Windows kedip" KETEMU lewat panic hook + tes installer operator.**
   Pesan panic nyata dari mesin operator: `Plugin Initialization("autostart",

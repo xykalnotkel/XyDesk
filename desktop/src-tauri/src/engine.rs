@@ -10,6 +10,23 @@ use tokio::sync::{Mutex, RwLock};
 
 const SIGNALING_HTTP: &str = "https://signal.xydesk.my.id";
 const SIGNALING_WS: &str = "wss://signal.xydesk.my.id/ws";
+
+/// Flag proses Windows: cegah jendela konsol muncul sesaat tiap spawn.
+/// `xydesk-host.exe` adalah biner subsistem konsol; tanpa flag ini setiap
+/// pemanggilan (identity, engine, restart) memunculkan "terminal kedip"
+/// yang dilaporkan operator saat tes installer.
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+/// Terapkan flag "tanpa jendela konsol" pada Command (hanya di Windows).
+#[cfg(target_os = "windows")]
+fn no_window(cmd: &mut tokio::process::Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(target_os = "windows"))]
+fn no_window(_cmd: &mut tokio::process::Command) {}
 const LOG_LIMIT: usize = 400;
 const RESTART_BACKOFF_BASE_MS: u64 = 2000;
 const RESTART_BACKOFF_MAX_MS: u64 = 30000;
@@ -133,8 +150,10 @@ impl EngineSupervisor {
     }
 
     pub async fn fetch_identity(exe_path: &Path) -> Result<IdentityJson, String> {
-        let output = Command::new(exe_path)
-            .arg("--identity-json")
+        let mut cmd = Command::new(exe_path);
+        cmd.arg("--identity-json");
+        no_window(&mut cmd);
+        let output = cmd
             .output()
             .await
             .map_err(|e| format!("Gagal memanggil xydesk-host --identity-json: {e}"))?;
@@ -263,7 +282,8 @@ impl EngineSupervisor {
                 };
 
                 // Pilih port kontrol acak / bebas
-                let mut child = match Command::new(&exe)
+                let mut engine_cmd = Command::new(&exe);
+                engine_cmd
                     .args([
                         "--url",
                         SIGNALING_WS,
@@ -273,8 +293,9 @@ impl EngineSupervisor {
                         "0",
                     ])
                     .stdout(Stdio::piped())
-                    .stderr(Stdio::piped())
-                    .spawn()
+                    .stderr(Stdio::piped());
+                no_window(&mut engine_cmd);
+                let mut child = match engine_cmd.spawn()
                 {
                     Ok(c) => c,
                     Err(e) => {

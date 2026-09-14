@@ -62,18 +62,17 @@
       ]
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true,
+        "license": "build/license_en.txt",
+        "allowElevation": true,
       "perMachine": true,
       "createDesktopShortcut": true,
       "shortcutName": "XyDesk",
       "artifactName": "XyDesk-Desktop-${version}-${arch}-Setup.${ext}",
-      "include": "build/installer.nsh",
-      "license": "build/license_en.txt",
-      "installerLanguages": [
-        "en_US"
-      ],
+        "installerLanguages": [
+          "en_US"
+        ],
       "language": "1033",
       "displayLanguageSelector": false,
       "warningsAsErrors": false

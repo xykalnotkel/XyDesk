@@ -508,26 +508,78 @@ jobs:
             desktop/src-tauri/target
           key: native-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('host/Cargo.lock') }}-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
           restore-keys: native-${{ runner.os }}-${{ matrix.arch }}-
+      # ── CABANG ARSITEKTUR (keputusan operator 14 Sep 2026) ──
+      # x64  = shell ELECTRON (terbukti di rilis-rilis lama; renderer
+      #        disajikan lewat HTTP lokal oleh main.cjs; bridge
+      #        window.xydesk lengkap; Chromium bawaan = bebas masalah
+      #        versi WebView2). electron-builder menghasilkan installer
+      #        NSIS utuh (wizard next/lokasi/lisensi) + portabel.
+      # arm64 = shell TAURI (Electron di Windows on Arm belum diandalkan;
+      #        dipertahankan apa adanya sampai Electron x64 terbukti lagi).
+      # Alasan balik arah: shell Tauri ternyata belum menyambung ke engine —
+      # renderer hanya mengenal bridge `window.xydesk` yang disediakan
+      # preload Electron, sehingga di Tauri UI berjalan dalam MODE DEMO
+      # (data contoh), plus protokol asetnya gagal di mesin ber-WebView2
+      # tua ("localhost refused to connect" di mesin operator).
       - name: Build engine Rust (release)
         working-directory: host
-        run: cargo build --release --target ${{ matrix.target }} --bin xydesk-host
+        # x64 (Electron) butuh hasil di host/target/release/xydesk-host.exe
+        # persis seperti yang dirujuk extraResources package.json — tanpa
+        # folder target arsitektur.
+        run: cargo build --release ${{ matrix.arch == 'x64' && '' || format('--target {0}', matrix.target) }} --bin xydesk-host
+      # ── Jalur x64: Electron ──
+      - name: Pasang dependensi shell (Electron, x64)
+        if: matrix.arch == 'x64'
+        working-directory: desktop
+        run: npm ci
+      - name: Paket shell Electron + installer NSIS (x64)
+        if: matrix.arch == 'x64'
+        working-directory: desktop
+        run: npm run package
+      - name: Verifikasi & lengkapi bundle Electron (x64)
+        if: matrix.arch == 'x64'
+        shell: pwsh
+        run: |
+          $dir = "desktop/dist/win-unpacked"
+          if (-not (Test-Path "$dir/XyDesk.exe")) { throw "XyDesk.exe tidak ditemukan di $dir" }
+          if (-not (Test-Path "$dir/resources/engine/xydesk-host.exe")) {
+            throw "engine tidak dibundel (resources/engine/xydesk-host.exe hilang)"
+          }
+          # drivers/ di akar bundle: parity dengan zip Tauri + dipakai
+          # langsung oleh tester tanpa installer.
+          New-Item -ItemType Directory -Force -Path "$dir/drivers" | Out-Null
+          Copy-Item "packaging/windows/drivers/*" "$dir/drivers/" -Recurse -Force
+          Get-ChildItem $dir | ForEach-Object { Write-Host "OUT: $($_.Name)" }
+      - name: Unggah installer Electron (x64)
+        if: matrix.arch == 'x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-Installer-x64
+          path: |
+            desktop/dist/XyDesk-Desktop-*-x64-Setup.exe
+            desktop/dist/XyDesk-Desktop-*-x64-Portable.exe
+          if-no-files-found: error
+          retention-days: 30
+      # ── Jalur arm64: Tauri ──
       - name: Build shell static Next.js
+        if: matrix.arch != 'x64'
         working-directory: desktop
         run: |
           npm ci
           npm run build
       - name: Build shell Tauri (release)
+        if: matrix.arch != 'x64'
         working-directory: desktop/src-tauri
         run: cargo build --release --target ${{ matrix.target }}
       # Uji unit shell Tauri (logika murni updater: semver, validasi URL
       # manifest, penolakan path asing — tanpa jaringan). Mode --release
       # memakai ulang dependensi yang baru dibangun, jadi langkahnya murah.
-      # Hanya x64: logikanya tidak tergantung arsitektur.
       - name: Uji unit shell Tauri
-        if: matrix.arch == 'x64'
+        if: matrix.arch != 'x64'
         working-directory: desktop/src-tauri
         run: cargo test --release --target ${{ matrix.target }}
       - name: Kumpulkan output bundle Windows
+        if: matrix.arch != 'x64'
         shell: pwsh
         env:
           OUT_DIR: ${{ format('desktop/dist/{0}', matrix.arch == 'x64' && 'win-unpacked' || format('win-{0}-unpacked', matrix.arch)) }}

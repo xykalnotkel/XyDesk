@@ -1,0 +1,53 @@
+# LISENSI PERANGKAT LUNAK XyDesk (PROPRIETARY)
+### Perjanjian Lisensi Pengguna Akhir (EULA) — Hak Cipta Dilindungi
+
+Hak cipta © 2026 XySpace Tech (xykalnotkel). Seluruh hak dilindungi undang-undang.
+
+## 1. Sifat lisensi
+
+XyDesk adalah perangkat lunak **proprietary (bukan sumber terbuka)**. Kode
+sumber XyDesk adalah rahasia dagang XySpace Tech dan TIDAK dilisensikan kepada
+pihak mana pun di bawah lisensi sumber terbuka apa pun (termasuk namun tidak
+terbatas pada Apache-2.0, MIT, GPL, atau BSD). Keberadaan repositori ini tidak
+memberikan izin untuk menggunakan, menyalin, atau mendistribusikan kode.
+
+## 2. Yang DIPERBOLEHKAN
+
+- Memakai aplikasi XyDesk (biner/APK/installer) untuk keperluan pribadi atau
+  bisnis pada perangkat milikmu sendiri atau yang kamu berwenang kelola.
+- Membagikan tautan unduhan resmi ke rilis XyDesk.
+
+## 3. Yang DILARANG — tanpa izin tertulis dari XySpace Tech
+
+- Menggandakan, memodifikasi, merekayasa balik, mendekompilasi, atau
+  membongkar aplikasi XyDesk.
+- **Meng-clone, menyalin, atau mendistribusikan ulang kode sumber**, sebagian
+  maupun seluruhnya, untuk tujuan apa pun.
+- Memakai nama, logo, atau merek XyDesk pada produk atau layanan lain.
+- Menjual, menyewakan, atau menyublisensikan XyDesk atau turunannya.
+- Menghapus atau mengubah pemberitahuan hak cipta dan lisensi.
+
+## 4. Komponen pihak ketiga
+
+Aplikasi XyDesk menggunakan komponen sumber terbuka pihak ketiga (misalnya
+Flutter, Lucide Icons, font Inter, libwebrtc, Electron, React, Next.js).
+Setiap komponen tetap tunduk pada lisensinya masing-masing — daftar lengkap
+beserta penjelasannya tersedia di halaman Legal & Lisensi di dalam aplikasi
+(Android, Desktop, dan Web) serta di docs/LEGAL.md. Pencantuman komponen ini
+TIDAK mengubah status proprietary XyDesk itu sendiri.
+
+## 5. Garansi & batasan tanggung jawab
+
+Perangkat lunak disediakan "sebagaimana adanya" tanpa garansi apa pun, baik
+tersurat maupun tersirat. Sejauh diizinkan hukum, XySpace Tech tidak
+bertanggung jawab atas kerugian langsung maupun tidak langsung yang timbul
+dari penggunaan XyDesk.
+
+## 6. Penghentian
+
+Lisensi ini berakhir otomatis bila kamu melanggar ketentuan di atas. Setelah
+berakhir, kamu wajib menghapus seluruh salinan XyDesk yang kamu miliki.
+
+## 7. Kontak
+
+Pertanyaan seputar lisensi: legal@xydesk.app
