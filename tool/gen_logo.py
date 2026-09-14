@@ -290,7 +290,11 @@ def main() -> None:
         # Legacy & adaptive SEMUA dari design/logo-asli.png (README) — konsisten
         # Legacy icon (Android < 8.0) dulu pakai tile, sekarang transparan dari design agar sama README
         _from_design(legacy, fill=0.82).save(base / "ic_launcher.png")
-        _from_design(foreground, fill=0.88).save(
+        # Safe-zone adaptive icon Android = 66/108 (~61%) dari kanvas; isi di
+        # luar zona itu DIPOTONG masker launcher (lingkaran/squircle). Dulu
+        # fill 0.88 membuat logo nyaris menyentuh tepi kanvas sehingga
+        # terlihat terpotong/kegedean di launcher bertema. 0.66 = pas zona aman.
+        _from_design(foreground, fill=0.66).save(
             base / "ic_launcher_foreground.png"
         )
         print(f"OK mipmap-{density:<8} legacy={legacy} foreground={foreground} (transparent)")
