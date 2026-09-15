@@ -6,7 +6,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,8 +17,6 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     private val settings = NativeSettings(application)
     private val api = AuthApi()
     private val session = NativeSessionRuntime.session(application)
-    private var reconnectJob: Job? = null
-    private var reconnectAttempts = 0
     private var lastHostId: String? = null
     private var lastPassword: String? = null
     private val _state = MutableStateFlow(NativeSessionState())
@@ -30,7 +27,6 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             session.state.collect {
                 _state.value = it
                 if (it.phase == NativeSessionPhase.Connected) {
-                    reconnectAttempts = 0
                     val host = lastHostId
                     val password = lastPassword
                     if (!host.isNullOrBlank() && !password.isNullOrBlank()) {
@@ -41,12 +37,6 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                             delay(500)
                             session.selectDisplay(settings.preferredDisplay)
                         }
-                    }
-                }
-                if (it.phase == NativeSessionPhase.Error || it.phase == NativeSessionPhase.PeerOffline) {
-                    scheduleReconnect()
-                    if (!settings.autoReconnect || reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-                        stopForegroundService()
                     }
                 }
                 if (it.phase == NativeSessionPhase.Rejected ||
@@ -62,9 +52,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         PairedHostStore(store, store.getString(SecureStore.EMAIL).orEmpty())
 
     fun connect(hostId: String, password: String) {
-        reconnectJob?.cancel()
-        reconnectJob = null
-        reconnectAttempts = 0
+        NativeSessionRuntime.clearReconnect()
         connectInternal(hostId, password, remember = true)
     }
 
@@ -88,6 +76,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             runCatching {
                 val deviceId = deviceId()
                 val signalToken = api.signalToken(token, deviceId)
+                NativeSessionRuntime.configureReconnect(normalizedId, password)
                 session.setSignalingEndpoint(settings.signalingEndpoint)
                 session.setAudioForwardEnabled(settings.audioForwardDefault)
                 session.setMicrophoneEnabled(settings.microphoneDefault)
@@ -141,9 +130,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun requestClipboard() = session.requestClipboard()
     fun sendText(value: String) = session.sendText(value)
     fun disconnect() {
-        reconnectJob?.cancel()
-        reconnectJob = null
-        reconnectAttempts = 0
+        NativeSessionRuntime.clearReconnect()
         lastHostId = null
         lastPassword = null
         session.stop()
@@ -160,21 +147,6 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         )
     }
 
-    private fun scheduleReconnect() {
-        if (!settings.autoReconnect || reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) return
-        val host = lastHostId ?: return
-        val password = lastPassword ?: return
-        if (reconnectJob?.isActive == true) return
-        reconnectAttempts += 1
-        val attempt = reconnectAttempts
-        reconnectJob = viewModelScope.launch {
-            delay(RECONNECT_DELAY_MS * attempt)
-            if (_state.value.phase == NativeSessionPhase.Error || _state.value.phase == NativeSessionPhase.PeerOffline) {
-                connectInternal(host, password, remember = false)
-            }
-        }
-    }
-
     private fun sessionError(message: String) {
         _state.value = _state.value.copy(phase = NativeSessionPhase.Error, message = message)
     }
@@ -187,13 +159,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     override fun onCleared() {
         // NativeSessionRuntime dimiliki process/foreground service, bukan
         // ViewModel. Jangan memutus WebRTC hanya karena Activity dibuat ulang.
-        reconnectJob?.cancel()
         super.onCleared()
-    }
-
-    companion object {
-        private const val MAX_RECONNECT_ATTEMPTS = 3
-        private const val RECONNECT_DELAY_MS = 1_500L
     }
 }
 

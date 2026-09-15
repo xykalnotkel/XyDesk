@@ -558,6 +558,8 @@ class NativeRtcSession(
         )
     }.getOrNull()
 
+    fun reportError(message: String) = fail(message)
+
     private fun fail(message: String) {
         if (!stopped) update(NativeSessionPhase.Error, message)
     }
