@@ -263,11 +263,22 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
                         modifier = Modifier.padding(padding),
                     )
                     is AuthUiState.Working -> LoadingPanel(state.label, Modifier.padding(padding))
-                    is AuthUiState.Error -> LoginScreen(
-                        error = state.message,
-                        onRequestOtp = auth::requestOtp,
-                        modifier = Modifier.padding(padding),
-                    )
+                    is AuthUiState.Error -> when (val previous = state.previous) {
+                        is AuthUiState.OtpRequested -> OtpScreen(
+                            email = previous.email,
+                            resendIn = previous.resendIn,
+                            error = state.message,
+                            onVerify = { code, name -> auth.verifyOtp(previous.email, code, name) },
+                            onResend = { name -> auth.requestOtp(previous.email, name) },
+                            onBack = { auth.signOut() },
+                            modifier = Modifier.padding(padding),
+                        )
+                        else -> LoginScreen(
+                            error = state.message,
+                            onRequestOtp = auth::requestOtp,
+                            modifier = Modifier.padding(padding),
+                        )
+                    }
                     AuthUiState.SignedOut -> LoginScreen(
                         error = null,
                         onRequestOtp = auth::requestOtp,
@@ -517,6 +528,7 @@ private fun LoginScreen(
 private fun OtpScreen(
     email: String,
     resendIn: Int,
+    error: String? = null,
     onVerify: (String, String) -> Unit,
     onResend: (String) -> Unit,
     onBack: () -> Unit,
@@ -541,6 +553,7 @@ private fun OtpScreen(
             color = XyDeskColors.textMid,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
+        if (!error.isNullOrBlank()) ErrorCard(error)
         Row(
             modifier = Modifier.widthIn(max = 360.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
