@@ -62,10 +62,15 @@ fun XyDeskTheme(content: @Composable () -> Unit) {
         secondary = XyDeskColors.accentLavender,
         background = XyDeskColors.bg,
         onBackground = XyDeskColors.textHi,
-        surface = XyDeskColors.raised,
+        // Flutter memakai "quiet surface": kartu terlihat lewat lavender
+        // overlay, bukan shadow/border Material default.
+        surface = XyDeskColors.overlay,
         onSurface = XyDeskColors.textHi,
         surfaceVariant = XyDeskColors.overlay,
         onSurfaceVariant = XyDeskColors.textMid,
+        surfaceContainer = XyDeskColors.overlay,
+        surfaceContainerHigh = XyDeskColors.overlay,
+        surfaceContainerLow = XyDeskColors.bg,
         outline = Color.Transparent,
         error = XyDeskColors.danger,
     )
@@ -77,7 +82,8 @@ fun XyDeskTheme(content: @Composable () -> Unit) {
             small = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
             medium = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
             large = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-            extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+            // Button dan input mengikuti bahasa bentuk Flutter: pill penuh.
+            extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(999.dp),
         ),
         content = content,
     )

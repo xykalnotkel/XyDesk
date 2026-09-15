@@ -363,6 +363,12 @@ class NativeRtcSession(
     fun sendInput(packet: ByteArray) {
         val channel = inputChannel ?: return
         if (channel.state() != DataChannel.State.OPEN) return
+        // MotionEvent bisa datang lebih cepat daripada jaringan. Jangan
+        // biarkan antrean DataChannel tumbuh tanpa batas: backlog input
+        // terasa sebagai lag video/klik tertunda. Keyboard/clipboard tetap
+        // reliable; gerakan pointer sudah di-throttle di UI dan paket yang
+        // terlalu tua boleh dibuang.
+        if (channel.bufferedAmount() > MAX_INPUT_BUFFER_BYTES) return
         channel.send(DataChannel.Buffer(ByteBuffer.wrap(packet), true))
     }
 
@@ -667,6 +673,7 @@ class NativeRtcSession(
     companion object {
         const val DEFAULT_SIGNALING_URL = "wss://signal.xydesk.my.id/ws"
         private const val VIDEO_WATCHDOG_MS = 15_000L
+        private const val MAX_INPUT_BUFFER_BYTES = 256L * 1024L
 
         fun normalizeHostId(value: String): String = value.filterNot { it == ' ' || it == '-' }
     }

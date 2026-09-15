@@ -15,6 +15,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
@@ -24,6 +25,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -109,6 +112,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Flutter app memakai edge-to-edge; native jangan meninggalkan status
+        // bar putih terpisah yang membuat layout terlihat seperti template.
+        enableEdgeToEdge()
         setContent {
             XyDeskNativeRoot(authViewModel, sessionViewModel)
         }
@@ -209,7 +215,17 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
 
     XyDeskTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = XyDeskColors.bg) {
-            Scaffold(
+            if (sessionState.phase == NativeSessionPhase.Connected) {
+                NativeSessionSurface(
+                    state = sessionState,
+                    session = session,
+                    onExit = {
+                        session.disconnect()
+                        selectedTab = 1
+                    },
+                )
+            } else {
+                Scaffold(
                 topBar = {
                     if (signedIn != null) {
                         TopAppBar(
@@ -320,6 +336,135 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
                         onGuest = auth::signInGuest,
                         modifier = Modifier.padding(padding),
                     )
+                }
+            }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NativeSessionSurface(
+    state: NativeSessionState,
+    session: SessionViewModel,
+    onExit: () -> Unit,
+) {
+    val configuration = LocalConfiguration.current
+    val landscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // Sesi native tidak lagi ditanam di dalam halaman Connect yang panjang.
+    // Flutter memakai permukaan video sebagai layar utama; Android mengikuti
+    // pola yang sama agar decoder tidak berebut ruang dengan Lazy/Scroll UI.
+    Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF131315)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            AndroidView(
+                factory = { context ->
+                    SurfaceViewRenderer(context).also { renderer ->
+                        session.attachRenderer(renderer)
+                        var previousX = 0f
+                        var previousY = 0f
+                        var downX = 0f
+                        var downY = 0f
+                        var moved = false
+                        var lastSentAt = 0L
+                        renderer.setOnTouchListener { view, event ->
+                            val width = view.width.coerceAtLeast(1)
+                            val height = view.height.coerceAtLeast(1)
+                            when (event.actionMasked) {
+                                android.view.MotionEvent.ACTION_DOWN -> {
+                                    previousX = event.x
+                                    previousY = event.y
+                                    downX = event.x
+                                    downY = event.y
+                                    moved = false
+                                    lastSentAt = 0L
+                                    true
+                                }
+                                android.view.MotionEvent.ACTION_MOVE -> {
+                                    val dx = event.x - previousX
+                                    val dy = event.y - previousY
+                                    if (event.pointerCount >= 2) {
+                                        val sx = (dx * 5).roundToInt()
+                                        val sy = (dy * 5).roundToInt()
+                                        if ((sx != 0 || sy != 0) && event.eventTime - lastSentAt >= 16) {
+                                            session.scroll(sx, sy)
+                                            lastSentAt = event.eventTime
+                                        }
+                                    } else if ((kotlin.math.abs(event.x - downX) > 6f || kotlin.math.abs(event.y - downY) > 6f) &&
+                                        event.eventTime - lastSentAt >= 16
+                                    ) {
+                                        moved = true
+                                        if (session.isRelativeMouseMode()) {
+                                            session.mouseMoveRelative(dx.roundToInt(), dy.roundToInt())
+                                        } else {
+                                            session.mouseMoveAbsolute(
+                                                event.x.toDouble() / width,
+                                                event.y.toDouble() / height,
+                                            )
+                                        }
+                                        lastSentAt = event.eventTime
+                                    }
+                                    previousX = event.x
+                                    previousY = event.y
+                                    true
+                                }
+                                android.view.MotionEvent.ACTION_UP,
+                                android.view.MotionEvent.ACTION_CANCEL -> {
+                                    // Tap = klik; drag hanya menggerakkan pointer.
+                                    // Mengirim mouse-down pada ACTION_DOWN membuat
+                                    // seluruh remote surface terasa seperti tombol
+                                    // yang tertahan dan menambah antrean input.
+                                    if (!moved && event.pointerCount == 1) {
+                                        session.mouseButton(0, true)
+                                        session.mouseButton(0, false)
+                                    }
+                                    true
+                                }
+                                else -> true
+                            }
+                        }
+                    }
+                },
+                modifier = if (landscape) {
+                    Modifier.fillMaxWidth().weight(1f)
+                } else {
+                    Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                },
+                onRelease = session::detachRenderer,
+            )
+            Surface(color = Color(0xFF1B1B1E)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Sesi aktif", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                state.stats?.let { stats ->
+                                    buildString {
+                                        stats.fps?.let { append("${it.roundToInt()} FPS") }
+                                        stats.rttMs?.let { if (isNotEmpty()) append(" · "); append("${it.roundToInt()} ms") }
+                                    }.ifBlank { "Video tersambung" }
+                                } ?: "Video tersambung",
+                                color = Color(0xFFA0A0A8),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { session.setAudioForwardEnabled(!state.audioForwardEnabled) },
+                            colors = XyDeskOutlinedButtonColors,
+                        ) { Text(if (state.audioForwardEnabled) "Audio" else "Audio off") }
+                        OutlinedButton(
+                            onClick = { session.setMicrophoneEnabled(!state.microphoneEnabled) },
+                            colors = XyDeskOutlinedButtonColors,
+                        ) { Text(if (state.microphoneEnabled) "Mic" else "Mic off") }
+                        Button(onClick = onExit, colors = XyDeskButtonColors) { Text("Selesai") }
+                    }
                 }
             }
         }
@@ -471,7 +616,15 @@ private fun HostHistoryScreen(
         AlertDialog(
             onDismissRequest = { renaming = null },
             title = { Text("Ganti nama host") },
-            text = { OutlinedTextField(value = name, onValueChange = { name = it.take(48) }, label = { Text("Nama host") }, singleLine = true) },
+            text = {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(48) },
+                    label = { Text("Nama host") },
+                    singleLine = true,
+                    colors = XyDeskTextFieldColors,
+                )
+            },
             confirmButton = {
                 TextButton(enabled = name.trim().isNotEmpty(), onClick = {
                     session.renameHost(host.id, name)
@@ -512,66 +665,84 @@ private fun LoginScreen(
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var emailMode by remember { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 24.dp),
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+            .widthIn(max = 440.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Spacer(Modifier.height(8.dp))
         Image(
-            painter = painterResource(R.drawable.il_auth),
-            contentDescription = "Ilustrasi masuk XyDesk",
-            modifier = Modifier.size(168.dp),
+            painter = painterResource(if (emailMode) R.drawable.pair_success else R.drawable.il_auth),
+            contentDescription = "Ilustrasi XyDesk",
+            modifier = Modifier.size(if (emailMode) 132.dp else 168.dp),
         )
-        Spacer(Modifier.height(10.dp))
         Text(
-            "Masuk ke XyDesk",
+            if (emailMode) "Masuk dengan email" else "Selamat datang di XyDesk",
             style = MaterialTheme.typography.headlineMedium,
             color = XyDeskColors.textHi,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         Text(
-            "Simpan sesi dengan aman dan mulai koneksi ke host Windows.",
+            if (emailMode) "Kami akan mengirim kode OTP ke email kamu."
+            else "Hubungkan ke host Windows dengan pengalaman remote desktop yang ringan.",
             color = XyDeskColors.textMid,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.widthIn(max = 440.dp),
         )
-        OutlinedButton(
-            onClick = onGoogle,
-            modifier = Modifier.fillMaxWidth(),
-            colors = XyDeskOutlinedButtonColors,
-        ) { Text("Masuk dengan Google") }
-        Text("atau gunakan email + OTP", style = MaterialTheme.typography.bodySmall, color = XyDeskColors.textLow)
         if (!error.isNullOrBlank()) ErrorCard(error)
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Nama") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Button(
-            onClick = { onRequestOtp(email, name) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = XyDeskButtonColors,
-        ) { Text("Kirim kode OTP") }
-        OutlinedButton(
-            onClick = onGuest,
-            modifier = Modifier.fillMaxWidth(),
-            colors = XyDeskOutlinedButtonColors,
-        ) { Text("Lanjut sebagai tamu") }
-        Text("Token akun disimpan terenkripsi melalui Android Keystore. Tamu dapat melihat UI, tetapi perlu akun untuk menyambung ke host.", style = MaterialTheme.typography.bodySmall, color = XyDeskColors.textLow)
-
+        if (!emailMode) {
+            OutlinedButton(
+                onClick = onGoogle,
+                modifier = Modifier.fillMaxWidth(),
+                colors = XyDeskOutlinedButtonColors,
+            ) {
+                Image(painterResource(R.drawable.google_g), "Google", Modifier.size(20.dp))
+                Spacer(Modifier.size(8.dp))
+                Text("Lanjut dengan Google")
+            }
+            Button(
+                onClick = { emailMode = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = XyDeskButtonColors,
+            ) { Text("Masuk dengan email + OTP") }
+            OutlinedButton(
+                onClick = onGuest,
+                modifier = Modifier.fillMaxWidth(),
+                colors = XyDeskOutlinedButtonColors,
+            ) { Text("Lanjut sebagai tamu") }
+            Text(
+                "Token akun disimpan terenkripsi melalui Android Keystore.",
+                style = MaterialTheme.typography.bodySmall,
+                color = XyDeskColors.textLow,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        } else {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it.take(80) },
+                label = { Text("Nama") },
+                singleLine = true,
+                colors = XyDeskTextFieldColors,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                singleLine = true,
+                colors = XyDeskTextFieldColors,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = { onRequestOtp(email, name) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = XyDeskButtonColors,
+            ) { Text("Kirim kode OTP") }
+            TextButton(onClick = { emailMode = false }) { Text("Kembali ke pilihan masuk") }
+        }
     }
 }
 
@@ -623,6 +794,7 @@ private fun OtpScreen(
                         digits = updated
                     },
                     singleLine = true,
+                    colors = XyDeskTextFieldColors,
                     textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
                     modifier = Modifier.weight(1f),
                 )
@@ -747,6 +919,7 @@ private fun HomeScreen(
                     },
                     label = { Text("ID host · 9 digit") },
                     singleLine = true,
+                    colors = XyDeskTextFieldColors,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedButton(
@@ -760,6 +933,7 @@ private fun HomeScreen(
                     onValueChange = { password = it },
                     label = { Text("Password host") },
                     singleLine = true,
+                    colors = XyDeskTextFieldColors,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -799,6 +973,7 @@ private fun HomeScreen(
                     onValueChange = { renameValue = it.take(48) },
                     label = { Text("Nama host") },
                     singleLine = true,
+                    colors = XyDeskTextFieldColors,
                 )
             },
             confirmButton = {
@@ -948,6 +1123,7 @@ private fun SettingsScreen(
             },
             label = { Text("Display host pilihan (0 = utama)") },
             singleLine = true,
+            colors = XyDeskTextFieldColors,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
@@ -958,6 +1134,7 @@ private fun SettingsScreen(
             },
             label = { Text("Endpoint signaling") },
             singleLine = true,
+            colors = XyDeskTextFieldColors,
             modifier = Modifier.fillMaxWidth(),
         )
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -1218,6 +1395,7 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                 onValueChange = { text = it },
                 label = { Text("Kirim teks ke host") },
                 singleLine = true,
+                colors = XyDeskTextFieldColors,
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(
