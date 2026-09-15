@@ -596,6 +596,17 @@ jobs:
         if: matrix.arch != 'x64'
         working-directory: host
         run: cargo build --release --target ${{ matrix.target }} --bin xydesk-host
+      # Native host shell Rust/Win32 — jalur StarDesk-like tanpa Electron.
+      # Belum menggantikan shell produk lama sebelum parity UI/control selesai,
+      # tetapi selalu dibangun dan dikirim sebagai bundle operator untuk validasi.
+      - name: Build native host shell Rust (x64)
+        if: matrix.arch == 'x64'
+        working-directory: host
+        run: cargo build --release --bin xydesk
+      - name: Build native host shell Rust (non-x64)
+        if: matrix.arch != 'x64'
+        working-directory: host
+        run: cargo build --release --target ${{ matrix.target }} --bin xydesk
       # ── Jalur x64: Electron ──
       - name: Pasang dependensi shell (Electron, x64)
         if: matrix.arch == 'x64'
@@ -668,8 +679,11 @@ jobs:
           # drivers/ di akar bundle: parity dengan zip Tauri + dipakai
           # langsung oleh tester tanpa installer.
           New-Item -ItemType Directory -Force -Path "$dir/drivers" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$dir/native-host" | Out-Null
           Copy-Item "packaging/windows/drivers/*" "$dir/drivers/" -Recurse -Force
+          Copy-Item "host/target/release/xydesk.exe" "$dir/native-host/XyDesk-Native.exe" -Force
           Write-Host "[OK] VDD offline ada di win-unpacked/resources/driver/IddSampleDriver"
+          Write-Host "[OK] native host shell Rust ada di win-unpacked/native-host/XyDesk-Native.exe"
           Get-ChildItem $dir | ForEach-Object { Write-Host "OUT: $($_.Name)" }
       - name: Unggah installer Electron (x64)
         if: matrix.arch == 'x64'
@@ -708,8 +722,10 @@ jobs:
           $dir = $env:OUT_DIR
           New-Item -ItemType Directory -Force -Path "$dir/resources/engine" | Out-Null
           New-Item -ItemType Directory -Force -Path "$dir/drivers" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$dir/native-host" | Out-Null
           Copy-Item "desktop/src-tauri/target/${{ matrix.target }}/release/xydesk-desktop.exe" "$dir/XyDesk.exe" -Force
           Copy-Item "host/target/${{ matrix.target }}/release/xydesk-host.exe" "$dir/resources/engine/xydesk-host.exe" -Force
+          Copy-Item "host/target/${{ matrix.target }}/release/xydesk.exe" "$dir/native-host/XyDesk-Native.exe" -Force
           Copy-Item "packaging/windows/drivers/*" "$dir/drivers/" -Recurse -Force
           # Fallback: salin frontend static export untuk Tauri (jika bundle tidak embed, tetap bisa jalan)
           if (Test-Path "desktop/out") {
