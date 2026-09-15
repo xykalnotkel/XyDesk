@@ -898,9 +898,23 @@ private fun SettingsScreen(
             pipEnabled = it
             settings.pipEnabled = it
         }
-        SettingsToggle("Notifikasi sesi", notificationsEnabled) {
+        SettingsToggle("Notifikasi OneSignal", notificationsEnabled) {
             notificationsEnabled = it
             settings.notificationsEnabled = it
+            if (it) {
+                updateScope.launch {
+                    val granted = NativePushNotifications.requestPermission()
+                    if (granted) {
+                        NativePushNotifications.setOptIn(true)
+                    } else {
+                        notificationsEnabled = false
+                        settings.notificationsEnabled = false
+                        updateMessage = "Izin notifikasi belum diberikan."
+                    }
+                }
+            } else {
+                NativePushNotifications.setOptIn(false)
+            }
         }
         SettingsToggle("Sinkronisasi clipboard", clipboardSync) {
             clipboardSync = it

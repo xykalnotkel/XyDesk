@@ -271,7 +271,10 @@ export class AuthStore {
   }
 
   // Kirim email OTP lewat Resend (gratis 3.000 email/bln, tanpa kartu).
-  // Butuh secret RESEND_API_KEY; RESEND_FROM opsional (default onboarding@resend.dev).
+  // Pengirim produksi selalu memakai domain yang diverifikasi; jangan kembali ke
+  // onboarding@resend.dev karena itu hanya alamat uji Resend.
+  // RESEND_FROM boleh dioverride sebagai Worker var, tetapi fallback-nya tetap
+  // domain XyDesk yang diverifikasi.
   async sendOtpEmail(email, otp) {
     if (!this.env.RESEND_API_KEY) {
       if (this.env.XYDESK_DEV === 'true' || this.env.DEV === 'true') {
@@ -281,7 +284,7 @@ export class AuthStore {
       console.error('[auth] RESEND_API_KEY belum dikonfigurasi');
       return { ok: false, status: 503, error: 'email-not-configured' };
     }
-    const from = this.env.RESEND_FROM || 'XyDesk <onboarding@resend.dev>';
+    const from = this.env.RESEND_FROM || 'XyDesk <auth@mail.xystudio.my.id>';
     const validMinutes = Math.round(OTP_TTL / 60);
     try {
       const res = await fetch('https://api.resend.com/emails', {

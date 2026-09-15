@@ -20,7 +20,7 @@ permissions:
   contents: write
 
 env:
-  FLUTTER_VERSION: '3.44.9'
+  # App ID XyDesk native Android; REST API key tetap di GitHub Secret.
   ONESIGNAL_APP_ID: 'e3d5adea-1c0f-4986-9ce5-e088d65f0998'
 
 jobs:
@@ -572,7 +572,7 @@ jobs:
             > APK ditandatangani dengan keystore rilis. Windows EXE belum
             > code-signed sehingga SmartScreen dapat menampilkan peringatan.
 
-      - name: Kirim OneSignal hanya ke build Android lama
+      - name: Kirim OneSignal ke APK Android native
         run: |
           set -euo pipefail
           python3 - <<'PY'

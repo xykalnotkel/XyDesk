@@ -18,6 +18,8 @@ android {
         versionName = "0.1-native"
         val googleWebClientId = System.getenv("GOOGLE_WEB_CLIENT_ID").orEmpty().replace("\\", "\\\\").replace("\"", "\\\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        // App ID OneSignal bersifat publik. REST/API key tetap hanya di Worker.
+        buildConfigField("String", "ONESIGNAL_APP_ID", "\"e3d5adea-1c0f-4986-9ce5-e088d65f0998\"")
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
@@ -101,6 +103,8 @@ dependencies {
     // yang dipilih; workflow memverifikasi file itu benar-benar masuk APK.
     implementation("io.github.webrtc-sdk:android:144.7559.09")
     implementation("com.google.android.gms:play-services-auth:21.3.0")
+    // OneSignal Android native; tidak memakai onesignal_flutter.
+    implementation("com.onesignal:OneSignal:5.10.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

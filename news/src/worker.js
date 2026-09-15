@@ -480,7 +480,14 @@ async function sendPush(env, post) {
 
 /// Email Resend ke seluruh pelanggan berita.
 async function sendEmails(env, post) {
-  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return;
+  if (!env.RESEND_API_KEY) return;
+  // Domain mail.xystudio.my.id sudah diverifikasi di Resend. EMAIL_FROM
+  // boleh dioverride, tetapi jangan pernah memakai onboarding@resend.dev.
+  const fromAddress = env.EMAIL_FROM || 'auth@mail.xystudio.my.id';
+  if (fromAddress.endsWith('@resend.dev')) {
+    console.error('EMAIL_FROM masih memakai domain uji resend.dev');
+    return;
+  }
   const subs = await env.DB.prepare('SELECT email FROM subscribers').all();
   for (const s of subs.results) {
     try {

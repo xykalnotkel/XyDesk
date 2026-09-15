@@ -86,7 +86,7 @@ tersebut ditambahkan, pengguna Web/Windows harus memakai OTP email.
 ### GitHub Actions repository variables
 
 - `GOOGLE_CLIENT_ID`
-- `RESEND_FROM`, misalnya `XyDesk <auth@domain-terverifikasi.example>`
+- `RESEND_FROM`, default produksi `XyDesk <auth@mail.xystudio.my.id>`
 
 Workflow deploy memasang `AUTH_SECRET`, `RESEND_API_KEY`, `GOOGLE_CLIENT_ID`,
 dan `RESEND_FROM` sebagai Worker secrets sebelum menjalankan

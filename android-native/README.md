@@ -16,6 +16,8 @@ input build APK native.
 - `xydesk_bridge.so`: JNI tipis yang menghubungkan library tersebut ke Kotlin.
 - `libjingle_peerconnection_so.so`: runtime WebRTC resmi dari AAR Android,
   wajib ada untuk media video/audio di setiap ABI.
+- OneSignal Android SDK: notifikasi native menggunakan App ID XyDesk publik;
+  REST/API key tidak pernah dimasukkan ke APK.
 - `InputCodec.kt`: port Kotlin dari `lib/webrtc/input_codec.dart`; byte wire
   harus identik dengan `host/src/input.rs`.
 

@@ -148,6 +148,14 @@ jobs:
           set_secret_optional TURN_REST_API_KEY "$TURN_REST_API_KEY"
 
           # Sender address adalah konfigurasi publik/Worker var, bukan secret.
+          # Jangan pernah jatuh ke onboarding@resend.dev pada deploy produksi.
+          if [ -z "$RESEND_FROM" ]; then
+            RESEND_FROM='XyDesk <auth@mail.xystudio.my.id>'
+          fi
+          if [[ "$RESEND_FROM" == *'@resend.dev'* ]]; then
+            echo "::error::RESEND_FROM masih memakai domain uji resend.dev"
+            exit 1
+          fi
           npx wrangler deploy --var RESEND_FROM:"$RESEND_FROM"
 
           # Ringkasan tanpa membocorkan nilai: berapa penyedia yang hidup.

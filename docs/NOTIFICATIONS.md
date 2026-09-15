@@ -1,13 +1,15 @@
 # XyDesk update notifications
 
-XyDesk uses `onesignal_flutter` 5.6.7 for Android/iOS push delivery. The SDK is initialized only on those platforms and does **not** request notification permission at first launch. Users opt in deliberately from **Akun → Notifikasi pembaruan**.
+XyDesk Android native uses the official `com.onesignal:OneSignal:5.10.0` SDK. The SDK is initialized from the Kotlin `Application` class and does **not** request notification permission at first launch. Users opt in deliberately from **Akun → Notifikasi OneSignal**.
 
 ## OneSignal configuration
 
-- OneSignal App ID is a public application identifier and is compiled into the client.
+- The OneSignal App ID is a public application identifier and is compiled into the native APK.
 - FCM V1 credentials stay in OneSignal's protected dashboard configuration.
 - Never copy a Firebase Admin SDK service-account JSON/private key into this repository, an APK, or client-side build secrets.
-- A direct Firebase Flutter dependency, `google-services.json`, and the Google Services Gradle plugin are not required solely for this OneSignal integration.
+- The OneSignal REST/API key stays only in the Worker or CI secret store.
+- FCM credentials must be configured in the XyDesk app in the OneSignal dashboard before device delivery can be verified.
+- The Android APK does not contain a Firebase service-account JSON or OneSignal REST key.
 
 ## Sending an update
 

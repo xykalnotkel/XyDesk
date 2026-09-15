@@ -96,28 +96,19 @@ Semua UI/UX XyDesk dirancang sendiri oleh tim XyDesk. Berikut seluruh
 komponen pihak ketiga yang dipakai, lisensinya, dan apa fungsinya.
 Pencantuman di sini TIDAK mengubah status proprietary XyDesk.
 
-### Android (Flutter)
+### Android Native (Kotlin + Compose + JNI)
 
 | Komponen | Lisensi | Fungsi di XyDesk |
 |---|---|---|
-| Flutter SDK | BSD-3-Clause (Google) | Kerangka UI lintas platform |
-| Dart SDK | BSD-3-Clause (Google) | Bahasa pemrograman aplikasi |
-| flutter_riverpod | MIT (Remi Rousselet) | Manajemen state reaktif |
-| go_router | BSD-3-Clause (Flutter Team) | Navigasi deklaratif |
-| lucide_icons_flutter | ISC (Lucide Contributors) | Set ikon garis konsisten |
-| Inter (font) | SIL Open Font License 1.1 (Rasmus Andersson) | Font antarmuka |
-| shared_preferences | BSD-3-Clause (Flutter Team) | Penyimpanan key-value lokal |
-| http | BSD-3-Clause (Dart Team) | Klien HTTP (berita, update) |
-| google_sign_in | BSD-3-Clause (Flutter Team) | Masuk dengan Google |
-| flutter_secure_storage | BSD-3-Clause (Flutter Team) | Penyimpanan kredensial terenkripsi |
-| flutter_webrtc | MIT (Flutter WebRTC) | Binding WebRTC untuk sesi |
-| libwebrtc | BSD-3-Clause (Google) | Implementasi media peer-to-peer |
-| web_socket_channel | BSD-3-Clause (Dart Team) | Kanal signaling |
-| package_info_plus | BSD-3-Clause (Flutter Community) | Metadata versi aplikasi |
-| url_launcher | BSD-3-Clause (Flutter Team) | Membuka tautan eksternal |
-| mobile_scanner | BSD-3-Clause (Mobile Scanner) | Pemindai QR (CameraX/MLKit) |
-| onesignal_flutter | Ketentuan OneSignal | Notifikasi push |
-| share_plus | BSD-3-Clause (Flutter Community) | Berbagi tautan berita |
+| Kotlin dan AndroidX | Apache-2.0 | Bahasa dan fondasi aplikasi native |
+| Jetpack Compose | Apache-2.0 | UI native Android |
+| WebRTC Android resmi | BSD-3-Clause | Media peer-to-peer video dan audio |
+| OneSignal Android SDK | Modified MIT / Ketentuan OneSignal | Notifikasi push opt-in |
+| Inter | SIL Open Font License 1.1 | Font antarmuka |
+| CameraX dan ML Kit | Apache-2.0 | Kamera dan pemindai QR |
+| OkHttp | Apache-2.0 | Klien HTTP signaling dan auth |
+| Kotlin Serialization | Apache-2.0 | Serialisasi protokol |
+| Google Play Services Auth | Apache-2.0 | Masuk dengan Google |
 
 ### Desktop Windows (Tauri v2 + Next.js)
 
