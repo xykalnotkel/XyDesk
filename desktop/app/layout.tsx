@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   // #131315 adalah sisa tema lama; shell ini terang (var(--bg) = #fafaf9) dan
-  // warna jendela di electron/main.cjs sudah disamakan ke situ.
+  // warna jendela Tauri sudah disamakan ke situ.
   themeColor: '#fafaf9',
 };
 

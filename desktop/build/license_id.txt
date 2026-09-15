@@ -30,7 +30,7 @@ memberikan izin untuk menggunakan, menyalin, atau mendistribusikan kode.
 4. Komponen pihak ketiga
 
 Aplikasi XyDesk menggunakan komponen pihak ketiga, termasuk Kotlin, Android
-Jetpack dan Compose, WebRTC Android resmi, font Inter, Electron, Rust,
+Jetpack dan Compose, WebRTC Android resmi, font Inter, Tauri, Rust,
 React, dan Next.js. Setiap komponen tetap tunduk pada lisensinya masing-masing.
 Daftar lengkap beserta penjelasannya tersedia pada docs/LEGAL.md dan menu
 Legal & Lisensi di dalam aplikasi. Pencantuman komponen tersebut tidak

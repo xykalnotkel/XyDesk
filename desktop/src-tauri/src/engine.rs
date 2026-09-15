@@ -43,7 +43,7 @@ pub struct InfoPayload {
     /// (Dulu `version`, sehingga Profil selalu menampilkan "v—".)
     #[serde(rename = "appVersion")]
     pub version: String,
-    /// `win32` di Windows (kontrak warisan Electron: `process.platform`),
+    /// `win32` di Windows, sesuai kontrak platform renderer,
     /// nama OS Rust (`linux`, `macos`) di tempat lain.
     pub platform: String,
     pub arch: String,

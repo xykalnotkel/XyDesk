@@ -2,18 +2,16 @@
   "name": "xydesk-desktop",
   "version": "6.8.5",
   "private": true,
-  "description": "XyDesk Desktop \u2014 shell Electron + Next.js untuk host Windows. Engine streaming (capture/encode/WebRTC) tetap Rust di xydesk-host.exe; proses ini TIDAK menyentuh media.",
+  "type": "module",
+  "description": "XyDesk Desktop — shell Tauri + Next.js untuk host Windows. Engine streaming (capture/encode/WebRTC) tetap Rust di xydesk-host.exe; proses ini tidak menangani media.",
   "author": "XyStudio",
   "license": "UNLICENSED",
-  "main": "electron/main.cjs",
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3470",
     "build": "next build",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/",
-    "electron": "electron .",
-    "package": "npm run build && electron-builder --win --x64 --publish never",
-    "package:portable": "npm run build && electron-builder --win portable --x64 --publish never"
+    "tauri:dev": "cargo tauri dev --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
     "lucide-react": "^1.37.0",
@@ -25,60 +23,6 @@
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
-    "electron": "^33.3.1",
-    "electron-builder": "^25.1.8",
     "typescript": "^5.7.3"
-  },
-  "build": {
-    "appId": "com.xydesk.desktop",
-    "productName": "XyDesk",
-    "directories": {
-      "output": "dist",
-      "buildResources": "build"
-    },
-    "files": [
-      "out/**",
-      "electron/**",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "../host/target/release/xydesk-host.exe",
-        "to": "engine/xydesk-host.exe"
-      },
-      {
-        "from": "../host/driver/",
-        "to": "driver/",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "win": {
-      "icon": "assets/icon.ico",
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    },
-    "nsis": {
-        "oneClick": false,
-        "allowToChangeInstallationDirectory": true,
-        "license": "build/license_id.txt",
-        "allowElevation": true,
-      "perMachine": true,
-      "createDesktopShortcut": true,
-      "shortcutName": "XyDesk",
-      "artifactName": "XyDesk-Desktop-${version}-${arch}-Setup.${ext}",
-        "installerLanguages": [
-          "en_US"
-        ],
-      "language": "1033",
-      "displayLanguageSelector": false,
-      "warningsAsErrors": false
-    },
-    "portable": {
-      "artifactName": "XyDesk-Desktop-${version}-${arch}-Portable.${ext}"
-    }
   }
 }

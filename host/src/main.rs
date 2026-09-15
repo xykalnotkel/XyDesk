@@ -84,7 +84,7 @@ async fn send_msg(ws: &mut Ws, msg: &Msg) -> Result<()> {
 }
 
 /// Batas percobaan sambung-ulang dalam proses sebelum menyerah dan keluar —
-/// supaya supervisor Electron meminta token signaling BARU. Token host
+/// supaya supervisor desktop meminta token signaling BARU. Token host
 /// berumur pendek (≈5 menit, lihat signaling/auth.go); kalau jaringan benar-
 /// benar down melewati jendela itu, token lama tidak berguna lagi.
 const RECONNECT_MAX_ATTEMPTS: u32 = 10;
@@ -287,7 +287,7 @@ async fn main() -> Result<()> {
         .as_deref()
         .context("--token wajib saat menjalankan Host")?;
 
-    // ── Control API lokal (shell desktop: Electron + Next.js, desktop/) ──
+    // ── Control API lokal (shell desktop: Tauri + Next.js, desktop/) ──
     // Keadaan mesin ini dibagikan ke loop signaling di bawah DAN ke server
     // HTTP (lihat control.rs). Token dicetak sekali — hanya shell yang
     // men-spawn proses ini yang membacanya.

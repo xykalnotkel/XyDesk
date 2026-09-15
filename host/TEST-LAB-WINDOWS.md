@@ -15,7 +15,7 @@ Kalau hasil sebuah uji menyimpang, catat di `HANDOFF.md` bagian
 ## 0. Persiapan
 
 **Lewat aplikasi (paling mirip pemakaian nyata).** Pasang XyDesk untuk Windows
-hasil `Build` CI (job `windows`). Shell Electron yang men-spawn
+hasil `Build` CI (job `windows`). Shell Tauri yang men-spawn
 `xydesk-host.exe`, jadi log engine ada di **tab Log** pada jendela XyDesk.
 
 **Lewat engine saja (untuk mengontrol sendiri).** Build lalu jalankan manual:

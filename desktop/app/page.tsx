@@ -44,7 +44,7 @@ import {
   toggleLike,
 } from './news';
 
-// Mode demo: dibuka sebagai halaman biasa (bukan lewat Electron) → data contoh.
+// Mode demo: dibuka sebagai halaman biasa (bukan lewat Tauri) → data contoh.
 const DEMO = typeof window !== 'undefined' && !window.xydesk;
 
 // Blok gambar di badan berita: baris sendiri berbentuk
@@ -110,7 +110,7 @@ const LICENSES: [string, string, string][] = [
   ['Dart SDK', 'BSD-3-Clause', 'Google'],
   ['Next.js', 'MIT', 'Vercel'],
   ['React', 'MIT', 'Meta'],
-  ['Electron', 'MIT', 'OpenJS Foundation'],
+  ['Tauri', 'Apache-2.0 / MIT', 'Tauri Contributors'],
   ['Lucide Icons', 'ISC', 'Lucide Contributors'],
   ['Inter', 'SIL OFL 1.1', 'Rasmus Andersson'],
   ['flutter_riverpod', 'MIT', 'Remi Rousselet'],
@@ -237,7 +237,7 @@ export default function Page() {
   // nilai awal `useState`. `window.xydesk` memang tidak ada saat SSR, jadi
   // kalau render pertama client langsung berbeda dari HTML server, React
   // mengamuk dengan #418 (hydration mismatch) dan seluruh subtree dibangun
-  // ulang. Di dalam aplikasi Electron `DEMO` false di kedua sisi: tidak ada
+  // ulang. Di dalam aplikasi Tauri `DEMO` false di kedua sisi: tidak ada
   // yang berubah, hanya jeda satu frame lebih bersih.
   useEffect(() => {
     if (!DEMO) return;
@@ -300,11 +300,11 @@ export default function Page() {
     window.xydesk?.setHint?.(hint).catch(() => {});
   }, [status]);
 
-  // Baris judul kita lebur jadi milik aplikasi (titleBarOverlay Electron),
+  // Baris judul kita lebur jadi milik aplikasi Tauri,
   // jadi tombol caption Windows butuh tempat kosong di ujung kanan topbar.
   useEffect(() => {
     const root = document.documentElement;
-    const cls = 'electron';
+    const cls = 'tauri';
     if (info && info.packaged !== undefined && info.platform === 'win32') root.classList.add(cls);
     else if (info && info.platform !== 'win32') root.classList.remove(cls);
   }, [info]);
@@ -1436,7 +1436,7 @@ function ProfilePage({
 
 /* ── Driver ─────────────────────────────────────────────────────────
    Pusat driver virtual (Display VDD + Audio VB-CABLE). Dulu tombol
-   "pasang driver" tidak berbuat apa-apa karena preload Electron tidak
+   "pasang driver" tidak berbuat apa-apa karena bridge Tauri tidak
    mengekspos installDriver — sekarang tiap tombol punya status loading,
    hasil sukses/gagal/dibatalkan yang ditampilkan gamblang. */
 

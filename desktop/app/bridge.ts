@@ -1,9 +1,8 @@
-// Jembatan Desktop (Tauri / Electron / Browser Demo)
+// Jembatan Desktop Tauri / Browser Demo
 //
 // Menginisialisasi `window.xydesk` secara otomatis bila berjalan di dalam Tauri
-// (menggunakan runtime invoke Tauri v2) atau mempertahankan bridge preload
-// bila berjalan di Electron. Jika dibuka di browser biasa, `window.xydesk`
-// tetap undefined sehingga mode DEMO aktif.
+// (menggunakan runtime invoke Tauri v2). Jika dibuka di browser biasa,
+// `window.xydesk` tetap undefined sehingga mode DEMO aktif.
 
 if (typeof window !== 'undefined') {
   const win = window as any;

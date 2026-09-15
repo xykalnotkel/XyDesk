@@ -1,6 +1,6 @@
 export {};
 
-// Tipe kontrak IPC renderer ↔ proses utama Electron / Tauri bridge.
+// Tipe kontrak bridge renderer ↔ backend Tauri.
 // Status mengikuti serialisasi camelCase dari host/src/control.rs.
 
 declare global {
@@ -103,7 +103,7 @@ declare global {
   interface InfoPayload {
     appVersion: string;
     signalingHttp: string;
-    /** `win32` di Windows (kontrak warisan Electron), nama OS di tempat lain. */
+    /** `win32` di Windows, nama OS di tempat lain. */
     platform: string;
     /** Arsitektur proses: `x86_64` / `aarch64` (dipakai pemilih aset update). */
     arch: string;
@@ -126,7 +126,7 @@ declare global {
 
   /**
    * Status login. SENGAJA tidak punya field token: token sesi hanya hidup di
-   * proses utama (lihat electron/auth.cjs), jadi renderer tidak punya cara
+   * backend Tauri, jadi renderer tidak punya cara
    * memintanya, apalagi membocorkannya ke DOM atau log.
    */
   interface AuthSessionPayload {

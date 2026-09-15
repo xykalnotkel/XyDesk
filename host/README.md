@@ -148,7 +148,7 @@ host/
 
 ## Shell desktop: topbar, scroll, dan perangkat yang terhubung
 
-`desktop/` (Electron + Next.js) hanya cangkang: dia men-spawn engine, membaca
+`desktop/` (Tauri + Next.js) hanya cangkang: dia men-spawn engine, membaca
 control API, dan menampilkan hasilnya. Beberapa aturan yang sudah dibayar
 mahal dan jangan sampai balik lagi:
 
@@ -164,14 +164,14 @@ di layar 1100×480 halaman Pengaturan terpotong 776px dan tidak bisa digulung
 sama sekali (`body` punya `overflow: hidden`). Kalau menambah layout baru,
 beri `min-height: 0` di setiap tingkat antara `.shell` dan kontainer scroll.
 
-**2. Topbar = baris judul Windows = quick surface.** `main.cjs` memakai
-`titleBarStyle: 'hidden'` + `titleBarOverlay` ( warna = `--bg` ), sehingga
+**2. Topbar = baris judul Windows = quick surface.** Tauri memakai
+window overlay (warna = `--bg`), sehingga
 tombol min/maks/tutup digambar Windows di ujung kanan topbar dan UI tidak
 lagi punya "garis asing" di atasnya. Konsekuensi yang wajib dijaga:
 `.topbar { -webkit-app-region: drag }` dan SETIAP elemen yang bisa diklik di
 dalamnya (`button`, `.chip`, `.pill`) `no-drag` — kalau tidak, tombolnya jadi
 daerah seret. `padding-right` 150px untuk tempat tombol caption dipasang
-hanya saat `<html>` punya class `electron` (dideduksi dari `info.platform`).
+hanya saat `<html>` punya class `tauri` (dideduksi dari `info.platform`).
 Jangan pakai `frame: false`: snap layouts, a11y, dan tombol caption asli
 ikut hilang, dan drag/resize harus ditulis ulang di HTML.
 
@@ -181,7 +181,7 @@ status. Karena itu `.side-status` yang dulu mengulang pill status di bawah
 sidebar dibuang — data yang sama dua kali = satu di antaranya basi.
 
 **4. Merek = aset yang digenerasi, bukan digambar di JSX.** `desktop/public/logo.png`
-   dan `desktop/electron/tray.ico` termasuk target `tool/gen_logo.py` (sumber:
+   dan `desktop/src-tauri/icons/tray.ico` termasuk target `tool/gen_logo.py` (sumber:
    `design/logo-asli.png`, lihat `docs/BRAND_ASSETS.md`). Jangan kembali menggambar
    SVG "X" di `page.tsx` — itu yang membuat shell sempat memajang logo berbeda dari
    web/APK. Kalau perlu ukuran baru, tambahkan target di generator, jangan
@@ -256,7 +256,7 @@ dengan watchdog + tombol darurat. Bilang saja kalau mau digarap.
 
 **"Ini apa ga butuh bahasa C#?" — tidak.** Stack ini sudah lengkap: engine
 Rust (`windows` crate untuk WinRT/DXGI/WASAPI/NVENC/SendInput), cangkang
-desktop Electron/Next.js, client Flutter. C# hanya masuk akal kalau mau
+desktop Tauri/Next.js, client Android native. C# hanya masuk akal kalau mau
 menulis tray WinUI/WPF sendiri atau contoh driver IddCx; itu menduplikasi FFI
 yang sudah ada dan memecah aturan `host/` satu bahasa di CI (`docs/CI.md`).
 Yang benar-benar butuh C/C++ bukan C#: vendor SDK (NVENC/AMF) atau kernel

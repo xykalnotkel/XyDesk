@@ -39,9 +39,9 @@ AnyDesk/RustDesk bisa karena mereka pakai WDDM Indirect Display Driver (IddCx) d
 ## Untuk bundling ke installer NSIS
 
 Copy driver .inf + .cat + .sys ke `host/driver/` sebelum `cargo build --release`.
-`electron-builder` akan bundle `host/target/release/xydesk-host.exe` yang sudah tau cara cari driver di `./driver/`.
+Bundle Tauri akan menyertakan `host/target/release/xydesk-host.exe` dan driver di direktori `./drivers/`.
 
-Atau bundle installer terpisah: `Virtual-Display-Driver-Setup.exe` di `desktop/assets/` dan panggil dari main.cjs kalau `virtualDisplay.needed && !installed`.
+Atau gunakan instalasi driver terpisah melalui command Tauri ketika `virtualDisplay.needed && !installed`.
 
 ## Test di VM/RDP
 

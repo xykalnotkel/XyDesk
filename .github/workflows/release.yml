@@ -244,9 +244,8 @@ jobs:
         run: |
           $bundle = Join-Path $env:RUNNER_TEMP "xydesk-${{ matrix.arch }}"
           New-Item -ItemType Directory -Force -Path $bundle | Out-Null
-          # Artefak Windows kini: shell Electron (XyDesk.exe) + engine Rust
-          # yang dibundel electron-builder ke resources/engine/xydesk-host.exe.
-          # GUI native Win32 tidak lagi dikemas.
+          # Artefak Windows kini: shell Tauri (XyDesk.exe) + engine Rust
+          # yang dibundel ke resources/engine/xydesk-host.exe.
           Expand-Archive "incoming/clients/app-windows-${{ matrix.arch }}.zip" $bundle
           if (-not (Test-Path "$bundle/XyDesk.exe")) { throw "XyDesk.exe tidak ada di bundle" }
           if (-not (Test-Path "$bundle/resources/engine/xydesk-host.exe")) {

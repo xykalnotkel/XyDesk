@@ -1,5 +1,5 @@
 //! Control API lokal — HTTP di `127.0.0.1` untuk shell desktop
-//! (Electron + Next.js, lihat `desktop/`).
+//! (Tauri + Next.js, lihat `desktop/`).
 //!
 //! ## Kenapa ada modul ini
 //!
