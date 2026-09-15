@@ -320,7 +320,11 @@ private fun HomeScreen(
         recentHosts = session.recentHosts()
     }
     if (settingsVisible) {
-        SettingsScreen(onBack = { settingsVisible = false }, onSignOut = onSignOut)
+        SettingsScreen(
+            session = session,
+            onBack = { settingsVisible = false },
+            onSignOut = onSignOut,
+        )
         return
     }
     val qrLauncher = rememberLauncherForActivityResult(
@@ -433,7 +437,11 @@ private fun HomeScreen(
 }
 
 @Composable
-private fun SettingsScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
+private fun SettingsScreen(
+    session: SessionViewModel,
+    onBack: () -> Unit,
+    onSignOut: () -> Unit,
+) {
     val context = LocalContext.current
     val settings = remember { NativeSettings(context) }
     var audioDefault by remember { mutableStateOf(settings.audioForwardDefault) }
@@ -494,10 +502,12 @@ private fun SettingsScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
         SettingsToggle("Audio host aktif saat mulai", audioDefault) {
             audioDefault = it
             settings.audioForwardDefault = it
+            session.setAudioForwardEnabled(it)
         }
         SettingsToggle("Mikrofon aktif saat mulai", microphoneDefault) {
             microphoneDefault = it
             settings.microphoneDefault = it
+            session.setMicrophoneEnabled(it)
         }
         SettingsToggle("Picture-in-picture otomatis", pipEnabled) {
             pipEnabled = it
@@ -518,6 +528,7 @@ private fun SettingsScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
         SettingsToggle("Mode mouse relatif / trackpad", relativeMouse) {
             relativeMouse = it
             settings.relativeMouseMode = it
+            session.setRelativeMouseMode(it)
         }
         SettingsToggle("Sambung ulang otomatis", autoReconnect) {
             autoReconnect = it
@@ -527,7 +538,10 @@ private fun SettingsScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
             value = preferredDisplay,
             onValueChange = {
                 preferredDisplay = it.filter(Char::isDigit)
-                it.toIntOrNull()?.let { index -> settings.preferredDisplay = index }
+                it.toIntOrNull()?.let { index ->
+                    settings.preferredDisplay = index
+                    session.selectDisplay(index)
+                }
             },
             label = { Text("Display host pilihan (0 = utama)") },
             singleLine = true,
