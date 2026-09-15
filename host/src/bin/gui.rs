@@ -18,6 +18,7 @@ fn main() {
 #[cfg(target_os = "windows")]
 mod win {
 
+    use std::path::PathBuf;
     use std::process::{Child, Command, Stdio};
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Mutex;
@@ -58,6 +59,10 @@ mod win {
     static LAST_ERR: Mutex<String> = Mutex::new(String::new());
     static IDENTITY: Mutex<Option<(String, String)>> = Mutex::new(None); // (id, password)
     static SHOW_PW: AtomicBool = AtomicBool::new(false);
+    // Satu slot proses untuk start awal, watchdog, dan shutdown. Sebelumnya
+    // tiap closure memiliki static slot sendiri sehingga watchdog tidak selalu
+    // melihat engine yang dimulai saat boot.
+    static ENGINE: Mutex<Option<Child>> = Mutex::new(None);
 
     const TIMER_WATCHDOG: usize = 1;
 
@@ -104,29 +109,105 @@ mod win {
         *LAST_ERR.lock().unwrap() = "Identitas host tidak terbaca.".into();
     }
 
-    /// Tukar id+password -> token signaling host. Rust murni, tanpa browser.
+    fn refresh_path() -> PathBuf {
+        let base = std::env::var_os("APPDATA")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("LOCALAPPDATA").map(PathBuf::from))
+            .or_else(|| std::env::current_exe().ok().and_then(|p| p.parent().map(PathBuf::from)))
+            .unwrap_or_else(|| PathBuf::from("."));
+        base.join("XyDesk").join("host-refresh.json")
+    }
+
+    fn load_refresh() -> Option<String> {
+        let text = std::fs::read_to_string(refresh_path()).ok()?;
+        serde_json::from_str::<serde_json::Value>(&text)
+            .ok()?
+            .get("refresh")?
+            .as_str()
+            .filter(|v| !v.is_empty())
+            .map(ToOwned::to_owned)
+    }
+
+    fn save_refresh(refresh: &str) {
+        let path = refresh_path();
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(text) = serde_json::to_string(&serde_json::json!({ "refresh": refresh })) {
+            let _ = std::fs::write(path, text);
+        }
+    }
+
+    fn clear_refresh() {
+        let _ = std::fs::remove_file(refresh_path());
+    }
+
+    /// POST token host dan pertahankan status HTTP supaya jalur refresh tidak
+    /// dianggap sebagai error jaringan. Token sesi hanya lima menit; refresh
+    /// credential membuat restart engine tidak menghabiskan jatah klaim.
+    fn post_host_token(body: serde_json::Value) -> Result<(u16, String), String> {
+        let result = ureq::post(&format!("{SIGNALING_HTTP}/host-token"))
+            .send_json(body);
+        match result {
+            Ok(resp) => Ok((resp.status(), resp.into_string().unwrap_or_default())),
+            Err(ureq::Error::Status(code, resp)) => {
+                Ok((code, resp.into_string().unwrap_or_default()))
+            }
+            Err(e) => Err(format!("Tidak dapat menghubungi server: {e}")),
+        }
+    }
+
+    /// Tukar id+password atau refresh credential menjadi token signaling host.
+    /// Ini menjaga host native tetap hidup melewati expiry token tanpa browser.
     fn fetch_host_token(id: &str, pw: &str) -> Result<String, String> {
-        let resp = ureq::post(&format!("{SIGNALING_HTTP}/host-token"))
-            .send_json(ureq::json!({ "id": id, "claim": pw }))
-            .map_err(|e| match e {
-                ureq::Error::Status(403, _) => {
-                    "Password tidak cocok dengan klaim device.".to_string()
+        if let Some(refresh) = load_refresh() {
+            let (status, text) = post_host_token(ureq::json!({ "id": id, "refresh": refresh }))?;
+            if status == 200 {
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+                    if let Some(token) = json.get("token").and_then(|v| v.as_str()) {
+                        return Ok(token.to_string());
+                    }
                 }
-                ureq::Error::Status(code, _) => format!("Server menolak (HTTP {code})."),
-                _ => "Tidak dapat menghubungi server.".to_string(),
-            })?;
-        resp.into_string()
-            .map(|s| s.trim().to_string())
-            .map_err(|e| e.to_string())
+            } else if status == 401 {
+                clear_refresh();
+            }
+        }
+
+        let (status, text) = post_host_token(ureq::json!({ "id": id, "claim": pw, "v": 2 }))?;
+        if status != 200 {
+            return Err(if status == 403 {
+                "Password tidak cocok dengan klaim device.".to_string()
+            } else {
+                format!("Server menolak token host (HTTP {status}).")
+            });
+        }
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+            if let Some(refresh) = json.get("refresh").and_then(|v| v.as_str()) {
+                save_refresh(refresh);
+            }
+            if let Some(token) = json.get("token").and_then(|v| v.as_str()) {
+                return Ok(token.to_string());
+            }
+        }
+        // Kompatibilitas dengan Worker lama yang mengembalikan token teks.
+        let token = text.trim().to_string();
+        if token.is_empty() {
+            Err("Server mengembalikan token host kosong.".to_string())
+        } else {
+            Ok(token)
+        }
     }
 
     /// Watchdog: pastikan engine hidup; start ulang dengan token baru bila mati.
-    fn ensure_engine(child_slot: &Mutex<Option<Child>>) {
-        let mut guard = child_slot.lock().unwrap();
+    fn ensure_engine() {
+        let mut guard = ENGINE.lock().unwrap();
         if let Some(c) = guard.as_mut() {
-            if matches!(c.try_wait(), Ok(None)) {
-                ENGINE_OK.store(true, Ordering::Relaxed);
-                return;
+            match c.try_wait() {
+                Ok(None) => {
+                    ENGINE_OK.store(true, Ordering::Relaxed);
+                    return;
+                }
+                Ok(Some(_)) | Err(_) => *guard = None,
             }
         }
         ENGINE_OK.store(false, Ordering::Relaxed);
@@ -140,7 +221,10 @@ mod win {
                 return;
             }
         };
-        let Some(exe) = engine_exe() else { return };
+        let Some(exe) = engine_exe() else {
+            *LAST_ERR.lock().unwrap() = "XyDesk-Host.exe tidak ditemukan.".to_string();
+            return;
+        };
         let mut cmd = Command::new(&exe);
         cmd.arg("--url")
             .arg(SIGNALING_WS)
@@ -233,13 +317,11 @@ mod win {
     }
 
     unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
-        static CHILD: Mutex<Option<Child>> = Mutex::new(None);
         match msg {
             WM_TIMER => {
                 if wp.0 == TIMER_WATCHDOG {
                     std::thread::spawn(|| {
-                        static SLOT: Mutex<Option<Child>> = Mutex::new(None);
-                        ensure_engine(&SLOT);
+                        ensure_engine();
                     });
                     let _ = InvalidateRect(Some(hwnd), None, false);
                 }
@@ -362,7 +444,7 @@ mod win {
             }
             WM_DESTROY => {
                 // Matikan engine saat jendela ditutup.
-                if let Some(mut c) = CHILD.lock().unwrap().take() {
+                if let Some(mut c) = ENGINE.lock().unwrap().take() {
                     let _ = c.kill();
                 }
                 PostQuitMessage(0);
@@ -377,8 +459,7 @@ mod win {
         load_identity();
         // Start engine segera di thread terpisah (always-on dari detik pertama).
         std::thread::spawn(|| {
-            static SLOT: Mutex<Option<Child>> = Mutex::new(None);
-            ensure_engine(&SLOT);
+            ensure_engine();
         });
 
         unsafe {

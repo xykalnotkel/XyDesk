@@ -17,6 +17,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -162,15 +164,15 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
         onDispose { }
     }
 
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF7F7FB)) {
+    XyDeskTheme {
+        Surface(modifier = Modifier.fillMaxSize(), color = XyDeskColors.bg) {
             Scaffold(
                 topBar = {
                     TopAppBar(
                         title = { Text("XyDesk") },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.White,
-                            titleContentColor = Color(0xFF201A35),
+                            containerColor = XyDeskColors.bg,
+                            titleContentColor = XyDeskColors.textHi,
                         ),
                     )
                 },
@@ -235,8 +237,14 @@ private fun LoginScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Spacer(Modifier.height(26.dp))
-        Text("Masuk ke XyDesk", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF201A35))
+        Spacer(Modifier.height(18.dp))
+        Image(
+            painter = painterResource(R.drawable.il_auth),
+            contentDescription = "Ilustrasi masuk XyDesk",
+            modifier = Modifier.fillMaxWidth().height(168.dp),
+        )
+        Spacer(Modifier.height(18.dp))
+        Text("Masuk ke XyDesk", style = MaterialTheme.typography.headlineMedium, color = XyDeskColors.textHi)
         Text("Simpan sesi dengan aman dan mulai koneksi ke host Windows.", color = Color(0xFF625B71))
         if (!error.isNullOrBlank()) ErrorCard(error)
         OutlinedTextField(
