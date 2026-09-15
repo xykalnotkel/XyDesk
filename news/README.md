@@ -99,7 +99,9 @@ Saat terbit, worker **otomatis** (asinkron, `waitUntil`):
    Jika `RESEND_API_KEY` kosong, pengiriman dilewati.
 
 Secret Worker (via `wrangler secret put`): `ADMIN_TOKEN`, `ONESIGNAL_APP_ID`,
-`ONESIGNAL_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`.
+`ONESIGNAL_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`. Untuk push XyDesk native,
+`ONESIGNAL_APP_ID` dan `ONESIGNAL_API_KEY` harus berasal dari aplikasi XyDesk
+native yang sama; jangan menukar key dengan aplikasi OneSignal lain.
 Jalur Google butuh dua secret tambahan: `GOOGLE_CLIENT_ID` (audience token
 OAuth web; bisa daftar pisah-koma bila Android ikut) dan `FOUNDER_EMAIL`
 (email Google founder yang diizinkan). Tanpa keduanya jalur Google nonaktif
