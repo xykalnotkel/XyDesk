@@ -31,6 +31,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             val token = store.getString(SecureStore.TOKEN)
             val email = store.getString(SecureStore.EMAIL)
             val name = store.getString(SecureStore.NAME)
+            if (store.getString(SecureStore.GUEST) == "true") {
+                _state.value = AuthUiState.SignedIn(AuthUser("", name.orEmpty().ifBlank { "Tamu XyDesk" }))
+                return@launch
+            }
             if (token.isNullOrBlank() || email.isNullOrBlank()) {
                 _state.value = AuthUiState.SignedOut
                 return@launch
@@ -85,12 +89,23 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     store.putString(SecureStore.TOKEN, session.token)
                     store.putString(SecureStore.EMAIL, session.user.email.ifBlank { email.trim() })
                     store.putString(SecureStore.NAME, session.user.name.ifBlank { name.trim() })
+                    store.putString(SecureStore.GUEST, "false")
                     _state.value = AuthUiState.SignedIn(session.user)
                 }
                 .onFailure { error ->
                     _state.value = AuthUiState.Error(error.userMessage(), AuthUiState.OtpRequested(email, 0))
                 }
         }
+    }
+
+    fun signInGuest() {
+        resendJob?.cancel()
+        store.remove(SecureStore.TOKEN)
+        store.remove(SecureStore.EMAIL)
+        val guestName = store.getString(SecureStore.NAME).orEmpty().ifBlank { "Tamu XyDesk" }
+        store.putString(SecureStore.NAME, guestName)
+        store.putString(SecureStore.GUEST, "true")
+        _state.value = AuthUiState.SignedIn(AuthUser("", guestName))
     }
 
     fun signOut() {
@@ -126,6 +141,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         store.remove(SecureStore.TOKEN)
         store.remove(SecureStore.EMAIL)
         store.remove(SecureStore.NAME)
+        store.remove(SecureStore.GUEST)
     }
 }
 

@@ -62,6 +62,7 @@ class SecureStore(context: Context) {
         const val TOKEN = "auth.token"
         const val EMAIL = "auth.email"
         const val NAME = "auth.name"
+        const val GUEST = "auth.guest"
         const val DEVICE_ID = "device.id"
     }
 }

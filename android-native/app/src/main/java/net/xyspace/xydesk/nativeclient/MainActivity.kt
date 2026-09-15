@@ -282,6 +282,7 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
                     AuthUiState.SignedOut -> LoginScreen(
                         error = null,
                         onRequestOtp = auth::requestOtp,
+                        onGuest = auth::signInGuest,
                         modifier = Modifier.padding(padding),
                     )
                 }
@@ -470,6 +471,7 @@ private fun LoadingPanel(label: String, modifier: Modifier = Modifier) {
 private fun LoginScreen(
     error: String?,
     onRequestOtp: (String, String) -> Unit,
+    onGuest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var name by remember { mutableStateOf("") }
@@ -519,8 +521,15 @@ private fun LoginScreen(
         Button(
             onClick = { onRequestOtp(email, name) },
             modifier = Modifier.fillMaxWidth(),
+            colors = XyDeskButtonColors,
         ) { Text("Kirim kode OTP") }
-        Text("Token disimpan terenkripsi melalui Android Keystore.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF756E84))
+        OutlinedButton(
+            onClick = onGuest,
+            modifier = Modifier.fillMaxWidth(),
+            colors = XyDeskOutlinedButtonColors,
+        ) { Text("Lanjut sebagai tamu") }
+        Text("Token akun disimpan terenkripsi melalui Android Keystore. Tamu dapat melihat UI, tetapi perlu akun untuk menyambung ke host.", style = MaterialTheme.typography.bodySmall, color = XyDeskColors.textLow)
+
     }
 }
 
