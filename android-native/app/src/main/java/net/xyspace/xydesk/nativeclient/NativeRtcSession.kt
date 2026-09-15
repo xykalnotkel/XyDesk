@@ -437,22 +437,22 @@ class NativeRtcSession(
         }
         val now = System.currentTimeMillis()
         val elapsedSeconds = previousStatsAt?.let { ((now - it).coerceAtLeast(1L) / 1000.0) }
-        val videoBytes = inboundVideo?.number("bytesReceived")?.toLong()
-        val audioBytes = inboundAudio?.number("bytesReceived")?.toLong()
+        val videoBytes = inboundVideo?.members?.number("bytesReceived")?.toLong()
+        val audioBytes = inboundAudio?.members?.number("bytesReceived")?.toLong()
         val videoKbps = if (elapsedSeconds != null && videoBytes != null && previousVideoBytes != null) {
             ((videoBytes - previousVideoBytes!!).coerceAtLeast(0L) * 8.0 / elapsedSeconds) / 1000.0
         } else null
         val audioKbps = if (elapsedSeconds != null && audioBytes != null && previousAudioBytes != null) {
             ((audioBytes - previousAudioBytes!!).coerceAtLeast(0L) * 8.0 / elapsedSeconds) / 1000.0
         } else null
-        val packetsLost = inboundVideo?.number("packetsLost")?.toLong()
-        val packetsReceived = inboundVideo?.number("packetsReceived")?.toLong()
+        val packetsLost = inboundVideo?.members?.number("packetsLost")?.toLong()
+        val packetsReceived = inboundVideo?.members?.number("packetsReceived")?.toLong()
         val lostDelta = if (packetsLost != null && previousPacketsLost != null) (packetsLost - previousPacketsLost!!).coerceAtLeast(0L) else null
         val receivedDelta = if (packetsReceived != null && previousPacketsReceived != null) (packetsReceived - previousPacketsReceived!!).coerceAtLeast(0L) else null
         val packetLoss = if (lostDelta != null && receivedDelta != null && lostDelta + receivedDelta > 0) {
             lostDelta * 100.0 / (lostDelta + receivedDelta)
         } else null
-        val framesReceived = inboundVideo?.number("framesReceived")?.toLong()
+        val framesReceived = inboundVideo?.members?.number("framesReceived")?.toLong()
         if (framesReceived != null && framesReceived > 0L) lastVideoFrameAt = now
         if (
             framesReceived != null &&
@@ -466,12 +466,12 @@ class NativeRtcSession(
         val measuredFps = if (elapsedSeconds != null && framesReceived != null && previousVideoFrames != null) {
             (framesReceived - previousVideoFrames!!).coerceAtLeast(0L) / elapsedSeconds
         } else null
-        val fps = inboundVideo?.number("framesPerSecond") ?: measuredFps
+        val fps = inboundVideo?.members?.number("framesPerSecond") ?: measuredFps
         val codecId = inboundVideo?.members?.get("codecId")?.toString()
         val codec = codecs[codecId]?.members?.get("mimeType")?.toString()?.removePrefix("video/")
-        val rttMs = candidatePair?.number("currentRoundTripTime")?.times(1000.0)
-        val width = inboundVideo?.number("frameWidth")?.toInt()
-        val height = inboundVideo?.number("frameHeight")?.toInt()
+        val rttMs = candidatePair?.members?.number("currentRoundTripTime")?.times(1000.0)
+        val width = inboundVideo?.members?.number("frameWidth")?.toInt()
+        val height = inboundVideo?.members?.number("frameHeight")?.toInt()
         _state.value = _state.value.copy(
             stats = NativeSessionStats(width, height, fps, videoKbps, audioKbps, rttMs, packetLoss, codec),
         )
