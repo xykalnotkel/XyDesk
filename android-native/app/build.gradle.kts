@@ -89,7 +89,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("org.webrtc:google-webrtc:1.0.32006")
+    // Upstream WebRTC Android SDK; bukan binary proprietary StarDesk.
+    implementation("io.github.webrtc-sdk:android:144.7559.09")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
