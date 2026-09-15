@@ -61,6 +61,7 @@ data class NativeSessionState(
     val audioReady: Boolean = false,
     val audioForwardEnabled: Boolean = true,
     val microphoneEnabled: Boolean = true,
+    val relativeMouseMode: Boolean = false,
     val clipboard: String? = null,
     val hostMeta: HostMeta? = null,
     val stats: NativeSessionStats? = null,
@@ -378,6 +379,12 @@ class NativeRtcSession(
         microphoneTrack?.setEnabled(enabled)
         _state.value = _state.value.copy(microphoneEnabled = enabled)
     }
+
+    fun setRelativeMouseMode(enabled: Boolean) {
+        _state.value = _state.value.copy(relativeMouseMode = enabled)
+    }
+
+    fun isRelativeMouseMode(): Boolean = _state.value.relativeMouseMode
 
     fun setAudioForwardEnabled(enabled: Boolean) {
         _state.value = _state.value.copy(audioForwardEnabled = enabled)

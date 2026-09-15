@@ -80,6 +80,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                 session.setSignalingEndpoint(settings.signalingEndpoint)
                 session.setAudioForwardEnabled(settings.audioForwardDefault)
                 session.setMicrophoneEnabled(settings.microphoneDefault)
+                session.setRelativeMouseMode(settings.relativeMouseMode)
                 val serviceIntent = Intent(getApplication(), SessionForegroundService::class.java)
                     .setAction(SessionForegroundService.ACTION_START)
                     .putExtra(SessionForegroundService.EXTRA_MESSAGE, "Menghubungkan ke host…")
@@ -126,6 +127,11 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         settings.microphoneDefault = enabled
         session.setMicrophoneEnabled(enabled)
     }
+    fun setRelativeMouseMode(enabled: Boolean) {
+        settings.relativeMouseMode = enabled
+        session.setRelativeMouseMode(enabled)
+    }
+    fun isRelativeMouseMode(): Boolean = session.isRelativeMouseMode()
     fun sendClipboard(value: String) = session.sendClipboard(value)
     fun requestClipboard() = session.requestClipboard()
     fun sendText(value: String) = session.sendText(value)

@@ -35,6 +35,10 @@ class NativeSettings(context: Context) {
         get() = preferences.getBoolean(KEY_HAPTICS, true)
         set(value) = preferences.edit().putBoolean(KEY_HAPTICS, value).apply()
 
+    var relativeMouseMode: Boolean
+        get() = preferences.getBoolean(KEY_RELATIVE_MOUSE, false)
+        set(value) = preferences.edit().putBoolean(KEY_RELATIVE_MOUSE, value).apply()
+
     var autoReconnect: Boolean
         get() = preferences.getBoolean(KEY_AUTO_RECONNECT, true)
         set(value) = preferences.edit().putBoolean(KEY_AUTO_RECONNECT, value).apply()
@@ -54,6 +58,7 @@ class NativeSettings(context: Context) {
         private const val KEY_NOTIFICATIONS = "notifications_enabled"
         private const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         private const val KEY_HAPTICS = "haptics_enabled"
+        private const val KEY_RELATIVE_MOUSE = "relative_mouse_mode"
         private const val KEY_AUTO_RECONNECT = "auto_reconnect"
         private const val KEY_SIGNALING = "signaling_endpoint"
     }

@@ -440,6 +440,7 @@ private fun SettingsScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
     var notificationsEnabled by remember { mutableStateOf(settings.notificationsEnabled) }
     var keepScreenOn by remember { mutableStateOf(settings.keepScreenOn) }
     var haptics by remember { mutableStateOf(settings.hapticsEnabled) }
+    var relativeMouse by remember { mutableStateOf(settings.relativeMouseMode) }
     var autoReconnect by remember { mutableStateOf(settings.autoReconnect) }
     var preferredDisplay by remember { mutableStateOf(settings.preferredDisplay.toString()) }
     var signalingEndpoint by remember { mutableStateOf(settings.signalingEndpoint) }
@@ -511,6 +512,10 @@ private fun SettingsScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
         SettingsToggle("Getaran kontrol", haptics) {
             haptics = it
             settings.hapticsEnabled = it
+        }
+        SettingsToggle("Mode mouse relatif / trackpad", relativeMouse) {
+            relativeMouse = it
+            settings.relativeMouseMode = it
         }
         SettingsToggle("Sambung ulang otomatis", autoReconnect) {
             autoReconnect = it
@@ -622,21 +627,41 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Sesi aktif", style = MaterialTheme.typography.titleLarge)
             Text(if (state.videoReady) "Video tersambung" else "Video sedang disiapkan…")
+            Text(
+                if (state.relativeMouseMode) "Mouse: relatif / trackpad" else "Mouse: absolute / layar",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF625B71),
+            )
             AndroidView(
                 factory = { context ->
                     SurfaceViewRenderer(context).also { renderer ->
                         session.attachRenderer(renderer)
+                        var previousX = 0f
+                        var previousY = 0f
                         renderer.setOnTouchListener { view, event ->
                             val width = view.width.coerceAtLeast(1)
                             val height = view.height.coerceAtLeast(1)
                             when (event.actionMasked) {
                                 android.view.MotionEvent.ACTION_DOWN -> {
-                                    session.mouseMoveAbsolute(event.x / width, event.y / height)
+                                    previousX = event.x
+                                    previousY = event.y
+                                    if (!session.isRelativeMouseMode()) {
+                                        session.mouseMoveAbsolute(event.x / width, event.y / height)
+                                    }
                                     session.mouseButton(0, true)
                                     true
                                 }
                                 android.view.MotionEvent.ACTION_MOVE -> {
-                                    session.mouseMoveAbsolute(event.x / width, event.y / height)
+                                    if (session.isRelativeMouseMode()) {
+                                        session.mouseMoveRelative(
+                                            (event.x - previousX).roundToInt(),
+                                            (event.y - previousY).roundToInt(),
+                                        )
+                                    } else {
+                                        session.mouseMoveAbsolute(event.x / width, event.y / height)
+                                    }
+                                    previousX = event.x
+                                    previousY = event.y
                                     true
                                 }
                                 android.view.MotionEvent.ACTION_UP,
@@ -687,6 +712,20 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                     },
                     modifier = Modifier.weight(1f),
                 ) { Text("Klik kiri") }
+                OutlinedButton(
+                    onClick = {
+                        session.mouseButton(1, true)
+                        session.mouseButton(1, false)
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Klik kanan") }
+                OutlinedButton(
+                    onClick = {
+                        session.mouseButton(2, true)
+                        session.mouseButton(2, false)
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Klik tengah") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = { session.scroll(0, -480) }, modifier = Modifier.weight(1f)) { Text("Scroll atas") }

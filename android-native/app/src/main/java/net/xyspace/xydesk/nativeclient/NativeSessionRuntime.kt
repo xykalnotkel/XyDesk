@@ -137,6 +137,7 @@ object NativeSessionRuntime {
                     nativeSession.setSignalingEndpoint(settings.signalingEndpoint)
                     nativeSession.setAudioForwardEnabled(settings.audioForwardDefault)
                     nativeSession.setMicrophoneEnabled(settings.microphoneDefault)
+                    nativeSession.setRelativeMouseMode(settings.relativeMouseMode)
                     nativeSession.start(
                         hostId = plan.hostId,
                         password = plan.password,
