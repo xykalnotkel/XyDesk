@@ -64,9 +64,16 @@ jobs:
           set -euo pipefail
           apk="android-native/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$apk"
-          unzip -l "$apk" | grep -E 'lib/(arm64-v8a|armeabi-v7a)/libxydesk_(streamer|audio|control|bridge)\.so'
-          if unzip -l "$apk" | grep -E 'lib/(x86|x86_64)/|libflutter\.so|libapp\.so'; then
-            echo "ABI x86 atau runtime Flutter ditemukan di APK native."
+          for abi in arm64-v8a armeabi-v7a; do
+            for library in libxydesk_streamer.so libxydesk_audio.so libxydesk_control.so libxydesk_bridge.so libjingle_peerconnection_so.so; do
+              if ! unzip -l "$apk" | grep -q "lib/$abi/$library"; then
+                echo "Library wajib hilang: $abi/$library"
+                exit 1
+              fi
+            done
+          done
+          if unzip -l "$apk" | grep -E 'lib/(x86|x86_64)/|libflutter\.so|libapp\.so|libstreamer\.so'; then
+            echo "ABI x86, runtime Flutter, atau libstreamer.so proprietary ditemukan di APK native."
             exit 1
           fi
           mkdir -p dist

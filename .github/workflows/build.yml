@@ -278,9 +278,16 @@ jobs:
           set -euo pipefail
           apk="android-native/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$apk"
-          unzip -l "$apk" | grep -E 'lib/(arm64-v8a|armeabi-v7a)/libxydesk_(streamer|audio|control|bridge)\.so'
-          if unzip -l "$apk" | grep -E 'lib/(x86|x86_64)/|libflutter\.so|libapp\.so'; then
-            echo "ABI x86 atau runtime Flutter ditemukan di APK native."
+          for abi in arm64-v8a armeabi-v7a; do
+            for library in libxydesk_streamer.so libxydesk_audio.so libxydesk_control.so libxydesk_bridge.so libjingle_peerconnection_so.so; do
+              if ! unzip -l "$apk" | grep -q "lib/$abi/$library"; then
+                echo "Library wajib hilang: $abi/$library"
+                exit 1
+              fi
+            done
+          done
+          if unzip -l "$apk" | grep -E 'lib/(x86|x86_64)/|libflutter\.so|libapp\.so|libstreamer\.so'; then
+            echo "ABI x86, runtime Flutter, atau libstreamer.so proprietary ditemukan di APK native."
             exit 1
           fi
           mkdir -p dist
@@ -342,9 +349,16 @@ jobs:
           set -euo pipefail
           apk="android-native/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$apk"
-          unzip -l "$apk" | grep -E 'lib/(arm64-v8a|armeabi-v7a)/libxydesk_(streamer|audio|control|bridge)\.so'
-          if unzip -l "$apk" | grep -E 'lib/(x86|x86_64)/'; then
-            echo "ABI x86 tidak boleh masuk APK native."
+          for abi in arm64-v8a armeabi-v7a; do
+            for library in libxydesk_streamer.so libxydesk_audio.so libxydesk_control.so libxydesk_bridge.so libjingle_peerconnection_so.so; do
+              if ! unzip -l "$apk" | grep -q "lib/$abi/$library"; then
+                echo "Library wajib hilang: $abi/$library"
+                exit 1
+              fi
+            done
+          done
+          if unzip -l "$apk" | grep -E 'lib/(x86|x86_64)/|libflutter\.so|libapp\.so|libstreamer\.so'; then
+            echo "ABI x86, runtime Flutter, atau libstreamer.so proprietary ditemukan di APK native."
             exit 1
           fi
 
@@ -557,6 +571,13 @@ jobs:
           Write-Host "[OK] VDD offline ada di win-unpacked/resources/driver/IddSampleDriver"
           Write-Host "[OK] native host shell Rust ada di win-unpacked/native-host/XyDesk-Native.exe"
           Get-ChildItem $dir | ForEach-Object { Write-Host "OUT: $($_.Name)" }
+      - name: Audit dependency DLL engine Rust (x64)
+        if: matrix.arch == 'x64'
+        shell: pwsh
+        run: |
+          & .\tool\audit_windows_dependencies.ps1 `
+            -Binary @("host/target/release/xydesk-host.exe", "host/target/release/xydesk.exe") `
+            -StagingRoot "desktop/dist/win-unpacked"
       - name: Unggah installer Electron (x64)
         if: matrix.arch == 'x64'
         uses: actions/upload-artifact@v4
@@ -611,6 +632,13 @@ jobs:
             throw "engine tidak dibundel (resources/engine/xydesk-host.exe hilang)"
           }
           Get-ChildItem $dir | ForEach-Object { Write-Host "OUT: $($_.Name)" }
+      - name: Audit dependency DLL engine Rust (arm64)
+        if: matrix.arch == 'arm64'
+        shell: pwsh
+        run: |
+          & .\tool\audit_windows_dependencies.ps1 `
+            -Binary @("host/target/${{ matrix.target }}/release/xydesk-host.exe", "host/target/${{ matrix.target }}/release/xydesk.exe") `
+            -StagingRoot "desktop/dist/win-arm64-unpacked"
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Windows-${{ matrix.arch }}

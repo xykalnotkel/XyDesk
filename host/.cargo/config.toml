@@ -1,0 +1,10 @@
+# Windows engine dibuat dengan static MSVC CRT agar bundle tidak bergantung
+# pada msvcp140.dll/vcruntime140.dll yang disalin manual dari mesin build.
+# API Windows, Media Foundation, D3D11/DXGI, dan driver NVIDIA tetap berasal
+# dari Windows/driver host; static CRT tidak membuat DLL sistem ikut dibundle.
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

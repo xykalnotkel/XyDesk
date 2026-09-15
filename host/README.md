@@ -109,6 +109,28 @@ cargo build --release
 > Cross-compile dari Linux **tidak** didukung untuk bagian capture (butuh
 > Win32). Verifikasi di lab Windows lewat workflow `test-lab.yml`.
 
+## Dependency Windows dan DLL
+
+CI mempertahankan target MSVC `x86_64-pc-windows-msvc` dan
+`aarch64-pc-windows-msvc`. Engine `xydesk-host.exe` dan shell native
+`xydesk.exe` memakai static MSVC CRT; `libopus` dikompilasi dari
+`vendor/opus` sebagai archive/object statik oleh `build.rs`. Jadi kita tidak
+menyalin `msvcp140.dll`, `vcruntime140.dll`, atau seluruh folder `System32` ke
+bundle secara membabi buta.
+
+| Kelas | Contoh | Perlakuan |
+| --- | --- | --- |
+| Dependency aplikasi | DLL pihak ketiga yang benar-benar diimport engine | Wajib muncul di bundle; CI mengaudit `dumpbin /DEPENDENTS` dan gagal bila hilang |
+| MSVC/UCRT runtime | `msvcp140.dll`, `vcruntime140.dll`, `ucrtbase.dll` | Bukan DLL yang diambil dari runner; static CRT diusahakan. Jika import dinamis muncul, audit mencatatnya sebagai prerequisite resmi |
+| Windows/API media | `d3d11.dll`, DXGI, `mf.dll`, `mfplat.dll`, Media Foundation, WASAPI | Disediakan fitur Windows; tidak dibundle |
+| GPU driver opsional | `nvEncodeAPI64.dll` | Dimuat dinamis hanya saat NVENC dipakai; wajib berasal dari driver NVIDIA host, tidak dibundle |
+| Opus | `libopus` vendor | Statik; `opus.dll`/`libopus*.dll` tidak boleh ada |
+
+Audit CI ada di `tool/audit_windows_dependencies.ps1`. Audit ini tidak
+menganggap “semua DLL harus disalin” sebagai kelengkapan: yang lengkap adalah
+semua dependency aplikasi, sementara system/API dan driver tetap dipenuhi oleh
+platform yang memang memilikinya.
+
 ## Struktur
 
 ```

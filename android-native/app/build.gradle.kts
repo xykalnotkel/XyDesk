@@ -97,6 +97,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Upstream WebRTC Android SDK; bukan binary proprietary StarDesk.
+    // AAR ini memasukkan libjingle_peerconnection_so.so untuk setiap ABI
+    // yang dipilih; workflow memverifikasi file itu benar-benar masuk APK.
     implementation("io.github.webrtc-sdk:android:144.7559.09")
     implementation("com.google.android.gms:play-services-auth:21.3.0")
 

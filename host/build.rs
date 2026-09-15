@@ -67,6 +67,13 @@ fn main() {
         .define("NDEBUG", None)
         .warnings(false)
         .opt_level(3);
+    // Jangan membuat opus.dll atau ketergantungan MSVC CRT dinamis dari
+    // object vendor. Rust host juga memakai +crt-static (lihat
+    // host/.cargo/config.toml), sehingga engine tidak meminta VC runtime
+    // DLL hanya untuk codec yang kita kompilasi sendiri.
+    if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+        build.static_crt(true);
+    }
     build.compile("opus");
     println!("cargo:rustc-link-lib=static=opus");
     println!("cargo:rerun-if-changed=vendor/opus");

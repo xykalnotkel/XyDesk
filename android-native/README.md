@@ -11,15 +11,19 @@ input build APK native.
 
 - `xydesk_control.so`: state dan kontrak kontrol sesi.
 - `xydesk_audio.so`: clock audio dan format PCM dasar untuk jalur Android.
-- `xydesk_streamer.so`: lifecycle media client; integrasi WebRTC native menjadi
-  sumber media, bukan renderer Flutter.
+- `xydesk_streamer.so`: lifecycle media client milik XyDesk; integrasi WebRTC
+  native menjadi sumber media.
 - `xydesk_bridge.so`: JNI tipis yang menghubungkan library tersebut ke Kotlin.
+- `libjingle_peerconnection_so.so`: runtime WebRTC resmi dari AAR Android,
+  wajib ada untuk media video/audio di setiap ABI.
 - `InputCodec.kt`: port Kotlin dari `lib/webrtc/input_codec.dart`; byte wire
   harus identik dengan `host/src/input.rs`.
 
-Library StarDesk seperti `libstreamer.so` tidak dipakai. XyDesk membangun
-library miliknya sendiri dan menggunakan WebRTC Android SDK sebagai transport
-media terbuka.
+`libstreamer.so` StarDesk tidak disalin dan tidak boleh dipakai sebagai
+ketergantungan tersembunyi. Itu bukan nama library XyDesk dan artefak publik
+StarDesk tidak membuktikan lisensi, ABI, atau protokol yang cocok. Pengganti
+media native yang benar adalah kombinasi `libjingle_peerconnection_so.so`
+resmi + `libxydesk_streamer.so` milik XyDesk.
 
 ## ABI
 
