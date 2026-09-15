@@ -15,7 +15,9 @@ dependencies:
   shared_preferences: ^2.3.2
   http: ^1.6.0
   google_sign_in: ^7.2.0
-  flutter_secure_storage: ^11.0.0
+  # 9.x tetap kompatibel dengan SecureSessionVault dan tidak memaksa
+  # compileSdk 37 yang belum tersedia pada runner Android saat ini.
+  flutter_secure_storage: ^9.2.4
   # Transport sesi remote (Fase 0 — loop capture->encode->kirim->decode).
   flutter_webrtc: ^1.5.2
   web_socket_channel: ^3.0.0
