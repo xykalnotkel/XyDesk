@@ -63,8 +63,8 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             return
         }
         val normalizedId = normalizeHostId(hostId)
-        if (normalizedId.length < 6 || password.isBlank()) {
-            sessionError("ID host dan password wajib diisi.")
+        if (normalizedId.length != 9 || !normalizedId.all(Char::isDigit) || password.isBlank()) {
+            sessionError("ID host harus terdiri dari 9 digit dan password wajib diisi.")
             return
         }
         if (remember) {

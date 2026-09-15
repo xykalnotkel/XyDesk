@@ -700,8 +700,11 @@ private fun HomeScreen(
                 Text("Connect", style = MaterialTheme.typography.titleLarge)
                 OutlinedTextField(
                     value = hostId,
-                    onValueChange = { hostId = it },
-                    label = { Text("ID host") },
+                    onValueChange = { value ->
+                        val digits = value.filter(Char::isDigit).take(9)
+                        hostId = digits.chunked(3).joinToString(" ")
+                    },
+                    label = { Text("ID host · 9 digit") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
