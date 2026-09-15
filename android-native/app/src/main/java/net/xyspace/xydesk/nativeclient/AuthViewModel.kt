@@ -3,6 +3,8 @@ package net.xyspace.xydesk.nativeclient
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +22,7 @@ sealed interface AuthUiState {
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val store = SecureStore(application)
     private val api = AuthApi()
+    private var resendJob: Job? = null
     private val _state = MutableStateFlow<AuthUiState>(AuthUiState.Loading)
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
 
@@ -60,6 +63,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             runCatching { api.requestOtp(normalized, name.trim()) }
                 .onSuccess { result ->
                     _state.value = AuthUiState.OtpRequested(normalized, result.resendIn)
+                    startResendCountdown(normalized, result.resendIn)
                 }
                 .onFailure { error ->
                     _state.value = AuthUiState.Error(error.userMessage(), AuthUiState.SignedOut)
@@ -76,6 +80,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             runCatching { api.verifyOtp(email.trim(), otp.trim()) }
                 .onSuccess { session ->
+                    resendJob?.cancel()
+                    resendJob = null
                     store.putString(SecureStore.TOKEN, session.token)
                     store.putString(SecureStore.EMAIL, session.user.email.ifBlank { email.trim() })
                     store.putString(SecureStore.NAME, session.user.name.ifBlank { name.trim() })
@@ -88,8 +94,26 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun signOut() {
+        resendJob?.cancel()
+        resendJob = null
         clearSession()
         _state.value = AuthUiState.SignedOut
+    }
+
+    private fun startResendCountdown(email: String, seconds: Int) {
+        resendJob?.cancel()
+        if (seconds <= 0) return
+        resendJob = viewModelScope.launch {
+            var remaining = seconds
+            while (remaining >= 0) {
+                val current = _state.value as? AuthUiState.OtpRequested
+                if (current == null || current.email != email) return@launch
+                _state.value = current.copy(resendIn = remaining)
+                if (remaining == 0) break
+                delay(1_000)
+                remaining -= 1
+            }
+        }
     }
 
     fun token(): String? = store.getString(SecureStore.TOKEN)

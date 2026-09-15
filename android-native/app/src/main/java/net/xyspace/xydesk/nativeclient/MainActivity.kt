@@ -184,6 +184,7 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
                         email = state.email,
                         resendIn = state.resendIn,
                         onVerify = { code, name -> auth.verifyOtp(state.email, code, name) },
+                        onResend = { name -> auth.requestOtp(state.email, name) },
                         onBack = { auth.signOut() },
                         modifier = Modifier.padding(padding),
                     )
@@ -260,6 +261,7 @@ private fun OtpScreen(
     email: String,
     resendIn: Int,
     onVerify: (String, String) -> Unit,
+    onResend: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -289,8 +291,12 @@ private fun OtpScreen(
         Button(onClick = { onVerify(code, name) }, modifier = Modifier.fillMaxWidth()) {
             Text("Verifikasi")
         }
+        OutlinedButton(
+            onClick = { onResend(name) },
+            enabled = resendIn == 0,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(if (resendIn > 0) "Kirim ulang ($resendIn)" else "Kirim ulang kode") }
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Kembali") }
-        if (resendIn > 0) Text("Kode baru dapat diminta lagi setelah $resendIn detik.")
     }
 }
 
