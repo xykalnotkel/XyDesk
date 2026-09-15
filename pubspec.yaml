@@ -16,7 +16,6 @@ dependencies:
   http: ^1.6.0
   google_sign_in: ^7.2.0
   flutter_secure_storage: ^11.0.0
-  onesignal_flutter: ^5.6.7
   # Transport sesi remote (Fase 0 — loop capture->encode->kirim->decode).
   flutter_webrtc: ^1.5.2
   web_socket_channel: ^3.0.0

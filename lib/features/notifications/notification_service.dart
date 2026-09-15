@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/devlog.dart';
 import '../../core/store.dart';
@@ -12,38 +12,31 @@ import 'update_page.dart';
 
 final appNavigatorKey = GlobalKey<NavigatorState>();
 
-/// Callback untuk navigasi ke artikel berita dari push notification.
 typedef NewsNavigationCallback = void Function(String articleId, String slug);
 
-/// Integrasi tunggal OneSignal untuk seluruh aplikasi.
+/// Bridge Dart ke OneSignal Android SDK native.
 ///
-/// SDK diinisialisasi tanpa memunculkan dialog izin. Dialog sistem hanya
-/// dipanggil setelah pengguna menekan tombol opt-in di halaman pengaturan.
+/// Flutter tetap menjadi UI/UX, tetapi SDK push, permission, opt-in/opt-out,
+/// dan lifecycle OneSignal dijalankan oleh MainActivity Kotlin. Tidak ada lagi
+/// `onesignal_flutter` atau inisialisasi push dari Dart.
 class NotificationService extends ChangeNotifier {
   NotificationService._();
 
   static final NotificationService instance = NotificationService._();
+  static const _channel = MethodChannel('com.xystudio.xydesk/notifications');
+  static const _pausedKey = 'push_paused_by_user';
+  static const _initTimeout = Duration(seconds: 10);
 
   Future<void>? _initializeFuture;
-  bool _listenersAttached = false;
+  bool _handlerAttached = false;
   bool _initialized = false;
   bool _busy = false;
   bool _permissionGranted = false;
   bool _canRequestPermission = false;
   bool _optedIn = false;
   String? _lastError;
-
-  /// Callback untuk navigasi ke artikel berita.
   NewsNavigationCallback? onNewsNavigate;
-
-  /// Pending news navigation data
   _PendingNewsNavigation? _pendingNews;
-
-  /// Kunci penanda "pengguna sengaja menjeda notifikasi". Selama tidak ada,
-  /// izin sistem yang sudah diberikan dianggap sebagai persetujuan dan
-  /// langganan diaktifkan otomatis.
-  static const _pausedKey = 'push_paused_by_user';
-
   AppUpdateDetails? _pendingUpdate;
   bool _navigationScheduled = false;
   bool _updateRouteOpen = false;
@@ -57,154 +50,98 @@ class NotificationService extends ChangeNotifier {
   bool get active => _permissionGranted && _optedIn;
   String? get lastError => _lastError;
 
-  /// Batas waktu menyiapkan push. SDK pihak ketiga tidak boleh menahan
-  /// pemanggilnya tanpa akhir: kalau jawabannya tidak kunjung datang,
-  /// layanan ditinggalkan dalam keadaan belum siap dan bisa dicoba lagi
-  /// dari halaman pengaturan.
-  static const _initTimeout = Duration(seconds: 10);
+  void _attachNativeHandler() {
+    if (_handlerAttached) return;
+    _handlerAttached = true;
+    _channel.setMethodCallHandler((call) async {
+      if (call.method != 'notificationClick') return null;
+      final data = (call.arguments as Map?)?.cast<String, dynamic>() ?? {};
+      _onNotificationClick(data);
+      return null;
+    });
+  }
+
+  Future<Map<String, dynamic>> _nativeState() async {
+    final value = await _channel.invokeMapMethod<String, dynamic>('getState');
+    return value ?? const <String, dynamic>{};
+  }
+
+  void _applyState(Map<String, dynamic> state) {
+    _initialized = state['initialized'] == true;
+    _permissionGranted = state['permissionGranted'] == true;
+    _canRequestPermission = state['canRequestPermission'] == true;
+    _optedIn = state['optedIn'] == true;
+  }
 
   Future<void> initialize() async {
-    if (_initialized || !supported) return;
+    if (!supported || _initialized) return;
     final inFlight = _initializeFuture;
     if (inFlight != null) {
-      await inFlight.timeout(
-        _initTimeout,
-        onTimeout: () => DevLog.w(
-          'push',
-          'Menunggu inisialisasi sebelumnya kehabisan waktu',
-        ),
-      );
+      await inFlight.timeout(_initTimeout, onTimeout: () {});
       return;
     }
 
+    _attachNativeHandler();
     final future = _initialize();
     _initializeFuture = future;
     try {
       await future.timeout(_initTimeout, onTimeout: _onInitTimeout);
     } finally {
-      // Kegagalan sementara boleh dicoba lagi dari halaman pengaturan.
       if (!_initialized) _initializeFuture = null;
     }
   }
 
   void _onInitTimeout() {
-    _lastError =
-        'Layanan notifikasi tidak menjawab. Coba lagi dari Pengaturan.';
-    DevLog.w(
-      'push',
-      'Inisialisasi push melewati batas waktu',
-      '${_initTimeout.inSeconds} dtk — aplikasi tetap jalan tanpa push',
-    );
+    _lastError = 'Layanan notifikasi tidak menjawab. Coba lagi dari Pengaturan.';
+    DevLog.w('push', 'Bridge OneSignal native melewati batas waktu');
     notifyListeners();
   }
 
   Future<void> _initialize() async {
-    if (!supported) {
-      notifyListeners();
-      return;
-    }
+    if (!supported) return;
     if (NotificationConfig.oneSignalAppId.trim().isEmpty) {
       _lastError = 'OneSignal App ID belum dikonfigurasi.';
       notifyListeners();
       return;
     }
-
-    _attachListeners();
     try {
-      OneSignal.Debug.setLogLevel(
-        kDebugMode ? OSLogLevel.warn : OSLogLevel.none,
-      );
-      await OneSignal.initialize(NotificationConfig.oneSignalAppId);
-      _initialized = true;
+      final state = await _channel.invokeMapMethod<String, dynamic>('initialize');
+      _applyState(state ?? const <String, dynamic>{});
       _lastError = null;
-      _syncState();
-      await _syncCanRequest();
       await _autoOptInIfAllowed();
-      DevLog.ok('push', 'OneSignal siap', 'izin diminta hanya lewat opt-in');
+      DevLog.ok('push', 'OneSignal native siap', 'bridge MethodChannel');
     } catch (error, stack) {
       _lastError = 'Layanan notifikasi belum dapat dihubungkan.';
-      DevLog.e('push', 'Inisialisasi OneSignal gagal', error, stack);
+      DevLog.e('push', 'Inisialisasi OneSignal native gagal', error, stack);
     }
     notifyListeners();
     flushPendingNavigation();
   }
 
-  /// Menyalakan langganan bila izin Android sudah diberikan tetapi SDK masih
-  /// berstatus opt-out.
-  ///
-  /// Ini bukan detail kecil. Perangkat yang izinnya sudah diberikan tapi tidak
-  /// pernah opt-in tidak masuk segmen "Subscribed Users", dan push rilis
-  /// ditolak OneSignal dengan pesan "All included players are not subscribed".
-  /// Itulah sebabnya beberapa rilis terakhir terbit tanpa notifikasi sama
-  /// sekali. Pengguna yang sengaja menjeda tetap dihormati lewat penanda
-  /// tersimpan.
   Future<void> _autoOptInIfAllowed() async {
     if (!_initialized || !_permissionGranted || _optedIn) return;
-    Store? store;
     try {
-      store = await Store.open();
+      final store = await Store.open();
+      if (store.getBool(_pausedKey)) return;
+      final state = await _channel.invokeMapMethod<String, dynamic>('optIn');
+      _applyState(state ?? const <String, dynamic>{});
     } catch (error) {
-      DevLog.w('push', 'Penyimpanan preferensi tidak siap', '$error');
-    }
-    if (store != null && store.getBool(_pausedKey)) return;
-    try {
-      await OneSignal.User.pushSubscription.optIn();
-      _syncState();
-      DevLog.ok('push', 'Langganan dinyalakan', 'izin sistem sudah ada');
-    } catch (error, stack) {
-      DevLog.e('push', 'Gagal menyalakan langganan otomatis', error, stack);
-    }
-  }
-
-  void _attachListeners() {
-    if (_listenersAttached) return;
-    _listenersAttached = true;
-    OneSignal.Notifications.addClickListener(_onNotificationClick);
-    OneSignal.Notifications.addPermissionObserver(_onPermissionChanged);
-    OneSignal.User.pushSubscription.addObserver(_onSubscriptionChanged);
-  }
-
-  void _onPermissionChanged(bool granted) {
-    _permissionGranted = granted;
-    if (granted) {
-      _canRequestPermission = false;
-    } else {
-      unawaited(_syncCanRequest());
-    }
-    notifyListeners();
-  }
-
-  void _onSubscriptionChanged(OSPushSubscriptionChangedState change) {
-    _optedIn = change.current.optedIn;
-    notifyListeners();
-  }
-
-  void _syncState() {
-    if (!_initialized) return;
-    _permissionGranted = OneSignal.Notifications.permission;
-    _optedIn = OneSignal.User.pushSubscription.optedIn ?? false;
-  }
-
-  Future<void> _syncCanRequest() async {
-    if (!_initialized || _permissionGranted) {
-      _canRequestPermission = false;
-      return;
-    }
-    try {
-      _canRequestPermission = await OneSignal.Notifications.canRequest();
-    } catch (error, stack) {
-      DevLog.e('push', 'Status prompt izin tidak tersedia', error, stack);
+      DevLog.w('push', 'Langganan native belum dapat dinyalakan', '$error');
     }
   }
 
   Future<void> refresh() async {
     await initialize();
-    _syncState();
-    await _syncCanRequest();
+    if (!_initialized) return;
+    try {
+      _applyState(await _nativeState());
+    } catch (error) {
+      _lastError = 'Status notifikasi native tidak dapat dibaca.';
+      DevLog.w('push', 'Gagal membaca status native', '$error');
+    }
     notifyListeners();
   }
 
-  /// Meminta izin setelah pengguna memahami manfaatnya dan menekan tombol.
   Future<bool> enableUpdates() async {
     if (!supported || _busy) return false;
     _busy = true;
@@ -213,24 +150,17 @@ class NotificationService extends ChangeNotifier {
     try {
       await initialize();
       if (!_initialized) return false;
-
-      // canRequest membedakan prompt pertama dengan izin yang harus dibuka
-      // kembali melalui Settings. fallbackToSettings menangani kasus kedua.
-      _canRequestPermission = await OneSignal.Notifications.canRequest();
-      final granted = _permissionGranted
-          ? true
-          : await OneSignal.Notifications.requestPermission(true);
-      if (granted) {
-        // requestPermission saja tidak membatalkan opt-out SDK sebelumnya.
-        await OneSignal.User.pushSubscription.optIn();
-        await _setPaused(false);
+      if (!_permissionGranted) {
+        final granted = await _channel.invokeMethod<bool>('requestPermission') ?? false;
+        if (!granted) return false;
       }
-      _syncState();
-      await _syncCanRequest();
+      final state = await _channel.invokeMapMethod<String, dynamic>('optIn');
+      _applyState(state ?? const <String, dynamic>{});
+      await _setPaused(false);
       return active;
     } catch (error, stack) {
       _lastError = 'Izin notifikasi belum dapat diubah.';
-      DevLog.e('push', 'Gagal mengaktifkan notifikasi', error, stack);
+      DevLog.e('push', 'Gagal mengaktifkan notifikasi native', error, stack);
       return false;
     } finally {
       _busy = false;
@@ -246,13 +176,13 @@ class NotificationService extends ChangeNotifier {
     try {
       await initialize();
       if (_initialized) {
-        await OneSignal.User.pushSubscription.optOut();
+        final state = await _channel.invokeMapMethod<String, dynamic>('optOut');
+        _applyState(state ?? const <String, dynamic>{});
         await _setPaused(true);
-        _syncState();
       }
     } catch (error, stack) {
       _lastError = 'Langganan notifikasi belum dapat dijeda.';
-      DevLog.e('push', 'Gagal menjeda notifikasi', error, stack);
+      DevLog.e('push', 'Gagal menjeda notifikasi native', error, stack);
     } finally {
       _busy = false;
       notifyListeners();
@@ -268,95 +198,59 @@ class NotificationService extends ChangeNotifier {
     }
   }
 
-  void _onNotificationClick(OSNotificationClickEvent event) {
-    final data = event.notification.additionalData;
-
-    // Check if this is a news article notification
-    if (data != null &&
-        data.containsKey('article_id') &&
-        data.containsKey('slug')) {
-      final articleId = data['article_id'] as String?;
-      final slug = data['slug'] as String?;
-
-      if (articleId != null && slug != null) {
-        DevLog.i('push', 'Notifikasi berita diklik', 'article_id=$articleId');
-        _pendingNews = _PendingNewsNavigation(articleId: articleId, slug: slug);
-        _flushPendingNewsNavigation();
-        return;
-      }
-    }
-
-    // Check if this is an update notification
-    if (AppUpdateDetails.isUpdateDestination(
-      data,
-      actionId: event.result.actionId,
-    )) {
-      _pendingUpdate = AppUpdateDetails.fromPayload(
-        notificationTitle: event.notification.title,
-        notificationBody: event.notification.body,
-        data: data,
-      );
-      DevLog.i(
-        'push',
-        'Notifikasi pembaruan dibuka',
-        NotificationConfig.updateRoutePayload,
-      );
-      flushPendingNavigation();
+  void _onNotificationClick(Map<String, dynamic> data) {
+    final articleId = data['article_id']?.toString();
+    final slug = data['slug']?.toString();
+    if (articleId != null && slug != null) {
+      _pendingNews = _PendingNewsNavigation(articleId: articleId, slug: slug);
+      _flushPendingNewsNavigation();
       return;
     }
-
-    DevLog.i('push', 'Notifikasi dibuka', 'tipe tidak dikenali');
+    if (AppUpdateDetails.isUpdateDestination(data, actionId: data['action_id']?.toString())) {
+      _pendingUpdate = AppUpdateDetails.fromPayload(
+        notificationTitle: data['title']?.toString(),
+        notificationBody: data['body']?.toString(),
+        data: data,
+      );
+      flushPendingNavigation();
+    }
   }
 
-  /// Flush pending news navigation
   void _flushPendingNewsNavigation() {
     final pending = _pendingNews;
     if (pending == null) return;
-
     final callback = onNewsNavigate;
     if (callback != null) {
       _pendingNews = null;
       callback(pending.articleId, pending.slug);
     } else {
-      // Callback belum di-set, coba lagi nanti
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _flushPendingNewsNavigation();
-      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _flushPendingNewsNavigation());
     }
   }
 
-  /// Aman dipanggil berkali-kali dari MaterialApp builder.
   void flushPendingNavigation() {
-    if (_pendingUpdate == null || _navigationScheduled || _updateRouteOpen) {
-      return;
-    }
+    if (_pendingUpdate == null || _navigationScheduled || _updateRouteOpen) return;
     _navigationScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _navigationScheduled = false;
       final navigator = appNavigatorKey.currentState;
       final details = _pendingUpdate;
       if (navigator == null || details == null || _updateRouteOpen) return;
-
       _pendingUpdate = null;
       _updateRouteOpen = true;
-      navigator
-          .push<void>(
-            MaterialPageRoute(
-              settings: const RouteSettings(
-                name: NotificationConfig.updateRouteName,
-              ),
-              builder: (_) => UpdatePage(details: details),
-            ),
-          )
-          .whenComplete(() {
-            _updateRouteOpen = false;
-            flushPendingNavigation();
-          });
+      navigator.push<void>(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: NotificationConfig.updateRouteName),
+          builder: (_) => UpdatePage(details: details),
+        ),
+      ).whenComplete(() {
+        _updateRouteOpen = false;
+        flushPendingNavigation();
+      });
     });
   }
 }
 
-/// Data navigasi berita yang tertunda.
 class _PendingNewsNavigation {
   const _PendingNewsNavigation({required this.articleId, required this.slug});
 

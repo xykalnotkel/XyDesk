@@ -244,7 +244,15 @@ class GoogleAuthService {
       );
     }
 
-    await (_initializing ??= _initialize(signIn));
+    // Jangan menyimpan Future yang sudah gagal: setelah konfigurasi build
+    // diperbaiki pengguna harus bisa mencoba Google lagi tanpa restart app.
+    final initialization = _initializing ??= _initialize(signIn);
+    try {
+      await initialization;
+    } catch (_) {
+      if (identical(_initializing, initialization)) _initializing = null;
+      rethrow;
+    }
 
     try {
       final account = await signIn.authenticate();

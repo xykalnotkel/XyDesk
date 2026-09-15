@@ -6,6 +6,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+dependencies {
+    // OneSignal diinisialisasi lewat MainActivity native. UI Flutter hanya
+    // berkomunikasi melalui MethodChannel; onesignal_flutter tidak dipakai.
+    implementation("com.onesignal:OneSignal:5.10.0")
+}
+
 // ── Signing rilis: baca key.properties bila ada (CI menyediakannya) ──
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")

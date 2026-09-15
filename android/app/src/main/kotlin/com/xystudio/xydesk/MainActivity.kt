@@ -18,6 +18,9 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import androidx.lifecycle.lifecycleScope
+import com.onesignal.OneSignal
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
 import java.security.MessageDigest
@@ -29,6 +32,8 @@ class MainActivity : FlutterActivity() {
         private const val CHANNEL = "com.xystudio.xydesk/update"
         private const val DISPLAY_CHANNEL = "com.xystudio.xydesk/display"
         private const val PIP_CHANNEL = "com.xystudio.xydesk/pip"
+        private const val NOTIFICATION_CHANNEL = "com.xystudio.xydesk/notifications"
+        private const val ONESIGNAL_APP_ID = "e3d5adea-1c0f-4986-9ce5-e088d65f0998"
         private const val PREFS = "xydesk_update"
         private const val KEY_DOWNLOAD_ID = "download_id"
         private const val KEY_SHA256 = "sha256"
@@ -55,6 +60,47 @@ class MainActivity : FlutterActivity() {
         // PiP channel for floating window during active sessions
         pipChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PIP_CHANNEL)
         pipChannel?.setMethodCallHandler(::handlePipCall)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NOTIFICATION_CHANNEL)
+            .setMethodCallHandler(::handleNotificationCall)
+        initializeNativeNotifications()
+    }
+
+    // ── Notifikasi: OneSignal native, UI Flutter hanya memakai bridge ─────
+    private fun initializeNativeNotifications() {
+        runCatching {
+            OneSignal.initWithContext(applicationContext, ONESIGNAL_APP_ID)
+        }
+    }
+
+    private fun notificationState(): Map<String, Any> = mapOf(
+        "initialized" to true,
+        "permissionGranted" to OneSignal.Notifications.permission,
+        "canRequestPermission" to !OneSignal.Notifications.permission,
+        "optedIn" to (OneSignal.User.pushSubscription.optedIn ?: false),
+    )
+
+    private fun handleNotificationCall(call: MethodCall, result: MethodChannel.Result) {
+        when (call.method) {
+            "initialize", "getState" -> result.success(notificationState())
+            "requestPermission" -> {
+                lifecycleScope.launch {
+                    val granted = runCatching {
+                        OneSignal.Notifications.requestPermission(true)
+                    }.getOrDefault(false)
+                    result.success(granted)
+                }
+            }
+            "optIn" -> {
+                OneSignal.User.pushSubscription.optIn()
+                result.success(notificationState())
+            }
+            "optOut" -> {
+                OneSignal.User.pushSubscription.optOut()
+                result.success(notificationState())
+            }
+            else -> result.notImplemented()
+        }
     }
 
     // ── Tampilan: refresh rate & layar tetap menyala ─────────────────────

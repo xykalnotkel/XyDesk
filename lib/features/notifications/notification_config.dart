@@ -18,7 +18,5 @@ class NotificationConfig {
   // suara permanen, jadi tidak boleh ada channel spekulatif tanpa aset.
 
   static bool get isSupportedPlatform =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 }
