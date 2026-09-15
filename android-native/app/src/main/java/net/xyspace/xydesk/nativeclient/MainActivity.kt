@@ -3,10 +3,14 @@ package net.xyspace.xydesk.nativeclient
 import android.Manifest
 import android.app.PictureInPictureParams
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Rational
+import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,11 +37,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,8 +61,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.viewinterop.AndroidView
 import org.webrtc.SurfaceViewRenderer
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
+    private var pendingSessionStart: (() -> Unit)? = null
     private val authViewModel by viewModels<AuthViewModel>()
     private val sessionViewModel by viewModels<SessionViewModel>()
 
@@ -66,24 +78,43 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun requestAudioPermission() {
+    fun requestSessionPermissions(onGranted: () -> Unit) {
         val permissions = buildList {
             if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 add(Manifest.permission.RECORD_AUDIO)
             }
-            if (Build.VERSION.SDK_INT >= 33 &&
+            if (NativeSettings(this@MainActivity).notificationsEnabled && Build.VERSION.SDK_INT >= 33 &&
                 ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
             ) {
                 add(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-        if (permissions.isNotEmpty()) {
+        if (permissions.isEmpty()) {
+            onGranted()
+        } else {
+            pendingSessionStart = onGranted
             ActivityCompat.requestPermissions(this, permissions.toTypedArray(), REQUEST_AUDIO)
         }
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != REQUEST_AUDIO) return
+        val callback = pendingSessionStart
+        pendingSessionStart = null
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            callback?.invoke()
+        } else {
+            Toast.makeText(this, "Izin mikrofon diperlukan untuk memulai sesi.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onUserLeaveHint() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+        if (NativeSettings(this).pipEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             sessionViewModel.state.value.phase == NativeSessionPhase.Connected
         ) {
             setPictureInPictureParams(
@@ -108,6 +139,23 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
     val sessionState by session.state.collectAsState()
     val context = LocalContext.current
     val activity = context as? MainActivity
+    val settings = remember { NativeSettings(context) }
+    DisposableEffect(sessionState.phase) {
+        if (sessionState.phase == NativeSessionPhase.Connected) {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        onDispose { }
+    }
+    DisposableEffect(settings.keepScreenOn) {
+        if (settings.keepScreenOn) {
+            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose { }
+    }
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF7F7FB)) {
@@ -128,8 +176,8 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
                         user = state.user,
                         sessionState = sessionState,
                         session = session,
-                        onSignOut = auth::signOut,
-                        onRequestAudio = { activity?.requestAudioPermission() },
+                        onSignOut = { session.disconnect(); auth.signOut() },
+                        onRequestAudio = { start -> activity?.requestSessionPermissions(start) },
                         modifier = Modifier.padding(padding),
                     )
                     is AuthUiState.OtpRequested -> OtpScreen(
@@ -252,12 +300,21 @@ private fun HomeScreen(
     sessionState: NativeSessionState,
     session: SessionViewModel,
     onSignOut: () -> Unit,
-    onRequestAudio: () -> Unit,
+    onRequestAudio: ((() -> Unit) -> Unit),
     modifier: Modifier = Modifier,
 ) {
     var hostId by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var settingsVisible by remember { mutableStateOf(false) }
+    var recentHosts by remember { mutableStateOf(session.recentHosts()) }
     val context = LocalContext.current
+    LaunchedEffect(sessionState.phase) {
+        recentHosts = session.recentHosts()
+    }
+    if (settingsVisible) {
+        SettingsScreen(onBack = { settingsVisible = false }, onSignOut = onSignOut)
+        return
+    }
     val qrLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
@@ -274,16 +331,43 @@ private fun HomeScreen(
     ) {
         Text("Halo, ${user.name}", style = MaterialTheme.typography.headlineSmall, color = Color(0xFF201A35))
         Text("Hubungkan ke host Windows tanpa menyalin sesi Flutter.", color = Color(0xFF625B71))
+        if (recentHosts.isNotEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Host tersimpan", style = MaterialTheme.typography.titleMedium)
+                    recentHosts.forEach { host ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    hostId = host.id
+                                    password = host.password
+                                },
+                                modifier = Modifier.weight(1f),
+                            ) { Text(host.name) }
+                            TextButton(onClick = {
+                                session.removeHost(host.id)
+                                recentHosts = session.recentHosts()
+                            }) { Text("Hapus") }
+                        }
+                    }
+                }
+            }
+        }
         if (sessionState.phase == NativeSessionPhase.Error) ErrorCard(sessionState.message ?: "Koneksi gagal.")
         if (sessionState.phase == NativeSessionPhase.Rejected) ErrorCard(sessionState.message ?: "Pairing ditolak host.")
         if (sessionState.phase == NativeSessionPhase.PeerOffline) ErrorCard(sessionState.message ?: "Host tidak online.")
+        if (sessionState.phase == NativeSessionPhase.HostBusy) ErrorCard(sessionState.message ?: "Host sedang dipakai.")
         if (sessionState.phase == NativeSessionPhase.Error ||
             sessionState.phase == NativeSessionPhase.Rejected ||
             sessionState.phase == NativeSessionPhase.PeerOffline ||
             sessionState.phase == NativeSessionPhase.HostBusy
         ) {
             OutlinedButton(
-                onClick = { session.connect(hostId, password) },
+                onClick = { onRequestAudio { session.connect(hostId, password) } },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Coba lagi") }
         }
@@ -313,7 +397,7 @@ private fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Button(
-                    onClick = { onRequestAudio(); session.connect(hostId, password) },
+                    onClick = { onRequestAudio { session.connect(hostId, password) } },
                     enabled = !connecting && !live,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -333,8 +417,186 @@ private fun HomeScreen(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Pengaturan", style = MaterialTheme.typography.titleMedium)
                 Text("Akun: ${user.email}", style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = { settingsVisible = true }, modifier = Modifier.fillMaxWidth()) { Text("Buka pengaturan") }
                 OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) { Text("Keluar") }
             }
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen(onBack: () -> Unit, onSignOut: () -> Unit) {
+    val context = LocalContext.current
+    val settings = remember { NativeSettings(context) }
+    var audioDefault by remember { mutableStateOf(settings.audioForwardDefault) }
+    var microphoneDefault by remember { mutableStateOf(settings.microphoneDefault) }
+    var pipEnabled by remember { mutableStateOf(settings.pipEnabled) }
+    var notificationsEnabled by remember { mutableStateOf(settings.notificationsEnabled) }
+    var keepScreenOn by remember { mutableStateOf(settings.keepScreenOn) }
+    var haptics by remember { mutableStateOf(settings.hapticsEnabled) }
+    var autoReconnect by remember { mutableStateOf(settings.autoReconnect) }
+    var preferredDisplay by remember { mutableStateOf(settings.preferredDisplay.toString()) }
+    var signalingEndpoint by remember { mutableStateOf(settings.signalingEndpoint) }
+    var updateMessage by remember { mutableStateOf<String?>(null) }
+    var updateResult by remember { mutableStateOf<NativeUpdateResult?>(null) }
+    var downloadId by remember { mutableStateOf<Long?>(null) }
+    val updateScope = rememberCoroutineScope()
+    val updateInstaller = remember { NativeUpdateInstaller(context) }
+    LaunchedEffect(downloadId) {
+        val result = updateResult
+        downloadId?.let { id ->
+            while (isActive) {
+                when (updateInstaller.status(id)) {
+                    NativeUpdateInstaller.DownloadStatus.Ready -> {
+                        if (result == null || !updateInstaller.verify(id, result.sha256)) {
+                            updateMessage = "Checksum update tidak cocok; pemasangan dibatalkan."
+                            break
+                        }
+                        updateMessage = "Download selesai. Membuka installer Android…"
+                        runCatching { updateInstaller.install(id) }
+                            .onFailure { updateMessage = it.message ?: "Installer Android tidak dapat dibuka." }
+                        break
+                    }
+                    NativeUpdateInstaller.DownloadStatus.Failed,
+                    NativeUpdateInstaller.DownloadStatus.Missing -> {
+                        updateMessage = "Download update gagal."
+                        break
+                    }
+                    NativeUpdateInstaller.DownloadStatus.InProgress -> {
+                        updateMessage = "Mengunduh update…"
+                        delay(1000)
+                    }
+                }
+            }
+        }
+    }
+    DisposableEffect(keepScreenOn) {
+        val activity = context as? MainActivity
+        if (keepScreenOn) activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose { }
+    }
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text("Pengaturan", style = MaterialTheme.typography.headlineSmall)
+        Text("Preferensi native XyDesk tersimpan di perangkat.", color = Color(0xFF625B71))
+        SettingsToggle("Audio host aktif saat mulai", audioDefault) {
+            audioDefault = it
+            settings.audioForwardDefault = it
+        }
+        SettingsToggle("Mikrofon aktif saat mulai", microphoneDefault) {
+            microphoneDefault = it
+            settings.microphoneDefault = it
+        }
+        SettingsToggle("Picture-in-picture otomatis", pipEnabled) {
+            pipEnabled = it
+            settings.pipEnabled = it
+        }
+        SettingsToggle("Notifikasi sesi", notificationsEnabled) {
+            notificationsEnabled = it
+            settings.notificationsEnabled = it
+        }
+        SettingsToggle("Layar tetap menyala saat sesi", keepScreenOn) {
+            keepScreenOn = it
+            settings.keepScreenOn = it
+        }
+        SettingsToggle("Getaran kontrol", haptics) {
+            haptics = it
+            settings.hapticsEnabled = it
+        }
+        SettingsToggle("Sambung ulang otomatis", autoReconnect) {
+            autoReconnect = it
+            settings.autoReconnect = it
+        }
+        OutlinedTextField(
+            value = preferredDisplay,
+            onValueChange = {
+                preferredDisplay = it.filter(Char::isDigit)
+                it.toIntOrNull()?.let { index -> settings.preferredDisplay = index }
+            },
+            label = { Text("Display host pilihan (0 = utama)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = signalingEndpoint,
+            onValueChange = {
+                signalingEndpoint = it
+                settings.signalingEndpoint = it
+            },
+            label = { Text("Endpoint signaling") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Pembaruan aplikasi", style = MaterialTheme.typography.titleMedium)
+                Text(updateMessage ?: "Periksa manifest GitHub Release resmi XyDesk.", style = MaterialTheme.typography.bodySmall)
+                Button(
+                    onClick = {
+                        updateMessage = "Memeriksa update…"
+                        updateScope.launch {
+                            runCatching { NativeUpdateChecker().check() }
+                                .onSuccess { result ->
+                                    updateResult = result
+                                    updateMessage = if (result.available) {
+                                        "Versi ${result.version} tersedia (build ${result.build})."
+                                    } else {
+                                        "XyDesk sudah versi terbaru (${result.installedVersion})."
+                                    }
+                                }
+                                .onFailure { error ->
+                                    updateResult = null
+                                    updateMessage = error.message ?: "Gagal memeriksa update."
+                                }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Periksa update") }
+                updateResult?.takeIf { it.available }?.let { result ->
+                    Button(
+                        onClick = {
+                            updateMessage = "Menyiapkan download update…"
+                            downloadId = updateInstaller.enqueue(result)
+                        },
+                        enabled = downloadId == null,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Unduh dan pasang update") }
+                    OutlinedButton(
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(result.releaseUrl)))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Buka rilis resmi") }
+                }
+            }
+        }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Tentang", style = MaterialTheme.typography.titleMedium)
+                Text("XyDesk Android Native", style = MaterialTheme.typography.bodyMedium)
+                Text("Package net.xyspace.xydesk", style = MaterialTheme.typography.bodySmall)
+                Text("Versi ${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_CODE}", style = MaterialTheme.typography.bodySmall)
+                Text("Flutter tetap fallback sampai parity device terbukti.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) { Text("Keluar akun") }
+        Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Kembali") }
+    }
+}
+
+@Composable
+private fun SettingsToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(label, modifier = Modifier.weight(1f))
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }
@@ -351,20 +613,66 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
             Text(if (state.videoReady) "Video tersambung" else "Video sedang disiapkan…")
             AndroidView(
                 factory = { context ->
-                    SurfaceViewRenderer(context).also { session.attachRenderer(it) }
+                    SurfaceViewRenderer(context).also { renderer ->
+                        session.attachRenderer(renderer)
+                        renderer.setOnTouchListener { view, event ->
+                            val width = view.width.coerceAtLeast(1)
+                            val height = view.height.coerceAtLeast(1)
+                            when (event.actionMasked) {
+                                android.view.MotionEvent.ACTION_DOWN -> {
+                                    session.mouseMoveAbsolute(event.x / width, event.y / height)
+                                    session.mouseButton(0, true)
+                                    true
+                                }
+                                android.view.MotionEvent.ACTION_MOVE -> {
+                                    session.mouseMoveAbsolute(event.x / width, event.y / height)
+                                    true
+                                }
+                                android.view.MotionEvent.ACTION_UP,
+                                android.view.MotionEvent.ACTION_CANCEL -> {
+                                    session.mouseButton(0, false)
+                                    true
+                                }
+                                else -> true
+                            }
+                        }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().height(220.dp),
+                onRelease = session::detachRenderer,
             )
             Text(if (state.audioReady) "Audio tersambung" else "Menunggu audio host…")
+            state.stats?.let { stats ->
+                Text(
+                    buildString {
+                        append("Stats: ")
+                        stats.width?.let { width -> append("${width}x${stats.height ?: 0} ") }
+                        stats.fps?.let { append("• ${it.roundToInt()} FPS ") }
+                        stats.videoKbps?.let { append("• video ${it.roundToInt()} kbps ") }
+                        stats.audioKbps?.let { append("• audio ${it.roundToInt()} kbps ") }
+                        stats.rttMs?.let { append("• RTT ${it.roundToInt()} ms ") }
+                        stats.packetLossPercent?.let { append("• loss ${"%.1f".format(it)}% ") }
+                        stats.codec?.let { append("• $it") }
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF625B71),
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
                     onClick = { session.setAudioForwardEnabled(!state.audioForwardEnabled) },
                     modifier = Modifier.weight(1f),
                 ) { Text(if (state.audioForwardEnabled) "Matikan audio" else "Nyalakan audio") }
                 OutlinedButton(
+                    onClick = { session.setMicrophoneEnabled(!state.microphoneEnabled) },
+                    modifier = Modifier.weight(1f),
+                ) { Text(if (state.microphoneEnabled) "Matikan mic" else "Nyalakan mic") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
                     onClick = {
-                        session.mouseButton(1, true)
-                        session.mouseButton(1, false)
+                        session.mouseButton(0, true)
+                        session.mouseButton(0, false)
                     },
                     modifier = Modifier.weight(1f),
                 ) { Text("Klik kiri") }
@@ -426,9 +734,22 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
 
 @Composable
 private fun KeyboardPanel(session: SessionViewModel) {
+    val activeModifiers = remember { mutableStateOf(setOf<String>()) }
+    val modifierLabels = setOf("Ctrl", "Alt", "Win", "Shift")
+    DisposableEffect(Unit) {
+        onDispose {
+            activeModifiers.value.forEach { label ->
+                KeyMapper.vkForLabel(label)?.let { session.key(it, false) }
+            }
+        }
+    }
     val rows = listOf(
         listOf("Esc", "Tab", "Ctrl", "Alt", "Win"),
-        listOf("↑", "←", "↓", "→", "Backspace"),
+        listOf("↑", "←", "↓", "→", "Backspace", "Del"),
+        listOf("`", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="),
+        listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
+        listOf("Caps", "A", "S", "D", "F", "G", "H", "J", "K", "L"),
+        listOf("Z", "X", "C", "V", "B", "N", "M", ",", ".", "/"),
         listOf("Enter", "Space", "F1", "F2", "F3", "F4"),
         listOf("F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"),
     )
@@ -438,9 +759,28 @@ private fun KeyboardPanel(session: SessionViewModel) {
                 row.forEach { label ->
                     val mapped = if (label == "Space") " " else label
                     OutlinedButton(
-                        onClick = { session.sendKeyLabel(mapped) },
+                        onClick = {
+                            KeyMapper.vkForLabel(mapped)?.let { vk ->
+                                if (label in modifierLabels) {
+                                    if (label in activeModifiers.value) {
+                                        session.key(vk, false)
+                                        activeModifiers.value = activeModifiers.value - label
+                                    } else {
+                                        session.key(vk, true)
+                                        activeModifiers.value = activeModifiers.value + label
+                                    }
+                                } else {
+                                    session.key(vk, true)
+                                    session.key(vk, false)
+                                    activeModifiers.value.forEach { modifier ->
+                                        KeyMapper.vkForLabel(modifier)?.let { session.key(it, false) }
+                                    }
+                                    activeModifiers.value = emptySet()
+                                }
+                            }
+                        },
                         modifier = Modifier.weight(1f),
-                    ) { Text(label) }
+                    ) { Text(if (label in activeModifiers.value) "[$label]" else label) }
                 }
             }
         }

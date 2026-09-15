@@ -1,12 +1,15 @@
 package net.xyspace.xydesk.nativeclient
 
 import android.content.Context
+import android.media.AudioManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
@@ -26,6 +29,8 @@ import org.webrtc.MediaStreamTrack
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.RtpReceiver
+import org.webrtc.RTCStatsCollectorCallback
+import org.webrtc.RTCStatsReport
 import org.webrtc.RtpTransceiver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceViewRenderer
@@ -55,9 +60,21 @@ data class NativeSessionState(
     val videoReady: Boolean = false,
     val audioReady: Boolean = false,
     val audioForwardEnabled: Boolean = true,
-    val microphoneEnabled: Boolean = false,
+    val microphoneEnabled: Boolean = true,
     val clipboard: String? = null,
     val hostMeta: HostMeta? = null,
+    val stats: NativeSessionStats? = null,
+)
+
+data class NativeSessionStats(
+    val width: Int? = null,
+    val height: Int? = null,
+    val fps: Double? = null,
+    val videoKbps: Double? = null,
+    val audioKbps: Double? = null,
+    val rttMs: Double? = null,
+    val packetLossPercent: Double? = null,
+    val codec: String? = null,
 )
 
 data class HostDisplay(
@@ -83,7 +100,7 @@ data class HostMeta(
 class NativeRtcSession(
     private val context: Context,
     private val scope: CoroutineScope,
-    private val signalingUrl: String = DEFAULT_SIGNALING_URL,
+    endpoint: String = DEFAULT_SIGNALING_URL,
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
@@ -91,13 +108,23 @@ class NativeRtcSession(
 ) {
     private val _state = MutableStateFlow(NativeSessionState())
     val state: StateFlow<NativeSessionState> = _state.asStateFlow()
+    private var signalingUrl: String = endpoint
 
     private val eglBase = EglBase.create()
     private var factory: PeerConnectionFactory? = null
     private var peerConnection: PeerConnection? = null
     private var signaling: SignalingClient? = null
     private var signalJob: Job? = null
+    private var statsJob: Job? = null
     private var inputChannel: DataChannel? = null
+    private var previousVideoBytes: Long? = null
+    private var previousAudioBytes: Long? = null
+    private var previousPacketsLost: Long? = null
+    private var previousPacketsReceived: Long? = null
+    private var previousVideoFrames: Long? = null
+    private var previousStatsAt: Long? = null
+    private var connectedAt: Long? = null
+    private var lastVideoFrameAt: Long? = null
     private var videoTrack: VideoTrack? = null
     private var remoteAudioTrack: AudioTrack? = null
     private var audioTransceiver: RtpTransceiver? = null
@@ -107,8 +134,14 @@ class NativeRtcSession(
     private var hostId: String = ""
     private var signalingToken: String = ""
     private var stopped = false
+    private var previousAudioMode: Int? = null
+    private var previousSpeakerphone: Boolean? = null
 
     fun eglContext(): EglBase.Context = eglBase.eglBaseContext
+
+    fun setSignalingEndpoint(endpoint: String) {
+        if (endpoint.isNotBlank()) signalingUrl = endpoint.trim()
+    }
 
     fun attachVideoRenderer(renderer: SurfaceViewRenderer) {
         renderer.init(eglBase.eglBaseContext, null)
@@ -138,7 +171,16 @@ class NativeRtcSession(
         val signal = SignalingClient(deviceId)
         signaling = signal
         signalJob = scope.launch(Dispatchers.Default) {
-            signal.messages.collect { handleSignal(it, password) }
+            launch { signal.messages.collect { handleSignal(it, password) } }
+            launch {
+                signal.state.collect { signalState ->
+                    if (!stopped && _state.value.phase == NativeSessionPhase.Connected &&
+                        (signalState == SignalingState.Failed || signalState == SignalingState.Disconnected)
+                    ) {
+                        fail("Koneksi signaling terputus.")
+                    }
+                }
+            }
         }
         try {
             signal.connect(signalingUrl, signalingToken)
@@ -191,6 +233,7 @@ class NativeRtcSession(
     }
 
     private suspend fun negotiate() {
+        configureAudioRoute()
         val peerFactory = ensureFactory()
         val iceServers = mutableListOf(
             PeerConnection.IceServer.builder("stun:stun.cloudflare.com:3478").createIceServer(),
@@ -207,13 +250,20 @@ class NativeRtcSession(
         )
         val audioTransceiver = pc.addTransceiver(
             MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
-            RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.SEND_RECV),
+            RtpTransceiver.RtpTransceiverInit(
+                if (_state.value.audioForwardEnabled) {
+                    RtpTransceiver.RtpTransceiverDirection.SEND_RECV
+                } else {
+                    RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
+                },
+            ),
         )
         this.audioTransceiver = audioTransceiver
         // Mic Android dikirim langsung lewat WebRTC AudioTrack. Ini tidak
         // membuat virtual microphone dan tidak membutuhkan VB-CABLE/reboot.
         microphoneSource = peerFactory.createAudioSource(MediaConstraints())
         microphoneTrack = peerFactory.createAudioTrack("xydesk-mic", microphoneSource)
+        microphoneTrack?.setEnabled(_state.value.microphoneEnabled)
         audioTransceiver?.sender?.setTrack(microphoneTrack, false)
 
         inputChannel = pc.createDataChannel("input", DataChannel.Init())
@@ -240,6 +290,7 @@ class NativeRtcSession(
         PeerConnectionFactory.initialize(
             PeerConnectionFactory.InitializationOptions.builder(context.applicationContext).createInitializationOptions(),
         )
+        configureAudioRoute()
         val audioModule = JavaAudioDeviceModule.builder(context.applicationContext)
             .setUseHardwareAcousticEchoCanceler(true)
             .setUseHardwareNoiseSuppressor(true)
@@ -250,6 +301,24 @@ class NativeRtcSession(
             .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBase.eglBaseContext))
             .createPeerConnectionFactory()
         return factory!!
+    }
+
+    private fun configureAudioRoute() {
+        val manager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        if (previousAudioMode == null) {
+            previousAudioMode = manager.mode
+            previousSpeakerphone = manager.isSpeakerphoneOn
+        }
+        manager.mode = AudioManager.MODE_IN_COMMUNICATION
+        manager.isSpeakerphoneOn = true
+    }
+
+    private fun restoreAudioRoute() {
+        val manager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        previousAudioMode?.let { manager.mode = it }
+        previousSpeakerphone?.let { manager.isSpeakerphoneOn = it }
+        previousAudioMode = null
+        previousSpeakerphone = null
     }
 
     private suspend fun fetchTurnServers(): List<PeerConnection.IceServer> = withContext(Dispatchers.IO) {
@@ -305,6 +374,11 @@ class NativeRtcSession(
     fun requestClipboard() = sendInput(InputCodec.clipboardRequest())
     fun sendText(value: String) = InputCodec.textChunked(value).forEach(::sendInput)
 
+    fun setMicrophoneEnabled(enabled: Boolean) {
+        microphoneTrack?.setEnabled(enabled)
+        _state.value = _state.value.copy(microphoneEnabled = enabled)
+    }
+
     fun setAudioForwardEnabled(enabled: Boolean) {
         _state.value = _state.value.copy(audioForwardEnabled = enabled)
         audioTransceiver?.setDirection(
@@ -317,8 +391,104 @@ class NativeRtcSession(
         )
     }
 
+    private fun startStatsCollection() {
+        if (statsJob?.isActive == true) return
+        previousVideoBytes = null
+        previousAudioBytes = null
+        previousPacketsLost = null
+        previousPacketsReceived = null
+        previousVideoFrames = null
+        previousStatsAt = null
+        connectedAt = System.currentTimeMillis()
+        lastVideoFrameAt = null
+        statsJob = scope.launch(Dispatchers.Default) {
+            while (isActive && !stopped) {
+                peerConnection?.getStats(object : RTCStatsCollectorCallback {
+                    override fun onStatsDelivered(report: RTCStatsReport) {
+                        updateStats(report)
+                    }
+                })
+                delay(1000)
+            }
+        }
+    }
+
+    private fun updateStats(report: RTCStatsReport) {
+        if (stopped) return
+        val stats = report.statsMap.values
+        val codecs = stats.filter { it.type == "codec" }
+            .associateBy { it.members["id"]?.toString() }
+        val inboundVideo = stats.firstOrNull {
+            it.type == "inbound-rtp" && (it.members["kind"] ?: it.members["mediaType"]) == "video"
+        }
+        val inboundAudio = stats.firstOrNull {
+            it.type == "inbound-rtp" && (it.members["kind"] ?: it.members["mediaType"]) == "audio"
+        }
+        val candidatePair = stats.firstOrNull {
+            it.type == "candidate-pair" && it.members["state"]?.toString() == "succeeded"
+        }
+        val now = System.currentTimeMillis()
+        val elapsedSeconds = previousStatsAt?.let { ((now - it).coerceAtLeast(1L) / 1000.0) }
+        val videoBytes = inboundVideo?.number("bytesReceived")?.toLong()
+        val audioBytes = inboundAudio?.number("bytesReceived")?.toLong()
+        val videoKbps = if (elapsedSeconds != null && videoBytes != null && previousVideoBytes != null) {
+            ((videoBytes - previousVideoBytes!!).coerceAtLeast(0L) * 8.0 / elapsedSeconds) / 1000.0
+        } else null
+        val audioKbps = if (elapsedSeconds != null && audioBytes != null && previousAudioBytes != null) {
+            ((audioBytes - previousAudioBytes!!).coerceAtLeast(0L) * 8.0 / elapsedSeconds) / 1000.0
+        } else null
+        val packetsLost = inboundVideo?.number("packetsLost")?.toLong()
+        val packetsReceived = inboundVideo?.number("packetsReceived")?.toLong()
+        val lostDelta = if (packetsLost != null && previousPacketsLost != null) (packetsLost - previousPacketsLost!!).coerceAtLeast(0L) else null
+        val receivedDelta = if (packetsReceived != null && previousPacketsReceived != null) (packetsReceived - previousPacketsReceived!!).coerceAtLeast(0L) else null
+        val packetLoss = if (lostDelta != null && receivedDelta != null && lostDelta + receivedDelta > 0) {
+            lostDelta * 100.0 / (lostDelta + receivedDelta)
+        } else null
+        val framesReceived = inboundVideo?.number("framesReceived")?.toLong()
+        if (framesReceived != null && framesReceived > 0L) lastVideoFrameAt = now
+        if (
+            framesReceived != null &&
+            connectedAt != null &&
+            now - connectedAt!! > VIDEO_WATCHDOG_MS &&
+            (lastVideoFrameAt == null || now - lastVideoFrameAt!! > VIDEO_WATCHDOG_MS)
+        ) {
+            fail("Koneksi tersambung tetapi frame video tidak diterima.")
+            return
+        }
+        val measuredFps = if (elapsedSeconds != null && framesReceived != null && previousVideoFrames != null) {
+            (framesReceived - previousVideoFrames!!).coerceAtLeast(0L) / elapsedSeconds
+        } else null
+        val fps = inboundVideo?.number("framesPerSecond") ?: measuredFps
+        val codecId = inboundVideo?.members?.get("codecId")?.toString()
+        val codec = codecs[codecId]?.members?.get("mimeType")?.toString()?.removePrefix("video/")
+        val rttMs = candidatePair?.number("currentRoundTripTime")?.times(1000.0)
+        val width = inboundVideo?.number("frameWidth")?.toInt()
+        val height = inboundVideo?.number("frameHeight")?.toInt()
+        _state.value = _state.value.copy(
+            stats = NativeSessionStats(width, height, fps, videoKbps, audioKbps, rttMs, packetLoss, codec),
+        )
+        previousVideoBytes = videoBytes
+        previousAudioBytes = audioBytes
+        previousPacketsLost = packetsLost
+        previousPacketsReceived = packetsReceived
+        previousVideoFrames = framesReceived
+        previousStatsAt = now
+    }
+
+    private fun Map<String, Any>.number(key: String): Double? =
+        (this[key] as? Number)?.toDouble() ?: this[key]?.toString()?.toDoubleOrNull()
+
+    fun dispose() {
+        stop()
+        factory?.dispose()
+        factory = null
+        eglBase.release()
+    }
+
     fun stop() {
         stopped = true
+        statsJob?.cancel()
+        statsJob = null
         signaling?.sendBye(hostId)
         signalJob?.cancel()
         signalJob = null
@@ -335,16 +505,26 @@ class NativeRtcSession(
         remoteAudioTrack = null
         signaling?.close()
         signaling = null
+        restoreAudioRoute()
+        _state.value = _state.value.copy(stats = null)
         update(NativeSessionPhase.Ended, null)
     }
 
     private fun update(phase: NativeSessionPhase, message: String?) {
+        NativeCore.setSessionState(
+            when (phase) {
+                NativeSessionPhase.Pairing -> 1
+                NativeSessionPhase.Negotiating -> 2
+                NativeSessionPhase.Connected -> 3
+                NativeSessionPhase.Ended -> 4
+                else -> 0
+            },
+        )
         _state.value = _state.value.copy(
             phase = phase,
             message = message,
             videoReady = phase == NativeSessionPhase.Connected && videoTrack != null,
             audioReady = phase == NativeSessionPhase.Connected && remoteAudioTrack != null,
-            microphoneEnabled = microphoneTrack != null,
         )
     }
 
@@ -404,7 +584,10 @@ class NativeRtcSession(
         override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
             when (state) {
                 PeerConnection.IceConnectionState.CONNECTED,
-                PeerConnection.IceConnectionState.COMPLETED -> update(NativeSessionPhase.Connected, null)
+                PeerConnection.IceConnectionState.COMPLETED -> {
+                    update(NativeSessionPhase.Connected, null)
+                    startStatsCollection()
+                }
                 PeerConnection.IceConnectionState.FAILED -> fail("Koneksi ICE gagal. Periksa jaringan atau TURN.")
                 else -> Unit
             }
@@ -468,6 +651,7 @@ class NativeRtcSession(
 
     companion object {
         const val DEFAULT_SIGNALING_URL = "wss://signal.xydesk.my.id/ws"
+        private const val VIDEO_WATCHDOG_MS = 15_000L
 
         fun normalizeHostId(value: String): String = value.filterNot { it == ' ' || it == '-' }
     }

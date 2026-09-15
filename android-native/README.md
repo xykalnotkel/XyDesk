@@ -28,9 +28,15 @@ rilis. `x86` dan `x86_64` tidak termasuk target perangkat XyDesk.
 
 ## Status
 
-Scaffold ini adalah fondasi migrasi: Compose, JNI, tiga library native, dan
-port codec input sudah disiapkan. Build manual ada di workflow
-`Build Android Native` dan artifact debug hanya untuk pengujian internal.
-Signaling, PeerConnection, audio route, MediaProjection, auth, PiP, dan
-seluruh layar produk dipindahkan bertahap setelah kontrak byte dan build
-native terkunci.
+Native client sekarang mencakup alur auth OTP dan secure storage, QR pairing,
+riwayat host terenkripsi, signaling WebSocket, WebRTC video/audio/mikrofon,
+kontrol mouse/keyboard/clipboard/display, PiP, foreground notification,
+auto-reconnect terbatas, stats sesi, pengaturan persisten, dan pemeriksaan
+update resmi. UI Compose tetap jujur menampilkan error pairing, host offline,
+host sibuk, dan kegagalan ICE.
+
+`android/` Flutter masih fallback. Native belum boleh menggantikan fallback
+sebelum satu full GitHub Actions build menghasilkan artifact dan pengujian
+perangkat operator membuktikan auth, pairing, audio, video, input, PiP,
+reconnect, update, serta lifecycle. Build/CI dan device test sengaja belum
+dijalankan pada tahap implementasi ini.
