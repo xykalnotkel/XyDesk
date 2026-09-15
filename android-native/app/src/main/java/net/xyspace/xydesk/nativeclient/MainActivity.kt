@@ -55,6 +55,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -617,15 +619,32 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
     var text by remember { mutableStateOf("") }
     val context = LocalContext.current
     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+    val hapticFeedback = LocalHapticFeedback.current
+    val settings = remember { NativeSettings(context) }
+    fun feedback() {
+        if (settings.hapticsEnabled) {
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
     var keyboardVisible by remember { mutableStateOf(false) }
+    var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(state.connectedAtMs) {
+        while (state.connectedAtMs != null) {
+            nowMs = System.currentTimeMillis()
+            delay(1_000)
+        }
+    }
     LaunchedEffect(state.clipboard) {
         state.clipboard?.let { value ->
             clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("XyDesk PC", value))
         }
     }
+    val elapsedSeconds = state.connectedAtMs?.let { ((nowMs - it).coerceAtLeast(0L) / 1_000L) } ?: 0L
+    val durationLabel = "%02d:%02d:%02d".format(elapsedSeconds / 3_600, (elapsedSeconds % 3_600) / 60, elapsedSeconds % 60)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Sesi aktif", style = MaterialTheme.typography.titleLarge)
+            Text("Durasi $durationLabel", style = MaterialTheme.typography.bodySmall, color = Color(0xFF625B71))
             Text(if (state.videoReady) "Video tersambung" else "Video sedang disiapkan…")
             Text(
                 if (state.relativeMouseMode) "Mouse: relatif / trackpad" else "Mouse: absolute / layar",
@@ -696,17 +715,18 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
-                    onClick = { session.setAudioForwardEnabled(!state.audioForwardEnabled) },
+                    onClick = { feedback(); session.setAudioForwardEnabled(!state.audioForwardEnabled) },
                     modifier = Modifier.weight(1f),
                 ) { Text(if (state.audioForwardEnabled) "Matikan audio" else "Nyalakan audio") }
                 OutlinedButton(
-                    onClick = { session.setMicrophoneEnabled(!state.microphoneEnabled) },
+                    onClick = { feedback(); session.setMicrophoneEnabled(!state.microphoneEnabled) },
                     modifier = Modifier.weight(1f),
                 ) { Text(if (state.microphoneEnabled) "Matikan mic" else "Nyalakan mic") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
                     onClick = {
+                        feedback()
                         session.mouseButton(0, true)
                         session.mouseButton(0, false)
                     },
@@ -714,6 +734,7 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                 ) { Text("Klik kiri") }
                 OutlinedButton(
                     onClick = {
+                        feedback()
                         session.mouseButton(1, true)
                         session.mouseButton(1, false)
                     },
@@ -721,6 +742,7 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                 ) { Text("Klik kanan") }
                 OutlinedButton(
                     onClick = {
+                        feedback()
                         session.mouseButton(2, true)
                         session.mouseButton(2, false)
                     },
@@ -728,8 +750,8 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                 ) { Text("Klik tengah") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = { session.scroll(0, -480) }, modifier = Modifier.weight(1f)) { Text("Scroll atas") }
-                OutlinedButton(onClick = { session.scroll(0, 480) }, modifier = Modifier.weight(1f)) { Text("Scroll bawah") }
+                OutlinedButton(onClick = { feedback(); session.scroll(0, -480) }, modifier = Modifier.weight(1f)) { Text("Scroll atas") }
+                OutlinedButton(onClick = { feedback(); session.scroll(0, 480) }, modifier = Modifier.weight(1f)) { Text("Scroll bawah") }
             }
             state.hostMeta?.displays?.takeIf { it.isNotEmpty() }?.let { displays ->
                 Text("Layar host", style = MaterialTheme.typography.titleMedium)

@@ -61,6 +61,7 @@ data class NativeSessionState(
     val audioReady: Boolean = false,
     val audioForwardEnabled: Boolean = true,
     val microphoneEnabled: Boolean = true,
+    val connectedAtMs: Long? = null,
     val relativeMouseMode: Boolean = false,
     val clipboard: String? = null,
     val hostMeta: HostMeta? = null,
@@ -518,6 +519,11 @@ class NativeRtcSession(
     }
 
     private fun update(phase: NativeSessionPhase, message: String?) {
+        val connectedAt = when {
+            phase != NativeSessionPhase.Connected -> null
+            _state.value.phase == NativeSessionPhase.Connected -> _state.value.connectedAtMs
+            else -> System.currentTimeMillis()
+        }
         NativeCore.setSessionState(
             when (phase) {
                 NativeSessionPhase.Pairing -> 1
@@ -532,6 +538,7 @@ class NativeRtcSession(
             message = message,
             videoReady = phase == NativeSessionPhase.Connected && videoTrack != null,
             audioReady = phase == NativeSessionPhase.Connected && remoteAudioTrack != null,
+            connectedAtMs = connectedAt,
         )
     }
 
