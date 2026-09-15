@@ -17,7 +17,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     private val store = SecureStore(application)
     private val settings = NativeSettings(application)
     private val api = AuthApi()
-    private val session = NativeRtcSession(application, viewModelScope)
+    private val session = NativeSessionRuntime.session(application)
     private var reconnectJob: Job? = null
     private var reconnectAttempts = 0
     private var lastHostId: String? = null
@@ -185,12 +185,9 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     }
 
     override fun onCleared() {
+        // NativeSessionRuntime dimiliki process/foreground service, bukan
+        // ViewModel. Jangan memutus WebRTC hanya karena Activity dibuat ulang.
         reconnectJob?.cancel()
-        session.dispose()
-        getApplication<Application>().stopService(
-            Intent(getApplication(), SessionForegroundService::class.java)
-                .setAction(SessionForegroundService.ACTION_STOP),
-        )
         super.onCleared()
     }
 

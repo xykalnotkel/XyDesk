@@ -13,12 +13,14 @@ import androidx.core.app.NotificationCompat
 class SessionForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
+        NativeSessionRuntime.attach(applicationContext)
         createChannel()
         startForeground(NOTIFICATION_ID, notification("Sesi XyDesk aktif"))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            NativeSessionRuntime.stop()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
