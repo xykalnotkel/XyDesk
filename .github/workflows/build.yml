@@ -440,6 +440,9 @@ jobs:
           java-version: '17'
 
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          accept-android-sdk-license: true
 
       - name: Pasang Android SDK, NDK, dan CMake
         run: |
