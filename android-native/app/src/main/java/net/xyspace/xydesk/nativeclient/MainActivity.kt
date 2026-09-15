@@ -607,6 +607,11 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
     val context = LocalContext.current
     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
     var keyboardVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(state.clipboard) {
+        state.clipboard?.let { value ->
+            clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("XyDesk PC", value))
+        }
+    }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Sesi aktif", style = MaterialTheme.typography.titleLarge)
