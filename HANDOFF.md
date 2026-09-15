@@ -29,7 +29,7 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 
 ## Untuk: Client Flutter
 
-- [ ] (dari Operator - XyDesk Team, 2026-09-15) — **Rewrite Android native dimulai.** Fondasi baru ada di `android-native/`: Kotlin + Jetpack Compose + AndroidX, `InputCodec.kt` harus identik dengan `lib/webrtc/input_codec.dart`, JNI bridge, dan library native `libxydesk_streamer.so`, `libxydesk_audio.so`, `libxydesk_control.so`. Flutter masih dipakai untuk APK aktif sampai signaling, PeerConnection, audio/video, auth, PiP, MediaProjection, dan uji arm64-v8a/armeabi-v7a native lulus di perangkat nyata. Jangan menghapus atau mengubah jalur Flutter karena masih menjadi fallback testing.
+- [ ] (dari Operator - XyDesk Team, 2026-09-15) — **Rewrite Android native berjalan dan CI sengaja dipause.** `android-native/` kini mulai mem-port signaling WebSocket, SDP/ICE/PeerConnection, DataChannel input, auth OTP, Android Keystore, dan UI Compose connect/session; `InputCodec.kt` tetap harus identik dengan `lib/webrtc/input_codec.dart`. Build GitHub terakhir dibatalkan atas instruksi Operator dan tidak boleh didispatch lagi sebelum UI/UX, auth, audio/video tanpa driver, MediaProjection, PiP, foreground service, notification, lifecycle, reconnect, dan device flow selesai terhubung. Flutter tetap APK fallback dan tidak boleh dihapus/diubah untuk migrasi ini.
 
 - [x] (dari Operator - XyDesk Team, 2026-09-06) — **Verifikasi kompilator untuk
   perubahan Dart sesi audit 6 Sep — TERPENUHI lewat CI.** Sesi itu mengubah

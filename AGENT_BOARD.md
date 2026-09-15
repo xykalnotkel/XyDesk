@@ -80,7 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260914-OPERATOR-LANJUT | Operator - XyDesk Team | Operator (semua area) | LAGI KERJA | Shell Windows + driver offline installer; perbaikan output log PowerShell; mulai rewrite client Android native Kotlin + Compose + AndroidX dengan libxydesk_streamer/audio/control.so; Flutter tetap fallback selama paritas | 2026-09-14 |
+| SESI-20260914-OPERATOR-LANJUT | Operator - XyDesk Team | Operator (semua area) | LAGI KERJA | Rewrite Android native aktif: signaling/PeerConnection/DataChannel, auth Keystore, dan UI Compose connect/session mulai dipindahkan. CI/build native sengaja dipause sampai seluruh UI/UX dan fitur native selesai; Flutter tetap fallback. VDD membedakan paket driver dari device aktif; reboot tetap hanya untuk aktivasi device kernel. | 2026-09-15 |
 
 ## Antrean izin push
 
