@@ -1,9 +1,15 @@
 package net.xyspace.xydesk.nativeclient
 
 import android.Manifest
+import android.app.PictureInPictureParams
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
@@ -64,6 +70,20 @@ class MainActivity : ComponentActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_AUDIO)
         }
+    }
+
+    override fun onUserLeaveHint() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            sessionViewModel.state.value.phase == NativeSessionPhase.Connected
+        ) {
+            setPictureInPictureParams(
+                PictureInPictureParams.Builder()
+                    .setAspectRatio(Rational(16, 9))
+                    .build(),
+            )
+            enterPictureInPictureMode()
+        }
+        super.onUserLeaveHint()
     }
 
     companion object {
@@ -227,6 +247,14 @@ private fun HomeScreen(
 ) {
     var hostId by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val qrLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            result.data?.getStringExtra(QrScannerActivity.EXTRA_HOST_ID)?.let { hostId = it }
+        }
+    }
     val connecting = sessionState.phase == NativeSessionPhase.Pairing || sessionState.phase == NativeSessionPhase.Negotiating
     val live = sessionState.phase == NativeSessionPhase.Connected
 
@@ -250,6 +278,12 @@ private fun HomeScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                OutlinedButton(
+                    onClick = {
+                        qrLauncher.launch(Intent(context, QrScannerActivity::class.java))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Pindai QR host") }
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },

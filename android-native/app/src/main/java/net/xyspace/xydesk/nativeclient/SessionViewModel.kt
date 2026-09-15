@@ -1,6 +1,8 @@
 package net.xyspace.xydesk.nativeclient
 
 import android.app.Application
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +40,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             runCatching {
                 val deviceId = deviceId()
                 val signalToken = api.signalToken(token, deviceId)
+                val serviceIntent = Intent(getApplication(), SessionForegroundService::class.java)
+                    .setAction(SessionForegroundService.ACTION_START)
+                    .putExtra(SessionForegroundService.EXTRA_MESSAGE, "Menghubungkan ke host…")
+                ContextCompat.startForegroundService(getApplication(), serviceIntent)
                 session.start(
                     hostId = normalizedId,
                     password = password,
@@ -45,6 +51,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                     signalingToken = signalToken,
                 )
             }.onFailure { error ->
+                getApplication<Application>().stopService(
+                    Intent(getApplication(), SessionForegroundService::class.java)
+                        .setAction(SessionForegroundService.ACTION_STOP),
+                )
                 sessionError(error.userMessage())
             }
         }
@@ -57,7 +67,13 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun sendClipboard(value: String) = session.sendClipboard(value)
     fun requestClipboard() = session.requestClipboard()
     fun sendText(value: String) = session.sendText(value)
-    fun disconnect() = session.stop()
+    fun disconnect() {
+        session.stop()
+        getApplication<Application>().stopService(
+            Intent(getApplication(), SessionForegroundService::class.java)
+                .setAction(SessionForegroundService.ACTION_STOP),
+        )
+    }
 
     private fun sessionError(message: String) {
         _state.value = _state.value.copy(phase = NativeSessionPhase.Error, message = message)
@@ -69,7 +85,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     }
 
     override fun onCleared() {
-        session.stop()
+        disconnect()
         super.onCleared()
     }
 }

@@ -8,14 +8,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
-import okhttp3.Call
-import okhttp3.Callback
 import org.webrtc.AudioSource
 import org.webrtc.AudioTrack
 import org.webrtc.DataChannel
@@ -33,6 +31,8 @@ import org.webrtc.SessionDescription
 import org.webrtc.SurfaceViewRenderer
 import org.webrtc.VideoTrack
 import org.webrtc.audio.JavaAudioDeviceModule
+import org.json.JSONArray
+import org.json.JSONObject
 import java.nio.ByteBuffer
 import java.util.concurrent.TimeUnit
 
@@ -96,7 +96,9 @@ class NativeRtcSession(
     private var signalJob: Job? = null
     private var inputChannel: DataChannel? = null
     private var videoTrack: VideoTrack? = null
-    private var audioTrack: AudioTrack? = null
+    private var remoteAudioTrack: AudioTrack? = null
+    private var microphoneTrack: AudioTrack? = null
+    private var microphoneSource: AudioSource? = null
     private var deviceId: String = ""
     private var hostId: String = ""
     private var signalingToken: String = ""
@@ -199,10 +201,16 @@ class NativeRtcSession(
             MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO,
             RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY),
         )
-        pc.addTransceiver(
+        val audioTransceiver = pc.addTransceiver(
             MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
             RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.SEND_RECV),
         )
+        // Mic Android dikirim langsung lewat WebRTC AudioTrack. Ini tidak
+        // membuat virtual microphone dan tidak membutuhkan VB-CABLE/reboot.
+        microphoneSource = peerFactory.createAudioSource(MediaConstraints())
+        microphoneTrack = peerFactory.createAudioTrack("xydesk-mic", microphoneSource)
+        audioTransceiver?.sender?.setTrack(microphoneTrack, false)
+
         inputChannel = pc.createDataChannel("input", DataChannel.Init())
         inputChannel?.registerObserver(DataObserver())
 
@@ -239,9 +247,41 @@ class NativeRtcSession(
         return factory!!
     }
 
-    private fun fetchTurnServers(): List<PeerConnection.IceServer>? {
+    private suspend fun fetchTurnServers(): List<PeerConnection.IceServer> = withContext(Dispatchers.IO) {
         // TURN bersifat opsional; STUN tetap membuat sesi LAN/NAT sederhana jalan.
-        return null
+        val base = signalingUrl
+            .replaceFirst("wss://", "https://")
+            .replaceFirst("ws://", "http://")
+            .substringBefore("/ws")
+        val request = Request.Builder()
+            .url("$base/turn-ice?id=$deviceId&token=$signalingToken")
+            .get()
+            .build()
+        runCatching {
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@use emptyList<PeerConnection.IceServer>()
+                val body = response.body?.string().orEmpty()
+                val servers = JSONObject(body).optJSONArray("iceServers") ?: return@use emptyList()
+                buildList {
+                    for (index in 0 until servers.length()) {
+                        val item = servers.optJSONObject(index) ?: continue
+                        val urls = item.opt("urls")
+                        val urlList = when (urls) {
+                            is JSONArray -> buildList {
+                                for (i in 0 until urls.length()) urls.optString(i).takeIf(String::isNotBlank)?.let(::add)
+                            }
+                            is String -> listOf(urls)
+                            else -> emptyList()
+                        }
+                        if (urlList.isEmpty()) continue
+                        val builder = PeerConnection.IceServer.builder(urlList)
+                        item.optString("username").takeIf(String::isNotBlank)?.let(builder::setUsername)
+                        item.optString("credential").takeIf(String::isNotBlank)?.let(builder::setPassword)
+                        add(builder.createIceServer())
+                    }
+                }
+            }
+        }.getOrElse { emptyList() }
     }
 
     fun sendInput(packet: ByteArray) {
@@ -265,8 +305,12 @@ class NativeRtcSession(
         peerConnection?.close()
         peerConnection?.dispose()
         peerConnection = null
+        microphoneTrack?.dispose()
+        microphoneTrack = null
+        microphoneSource?.dispose()
+        microphoneSource = null
         videoTrack = null
-        audioTrack = null
+        remoteAudioTrack = null
         signaling?.close()
         signaling = null
         update(NativeSessionPhase.Ended, null)
@@ -277,7 +321,7 @@ class NativeRtcSession(
             phase = phase,
             message = message,
             videoReady = phase == NativeSessionPhase.Connected && videoTrack != null,
-            audioReady = phase == NativeSessionPhase.Connected && audioTrack != null,
+            audioReady = phase == NativeSessionPhase.Connected && remoteAudioTrack != null,
         )
     }
 
@@ -332,7 +376,7 @@ class NativeRtcSession(
             val track = receiver?.track()
             when (track) {
                 is VideoTrack -> videoTrack = track
-                is AudioTrack -> audioTrack = track
+                is AudioTrack -> remoteAudioTrack = track
             }
             update(NativeSessionPhase.Connected, null)
         }
