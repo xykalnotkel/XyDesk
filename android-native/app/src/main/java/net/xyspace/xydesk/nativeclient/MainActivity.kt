@@ -104,7 +104,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
-        permissions: Array<out String>,
+        permissions: Array<String>,
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -734,7 +734,7 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                                     previousX = event.x
                                     previousY = event.y
                                     if (!session.isRelativeMouseMode()) {
-                                        session.mouseMoveAbsolute(event.x / width, event.y / height)
+                                        session.mouseMoveAbsolute(event.x.toDouble() / width, event.y.toDouble() / height)
                                     }
                                     session.mouseButton(0, true)
                                     true
@@ -746,7 +746,7 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                                             (event.y - previousY).roundToInt(),
                                         )
                                     } else {
-                                        session.mouseMoveAbsolute(event.x / width, event.y / height)
+                                        session.mouseMoveAbsolute(event.x.toDouble() / width, event.y.toDouble() / height)
                                     }
                                     previousX = event.x
                                     previousY = event.y

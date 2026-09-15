@@ -483,7 +483,7 @@ class NativeRtcSession(
         previousStatsAt = now
     }
 
-    private fun Map<String, Any>.number(key: String): Double? =
+    private fun Map<*, *>.number(key: String): Double? =
         (this[key] as? Number)?.toDouble() ?: this[key]?.toString()?.toDoubleOrNull()
 
     fun dispose() {
@@ -642,7 +642,6 @@ class NativeRtcSession(
                 fail("PeerConnection gagal.")
             }
         }
-        override fun onSelectedCandidatePairChanged(event: PeerConnection.CandidatePairChangeEvent?) = Unit
     }
 
     private open class SdpObserverAdapter : org.webrtc.SdpObserver {

@@ -145,7 +145,9 @@ pub fn driver_package_available() -> bool {
         r"./driver/VirtualDisplayDriver.inf",
         r"C:\Program Files\XyDesk\drivers\IddSampleDriver\option.txt",
     ];
-    common_paths.iter().any(|p| std::path::Path::new(p).exists())
+    common_paths
+        .iter()
+        .any(|p| std::path::Path::new(p).exists())
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -400,7 +402,9 @@ pub fn ensure_display() {
         let _ = Command::new("pnputil").args(["/scan-devices"]).output();
         std::thread::sleep(std::time::Duration::from_secs(2));
         if is_driver_installed() && find_virtual_display().is_some() {
-            println!("[xydesk-host] virtual display muncul setelah PnP rescan — siap capture via driver");
+            println!(
+                "[xydesk-host] virtual display muncul setelah PnP rescan — siap capture via driver"
+            );
             return;
         }
         eprintln!(
