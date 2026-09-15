@@ -30,12 +30,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -147,6 +154,10 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
     val context = LocalContext.current
     val activity = context as? MainActivity
     val settings = remember { NativeSettings(context) }
+    var selectedTab by remember { mutableStateOf(0) }
+    val signedIn = authState as? AuthUiState.SignedIn
+    val titles = listOf("Beranda", "Hubungkan", "Riwayat", "Akun")
+
     DisposableEffect(sessionState.phase) {
         if (sessionState.phase == NativeSessionPhase.Connected) {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -168,25 +179,81 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
         Surface(modifier = Modifier.fillMaxSize(), color = XyDeskColors.bg) {
             Scaffold(
                 topBar = {
-                    TopAppBar(
-                        title = { Text("XyDesk") },
-                        colors = TopAppBarDefaults.topAppBarColors(
+                    if (signedIn != null) {
+                        TopAppBar(
+                            title = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Image(
+                                        painter = painterResource(R.drawable.logo),
+                                        contentDescription = "Logo XyDesk",
+                                        modifier = Modifier.size(30.dp),
+                                    )
+                                    Spacer(Modifier.size(8.dp))
+                                    Text(titles[selectedTab])
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = XyDeskColors.bg,
+                                scrolledContainerColor = XyDeskColors.bg,
+                                titleContentColor = XyDeskColors.textHi,
+                            ),
+                        )
+                    }
+                },
+                bottomBar = {
+                    if (signedIn != null) {
+                        NavigationBar(
                             containerColor = XyDeskColors.bg,
-                            titleContentColor = XyDeskColors.textHi,
-                        ),
-                    )
+                            tonalElevation = 0.dp,
+                        ) {
+                            val destinations = listOf(
+                                Triple(Icons.Filled.Home, "Beranda", 0),
+                                Triple(Icons.Filled.Link, "Hubungkan", 1),
+                                Triple(Icons.Filled.History, "Riwayat", 2),
+                                Triple(Icons.Filled.Settings, "Akun", 3),
+                            )
+                            destinations.forEach { (icon, label, index) ->
+                                NavigationBarItem(
+                                    selected = selectedTab == index,
+                                    onClick = { selectedTab = index },
+                                    icon = { androidx.compose.material3.Icon(icon, contentDescription = label) },
+                                    label = { Text(label) },
+                                )
+                            }
+                        }
+                    }
                 },
             ) { padding ->
                 when (val state = authState) {
                     AuthUiState.Loading -> LoadingPanel("Memuat sesi aman…", Modifier.padding(padding))
-                    is AuthUiState.SignedIn -> HomeScreen(
-                        user = state.user,
-                        sessionState = sessionState,
-                        session = session,
-                        onSignOut = { session.disconnect(); auth.signOut() },
-                        onRequestAudio = { start -> activity?.requestSessionPermissions(start) },
-                        modifier = Modifier.padding(padding),
-                    )
+                    is AuthUiState.SignedIn -> when (selectedTab) {
+                        0 -> NativeHomeOverview(
+                            user = state.user,
+                            session = session,
+                            sessionState = sessionState,
+                            onConnect = { selectedTab = 1 },
+                            modifier = Modifier.padding(padding),
+                        )
+                        1 -> HomeScreen(
+                            user = state.user,
+                            sessionState = sessionState,
+                            session = session,
+                            onSignOut = { session.disconnect(); auth.signOut() },
+                            onRequestAudio = { start -> activity?.requestSessionPermissions(start) },
+                            modifier = Modifier.padding(padding),
+                        )
+                        2 -> HostHistoryScreen(
+                            session = session,
+                            onConnect = { selectedTab = 1 },
+                            modifier = Modifier.padding(padding),
+                        )
+                        else -> SettingsScreen(
+                            session = session,
+                            onBack = { selectedTab = 0 },
+                            onSignOut = { session.disconnect(); auth.signOut() },
+                            modifier = Modifier.padding(padding),
+                        )
+                    }
                     is AuthUiState.OtpRequested -> OtpScreen(
                         email = state.email,
                         resendIn = state.resendIn,
@@ -213,11 +280,177 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
 }
 
 @Composable
+private fun NativeHomeOverview(
+    user: AuthUser,
+    session: SessionViewModel,
+    sessionState: NativeSessionState,
+    onConnect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var hosts by remember { mutableStateOf(session.recentHosts()) }
+    LaunchedEffect(sessionState.phase) { hosts = session.recentHosts() }
+    Column(
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text("Halo, ${user.name}", style = MaterialTheme.typography.headlineMedium)
+        Text("Perangkat kamu, siap terhubung.", color = XyDeskColors.textMid)
+        if (hosts.isEmpty()) {
+            Card(colors = XyDeskCardColors, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.empty_devices),
+                        contentDescription = "Belum ada perangkat",
+                        modifier = Modifier.size(150.dp),
+                    )
+                    Text("Belum ada perangkat", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "Tambahkan host Windows dari halaman Hubungkan atau pindai QR.",
+                        color = XyDeskColors.textMid,
+                    )
+                    Button(onClick = onConnect, colors = XyDeskButtonColors) {
+                        Text("Hubungkan perangkat")
+                    }
+                }
+            }
+        } else {
+            Text("Perangkat tersimpan", style = MaterialTheme.typography.titleMedium)
+            hosts.forEach { host ->
+                Card(colors = XyDeskCardColors, modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Image(
+                            painter = painterResource(
+                                if (sessionState.phase == NativeSessionPhase.Connected && sessionState.hostMeta != null) {
+                                    R.drawable.pc_online
+                                } else {
+                                    R.drawable.pc_offline
+                                },
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier.size(52.dp),
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(host.name, style = MaterialTheme.typography.titleMedium)
+                            Text("ID ${host.id}", style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                if (sessionState.phase == NativeSessionPhase.Connected) "Sesi aktif" else "Terakhir disimpan",
+                                color = if (sessionState.phase == NativeSessionPhase.Connected) XyDeskColors.success else XyDeskColors.textMid,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        TextButton(onClick = onConnect) { Text("Buka") }
+                    }
+                }
+            }
+            OutlinedButton(onClick = onConnect, modifier = Modifier.fillMaxWidth(), colors = XyDeskOutlinedButtonColors) {
+                Text("Tambah atau hubungkan host")
+            }
+        }
+        if (sessionState.phase == NativeSessionPhase.Connected) {
+            StatusCard("Sesi aktif", "Buka Hubungkan untuk melihat layar dan kontrol sesi.")
+        }
+    }
+}
+
+@Composable
+private fun HostHistoryScreen(
+    session: SessionViewModel,
+    onConnect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var hosts by remember { mutableStateOf(session.recentHosts()) }
+    var renaming by remember { mutableStateOf<PairedHost?>(null) }
+    var name by remember { mutableStateOf("") }
+    Column(
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text("Riwayat host", style = MaterialTheme.typography.headlineMedium)
+        Text("Host yang pernah dipasangkan tersimpan terenkripsi di perangkat.", color = XyDeskColors.textMid)
+        if (hosts.isEmpty()) {
+            Card(colors = XyDeskCardColors, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Image(painterResource(R.drawable.empty), "Riwayat kosong", Modifier.size(140.dp))
+                    Text("Riwayat masih kosong", style = MaterialTheme.typography.titleMedium)
+                    Text("Mulai dari satu host Windows.", color = XyDeskColors.textMid)
+                    Button(onClick = onConnect, colors = XyDeskButtonColors) { Text("Hubungkan") }
+                }
+            }
+        } else {
+            hosts.forEach { host ->
+                Card(colors = XyDeskCardColors, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(painterResource(R.drawable.pc_online), null, Modifier.size(42.dp))
+                            Spacer(Modifier.size(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(host.name, style = MaterialTheme.typography.titleMedium)
+                                Text(host.id, style = MaterialTheme.typography.bodySmall)
+                            }
+                            TextButton(onClick = {
+                                renaming = host
+                                name = host.name
+                            }) { Text("Nama") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(onClick = onConnect, modifier = Modifier.weight(1f), colors = XyDeskButtonColors) { Text("Hubungkan") }
+                            OutlinedButton(
+                                onClick = {
+                                    session.removeHost(host.id)
+                                    hosts = session.recentHosts()
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = XyDeskOutlinedButtonColors,
+                            ) { Text("Hapus") }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    renaming?.let { host ->
+        AlertDialog(
+            onDismissRequest = { renaming = null },
+            title = { Text("Ganti nama host") },
+            text = { OutlinedTextField(value = name, onValueChange = { name = it.take(48) }, label = { Text("Nama host") }, singleLine = true) },
+            confirmButton = {
+                TextButton(enabled = name.trim().isNotEmpty(), onClick = {
+                    session.renameHost(host.id, name)
+                    hosts = session.recentHosts()
+                    renaming = null
+                }) { Text("Simpan") }
+            },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Batal") } },
+        )
+    }
+}
+
+@Composable
 private fun LoadingPanel(label: String, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            CircularProgressIndicator(color = Color(0xFF6D28D9))
-            Text(label, color = Color(0xFF514A67))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Image(
+                painter = painterResource(R.drawable.logo),
+                contentDescription = "Logo XyDesk",
+                modifier = Modifier.size(88.dp),
+            )
+            CircularProgressIndicator(color = XyDeskColors.accent)
+            Text(label, color = XyDeskColors.textMid)
         }
     }
 }
@@ -234,18 +467,29 @@ private fun LoginScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = 20.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(8.dp))
         Image(
             painter = painterResource(R.drawable.il_auth),
             contentDescription = "Ilustrasi masuk XyDesk",
-            modifier = Modifier.fillMaxWidth().height(168.dp),
+            modifier = Modifier.size(168.dp),
         )
-        Spacer(Modifier.height(18.dp))
-        Text("Masuk ke XyDesk", style = MaterialTheme.typography.headlineMedium, color = XyDeskColors.textHi)
-        Text("Simpan sesi dengan aman dan mulai koneksi ke host Windows.", color = Color(0xFF625B71))
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Masuk ke XyDesk",
+            style = MaterialTheme.typography.headlineMedium,
+            color = XyDeskColors.textHi,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        Text(
+            "Simpan sesi dengan aman dan mulai koneksi ke host Windows.",
+            color = XyDeskColors.textMid,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.widthIn(max = 440.dp),
+        )
         if (!error.isNullOrBlank()) ErrorCard(error)
         OutlinedTextField(
             value = name,
@@ -278,38 +522,60 @@ private fun OtpScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var code by remember { mutableStateOf("") }
-    var name by remember { mutableStateOf("") }
+    var digits by remember { mutableStateOf(List(6) { "" }) }
+    val code = digits.joinToString("")
     Column(
-        modifier = modifier.fillMaxSize().padding(24.dp),
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Spacer(Modifier.height(26.dp))
-        Text("Verifikasi email", style = MaterialTheme.typography.headlineMedium)
-        Text("Kode dikirim ke $email.")
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Nama") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+        Spacer(Modifier.height(8.dp))
+        Image(
+            painter = painterResource(R.drawable.pair_success),
+            contentDescription = "Verifikasi aman",
+            modifier = Modifier.size(132.dp),
         )
-        OutlinedTextField(
-            value = code,
-            onValueChange = { code = it },
-            label = { Text("Kode OTP") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+        Text("Verifikasi email", style = MaterialTheme.typography.headlineMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(
+            "Kode enam digit dikirim ke $email",
+            color = XyDeskColors.textMid,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
-        Button(onClick = { onVerify(code, name) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Verifikasi")
+        Row(
+            modifier = Modifier.widthIn(max = 360.dp).fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            repeat(6) { index ->
+                OutlinedTextField(
+                    value = digits[index],
+                    onValueChange = { value ->
+                        val incoming = value.filter(Char::isDigit)
+                        val updated = digits.toMutableList()
+                        if (incoming.length > 1) {
+                            incoming.take(6).forEachIndexed { offset, digit -> updated[offset] = digit.toString() }
+                        } else {
+                            updated[index] = incoming.takeLast(1)
+                        }
+                        digits = updated
+                    },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
-        OutlinedButton(
-            onClick = { onResend(name) },
-            enabled = resendIn == 0,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(if (resendIn > 0) "Kirim ulang ($resendIn)" else "Kirim ulang kode") }
-        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Kembali") }
+        Button(
+            onClick = { onVerify(code, "") },
+            enabled = code.length == 6,
+            modifier = Modifier.fillMaxWidth().widthIn(max = 440.dp),
+            colors = XyDeskButtonColors,
+        ) { Text("Verifikasi") }
+        TextButton(onClick = { onResend("") }, enabled = resendIn == 0) {
+            Text(if (resendIn > 0) "Kirim ulang dalam ${resendIn}s" else "Kirim ulang kode")
+        }
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth().widthIn(max = 440.dp), colors = XyDeskOutlinedButtonColors) {
+            Text("Kembali")
+        }
     }
 }
 
@@ -354,8 +620,13 @@ private fun HomeScreen(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text("Halo, ${user.name}", style = MaterialTheme.typography.headlineSmall, color = Color(0xFF201A35))
-        Text("Hubungkan ke host Windows tanpa menyalin sesi Flutter.", color = Color(0xFF625B71))
+        Image(
+            painter = painterResource(R.drawable.connect),
+            contentDescription = "Ilustrasi koneksi",
+            modifier = Modifier.fillMaxWidth().height(118.dp),
+        )
+        Text("Halo, ${user.name}", style = MaterialTheme.typography.headlineSmall, color = XyDeskColors.textHi)
+        Text("Hubungkan ke host Windows tanpa menyalin sesi Flutter.", color = XyDeskColors.textMid)
         if (recentHosts.isNotEmpty()) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -483,6 +754,7 @@ private fun SettingsScreen(
     session: SessionViewModel,
     onBack: () -> Unit,
     onSignOut: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val settings = remember { NativeSettings(context) }
@@ -540,7 +812,7 @@ private fun SettingsScreen(
         onDispose { }
     }
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("Pengaturan", style = MaterialTheme.typography.headlineSmall)

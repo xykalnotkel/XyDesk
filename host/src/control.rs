@@ -750,7 +750,7 @@ async fn action(
                     }))
                 } else {
                     Ok(Json(ActionResponse::err(
-                        "virtual display belum ada — driver belum terpasang atau butuh admin/reboot",
+                        "virtual display belum ada — driver belum aktif atau butuh hak admin; reboot Windows tidak diwajibkan, GDI fallback tetap tersedia",
                     )))
                 }
             }

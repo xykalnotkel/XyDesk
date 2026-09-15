@@ -11,7 +11,7 @@
 //! 1. Deteksi headless / RDP (pakai is_rdp_session + list_displays + GPU vendor check)
 //! 2. Cek apakah virtual display driver sudah terinstal (IddSampleDriver /
 //!    Virtual-Display-Driver dari itsmikethetech)
-//! 3. Kalau driver ada tapi virtual display belum muncul → buat via IOCTL/exe/restart
+//! 3. Kalau driver ada tapi virtual display belum muncul → buat via IOCTL/exe/PnP rescan tanpa reboot
 //! 4. Kalau admin + driver bundling ada di `C:\Program Files\XyDesk\drivers\` → install via pnputil
 //! 5. Capture via **driver display** (DXGI pada virtual adapter) — bukan DXGI fisik yang gagal di RDP
 //! 6. Fallback: GDI GetDC(0) bila driver belum siap
@@ -290,9 +290,9 @@ pub fn try_install_driver() -> Result<String, String> {
          1. Download https://github.com/itsmikethetech/Virtual-Display-Driver/releases (rekomendasi)\n\
          2. Atau Scoop: `scoop install idd-sample-driver` (https://github.com/roshkins/IddSampleDriver)\n\
          3. Atau `ge9/IddSampleDriver`\n\
-         4. Setelah install, restart XyDesk — DISPLAY virtual akan muncul dan tidak hitam lagi\n\
+         4. Setelah install, jalankan XyDesk Host sebagai admin; host akan mencoba PnP rescan live tanpa reboot\n\
          \n\
-         Untuk lab RDP GitHub Actions, driver tidak bisa di-install tanpa reboot — pakai tscon trick:\n\
+         Untuk lab RDP GitHub Actions, bila provider menahan instalasi driver gunakan tscon trick:\n\
          `tscon %SESSIONNAME% /dest:console` atau klik Disconnect-tanpa-lock.bat di Desktop"
             .to_string(),
     )
@@ -328,11 +328,11 @@ pub fn ensure_virtual_display_created() -> bool {
                 println!("[xydesk-host] virtual display berhasil dibuat");
                 return true;
             } else {
-                eprintln!("[xydesk-host] virtual display belum muncul setelah create — coba restart service Display");
-                // Coba restart TermService atau PnP
-                let _ = Command::new("powershell")
-                    .args(["-Command", "Restart-Service -Name \"DisplayEnhancementService\" -ErrorAction SilentlyContinue"])
-                    .output();
+                // Re-enumerasi PnP adalah langkah live yang tidak me-restart
+                // Windows maupun service display. Kalau driver memang mampu
+                // membuat monitor tanpa reboot, monitor akan terlihat di sini.
+                eprintln!("[xydesk-host] virtual display belum muncul setelah create — coba PnP rescan tanpa restart");
+                let _ = Command::new("pnputil").args(["/scan-devices"]).output();
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 return find_virtual_display().is_some();
             }
@@ -389,7 +389,7 @@ pub fn ensure_display() {
         } else {
             eprintln!(
                 "[xydesk-host] driver aktif tapi virtual display belum muncul. Cek Device Manager → Display adapters. \
-                 Coba: pnputil /scan-devices atau restart XyDesk sebagai admin."
+                 Coba: pnputil /scan-devices atau jalankan host sebagai admin; reboot Windows tidak diwajibkan."
             );
         }
         return;
@@ -408,7 +408,7 @@ pub fn ensure_display() {
             return;
         }
         eprintln!(
-            "[xydesk-host] paket driver sudah ada tetapi device virtual belum aktif — reboot Windows diperlukan agar IddSampleDriver membuat monitor virtual"
+            "[xydesk-host] paket driver sudah ada tetapi device virtual belum aktif — tidak memaksa reboot; GDI fallback tetap dapat menguji sesi, PnP akan dicoba saat host berjalan"
         );
         return;
     }
@@ -426,7 +426,7 @@ pub fn ensure_display() {
                 if ensure_virtual_display_created() {
                     println!("[xydesk-host] virtual display driver terpasang + virtual display aktif — headless teratasi");
                 } else {
-                    eprintln!("[xydesk-host] driver terpasang tapi virtual display belum muncul — butuh reboot atau pnputil /scan-devices");
+                    eprintln!("[xydesk-host] driver terpasang tapi virtual display belum muncul — tidak meminta reboot; pnputil /scan-devices sudah dicoba, GDI fallback dipakai");
                 }
             }
             Err(e) => eprintln!("[xydesk-host] virtual display: {e}"),
@@ -437,7 +437,7 @@ pub fn ensure_display() {
              Saat ini {} monitor, RDP={}, basic_render={}. Install:\n\
              - https://github.com/itsmikethetech/Virtual-Display-Driver (installer exe, rekomendasi)\n\
              - Atau Scoop: scoop install idd-sample-driver\n\
-             - Jalankan XyDesk Host sebagai admin, lalu restart — virtual display auto dibuat\n\
+             - Jalankan XyDesk Host sebagai admin; virtual display dicoba dibuat live dengan PnP rescan\n\
              \n\
              Sementara: GDI fallback GetDC(0) aktif, tapi akan hitam kalau sesi lock (RDP disconnect tanpa /dest:console).\n\
              Di lab RDP, pakai tscon %SESSIONNAME% /dest:console untuk disconnect tanpa lock.",
@@ -525,7 +525,7 @@ pub fn create_virtual_display(width: u32, height: u32, count: u32) -> Result<Str
         ));
     }
 
-    Err("virtual display manager tidak ditemukan — install driver dulu dari https://github.com/itsmikethetech/Virtual-Display-Driver (atau ge9 IddSampleDriver sudah terpasang tapi virtual display belum muncul, coba reboot)".to_string())
+    Err("virtual display manager tidak ditemukan — install driver dulu dari https://github.com/itsmikethetech/Virtual-Display-Driver (atau ge9 IddSampleDriver sudah terpasang tapi virtual display belum muncul, coba pnputil /scan-devices; reboot tidak diwajibkan)".to_string())
 }
 
 #[cfg(not(target_os = "windows"))]

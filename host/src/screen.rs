@@ -374,11 +374,12 @@ pub fn spawn_frame_source() -> FrameSource {
                     current = v_idx;
                     BACKEND.store(BACKEND_VIRTUAL, std::sync::atomic::Ordering::Relaxed);
                 } else {
-                    // Driver ada tapi virtual display belum muncul — tetap pakai VIRTUAL backend, nanti akan coba buat lagi di loop
-                    if BACKEND.load(std::sync::atomic::Ordering::Relaxed) == BACKEND_DXGI {
-                        BACKEND.store(BACKEND_VIRTUAL, std::sync::atomic::Ordering::Relaxed);
-                        eprintln!("[xydesk-host] headless+driver → set backend ke virtual-display-driver (menunggu virtual display muncul)");
-                    }
+                    // Driver package belum menghasilkan monitor aktif. Jangan
+                    // memaksa backend virtual yang akan mengulang PnP/reboot
+                    // request; saat RDP masih aktif GDI GetDC(0) dapat dipakai
+                    // langsung untuk menguji sesi tanpa restart Windows.
+                    BACKEND.store(BACKEND_GDI, std::sync::atomic::Ordering::Relaxed);
+                    eprintln!("[xydesk-host] virtual display belum aktif → GDI fallback live dipakai; sesi tidak menunggu reboot");
                 }
             }
             // Throttle peringatan "semua backend gagal" (lihat watchdog).

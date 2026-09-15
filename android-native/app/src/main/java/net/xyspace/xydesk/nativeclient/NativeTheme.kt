@@ -67,16 +67,18 @@ fun XyDeskTheme(content: @Composable () -> Unit) {
         onSurface = XyDeskColors.textHi,
         surfaceVariant = XyDeskColors.overlay,
         onSurfaceVariant = XyDeskColors.textMid,
-        outline = XyDeskColors.border,
+        outline = Color.Transparent,
         error = XyDeskColors.danger,
     )
     MaterialTheme(
         colorScheme = scheme,
         typography = XyDeskTypography,
         shapes = MaterialTheme.shapes.copy(
+            extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(999.dp),
             small = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-            medium = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-            large = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            medium = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            large = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
         ),
         content = content,
     )
@@ -104,7 +106,9 @@ val XyDeskCardColors
 val XyDeskTextFieldColors
     @Composable get() = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = XyDeskColors.accent,
-        unfocusedBorderColor = XyDeskColors.border,
+        unfocusedBorderColor = Color.Transparent,
+        disabledBorderColor = Color.Transparent,
+        errorBorderColor = XyDeskColors.danger,
         focusedLabelColor = XyDeskColors.accentDeep,
         unfocusedLabelColor = XyDeskColors.textMid,
         cursorColor = XyDeskColors.accent,
