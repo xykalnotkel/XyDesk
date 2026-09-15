@@ -2,6 +2,7 @@ package net.xyspace.xydesk.nativeclient
 
 import android.app.Notification
 import android.app.NotificationChannel
+import android.app.PendingIntent
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
@@ -35,13 +36,29 @@ class SessionForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun notification(message: String): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(android.R.drawable.stat_sys_headset)
-        .setContentTitle("XyDesk")
-        .setContentText(message)
-        .setOngoing(true)
-        .setCategory(NotificationCompat.CATEGORY_SERVICE)
-        .build()
+    private fun notification(message: String): Notification {
+        val openApp = PendingIntent.getActivity(
+            this,
+            REQUEST_OPEN_APP,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val stopSession = PendingIntent.getService(
+            this,
+            REQUEST_STOP_SESSION,
+            Intent(this, SessionForegroundService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_headset)
+            .setContentTitle("XyDesk")
+            .setContentText(message)
+            .setContentIntent(openApp)
+            .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .addAction(android.R.drawable.ic_media_pause, "Akhiri sesi", stopSession)
+            .build()
+    }
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -61,5 +78,7 @@ class SessionForegroundService : Service() {
         const val EXTRA_MESSAGE = "message"
         private const val CHANNEL_ID = "xydesk-session"
         private const val NOTIFICATION_ID = 8701
+        private const val REQUEST_OPEN_APP = 8702
+        private const val REQUEST_STOP_SESSION = 8703
     }
 }

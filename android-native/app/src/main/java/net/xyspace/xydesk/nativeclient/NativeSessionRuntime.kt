@@ -2,6 +2,7 @@ package net.xyspace.xydesk.nativeclient
 
 import android.content.Context
 import android.content.Intent
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -90,11 +91,15 @@ object NativeSessionRuntime {
     private suspend fun observe(nativeSession: NativeRtcSession) {
         nativeSession.state.collect { state ->
             when (state.phase) {
-                NativeSessionPhase.Connected -> synchronized(lock) {
-                    reconnectAttempts = 0
+                NativeSessionPhase.Connected -> {
+                    synchronized(lock) { reconnectAttempts = 0 }
+                    synchronized(lock) { appContext }?.let { updateForegroundService(it, "Sesi XyDesk aktif") }
                 }
                 NativeSessionPhase.Error,
-                NativeSessionPhase.PeerOffline -> scheduleReconnect(nativeSession)
+                NativeSessionPhase.PeerOffline -> {
+                    synchronized(lock) { appContext }?.let { updateForegroundService(it, "Koneksi terputus; mencoba ulang…") }
+                    scheduleReconnect(nativeSession)
+                }
                 NativeSessionPhase.Rejected,
                 NativeSessionPhase.HostBusy -> {
                     synchronized(lock) { appContext }?.let { stopForegroundService(it) }
@@ -154,6 +159,15 @@ object NativeSessionRuntime {
                 }
             }
         }
+    }
+
+    private fun updateForegroundService(context: Context, message: String) {
+        ContextCompat.startForegroundService(
+            context,
+            Intent(context, SessionForegroundService::class.java)
+                .setAction(SessionForegroundService.ACTION_START)
+                .putExtra(SessionForegroundService.EXTRA_MESSAGE, message),
+        )
     }
 
     private fun stopForegroundService(context: Context) {
