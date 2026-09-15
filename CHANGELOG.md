@@ -22,6 +22,11 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [Belum terbit]
+
+### Ditambahkan
+- Fondasi client Android native di `android-native/`: Kotlin + Jetpack Compose + AndroidX, port `InputCodec`, JNI bridge, dan library milik XyDesk `libxydesk_streamer.so`, `libxydesk_audio.so`, serta `libxydesk_control.so`. Flutter tetap menjadi jalur APK sampai paritas native terbukti di perangkat.
+
 ## [6.8.5] - 2026-09-13
 
 > Build 59. Semua tombol admin nyata — ban/role/revoke/kick/terminate/purge/logs Hibernation+storage, gada dummy.

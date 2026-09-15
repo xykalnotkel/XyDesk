@@ -80,7 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260914-OPERATOR-LANJUT | Operator - XyDesk Team | Operator (semua area) | LAGI KERJA | Shell Windows (WebView2+panic hook+tray); popup pembaruan jadi kartu nyata + banner masuk git; ikon billing topbar stabil; halaman Server & koneksi; logo adaptive 66%; bersih-bersih repo & arsip changelog; papan & HANDOFF dirapikan | 2026-09-14 |
+| SESI-20260914-OPERATOR-LANJUT | Operator - XyDesk Team | Operator (semua area) | LAGI KERJA | Shell Windows + driver offline installer; perbaikan output log PowerShell; mulai rewrite client Android native Kotlin + Compose + AndroidX dengan libxydesk_streamer/audio/control.so; Flutter tetap fallback selama paritas | 2026-09-14 |
 
 ## Antrean izin push
 
