@@ -85,32 +85,16 @@ fn is_basic_render_driver() -> bool {
     false
 }
 
-/// Cek apakah virtual display driver sudah terinstal
+/// Cek apakah virtual display device benar-benar aktif di Windows.
+///
+/// Jangan menganggap berkas INF di resources sebagai device aktif: installer
+/// bisa sudah menyalin paket driver ke Program Files/Driver Store, tetapi
+/// monitor virtual baru muncul setelah PnP re-enumeration atau reboot.
 #[cfg(target_os = "windows")]
 pub fn is_driver_installed() -> bool {
-    // 1. Cek driver store via pnputil
-    if let Ok(output) = Command::new("pnputil").arg("/enum-drivers").output() {
-        let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
-        for hwid in DRIVER_HWIDS {
-            if stdout.contains(&hwid.to_lowercase()) {
-                return true;
-            }
-        }
-    }
-    // 2. Cek via display devices — kalau ada yang namanya mengandung Idd/Virtual
-    let displays = crate::screen::list_displays();
-    for d in &displays {
-        let name = d.name.to_lowercase();
-        if name.contains("idd") || name.contains("virtual") || name.contains("xydesk") {
-            return true;
-        }
-        // Juga cek via EnumDisplayDevices yang lebih rendah: GDI device name
-        // Untuk virtual display ge9, nama biasanya \\.\DISPLAYx dengan driver IddSampleDriver
-    }
-    // 3. Cek via PnP devices
+    // 1. PnP device yang sedang hadir — ini sumber kebenaran utama.
     if let Ok(output) = Command::new("pnputil")
-        .arg("/enum-devices")
-        .arg("/present")
+        .args(["/enum-devices", "/class", "Display", "/present"])
         .output()
     {
         let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
@@ -121,7 +105,35 @@ pub fn is_driver_installed() -> bool {
             return true;
         }
     }
-    // 4. Cek file driver di lokasi umum
+
+    // 2. Display yang sudah terenumerasi juga dianggap aktif.
+    let displays = crate::screen::list_displays();
+    displays.iter().any(|d| {
+        let name = d.name.to_lowercase();
+        name.contains("idd") || name.contains("virtual") || name.contains("xydesk")
+    })
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn is_driver_installed() -> bool {
+    false
+}
+
+/// Cek apakah paket driver sudah tersedia/terdaftar, tetapi belum tentu device
+/// virtualnya aktif. Ini sengaja dipisahkan dari `is_driver_installed()` agar
+/// log tidak lagi melaporkan `installed=true` hanya karena INF ikut terbundle.
+#[cfg(target_os = "windows")]
+pub fn driver_package_available() -> bool {
+    if let Ok(output) = Command::new("pnputil").arg("/enum-drivers").output() {
+        let stdout = String::from_utf8_lossy(&output.stdout).to_lowercase();
+        if DRIVER_HWIDS
+            .iter()
+            .any(|hwid| stdout.contains(&hwid.to_lowercase()))
+        {
+            return true;
+        }
+    }
+
     let common_paths = [
         r"C:\Program Files\Virtual Display Driver\VirtualDisplayDriver.inf",
         r"C:\Program Files\IddSampleDriver\IddSampleDriver.inf",
@@ -133,16 +145,11 @@ pub fn is_driver_installed() -> bool {
         r"./driver/VirtualDisplayDriver.inf",
         r"C:\Program Files\XyDesk\drivers\IddSampleDriver\option.txt",
     ];
-    for p in common_paths {
-        if std::path::Path::new(p).exists() {
-            return true;
-        }
-    }
-    false
+    common_paths.iter().any(|p| std::path::Path::new(p).exists())
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn is_driver_installed() -> bool {
+pub fn driver_package_available() -> bool {
     false
 }
 
@@ -355,31 +362,50 @@ pub fn ensure_display() {
     }
 
     let displays = crate::screen::list_displays();
+    let driver_active = is_driver_installed();
+    let driver_package = driver_package_available();
     eprintln!(
-        "[xydesk-host] HEADLESS/RDP terdeteksi: {} monitor, RDP={}, driver_installed={}, basic_render={}",
+        "[xydesk-host] HEADLESS/RDP terdeteksi: {} monitor, RDP={}, driver_active={}, driver_package={}, basic_render={}",
         displays.len(),
         crate::screen::is_rdp_session(),
-        is_driver_installed(),
+        driver_active,
+        driver_package,
         is_basic_render_driver()
     );
 
-    if is_driver_installed() {
+    if driver_active {
         if find_virtual_display().is_some() {
             println!(
                 "[xydesk-host] virtual display driver sudah ada + virtual display aktif — capture via driver (bukan DXGI fisik) akan dipakai, tidak hitam di RDP/headless"
             );
             return;
         }
-        // Driver ada tapi virtual display belum ada — coba buat
-        println!("[xydesk-host] driver ada tapi virtual display belum muncul — mencoba buat...");
+        // Device aktif tetapi monitor belum terlihat oleh enumerator.
+        println!("[xydesk-host] driver aktif tapi virtual display belum muncul — mencoba buat...");
         if ensure_virtual_display_created() {
             println!("[xydesk-host] virtual display berhasil disiapkan — siap capture via driver");
         } else {
             eprintln!(
-                "[xydesk-host] driver ada tapi virtual display belum muncul. Cek Device Manager → Display adapters. \
+                "[xydesk-host] driver aktif tapi virtual display belum muncul. Cek Device Manager → Display adapters. \
                  Coba: pnputil /scan-devices atau restart XyDesk sebagai admin."
             );
         }
+        return;
+    }
+
+    if driver_package {
+        // INF/driver store sudah ada, tetapi device belum aktif. Jangan
+        // melaporkan ini sebagai installed=true dan jangan mencari manager EXE
+        // yang memang tidak dibundel oleh ge9/IddSampleDriver.
+        let _ = Command::new("pnputil").args(["/scan-devices"]).output();
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        if is_driver_installed() && find_virtual_display().is_some() {
+            println!("[xydesk-host] virtual display muncul setelah PnP rescan — siap capture via driver");
+            return;
+        }
+        eprintln!(
+            "[xydesk-host] paket driver sudah ada tetapi device virtual belum aktif — reboot Windows diperlukan agar IddSampleDriver membuat monitor virtual"
+        );
         return;
     }
 
