@@ -48,7 +48,7 @@ curl -X POST "https://news.xydesk.my.id/api/admin/publish" \
   }'
 ```
 
-> ⚠️ **Artikel changelog rilis WAJIB mengirim `slug` sendiri.** Footer web
+> **Peringatan:** Artikel changelog rilis WAJIB mengirim `slug` sendiri. Footer web
 > dan layar "Tentang" menautkan versi ke `changelog-v<major>-<minor>-<patch>`
 > (`web/src/version.ts` → `CHANGELOG_SLUG`). Kalau field `slug` tidak
 > dikirim, slug jatuh ke hash acak `p-…` dan tautan versi itu menunjuk ke

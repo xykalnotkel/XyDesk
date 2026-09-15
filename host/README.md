@@ -7,10 +7,10 @@ meng-encode, dan mengirim via WebRTC ke client.
 
 | Bagian | Status |
 |---|---|
-| Signaling client (daftar, pair, negosiasi) | ✅ jadi, lintas platform |
-| Sesi WebRTC (answerer) + data channel "input" | ✅ implementasi tersedia |
-| **Media plane: track video H264 + encode → RTP → decode** | ✅ implementasi tersedia (openh264, pola frame) |
-| Sumber video: capture layar (DXGI) + encode (NVENC) | ✅ implementasi tersedia (`screen.rs` + `nvenc.rs`); ⏳ belum diverifikasi di lab Windows |
+| Signaling client (daftar, pair, negosiasi) | Selesai, lintas platform |
+| Sesi WebRTC (answerer) + data channel "input" | Tersedia |
+| **Media plane: track video H264 + encode → RTP → decode** | Tersedia (openh264, pola frame) |
+| Sumber video: capture layar (DXGI) + encode (NVENC) | Tersedia (`screen.rs` + `nvenc.rs`); belum diverifikasi di lab Windows |
 
 Artinya: jalur media **sudah terbukti end-to-end** — host meng-encode frame
 (openh264) → kirim lewat RTP → client menerima & men-decode. Di Windows,

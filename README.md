@@ -16,7 +16,7 @@
 [![News Status](https://img.shields.io/github/actions/workflow/status/xykalnotkel/XyDesk/deploy-news.yml?label=News%20Worker&logo=cloudflarepages&logoColor=white&style=flat-square)](https://news.xydesk.my.id)
 [![Web Client](https://img.shields.io/badge/Web_Client-Live-success?logo=googlechrome&logoColor=white&style=flat-square)](https://app.xydesk.my.id)
 
-[![Flutter](https://img.shields.io/badge/Client-Flutter_3.44+-02569B?logo=flutter&logoColor=white&style=flat-square)](https://flutter.dev)
+[![Android Native](https://img.shields.io/badge/Android-Kotlin%2FCompose-3DDC84?logo=android&logoColor=white&style=flat-square)](android-native/README.md)
 [![Rust](https://img.shields.io/badge/Host_Engine-Rust_1.80+-000000?logo=rust&logoColor=white&style=flat-square)](host/)
 [![Tauri](https://img.shields.io/badge/Desktop_Shell-Tauri_v2-24C8D5?logo=tauri&logoColor=white&style=flat-square)](desktop/)
 [![TypeScript](https://img.shields.io/badge/Web_&_Edge-TypeScript_5-3178C6?logo=typescript&logoColor=white&style=flat-square)](web/)
@@ -31,22 +31,22 @@
 
 ---
 
-## 🌟 Sorotan Fitur Utama
+## Sorotan Fitur Utama
 
-- **🚀 Ultra-Low Latency Streaming**: Pipeline tangkapan layar DXGI / GDI hardware-accelerated di Windows, enkripsi P2P WebRTC DTLS-SRTP, fallback TURN otomatis (ExpressTurn + Cloudflare ber-TTL), dan latensi end-to-end teroptimasi untuk gaming.
-- **🎮 In-Session Gaming HUD & Haptic Virtual Controller**: Kontrol overlay ABXY & D-pad virtual berhaptik mikro, keyboard mekanis virtual dengan modifier sticky, dan gesture switch intuitif.
-- **🔄 In-App Update Experience (AI Portrait Modal)**: Dialog visual pembaruan rasio 3:4 portrait AI modern, progress unduh di latar belakang via Android system tray push notification, dan instalasi instan direct-to-package-installer.
-- **🖥️ Multi-Platform Native Architecture**:
-  - **Android Client**: Flutter native dengan rendering WebRTC hardware decoder, Picture-in-Picture (PiP), dan sensor adaptif.
+- **Ultra-Low Latency Streaming**: Pipeline tangkapan layar DXGI / GDI hardware-accelerated di Windows, enkripsi P2P WebRTC DTLS-SRTP, fallback TURN otomatis (ExpressTurn + Cloudflare ber-TTL), dan latensi end-to-end teroptimasi untuk gaming.
+- **In-Session Gaming HUD & Haptic Virtual Controller**: Kontrol overlay ABXY & D-pad virtual berhaptik mikro, keyboard mekanis virtual dengan modifier sticky, dan gesture switch intuitif.
+- **In-App Update Experience (AI Portrait Modal)**: Dialog visual pembaruan rasio 3:4 portrait AI modern, progress unduh di latar belakang via Android system tray push notification, dan instalasi instan direct-to-package-installer.
+- **Multi-Platform Native Architecture**:
+  - **Android Client**: Kotlin/Compose/JNI native dengan WebRTC resmi, rendering hardware decoder, Picture-in-Picture (PiP), dan sensor adaptif.
   - **Windows Host & Desktop Shell**: Rust supervisor engine yang ringan dipadukan dengan cangkang modern Tauri v2 + Next.js.
   - **Web Client**: Aplikasi web PWA modern di `https://app.xydesk.my.id` yang siap diakses dari peramban mana pun tanpa instalasi.
-- **📺 Multi-Monitor & Audio Loopback**: Pindah layar live antar monitor tanpa memutus sesi, capture audio loopback WASAPI stereo berdefinisi tinggi, dan mikrofon passthrough dua arah.
-- **🔒 Keamanan & Zero-Trust Pairing**: Autentikasi OTP email, Google OAuth terverifikasi, HMAC token gerbang signaling, perlindungan anti brute-force pairing (*PairGuard*), dan sesi tunggal anti-ambil alih.
-- **✨ Desain "Quiet Surface"**: Nol garis pemisah Material (zero `Divider`), kontras lembut berbasis elevasi ruang, palet warna Paper terang, dan aksen ungu violet 3D-glossy.
+- **Multi-Monitor & Audio Loopback**: Pindah layar live antar monitor tanpa memutus sesi, capture audio loopback WASAPI stereo berdefinisi tinggi, dan mikrofon passthrough dua arah.
+- **Keamanan & Zero-Trust Pairing**: Autentikasi OTP email, Google OAuth terverifikasi, HMAC token gerbang signaling, perlindungan anti brute-force pairing (*PairGuard*), dan sesi tunggal anti-ambil alih.
+- **Desain "Quiet Surface"**: Nol garis pemisah Material (zero `Divider`), kontras lembut berbasis elevasi ruang, palet warna Paper terang, dan aksen ungu violet 3D-glossy.
 
 ---
 
-## 📊 Matriks Platform & Unduhan Rilis
+## Matriks Platform & Unduhan Rilis
 
 | Platform | Format Berkas | Deskripsi Target |
 |---|---|---|
@@ -60,7 +60,7 @@ Seluruh artefak rilis resmi otomatis diverifikasi dengan checksum `SHA256SUMS.tx
 
 ---
 
-## 🏗️ Arsitektur Sistem
+## Arsitektur Sistem
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -77,7 +77,7 @@ Seluruh artefak rilis resmi otomatis diverifikasi dengan checksum `SHA256SUMS.tx
 ┌───────────────────────────┐         ┌───────────────────────────┐
 │     XyDesk Client         │         │      XyDesk Host          │
 │   (Android / Web / PC)    │◄───────►│  (Windows Rust Engine)    │
-│  - Flutter WebRTC Video   │  P2P    │  - DXGI Desktop Dupl.     │
+│  - Native WebRTC Video    │  P2P    │  - DXGI Desktop Dupl.     │
 │  - Audio Track Renderer   │  DTLS   │  - WASAPI Audio Capture   │
 │  - Gaming HUD / Virtual KB│  SRTP   │  - Virtual Display & Mic  │
 └───────────────────────────┘  Media  └───────────────────────────┘
@@ -85,24 +85,22 @@ Seluruh artefak rilis resmi otomatis diverifikasi dengan checksum `SHA256SUMS.tx
 
 ---
 
-## 💻 Memulai Pengembangan Lokal
+## Memulai Pengembangan Lokal
 
 ### Prasyarat
-- **Flutter SDK**: `3.44.9+` (Channel Stable) & **Dart**: `3.12+`
+- **Android SDK**: compile SDK 35, NDK `27.2.12479018`, dan JDK 17
 - **Rust**: `1.80+` (Toolchain stable with `x86_64-pc-windows-msvc` / `aarch64-pc-windows-msvc`)
 - **Node.js**: `v20+` atau `v24` & **npm**: `10+`
 
-### 1. Menjalankan Aplikasi Flutter (Android)
+### 1. Membangun Aplikasi Native Android
 ```bash
-# Pasang dependensi Flutter
-flutter pub get
+cd android-native
 
-# Jalankan pengujian unit & analisis statis
-flutter analyze --fatal-infos --fatal-warnings
-flutter test
+# Jalankan pengujian unit Kotlin native
+gradle test
 
-# Jalankan di emulator / perangkat fisik
-flutter run
+# Bangun APK debug untuk uji perangkat
+gradle assembleDebug
 ```
 
 ### 2. Membangun Host Engine (Rust)
@@ -131,7 +129,7 @@ npm run tauri dev
 
 ---
 
-## 🎨 Pedoman Desain & Kualitas Kode
+## Pedoman Desain & Kualitas Kode
 
 - **Zero Divider Line**: Dilarang menyisipkan `Divider()` atau `VerticalDivider()`. Pemisah visual murni menggunakan jarak token `Gap` (16dp, 24dp, 32dp) dan gradasi permukaan `FadeEdge`.
 - **High Transparency Assets**: Seluruh ilustrasi diuji otomatis oleh `tool/audit_assets.py` untuk memastikan kompatibilitas tema dan transparansi tepi yang bersih.
@@ -140,20 +138,20 @@ npm run tauri dev
 
 ---
 
-## 🤝 Kontribusi & Kolaborasi
+## Kontribusi & Kolaborasi
 
 Kami menyambut hangat kontribusi, diskusi teknis, pelaporan bug, dan ide fitur dari komunitas pengembang!
 
 ### Cara Berkontribusi:
 1. **Fork Repositori**: Buat salinan repo di akun GitHub Anda.
 2. **Buat Branch Fitur**: `git checkout -b feature/fitur-keren-anda`
-3. **Patuhi Standar Mutu**: Pastikan `flutter analyze`, `cargo clippy`, dan seluruh test suite lulus 100%.
-4. **Format Kode**: Jalankan `dart format lib tool` dan `cargo fmt`.
+3. **Patuhi Standar Mutu**: Pastikan pengujian Kotlin native, `cargo clippy`, dan seluruh test suite lulus 100%.
+4. **Format Kode**: Jalankan formatter Kotlin/Compose yang digunakan IDE dan `cargo fmt`.
 5. **Kirim Pull Request**: Buka PR dengan deskripsi yang jelas dan alasan perubahan.
 
 ---
 
-## 👥 Tim & Kontributor
+## Tim & Kontributor
 
 <div align="center">
 
@@ -171,7 +169,7 @@ Dibuat dan dipelihara dengan dedikasi tinggi oleh:
 
 ---
 
-## 📄 Lisensi
+## Lisensi
 
 Kode sumber XyDesk dilindungi hak cipta dan didistribusikan di bawah lisensi resmi **XyDesk Proprietary License** (lihat [`LICENSE`](LICENSE)).  
 Rincian atribusi lisensi perangkat lunak pihak ketiga tersedia di [`docs/THIRD-PARTY-LICENSES.md`](docs/THIRD-PARTY-LICENSES.md) serta pada menu **Legal & Lisensi** di seluruh klien aplikasi.
