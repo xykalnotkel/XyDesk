@@ -1,11 +1,11 @@
 # XyDesk Android Native
 
-Project Android native untuk migrasi client XyDesk dari Flutter ke Kotlin,
-Jetpack Compose, dan AndroidX. Package rebrand: `net.xyspace.xydesk`.
+Project Android native XyDesk berbasis Kotlin, Jetpack Compose, AndroidX,
+WebRTC Android resmi, dan JNI library milik XyDesk. Package: `net.xyspace.xydesk`.
 
-Project ini sengaja berdiri di samping `android/` yang masih menjadi build
-Flutter. APK native belum menggantikan APK Flutter dan belum masuk artifact
-rilis.
+Jalur APK produk sekarang memakai project ini. Tidak ada Flutter, `libflutter.so`,
+atau renderer Flutter di artifact native. Source Flutter lama tidak menjadi
+input build APK native.
 
 ## Lapisan native
 
@@ -35,8 +35,8 @@ auto-reconnect terbatas, stats sesi, pengaturan persisten, dan pemeriksaan
 update resmi. UI Compose tetap jujur menampilkan error pairing, host offline,
 host sibuk, dan kegagalan ICE.
 
-`android/` Flutter masih fallback. Native belum boleh menggantikan fallback
-sebelum satu full GitHub Actions build menghasilkan artifact dan pengujian
-perangkat operator membuktikan auth, pairing, audio, video, input, PiP,
-reconnect, update, serta lifecycle. Build/CI dan device test sengaja belum
-dijalankan pada tahap implementasi ini.
+Artifact native debug dipakai untuk uji perangkat sebelum ada keputusan
+release. Acceptance test operator wajib mencakup auth Google/OTP/guest,
+QR pairing, audio, video, input, PiP, reconnect, update, dan lifecycle.
+Build CI sedang dijalankan; release tetap tidak dibuat sebelum operator
+mengonfirmasi APK dan perangkat berfungsi.
