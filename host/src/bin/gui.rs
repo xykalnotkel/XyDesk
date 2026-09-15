@@ -113,7 +113,11 @@ mod win {
         let base = std::env::var_os("APPDATA")
             .map(PathBuf::from)
             .or_else(|| std::env::var_os("LOCALAPPDATA").map(PathBuf::from))
-            .or_else(|| std::env::current_exe().ok().and_then(|p| p.parent().map(PathBuf::from)))
+            .or_else(|| {
+                std::env::current_exe()
+                    .ok()
+                    .and_then(|p| p.parent().map(PathBuf::from))
+            })
             .unwrap_or_else(|| PathBuf::from("."));
         base.join("XyDesk").join("host-refresh.json")
     }
@@ -146,8 +150,7 @@ mod win {
     /// dianggap sebagai error jaringan. Token sesi hanya lima menit; refresh
     /// credential membuat restart engine tidak menghabiskan jatah klaim.
     fn post_host_token(body: serde_json::Value) -> Result<(u16, String), String> {
-        let result = ureq::post(&format!("{SIGNALING_HTTP}/host-token"))
-            .send_json(body);
+        let result = ureq::post(&format!("{SIGNALING_HTTP}/host-token")).send_json(body);
         match result {
             Ok(resp) => Ok((resp.status(), resp.into_string().unwrap_or_default())),
             Err(ureq::Error::Status(code, resp)) => {
