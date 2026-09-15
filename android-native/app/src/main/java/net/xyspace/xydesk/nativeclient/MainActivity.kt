@@ -67,8 +67,18 @@ class MainActivity : ComponentActivity() {
     }
 
     fun requestAudioPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_AUDIO)
+        val permissions = buildList {
+            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                add(Manifest.permission.RECORD_AUDIO)
+            }
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        if (permissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissions.toTypedArray(), REQUEST_AUDIO)
         }
     }
 
@@ -267,6 +277,16 @@ private fun HomeScreen(
         if (sessionState.phase == NativeSessionPhase.Error) ErrorCard(sessionState.message ?: "Koneksi gagal.")
         if (sessionState.phase == NativeSessionPhase.Rejected) ErrorCard(sessionState.message ?: "Pairing ditolak host.")
         if (sessionState.phase == NativeSessionPhase.PeerOffline) ErrorCard(sessionState.message ?: "Host tidak online.")
+        if (sessionState.phase == NativeSessionPhase.Error ||
+            sessionState.phase == NativeSessionPhase.Rejected ||
+            sessionState.phase == NativeSessionPhase.PeerOffline ||
+            sessionState.phase == NativeSessionPhase.HostBusy
+        ) {
+            OutlinedButton(
+                onClick = { session.connect(hostId, password) },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Coba lagi") }
+        }
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -322,6 +342,9 @@ private fun HomeScreen(
 @Composable
 private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
     var text by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+    var keyboardVisible by remember { mutableStateOf(false) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Sesi aktif", style = MaterialTheme.typography.titleLarge)
@@ -361,6 +384,22 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                     }
                 }
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { session.requestClipboard() },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Ambil clipboard PC") }
+                OutlinedButton(
+                    onClick = {
+                        val value = clipboard?.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
+                        if (value.isNotEmpty()) session.sendClipboard(value)
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Kirim clipboard") }
+            }
+            state.clipboard?.let { value ->
+                Text("Clipboard PC diterima: ${value.take(80)}", style = MaterialTheme.typography.bodySmall)
+            }
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
@@ -373,8 +412,36 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                 enabled = text.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Kirim teks") }
+            OutlinedButton(
+                onClick = { keyboardVisible = !keyboardVisible },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(if (keyboardVisible) "Sembunyikan keyboard" else "Buka keyboard virtual") }
+            if (keyboardVisible) KeyboardPanel(session)
             OutlinedButton(onClick = session::disconnect, modifier = Modifier.fillMaxWidth()) {
                 Text("Akhiri sesi")
+            }
+        }
+    }
+}
+
+@Composable
+private fun KeyboardPanel(session: SessionViewModel) {
+    val rows = listOf(
+        listOf("Esc", "Tab", "Ctrl", "Alt", "Win"),
+        listOf("↑", "←", "↓", "→", "Backspace"),
+        listOf("Enter", "Space", "F1", "F2", "F3", "F4"),
+        listOf("F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"),
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+        rows.forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.fillMaxWidth()) {
+                row.forEach { label ->
+                    val mapped = if (label == "Space") " " else label
+                    OutlinedButton(
+                        onClick = { session.sendKeyLabel(mapped) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text(label) }
+                }
             }
         }
     }

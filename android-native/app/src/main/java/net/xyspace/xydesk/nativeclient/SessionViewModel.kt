@@ -66,6 +66,12 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun mouseButton(button: Int, down: Boolean) = session.mouseButton(button, down)
     fun scroll(dx: Int, dy: Int) = session.scroll(dx, dy)
     fun key(vk: Int, down: Boolean) = session.key(vk, down)
+    fun sendKeyLabel(label: String) {
+        KeyMapper.vkForLabel(label)?.let { vk ->
+            session.key(vk, true)
+            session.key(vk, false)
+        }
+    }
     fun sendInput(packet: ByteArray) = session.sendInput(packet)
     fun selectDisplay(index: Int) = session.selectDisplay(index)
     fun setAudioForwardEnabled(enabled: Boolean) = session.setAudioForwardEnabled(enabled)
