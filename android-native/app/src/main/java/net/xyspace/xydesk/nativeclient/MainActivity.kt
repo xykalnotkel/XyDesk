@@ -3,6 +3,7 @@ package net.xyspace.xydesk.nativeclient
 import android.Manifest
 import android.app.PictureInPictureParams
 import android.content.Intent
+import android.content.res.Configuration
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -54,6 +55,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -637,6 +639,8 @@ private fun SettingsToggle(label: String, checked: Boolean, onCheckedChange: (Bo
 private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
     var text by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val videoHeight = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 320.dp else 220.dp
     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
     val hapticFeedback = LocalHapticFeedback.current
     val settings = remember { NativeSettings(context) }
@@ -714,7 +718,7 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(220.dp),
+                modifier = Modifier.fillMaxWidth().height(videoHeight),
                 onRelease = session::detachRenderer,
             )
             Text(if (state.audioReady) "Audio tersambung" else "Menunggu audio host…")
