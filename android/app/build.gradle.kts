@@ -21,9 +21,9 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.xystudio.xydesk"
-    // API 35 tersedia stabil pada runner dan cukup untuk Android 8.0+.
+    // Plugin Flutter media/gambar saat ini mensyaratkan compileSdk 36.
     // Ini tidak mengubah minSdk; perangkat Android 8.0+ tetap didukung.
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
