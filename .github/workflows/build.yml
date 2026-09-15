@@ -74,6 +74,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       flutter: ${{ steps.filter.outputs.flutter }}
+      native: ${{ steps.filter.outputs.native }}
       host: ${{ steps.filter.outputs.host }}
       web: ${{ steps.filter.outputs.web }}
       news: ${{ steps.filter.outputs.news }}
@@ -103,6 +104,8 @@ jobs:
           # Kunci pemetaan: area → job. Ubah di sini, plus tabel di
           # docs/CI.md, kalau struktur repo bergeser.
           filters: |
+            native:
+              - 'android-native/**'
             flutter:
               - 'lib/**'
               - 'test/**'
@@ -150,90 +153,10 @@ jobs:
               - 'desktop/package.json'
               - 'host/Cargo.toml'
 
-  # ── 1a. Gerbang kompilasi & mutu client Flutter ──
-  check-flutter:
-    name: Analisis Statis (Flutter)
-    needs: changes
-    if: needs.changes.outputs.flutter == 'true' || needs.changes.outputs.full == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-
-      - run: flutter pub get
-
-      # Lockfile wajib identik dengan source. `pub get` yang diam-diam mengubah
-      # resolusi dependency berarti build lokal dan CI tidak reproduktif.
-      - name: Verifikasi dependency lock tidak berubah
-        run: git diff --exit-code -- pubspec.lock
-
-      - name: Simpan dependency lock hasil resolusi
-        uses: actions/upload-artifact@v4
-        with:
-          name: resolved-pubspec-lock
-          path: pubspec.lock
-          retention-days: 3
-
-      - name: Cek format (gagal bila ada file belum rapi)
-        run: dart format --output=none --set-exit-if-changed lib tool
-
-      - name: Tolak suppression analyzer
-        run: |
-          if grep -RInE 'ignore_for_file:|//[[:space:]]*ignore:' lib tool; then
-            echo "::error::Suppression analyzer dilarang. Perbaiki akar warning/error-nya."
-            exit 1
-          fi
-          if grep -nE '^[[:space:]]*exclude:|:[[:space:]]*ignore$' analysis_options.yaml; then
-            echo "::error::analysis_options tidak boleh mengecualikan source atau menurunkan diagnostic menjadi ignore."
-            exit 1
-          fi
-
-      - name: Analisis statis tanpa toleransi diagnostic
-        run: flutter analyze --fatal-infos --fatal-warnings
-
-      # Uji unit Dart. Sampai sekarang tidak pernah dijalankan CI, padahal
-      # test/webrtc/input_codec_test.dart mengunci format protokol input
-      # biner yang dipakai host/src/input.rs — kalau formatnya bergeser
-      # tanpa sengaja, yang rusak bukan "test yang merah", melainkan
-      # keyboard dan mouse di komputer orang. Uji yang tidak pernah
-      # dijalankan sama saja dengan tidak punya uji.
-      - name: Uji unit Dart
-        run: flutter test
-
-      # Inventaris lisensi wajib mencerminkan lockfile saat ini. Kalau
-      # dependensi berubah tanpa regenerasi, dokumen legal jadi bohong —
-      # dan itu kewajiban hukum, bukan sekadar dokumentasi.
-      - name: Verifikasi inventaris lisensi mutakhir
-        run: node tool/gen-licenses.mjs --check
-
-      - name: Audit ilustrasi transparan untuk semua tema
-        run: |
-          python3 -m pip install --quiet Pillow
-          python3 tool/audit_assets.py
-
-      # Ikon launcher dua kali regresi ke varian hitam (Sep 2026) — gerbang
-      # ini mengunci fakta pikselnya (foreground transparan, tile terang).
-      - name: Verifikasi ikon launcher bukan varian hitam
-        run: python3 tool/check_icons.py
-
-      # Aturan desain ditegakkan mesin, bukan sekadar ditulis di dokumen.
-      - name: Verifikasi aturan seamless
-        run: |
-          if grep -rn --include='*.dart' -E '\b(Divider|VerticalDivider)\(' lib/; then
-            echo "::error::Ditemukan Divider. Desain XyDesk melarang garis pemisah."
-            exit 1
-          fi
-          if grep -rn --include='*.dart' -E 'scrolledUnderElevation:\s*[1-9]' lib/; then
-            echo "::error::scrolledUnderElevation > 0 memunculkan garis di bawah AppBar."
-            exit 1
-          fi
-          echo "OK - tidak ada garis pemisah terlarang."
+  # ── 1a. Gerbang Android native ──
+  # Flutter tidak lagi menjadi jalur APK. Source Flutter lama tidak dipakai
+  # oleh artifact Android; seluruh UI, auth, media, dan session berasal dari
+  # android-native Kotlin/Compose/JNI.
 
   # ── 1b. Gerbang mutu Worker berita ──
   check-news:
@@ -307,13 +230,15 @@ jobs:
       - name: Verifikasi versi konsisten di semua manifest
         run: python3 tool/check_version.py
 
-  # ── 2. APK per ABI: unduhan kecil, tanpa universal gemuk ──
+  # ── 2. APK Android native produk ──
   android:
-    name: APK Android per ABI
-    needs: [changes, check-flutter]
-    if: needs.changes.outputs.flutter == 'true' || needs.changes.outputs.full == 'true'
+    name: APK Android Native Produk
+    needs: changes
+    if: needs.changes.outputs.native == 'true' || needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
+    env:
+      GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -322,115 +247,62 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: subosito/flutter-action@v2
+      - uses: android-actions/setup-android@v3
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
+          packages: platform-tools
+          accept-android-sdk-license: true
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
-          restore-keys: gradle-
-
-      - run: flutter pub get
-
-      - name: Siapkan signing APK
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Pasang Android SDK, NDK, dan CMake
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "KEYSTORE_BASE64 kosong — lewati signing rilis (fallback debug)."
-            exit 0
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "cmake;3.22.1" \
+            "ndk;27.2.12479018"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.1.0'
+
+      - name: Uji unit Kotlin native
+        run: gradle -p android-native test
+
+      - name: Build APK native debug
+        run: gradle -p android-native assembleDebug
+
+      - name: Verifikasi APK native dan ABI
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="android-native/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$apk"
+          unzip -l "$apk" | grep -E 'lib/(arm64-v8a|armeabi-v7a)/libxydesk_(streamer|audio|control|bridge)\.so'
+          if unzip -l "$apk" | grep -E 'lib/(x86|x86_64)/|libflutter\.so|libapp\.so'; then
+            echo "ABI x86 atau runtime Flutter ditemukan di APK native."
+            exit 1
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/xydesk-release.keystore
-          cat > android/key.properties <<EOF
-          storePassword=$KEYSTORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=$KEY_ALIAS
-          storeFile=xydesk-release.keystore
-          EOF
-
-      # Dua APK saja: ARM64 untuk perangkat modern dan ARMv7 untuk Android
-      # 32-bit. Tidak ada universal dan tidak ada x86/x86_64.
-      - name: Build APK terpisah ARM64 dan ARMv7
-        run: >-
-          flutter build apk --release --split-per-abi
-          --target-platform=android-arm,android-arm64
-          --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID"
-
-      - name: Namai paket berdasarkan ABI
-        run: |
-          set -euo pipefail
           mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-            dist/XyDesk-Android-arm64-v8a.apk
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
-            dist/XyDesk-Android-armeabi-v7a.apk
-          ls -lh dist/
-
-      - name: Verifikasi setiap APK hanya memuat ABI yang benar
-        run: |
-          set -euo pipefail
-          gagal=0
-          for abi in arm64-v8a armeabi-v7a; do
-            apk="dist/XyDesk-Android-${abi}.apk"
-            root="/tmp/apk-${abi}"
-            unzip -tq "$apk" >/dev/null
-            rm -rf "$root"
-            unzip -q "$apk" -d "$root"
-
-            actual="$(find "$root/lib" -mindepth 1 -maxdepth 1 -type d \
-              -printf '%f\n' | sort | paste -sd, -)"
-            if [ "$actual" != "$abi" ]; then
-              echo "::error::$apk memuat ABI '$actual', seharusnya hanya '$abi'."
-              gagal=1
-            fi
-            for library in libflutter.so libapp.so libjingle_peerconnection_so.so; do
-              if [ ! -s "$root/lib/$abi/$library" ]; then
-                echo "::error::$apk kehilangan $abi/$library."
-                gagal=1
-              fi
-            done
-
-            bytes="$(stat -c%s "$apk")"
-            limit_bytes=$(( 40 * 1048576 ))
-            size_mib="$(awk -v b="$bytes" 'BEGIN { printf "%.2f", b / 1048576 }')"
-            if [ "$bytes" -gt "$limit_bytes" ]; then
-              echo "::error::$apk berukuran ${size_mib} MiB, melampaui 40 MiB."
-              gagal=1
-            fi
-            echo "$abi: ${size_mib} MiB"
-            {
-              echo "| Android $abi | ${size_mib} MiB | ABI tunggal, runtime lengkap |"
-            } >> "$GITHUB_STEP_SUMMARY"
-          done
-          [ "$gagal" -eq 0 ] || exit 1
+          cp "$apk" dist/XyDesk-Android-Native-debug.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: XyDesk-Android-APK
-          path: dist/*.apk
+          name: XyDesk-Android-Native-debug
+          path: dist/XyDesk-Android-Native-debug.apk
           retention-days: 30
           if-no-files-found: error
 
-  # ── 2c. Client Android native selama migrasi ──
-  # Jalur ini hidup pada build manual penuh. Flutter tetap dibangun sebagai
-  # APK utama; artifact native hanya untuk uji internal sampai paritas fitur
-  # dan perangkat nyata terbukti.
+  # ── 2c. Verifikasi APK Android native tambahan ──
+  # Jalur ini menjaga artifact debug terpisah untuk inspeksi JNI/ABI.
   android-native:
     name: Android Native Kotlin + JNI
     needs: changes
     if: needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -828,7 +700,7 @@ jobs:
 
   summary:
     name: Ringkasan
-    needs: [changes, check-flutter, check-news, check-signaling, check-meta,
+    needs: [changes, check-news, check-signaling, check-meta,
             host-test, android, android-native, windows, web, installer-lint]
     if: always()
     runs-on: ubuntu-latest
@@ -865,12 +737,11 @@ jobs:
             echo ""
             echo "| Job | Status | Artefak |"
             echo "|---|---|---|"
-            echo "| Analisis Statis (Flutter)    | ${{ needs['check-flutter'].result }} | gerbang mutu client |"
             echo "| Uji Worker Berita            | ${{ needs['check-news'].result }} | — |"
             echo "| Uji Backend (Worker + Go)    | ${{ needs['check-signaling'].result }} | — |"
             echo "| Cek Lintas-Dokumen           | ${{ needs['check-meta'].result }} | — |"
             echo "| Uji Logika Host (Rust)      | ${{ needs['host-test'].result }} | gerbang mutu, tanpa artefak |"
-            echo "| Android APK (Flutter)       | ${{ needs.android.result }} | \`XyDesk-Android-APK\` |"
+            echo "| Android APK Native          | ${{ needs.android.result }} | \`XyDesk-Android-Native-debug\` |"
             echo "| Android Native (Kotlin/JNI) | ${{ needs['android-native'].result }} | \`XyDesk-Android-Native-debug\` |"
             echo "| Windows Desktop (EXE)       | ${{ needs.windows.result }} | \`XyDesk-Windows-<arch>\` |"
             echo "| Web Application             | ${{ needs.web.result }}     | \`XyDesk-Web\`         |"

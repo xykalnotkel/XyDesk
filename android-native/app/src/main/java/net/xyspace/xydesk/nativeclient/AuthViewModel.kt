@@ -98,6 +98,27 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun signInGoogle(idToken: String) {
+        if (idToken.isBlank()) {
+            _state.value = AuthUiState.Error("Google tidak memberikan token identitas.", AuthUiState.SignedOut)
+            return
+        }
+        _state.value = AuthUiState.Working("Memverifikasi Google…")
+        viewModelScope.launch {
+            runCatching { api.signInWithGoogle(idToken) }
+                .onSuccess { session ->
+                    store.putString(SecureStore.TOKEN, session.token)
+                    store.putString(SecureStore.EMAIL, session.user.email)
+                    store.putString(SecureStore.NAME, session.user.name)
+                    store.putString(SecureStore.GUEST, "false")
+                    _state.value = AuthUiState.SignedIn(session.user)
+                }
+                .onFailure { error ->
+                    _state.value = AuthUiState.Error(error.userMessage(), AuthUiState.SignedOut)
+                }
+        }
+    }
+
     fun signInGuest() {
         resendJob?.cancel()
         store.remove(SecureStore.TOKEN)

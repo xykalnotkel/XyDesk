@@ -38,6 +38,13 @@ class AuthApi(
         AuthSession.fromJson(body)
     }
 
+    suspend fun signInWithGoogle(idToken: String): AuthSession = withContext(Dispatchers.IO) {
+        val body = post("/auth/google", JSONObject().apply {
+            put("id_token", idToken)
+        })
+        AuthSession.fromJson(body)
+    }
+
     suspend fun me(token: String): AuthUser = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$baseUrl/auth/me")

@@ -2,6 +2,7 @@ package net.xyspace.xydesk.nativeclient
 
 import android.Manifest
 import android.app.PictureInPictureParams
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.content.pm.ActivityInfo
@@ -14,6 +15,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -76,10 +78,29 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.viewinterop.AndroidView
 import org.webrtc.SurfaceViewRenderer
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+private fun launchGoogle(
+    context: Context,
+    launcher: ActivityResultLauncher<Intent>,
+) {
+    val clientId = BuildConfig.GOOGLE_WEB_CLIENT_ID.trim()
+    if (clientId.isBlank()) {
+        Toast.makeText(context, "Google Client ID belum tersedia pada build ini.", Toast.LENGTH_LONG).show()
+        return
+    }
+    val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+        .requestIdToken(clientId)
+        .requestEmail()
+        .build()
+    launcher.launch(GoogleSignIn.getClient(context, options).signInIntent)
+}
 
 class MainActivity : ComponentActivity() {
     private var pendingSessionStart: (() -> Unit)? = null
@@ -158,6 +179,16 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
     val signedIn = authState as? AuthUiState.SignedIn
     val titles = listOf("Beranda", "Hubungkan", "Riwayat", "Akun")
+    val googleLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        runCatching { task.getResult(ApiException::class.java) }
+            .onSuccess { account -> auth.signInGoogle(account.idToken.orEmpty()) }
+            .onFailure { error ->
+                Toast.makeText(context, "Google Sign-In gagal: ${error.message ?: "coba lagi"}", Toast.LENGTH_LONG).show()
+            }
+    }
 
     DisposableEffect(sessionState.phase) {
         if (sessionState.phase == NativeSessionPhase.Connected) {
@@ -277,6 +308,7 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
                         else -> LoginScreen(
                             error = state.message,
                             onRequestOtp = auth::requestOtp,
+                            onGoogle = { launchGoogle(context, googleLauncher) },
                             onGuest = auth::signInGuest,
                             modifier = Modifier.padding(padding),
                         )
@@ -284,6 +316,7 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
                     AuthUiState.SignedOut -> LoginScreen(
                         error = null,
                         onRequestOtp = auth::requestOtp,
+                        onGoogle = { launchGoogle(context, googleLauncher) },
                         onGuest = auth::signInGuest,
                         modifier = Modifier.padding(padding),
                     )
@@ -473,6 +506,7 @@ private fun LoadingPanel(label: String, modifier: Modifier = Modifier) {
 private fun LoginScreen(
     error: String?,
     onRequestOtp: (String, String) -> Unit,
+    onGoogle: () -> Unit,
     onGuest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -505,6 +539,12 @@ private fun LoginScreen(
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.widthIn(max = 440.dp),
         )
+        OutlinedButton(
+            onClick = onGoogle,
+            modifier = Modifier.fillMaxWidth(),
+            colors = XyDeskOutlinedButtonColors,
+        ) { Text("Masuk dengan Google") }
+        Text("atau gunakan email + OTP", style = MaterialTheme.typography.bodySmall, color = XyDeskColors.textLow)
         if (!error.isNullOrBlank()) ErrorCard(error)
         OutlinedTextField(
             value = name,

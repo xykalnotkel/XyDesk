@@ -16,6 +16,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1-native"
+        val googleWebClientId = System.getenv("GOOGLE_WEB_CLIENT_ID").orEmpty().replace("\\", "\\\\").replace("\"", "\\\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
@@ -96,6 +98,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Upstream WebRTC Android SDK; bukan binary proprietary StarDesk.
     implementation("io.github.webrtc-sdk:android:144.7559.09")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
