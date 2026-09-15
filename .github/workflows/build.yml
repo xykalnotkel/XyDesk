@@ -421,6 +421,65 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+  # ── 2c. Client Android native selama migrasi ──
+  # Jalur ini hidup pada build manual penuh. Flutter tetap dibangun sebagai
+  # APK utama; artifact native hanya untuk uji internal sampai paritas fitur
+  # dan perangkat nyata terbukti.
+  android-native:
+    name: Android Native Kotlin + JNI
+    needs: changes
+    if: needs.changes.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Pasang Android SDK, NDK, dan CMake
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-37" \
+            "build-tools;35.0.0" \
+            "cmake;3.22.1" \
+            "ndk;27.2.12479018"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.1.0'
+
+      - name: Uji unit Kotlin
+        run: gradle -p android-native test
+
+      - name: Build APK native debug
+        run: gradle -p android-native assembleDebug
+
+      - name: Verifikasi library native dan ABI
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="android-native/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$apk"
+          unzip -l "$apk" | grep -E 'lib/(arm64-v8a|armeabi-v7a)/libxydesk_(streamer|audio|control|bridge)\.so'
+          if unzip -l "$apk" | grep -E 'lib/(x86|x86_64)/'; then
+            echo "ABI x86 tidak boleh masuk APK native."
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-Android-Native-debug
+          path: android-native/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
   # ── 2b. Gerbang mutu host (Rust) ──
   #
   # Dijalankan di Linux karena jauh lebih cepat dan murah daripada runner
@@ -751,7 +810,7 @@ jobs:
   summary:
     name: Ringkasan
     needs: [changes, check-flutter, check-news, check-signaling, check-meta,
-            host-test, android, windows, web, installer-lint]
+            host-test, android, android-native, windows, web, installer-lint]
     if: always()
     runs-on: ubuntu-latest
     steps:
