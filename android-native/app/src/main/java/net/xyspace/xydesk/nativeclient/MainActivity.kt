@@ -276,6 +276,7 @@ private fun XyDeskNativeRoot(auth: AuthViewModel, session: SessionViewModel) {
                         else -> LoginScreen(
                             error = state.message,
                             onRequestOtp = auth::requestOtp,
+                            onGuest = auth::signInGuest,
                             modifier = Modifier.padding(padding),
                         )
                     }
@@ -537,10 +538,10 @@ private fun LoginScreen(
 private fun OtpScreen(
     email: String,
     resendIn: Int,
-    error: String? = null,
     onVerify: (String, String) -> Unit,
     onResend: (String) -> Unit,
     onBack: () -> Unit,
+    error: String? = null,
     modifier: Modifier = Modifier,
 ) {
     var digits by remember { mutableStateOf(List(6) { "" }) }
