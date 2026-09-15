@@ -448,6 +448,7 @@ private fun SettingsScreen(
     var microphoneDefault by remember { mutableStateOf(settings.microphoneDefault) }
     var pipEnabled by remember { mutableStateOf(settings.pipEnabled) }
     var notificationsEnabled by remember { mutableStateOf(settings.notificationsEnabled) }
+    var clipboardSync by remember { mutableStateOf(settings.clipboardSync) }
     var keepScreenOn by remember { mutableStateOf(settings.keepScreenOn) }
     var haptics by remember { mutableStateOf(settings.hapticsEnabled) }
     var relativeMouse by remember { mutableStateOf(settings.relativeMouseMode) }
@@ -516,6 +517,10 @@ private fun SettingsScreen(
         SettingsToggle("Notifikasi sesi", notificationsEnabled) {
             notificationsEnabled = it
             settings.notificationsEnabled = it
+        }
+        SettingsToggle("Sinkronisasi clipboard", clipboardSync) {
+            clipboardSync = it
+            settings.clipboardSync = it
         }
         SettingsToggle("Layar tetap menyala saat sesi", keepScreenOn) {
             keepScreenOn = it
@@ -648,9 +653,11 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
             delay(1_000)
         }
     }
-    LaunchedEffect(state.clipboard) {
-        state.clipboard?.let { value ->
-            clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("XyDesk PC", value))
+    LaunchedEffect(state.clipboard, settings.clipboardSync) {
+        if (settings.clipboardSync) {
+            state.clipboard?.let { value ->
+                clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("XyDesk PC", value))
+            }
         }
     }
     val elapsedSeconds = state.connectedAtMs?.let { ((nowMs - it).coerceAtLeast(0L) / 1_000L) } ?: 0L
@@ -780,14 +787,17 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
-                    onClick = { session.requestClipboard() },
+                    onClick = { feedback(); session.requestClipboard() },
+                    enabled = settings.clipboardSync,
                     modifier = Modifier.weight(1f),
                 ) { Text("Ambil clipboard PC") }
                 OutlinedButton(
                     onClick = {
+                        feedback()
                         val value = clipboard?.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
                         if (value.isNotEmpty()) session.sendClipboard(value)
                     },
+                    enabled = settings.clipboardSync,
                     modifier = Modifier.weight(1f),
                 ) { Text("Kirim clipboard") }
             }

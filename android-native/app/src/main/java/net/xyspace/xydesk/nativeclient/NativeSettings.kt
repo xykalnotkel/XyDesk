@@ -27,6 +27,10 @@ class NativeSettings(context: Context) {
         get() = preferences.getBoolean(KEY_NOTIFICATIONS, true)
         set(value) = preferences.edit().putBoolean(KEY_NOTIFICATIONS, value).apply()
 
+    var clipboardSync: Boolean
+        get() = preferences.getBoolean(KEY_CLIPBOARD, true)
+        set(value) = preferences.edit().putBoolean(KEY_CLIPBOARD, value).apply()
+
     var keepScreenOn: Boolean
         get() = preferences.getBoolean(KEY_KEEP_SCREEN_ON, true)
         set(value) = preferences.edit().putBoolean(KEY_KEEP_SCREEN_ON, value).apply()
@@ -56,6 +60,7 @@ class NativeSettings(context: Context) {
         private const val KEY_DISPLAY = "preferred_display"
         private const val KEY_PIP = "pip_enabled"
         private const val KEY_NOTIFICATIONS = "notifications_enabled"
+        private const val KEY_CLIPBOARD = "clipboard_sync"
         private const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         private const val KEY_HAPTICS = "haptics_enabled"
         private const val KEY_RELATIVE_MOUSE = "relative_mouse_mode"
