@@ -476,11 +476,13 @@ private fun SettingsScreen(
                         updateMessage = "Download selesai. Membuka installer Android…"
                         runCatching { updateInstaller.install(id) }
                             .onFailure { updateMessage = it.message ?: "Installer Android tidak dapat dibuka." }
+                        downloadId = null
                         break
                     }
                     NativeUpdateInstaller.DownloadStatus.Failed,
                     NativeUpdateInstaller.DownloadStatus.Missing -> {
                         updateMessage = "Download update gagal."
+                        downloadId = null
                         break
                     }
                     NativeUpdateInstaller.DownloadStatus.InProgress -> {
