@@ -62,6 +62,23 @@ class PairedHostStore(
         secureStore.putString(storageKey, array.toString())
     }
 
+    fun rename(id: String, name: String) {
+        val cleanName = name.trim().take(48)
+        if (cleanName.isBlank()) return
+        val array = JSONArray()
+        list().forEach { host ->
+            array.put(
+                JSONObject().apply {
+                    put("id", host.id)
+                    put("name", if (host.id == id) cleanName else host.name)
+                    put("password", host.password)
+                    put("lastConnectedAt", host.lastConnectedAt)
+                },
+            )
+        }
+        secureStore.putString(storageKey, array.toString())
+    }
+
     fun remove(id: String) {
         val array = JSONArray()
         list().filterNot { it.id == id }.forEach { host ->

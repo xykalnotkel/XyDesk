@@ -102,6 +102,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun recentHosts(): List<PairedHost> = pairedHosts().list()
+    fun renameHost(id: String, name: String) = pairedHosts().rename(id, name)
     fun removeHost(id: String) = pairedHosts().remove(id)
 
     fun attachRenderer(renderer: SurfaceViewRenderer) = session.attachVideoRenderer(renderer)

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -317,6 +318,8 @@ private fun HomeScreen(
     var password by remember { mutableStateOf("") }
     var settingsVisible by remember { mutableStateOf(false) }
     var recentHosts by remember { mutableStateOf(session.recentHosts()) }
+    var renamingHost by remember { mutableStateOf<PairedHost?>(null) }
+    var renameValue by remember { mutableStateOf("") }
     val context = LocalContext.current
     LaunchedEffect(sessionState.phase) {
         recentHosts = session.recentHosts()
@@ -362,6 +365,10 @@ private fun HomeScreen(
                                 },
                                 modifier = Modifier.weight(1f),
                             ) { Text(host.name) }
+                            TextButton(onClick = {
+                                renamingHost = host
+                                renameValue = host.name
+                            }) { Text("Nama") }
                             TextButton(onClick = {
                                 session.removeHost(host.id)
                                 recentHosts = session.recentHosts()
@@ -435,6 +442,31 @@ private fun HomeScreen(
                 OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) { Text("Keluar") }
             }
         }
+    }
+    renamingHost?.let { host ->
+        AlertDialog(
+            onDismissRequest = { renamingHost = null },
+            title = { Text("Ganti nama host") },
+            text = {
+                OutlinedTextField(
+                    value = renameValue,
+                    onValueChange = { renameValue = it.take(48) },
+                    label = { Text("Nama host") },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        session.renameHost(host.id, renameValue)
+                        recentHosts = session.recentHosts()
+                        renamingHost = null
+                    },
+                    enabled = renameValue.trim().isNotEmpty(),
+                ) { Text("Simpan") }
+            },
+            dismissButton = { TextButton(onClick = { renamingHost = null }) { Text("Batal") } },
+        )
     }
 }
 
