@@ -21,9 +21,9 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.xystudio.xydesk"
-    // flutter_secure_storage 11 membutuhkan Android API 37 saat compile.
+    // API 35 tersedia stabil pada runner dan cukup untuk Android 8.0+.
     // Ini tidak mengubah minSdk; perangkat Android 8.0+ tetap didukung.
-    compileSdk = 37
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
