@@ -1,8 +1,8 @@
-name: Build APK Android Native
+name: Build APK Flutter Hybrid
 
-# Jalur APK yang bisa langsung diuji pengguna. Produk Android dibangun dari
-# android-native Kotlin/Compose/JNI; tidak ada Flutter atau libflutter.so.
-# Workflow ini hanya menghasilkan artifact debug dan tidak membuat release.
+# Jalur APK Android untuk uji pengguna: UI/UX Flutter existing + platform,
+# Google Sign-In, OneSignal, dan media WebRTC native Android.
+# Tidak membuat GitHub Release.
 
 on:
   workflow_dispatch:
@@ -11,19 +11,32 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-apk-native-${{ github.ref }}
+  group: build-apk-hybrid-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-apk-native:
-    name: Build APK Native Kotlin + JNI
+  build:
+    name: Build APK Flutter Hybrid
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
     steps:
       - name: Checkout kode
         uses: actions/checkout@v4
+
+      - name: Validasi OAuth build variable
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GOOGLE_WEB_CLIENT_ID:-}" ]; then
+            echo "::error::GOOGLE_WEB_CLIENT_ID belum diatur sebagai repository variable."
+            exit 1
+          fi
+          case "$GOOGLE_WEB_CLIENT_ID" in
+            *.apps.googleusercontent.com) ;;
+            *) echo "::error::GOOGLE_WEB_CLIENT_ID bukan OAuth Web Client ID."; exit 1 ;;
+          esac
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -31,60 +44,72 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          channel: stable
+          cache: true
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
           accept-android-sdk-license: true
 
-      - name: Pasang Android SDK, NDK, dan CMake
+      - name: Pasang Android SDK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager \
             "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0" \
-            "cmake;3.22.1" \
-            "ndk;27.2.12479018"
+            "platforms;android-37" \
+            "build-tools;35.0.0"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.1.0'
+      - name: Install dependency Flutter
+        run: flutter pub get
 
-      - name: Uji unit Kotlin
-        run: gradle -p android-native test
+      - name: Test Flutter
+        run: flutter test
 
-      - name: Build APK native debug
-        run: gradle -p android-native assembleDebug
+      - name: Build APK Flutter hybrid arm64 dan armeabi-v7a
+        run: |
+          flutter build apk --debug --split-per-abi \
+            --dart-define=GOOGLE_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID" \
+            --dart-define=XYDESK_API_URL=https://signal.xydesk.my.id
 
-      - name: Verifikasi package, ABI, dan tidak ada Flutter
+      - name: Verifikasi ABI dan package
         shell: bash
         run: |
           set -euo pipefail
-          apk="android-native/app/build/outputs/apk/debug/app-debug.apk"
-          test -s "$apk"
-          for abi in arm64-v8a armeabi-v7a; do
-            for library in libxydesk_streamer.so libxydesk_audio.so libxydesk_control.so libxydesk_bridge.so libjingle_peerconnection_so.so; do
-              if ! unzip -l "$apk" | grep -q "lib/$abi/$library"; then
-                echo "Library wajib hilang: $abi/$library"
-                exit 1
-              fi
-            done
+          out="build/app/outputs/flutter-apk"
+          arm64="$out/app-arm64-v8a-debug.apk"
+          armv7="$out/app-armeabi-v7a-debug.apk"
+          test -s "$arm64"
+          test -s "$armv7"
+          for apk in "$arm64" "$armv7"; do
+            unzip -l "$apk" | grep -q 'libflutter.so'
+            if unzip -l "$apk" | grep -E 'lib/(x86|x86_64)/|libstreamer\.so'; then
+              echo "ABI x86 atau libstreamer.so tidak sah ditemukan di $apk"
+              exit 1
+            fi
           done
-          if unzip -l "$apk" | grep -E 'lib/(x86|x86_64)/|libflutter\.so|libapp\.so|libstreamer\.so'; then
-            echo "ABI x86, runtime Flutter, atau libstreamer.so proprietary ditemukan di APK native."
-            exit 1
-          fi
           mkdir -p dist
-          cp "$apk" dist/XyDesk-Android-Native-debug.apk
-          unzip -l "$apk" | grep -E 'classes[0-9]*\.dex|AndroidManifest.xml' | head
-          ls -lh dist/XyDesk-Android-Native-debug.apk
+          cp "$arm64" dist/XyDesk-Android-Flutter-Hybrid-arm64-v8a-debug.apk
+          cp "$armv7" dist/XyDesk-Android-Flutter-Hybrid-armeabi-v7a-debug.apk
+          ls -lh dist/*.apk
 
-      - name: Upload APK native untuk uji perangkat
+      - name: Upload APK Flutter hybrid arm64
         uses: actions/upload-artifact@v4
         with:
-          name: XyDesk-Android-Native-debug-${{ github.sha }}
-          path: dist/XyDesk-Android-Native-debug.apk
+          name: XyDesk-Android-Flutter-Hybrid-arm64-v8a
+          path: dist/XyDesk-Android-Flutter-Hybrid-arm64-v8a-debug.apk
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload APK Flutter hybrid armeabi-v7a
+        uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-Android-Flutter-Hybrid-armeabi-v7a
+          path: dist/XyDesk-Android-Flutter-Hybrid-armeabi-v7a-debug.apk
           retention-days: 14
           if-no-files-found: error
