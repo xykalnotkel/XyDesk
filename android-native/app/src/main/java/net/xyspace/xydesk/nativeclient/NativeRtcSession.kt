@@ -1,4 +1,4 @@
-package com.xystudio.xydesk.nativeclient
+package net.xyspace.xydesk.nativeclient
 
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope

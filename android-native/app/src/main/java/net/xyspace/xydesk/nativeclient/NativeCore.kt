@@ -1,4 +1,4 @@
-package com.xystudio.xydesk.nativeclient
+package net.xyspace.xydesk.nativeclient
 
 /** JNI facade untuk library native milik XyDesk. */
 object NativeCore {

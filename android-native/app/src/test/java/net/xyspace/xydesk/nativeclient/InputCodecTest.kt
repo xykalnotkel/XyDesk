@@ -1,4 +1,4 @@
-package com.xystudio.xydesk.nativeclient
+package net.xyspace.xydesk.nativeclient
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

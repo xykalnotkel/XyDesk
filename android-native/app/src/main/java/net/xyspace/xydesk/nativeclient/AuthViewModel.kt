@@ -1,4 +1,4 @@
-package com.xystudio.xydesk.nativeclient
+package net.xyspace.xydesk.nativeclient
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel

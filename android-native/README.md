@@ -1,7 +1,7 @@
 # XyDesk Android Native
 
 Project Android native untuk migrasi client XyDesk dari Flutter ke Kotlin,
-Jetpack Compose, dan AndroidX.
+Jetpack Compose, dan AndroidX. Package rebrand: `net.xyspace.xydesk`.
 
 Project ini sengaja berdiri di samping `android/` yang masih menjadi build
 Flutter. APK native belum menggantikan APK Flutter dan belum masuk artifact

@@ -1,4 +1,4 @@
-package com.xystudio.xydesk.nativeclient
+package net.xyspace.xydesk.nativeclient
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

@@ -1,4 +1,4 @@
-package com.xystudio.xydesk.nativeclient
+package net.xyspace.xydesk.nativeclient
 
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.flow.MutableSharedFlow

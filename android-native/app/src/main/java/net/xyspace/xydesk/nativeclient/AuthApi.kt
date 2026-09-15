@@ -1,4 +1,4 @@
-package com.xystudio.xydesk.nativeclient
+package net.xyspace.xydesk.nativeclient
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

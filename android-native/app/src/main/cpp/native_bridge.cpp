@@ -6,7 +6,7 @@
 #include "xydesk_streamer.h"
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_xystudio_xydesk_nativeclient_NativeCore_nativeSnapshot(JNIEnv* env, jclass) {
+Java_net_xyspace_xydesk_nativeclient_NativeCore_nativeSnapshot(JNIEnv* env, jclass) {
     std::string value = "control=";
     value += xydesk_control_protocol_version();
     value += "; state=";
@@ -28,7 +28,7 @@ Java_com_xystudio_xydesk_nativeclient_NativeCore_nativeSnapshot(JNIEnv* env, jcl
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_xystudio_xydesk_nativeclient_NativeCore_nativeSetSessionState(
+Java_net_xyspace_xydesk_nativeclient_NativeCore_nativeSetSessionState(
     JNIEnv*, jclass, jint state) {
     xydesk_control_set_state(state);
     xydesk_streamer_set_state(state);

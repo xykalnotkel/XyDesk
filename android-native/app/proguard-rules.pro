@@ -1,2 +1,2 @@
 # JNI entry points dipanggil dari NativeCore.kt melalui nama method native.
--keep class com.xystudio.xydesk.nativeclient.NativeCore { *; }
+-keep class net.xyspace.xydesk.nativeclient.NativeCore { *; }

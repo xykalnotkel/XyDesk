@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.xystudio.xydesk.nativeclient"
+    namespace = "net.xyspace.xydesk.nativeclient"
     compileSdk = 35
     ndkVersion = "27.2.12479018"
     defaultConfig {
-        applicationId = "com.xystudio.xydesk.native"
+        applicationId = "net.xyspace.xydesk"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

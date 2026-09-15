@@ -1,4 +1,4 @@
-package com.xystudio.xydesk.nativeclient
+package net.xyspace.xydesk.nativeclient
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
