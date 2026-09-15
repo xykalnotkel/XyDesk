@@ -21,7 +21,7 @@ dependencies:
   # Transport sesi remote (Fase 0 — loop capture->encode->kirim->decode).
   flutter_webrtc: ^1.5.2
   web_socket_channel: ^3.0.0
-  package_info_plus: ^10.2.1
+  package_info_plus: ^9.0.1
   # Ikon Lucide — stroke tipis konsisten, sesuai mockup.
   # Material Icons terlalu tebal/filled dan membuat UI terasa berbeda.
   lucide_icons_flutter: ^3.1.15
