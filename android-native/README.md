@@ -29,6 +29,8 @@ rilis. `x86` dan `x86_64` tidak termasuk target perangkat XyDesk.
 ## Status
 
 Scaffold ini adalah fondasi migrasi: Compose, JNI, tiga library native, dan
-port codec input sudah disiapkan. Signaling, PeerConnection, audio route,
-MediaProjection, auth, PiP, dan seluruh layar produk dipindahkan bertahap
-setelah kontrak byte dan build native terkunci.
+port codec input sudah disiapkan. Build manual ada di workflow
+`Build Android Native` dan artifact debug hanya untuk pengujian internal.
+Signaling, PeerConnection, audio route, MediaProjection, auth, PiP, dan
+seluruh layar produk dipindahkan bertahap setelah kontrak byte dan build
+native terkunci.
