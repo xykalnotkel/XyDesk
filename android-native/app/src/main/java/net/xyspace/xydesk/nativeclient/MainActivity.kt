@@ -446,6 +446,7 @@ private fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val settings = remember { NativeSettings(context) }
+    val sessionState by session.state.collectAsState()
     var audioDefault by remember { mutableStateOf(settings.audioForwardDefault) }
     var microphoneDefault by remember { mutableStateOf(settings.microphoneDefault) }
     var pipEnabled by remember { mutableStateOf(settings.pipEnabled) }
@@ -605,6 +606,15 @@ private fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("Buka rilis resmi") }
                 }
+            }
+        }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Diagnostik native", style = MaterialTheme.typography.titleMedium)
+                Text("State: ${sessionState.phase}", style = MaterialTheme.typography.bodySmall)
+                Text("ABI: ${Build.SUPPORTED_ABIS.joinToString()}", style = MaterialTheme.typography.bodySmall)
+                Text("JNI library: ${if (NativeCore.isLoaded()) "loaded" else "tidak tersedia"}", style = MaterialTheme.typography.bodySmall)
+                Text(NativeCore.snapshot(), style = MaterialTheme.typography.bodySmall)
             }
         }
         Card(modifier = Modifier.fillMaxWidth()) {
