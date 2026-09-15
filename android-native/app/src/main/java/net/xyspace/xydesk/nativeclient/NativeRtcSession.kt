@@ -54,7 +54,10 @@ data class NativeSessionState(
     val message: String? = null,
     val videoReady: Boolean = false,
     val audioReady: Boolean = false,
+    val audioForwardEnabled: Boolean = true,
+    val microphoneEnabled: Boolean = false,
     val clipboard: String? = null,
+    val hostMeta: HostMeta? = null,
 )
 
 data class HostDisplay(
@@ -97,6 +100,7 @@ class NativeRtcSession(
     private var inputChannel: DataChannel? = null
     private var videoTrack: VideoTrack? = null
     private var remoteAudioTrack: AudioTrack? = null
+    private var audioTransceiver: RtpTransceiver? = null
     private var microphoneTrack: AudioTrack? = null
     private var microphoneSource: AudioSource? = null
     private var deviceId: String = ""
@@ -205,6 +209,7 @@ class NativeRtcSession(
             MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
             RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.SEND_RECV),
         )
+        this.audioTransceiver = audioTransceiver
         // Mic Android dikirim langsung lewat WebRTC AudioTrack. Ini tidak
         // membuat virtual microphone dan tidak membutuhkan VB-CABLE/reboot.
         microphoneSource = peerFactory.createAudioSource(MediaConstraints())
@@ -290,10 +295,27 @@ class NativeRtcSession(
         channel.send(DataChannel.Buffer(ByteBuffer.wrap(packet), true))
     }
 
+    fun mouseMoveRelative(dx: Int, dy: Int) = sendInput(InputCodec.mouseMoveRel(dx, dy))
+    fun mouseMoveAbsolute(x: Double, y: Double) = sendInput(InputCodec.mouseMoveAbs(x, y))
+    fun mouseButton(button: Int, down: Boolean) = sendInput(InputCodec.mouseButton(button, down))
+    fun scroll(dx: Int, dy: Int) = sendInput(InputCodec.scroll(dx, dy))
+    fun key(vk: Int, down: Boolean) = sendInput(InputCodec.key(vk, down))
     fun selectDisplay(index: Int) = sendInput(InputCodec.displaySelect(index))
     fun sendClipboard(value: String) = sendInput(InputCodec.clipboardSet(value))
     fun requestClipboard() = sendInput(InputCodec.clipboardRequest())
     fun sendText(value: String) = InputCodec.textChunked(value).forEach(::sendInput)
+
+    fun setAudioForwardEnabled(enabled: Boolean) {
+        _state.value = _state.value.copy(audioForwardEnabled = enabled)
+        audioTransceiver?.setDirection(
+            if (enabled) {
+                RtpTransceiver.RtpTransceiverDirection.SEND_RECV
+            } else {
+                // Tetap kirim mic; hanya suara host yang dimatikan.
+                RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
+            },
+        )
+    }
 
     fun stop() {
         stopped = true
@@ -322,8 +344,39 @@ class NativeRtcSession(
             message = message,
             videoReady = phase == NativeSessionPhase.Connected && videoTrack != null,
             audioReady = phase == NativeSessionPhase.Connected && remoteAudioTrack != null,
+            microphoneEnabled = microphoneTrack != null,
         )
     }
+
+    private fun parseHostMeta(text: String): HostMeta? = runCatching {
+        val root = JSONObject(text)
+        if (root.optString("type") != "meta") return null
+        val displayArray = root.optJSONArray("displays")
+        val displays = buildList {
+            if (displayArray != null) {
+                for (index in 0 until displayArray.length()) {
+                    val item = displayArray.optJSONObject(index) ?: continue
+                    add(
+                        HostDisplay(
+                            index = item.optInt("index", index),
+                            name = item.optString("name"),
+                            width = item.optInt("width"),
+                            height = item.optInt("height"),
+                            refreshRate = item.optInt("refreshRate").takeIf { it > 0 },
+                            isPrimary = item.optBoolean("isPrimary", false),
+                        ),
+                    )
+                }
+            }
+        }
+        val audio = root.optJSONObject("audio")
+        HostMeta(
+            displays = displays,
+            wantedDisplay = root.optInt("wanted", 0),
+            audioAvailable = audio?.optBoolean("available", false) ?: false,
+            audioPipeline = audio?.optString("pipeline").orEmpty(),
+        )
+    }.getOrNull()
 
     private fun fail(message: String) {
         if (!stopped) update(NativeSessionPhase.Error, message)
@@ -337,6 +390,10 @@ class NativeRtcSession(
             if (buffer.binary) {
                 InputCodec.decodeClipboardSet(data)?.let { text ->
                     _state.value = _state.value.copy(clipboard = text)
+                }
+            } else {
+                parseHostMeta(data.toString(Charsets.UTF_8))?.let { meta ->
+                    _state.value = _state.value.copy(hostMeta = meta)
                 }
             }
         }

@@ -321,6 +321,7 @@ private fun HomeScreen(
 
 @Composable
 private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
+    var text by remember { mutableStateOf("") }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Sesi aktif", style = MaterialTheme.typography.titleLarge)
@@ -332,6 +333,46 @@ private fun SessionCard(state: NativeSessionState, session: SessionViewModel) {
                 modifier = Modifier.fillMaxWidth().height(220.dp),
             )
             Text(if (state.audioReady) "Audio tersambung" else "Menunggu audio host…")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { session.setAudioForwardEnabled(!state.audioForwardEnabled) },
+                    modifier = Modifier.weight(1f),
+                ) { Text(if (state.audioForwardEnabled) "Matikan audio" else "Nyalakan audio") }
+                OutlinedButton(
+                    onClick = {
+                        session.mouseButton(1, true)
+                        session.mouseButton(1, false)
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Klik kiri") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { session.scroll(0, -480) }, modifier = Modifier.weight(1f)) { Text("Scroll atas") }
+                OutlinedButton(onClick = { session.scroll(0, 480) }, modifier = Modifier.weight(1f)) { Text("Scroll bawah") }
+            }
+            state.hostMeta?.displays?.takeIf { it.isNotEmpty() }?.let { displays ->
+                Text("Layar host", style = MaterialTheme.typography.titleMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    displays.forEach { display ->
+                        OutlinedButton(
+                            onClick = { session.selectDisplay(display.index) },
+                            modifier = Modifier.weight(1f),
+                        ) { Text("Layar ${display.index + 1}") }
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text("Kirim teks ke host") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = { session.sendText(text); text = "" },
+                enabled = text.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Kirim teks") }
             OutlinedButton(onClick = session::disconnect, modifier = Modifier.fillMaxWidth()) {
                 Text("Akhiri sesi")
             }
