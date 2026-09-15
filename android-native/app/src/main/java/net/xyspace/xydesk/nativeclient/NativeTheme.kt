@@ -3,7 +3,6 @@ package net.xyspace.xydesk.nativeclient
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButtonDefaults
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
@@ -93,7 +92,7 @@ val XyDeskButtonColors
     )
 
 val XyDeskOutlinedButtonColors
-    @Composable get() = OutlinedButtonDefaults.colors(
+    @Composable get() = ButtonDefaults.outlinedButtonColors(
         contentColor = XyDeskColors.accentDeep,
         disabledContentColor = XyDeskColors.textLow,
     )
