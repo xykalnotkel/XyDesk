@@ -2520,7 +2520,10 @@ function ConnectScreen({
         {/* Audio sistem host (track Opus) — elemen terpisah, tidak di-mute. */}
         <audio ref={audioRef} autoPlay />
         {connected && (stats?.noFrameWarning || videoMessage) && (
-          <div className="sesi-noframe-banner" role="alert">
+          <div className="sesi-noframe-banner" role="alert"
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+          >
             <div className="sesi-noframe-text">
               <strong>Video belum tampil</strong>
               <span>{videoMessage || stats?.videoState || 'Menunggu video dari host.'}</span>
