@@ -85,3 +85,10 @@ berlaku setelah rollout backend yang disetujui; jangan menyatakan seluruh
 kontrol admin baru telah terpasang hanya karena executable ini sudah berjalan.
 Build/tes compiler dan pemeriksaan executable tidak menggantikan pembuktian
 capture, decode, input, audio, atau kestabilan di RDP Anda.
+
+## Lisensi
+
+Lisensi XyDesk ada di `LICENSE-XyDesk.txt`; inventaris komponen di
+`THIRD-PARTY-LICENSES.md`. Direktori `licenses/` memuat notice/lisensi source
+crate yang tersedia pada build serta libopus yang di-vendor. Paket ini untuk
+uji manual pemilik, bukan publikasi rilis baru.

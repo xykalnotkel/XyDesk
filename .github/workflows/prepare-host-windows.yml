@@ -66,6 +66,20 @@ jobs:
           New-Item -ItemType Directory $dir -Force | Out-Null
           Copy-Item 'host/target/x86_64-pc-windows-msvc/release/xydesk-host.exe' $dir
           Copy-Item 'packaging/manual-host/*' $dir
+          Copy-Item 'LICENSE' "$dir/LICENSE-XyDesk.txt"
+          Copy-Item 'docs/THIRD-PARTY-LICENSES.md' $dir
+          New-Item -ItemType Directory "$dir/licenses" -Force | Out-Null
+          Copy-Item 'host/vendor/opus/COPYING' "$dir/licenses/Opus-COPYING.txt"
+          $cargoHome = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $HOME '.cargo' }
+          foreach ($crate in (Get-ChildItem "$cargoHome/registry/src/*/*" -Directory)) {
+            $files = Get-ChildItem $crate.FullName -File -Recurse | Where-Object { $_.Name -match '^(LICENSE|COPYING|NOTICE)([._-].*)?$' }
+            foreach ($file in $files) {
+              $relative = $file.FullName.Substring($crate.FullName.Length + 1)
+              $dest = Join-Path "$dir/licenses/$($crate.Name)" $relative
+              New-Item -ItemType Directory (Split-Path $dest) -Force | Out-Null
+              Copy-Item -LiteralPath $file.FullName -Destination $dest
+            }
+          }
           & "$dir/xydesk-host.exe" --help | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'Executable --help gagal' }
           $version = (Select-String '^version = "([^"]+)"' host/Cargo.toml | Select-Object -First 1).Matches.Groups[1].Value
