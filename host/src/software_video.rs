@@ -37,9 +37,63 @@ pub fn sps_profile_level(data: &[u8]) -> Option<[u8; 3]> {
     None
 }
 
+// Bobot fixed-point dipersiapkan hanya saat dimensi berubah. Empat sampel
+// per pixel mengurangi gerigi nearest-neighbor tanpa menaikkan resolusi/SPS.
+#[derive(Default)]
+struct ResizePlan {
+    shape: (usize, usize, usize, usize),
+    xs: Vec<(usize, usize, u32)>,
+    ys: Vec<(usize, usize, u32)>,
+}
+impl ResizePlan {
+    fn axis(src: usize, dst: usize) -> Vec<(usize, usize, u32)> {
+        (0..dst)
+            .map(|i| {
+                let pos =
+                    ((i as f64 + 0.5) * src as f64 / dst as f64 - 0.5).clamp(0.0, (src - 1) as f64);
+                let lo = pos.floor() as usize;
+                (
+                    lo,
+                    (lo + 1).min(src - 1),
+                    ((pos - lo as f64) * 256.0).round() as u32,
+                )
+            })
+            .collect()
+    }
+    fn resize(
+        &mut self,
+        rgba: &[u8],
+        width: usize,
+        height: usize,
+        w: usize,
+        h: usize,
+        out: &mut Vec<u8>,
+    ) {
+        if self.shape != (width, height, w, h) {
+            self.xs = Self::axis(width, w);
+            self.ys = Self::axis(height, h);
+            self.shape = (width, height, w, h);
+        }
+        out.resize(w * h * 4, 0);
+        for (y, &(y0, y1, wy)) in self.ys.iter().enumerate() {
+            for (x, &(x0, x1, wx)) in self.xs.iter().enumerate() {
+                for c in 0..4 {
+                    let top = rgba[(y0 * width + x0) * 4 + c] as u32 * (256 - wx)
+                        + rgba[(y0 * width + x1) * 4 + c] as u32 * wx;
+                    let bottom = rgba[(y1 * width + x0) * 4 + c] as u32 * (256 - wx)
+                        + rgba[(y1 * width + x1) * 4 + c] as u32 * wx;
+                    out[(y * w + x) * 4 + c] =
+                        ((top * (256 - wy) + bottom * wy + 32768) >> 16) as u8;
+                }
+            }
+        }
+    }
+}
+
 pub struct SoftwareEncoder {
     encoder: Encoder,
     resized: Vec<u8>,
+    resize_plan: ResizePlan,
     logged_size: Option<(usize, usize)>,
 }
 impl SoftwareEncoder {
@@ -50,6 +104,7 @@ impl SoftwareEncoder {
                 crate::screen::prod_encoder_config(),
             )?,
             resized: Vec::new(),
+            resize_plan: ResizePlan::default(),
             logged_size: None,
         })
     }
@@ -65,16 +120,8 @@ impl SoftwareEncoder {
         let pixels = if (w, h) == (width, height) {
             rgba
         } else {
-            // Nearest-neighbor tanpa alokasi ulang per frame. Tidak mengubah
-            // ukuran desktop atau koordinat input yang dinormalisasi.
-            self.resized.resize(w * h * 4, 0);
-            for y in 0..h {
-                for x in 0..w {
-                    let src = ((y * height / h) * width + x * width / w) * 4;
-                    let dst = (y * w + x) * 4;
-                    self.resized[dst..dst + 4].copy_from_slice(&rgba[src..src + 4]);
-                }
-            }
+            self.resize_plan
+                .resize(rgba, width, height, w, h, &mut self.resized);
             &self.resized
         };
         let yuv = YUVBuffer::from_rgb_source(RgbaSliceU8::new(pixels, (w, h)));
@@ -85,7 +132,7 @@ impl SoftwareEncoder {
             .to_vec();
         if self.logged_size != Some((width, height)) {
             if let Some([profile, constraints, level]) = sps_profile_level(&data) {
-                println!("[xydesk-host] video software: capture {width}x{height} -> kirim {w}x{h}, maks {MAX_FPS} fps, bitrate {} bps, SPS {profile:02x}{constraints:02x}{level:02x}", crate::screen::target_bitrate_bps().min(MAX_BITRATE));
+                println!("[xydesk-host] video software: capture {width}x{height} -> kirim {w}x{h}, filter bilinear, maks {MAX_FPS} fps, bitrate {} bps, SPS {profile:02x}{constraints:02x}{level:02x}", crate::screen::target_bitrate_bps().min(MAX_BITRATE));
                 self.logged_size = Some((width, height));
             }
         }
@@ -129,6 +176,24 @@ mod tests {
         let decoded = decoder.decode(&data).unwrap().expect("IDR harus terdecode");
         assert_eq!(decoded.dimensions(), output_size(w, h).unwrap());
     }
+    #[test]
+    fn bilinear_mencampur_detail_bukan_memilih_satu_pixel() {
+        let mut plan = ResizePlan::default();
+        let mut out = Vec::new();
+        let pixels: Vec<u8> = [0, 255, 255, 0]
+            .into_iter()
+            .flat_map(|v| [v, v, v, 255])
+            .collect();
+        plan.resize(&pixels, 2, 2, 1, 1, &mut out);
+        assert_eq!(out, vec![128, 128, 128, 255]);
+        plan.resize(&pixels, 2, 2, 2, 2, &mut out);
+        assert_eq!(out, pixels);
+        let capacity = out.capacity();
+        plan.resize(&[255; 16], 2, 2, 2, 2, &mut out);
+        assert_eq!(out, vec![255; 16]);
+        assert_eq!(out.capacity(), capacity);
+    }
+
     #[test]
     fn input_rgba_rusak_ditolak() {
         assert!(SoftwareEncoder::new()

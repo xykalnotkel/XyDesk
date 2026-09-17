@@ -1763,3 +1763,17 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - Host dalam pekerjaan terpisah: bilinear fixed-point reusable dan batas
   coalescing input agar posisi sebelum klik tidak dibuang. Belum dikemas pada
   checkpoint web ini. Tidak ada driver/RDP/backend/auth changes/version bump.
+
+### CONTROL — host lolos regresi
+
+-130lib +5bin +3integration/fmt PASS; percobaan4job debug kehabisan RAM
+  sandbox2GB, diulang1job/debug0 berhasil. Bilinear blend/identity/buffer
+  reuse + actual encode/decode1280x592/SPS3.1 PASS. Helper resize optimized
+  60frame rata-rata7.768ms di sandbox, bukan FPS Windows; filter punya
+  biaya CPU dan tidak memulihkan detail desktop yang hilang karena downscale.
+- Coalescing hanya gerak ABS berurutan; event tombol/rel/key/scroll menjadi
+  batas agar klik dan awal drag tidak terjadi pada posisi lama.
+- Web checkpoint9912f07 live65f8ef0f, exact JS/CSS+OAuth dan anonymous form
+  PASS setelah fetch awal belum cocok. CSS lanjutan menyembunyikan kursor
+  browser pada lapisan input supaya pointer mouse fisik tidak dobel lokal.
+- Windows build/NSIS berikutnya diperlukan; belum mengubah host user.

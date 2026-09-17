@@ -1,0 +1,36 @@
+{
+  "result": "PASS",
+  "sourceSha": "9912f07",
+  "workerVersion": "65f8ef0f-3a09-4b39-a7db-29f8f765eaad",
+  "checks": [
+    {
+      "asset": "/assets/index-DnQduGjN.js",
+      "sha256": "4bb8d2c237598031b7f0d62d3627c75da9010b7f035c5e3a72fbfbd9fbc69605",
+      "contentType": "text/javascript",
+      "exactBuildMatch": true
+    },
+    {
+      "asset": "/assets/rolldown-runtime-CbXtAM7H.js",
+      "sha256": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+      "contentType": "text/javascript",
+      "exactBuildMatch": true
+    },
+    {
+      "asset": "/assets/index-DNDdP5PL.css",
+      "sha256": "d51f602807fc4790e26147687494a7a60a0690a7dab54ea07bdb32379965ea1e",
+      "contentType": "text/css",
+      "exactBuildMatch": true
+    }
+  ],
+  "webOAuthPreserved": true,
+  "backendChanged": false,
+  "fieldControlTest": "pending user",
+  "initialVerification": "Immediate asset fetch did not match; fresh fetch later matched. No second deploy.",
+  "browser": {
+    "status": 200,
+    "connectFormVisible": true,
+    "errors": [],
+    "authenticated": false,
+    "paired": false
+  }
+}

@@ -124,28 +124,21 @@ pub fn decode(data: &[u8]) -> Option<InputEvent> {
 
 /// Pisahkan "state" dari "event" dalam satu batch input yang menumpuk.
 ///
-/// `MouseMoveAbs` adalah STATE: hanya posisi terakhir yang bermakna, jadi
-/// gerak absolut yang lebih tua dari posisi abs terbaru aman dibuang saat
-/// antrean penuh — inilah yang membuat kursor tidak "berenang" melanjutkan
-/// perjalanan basi setelah jaringan sempat padat. Semua yang lain (delta
-/// relatif, tombol, key, scroll) adalah EVENT: membuang satu saja berarti
-/// kehilangan gerakan/klik, jadi semuanya tetap diterapkan.
-///
-/// Bila antrean tidak menumpuk, batch berukuran satu dan fungsi ini tidak
-/// mengubah apa pun — perilaku sehat identik dengan sebelum split ada.
+/// Hanya gerak absolut BERURUTAN yang boleh digabung. Tombol, delta,
+/// scroll dan key adalah batas: posisi sebelum klik/drag wajib diterapkan
+/// dahulu, bukan dibuang karena ada posisi yang lebih baru setelah klik.
 pub fn buang_abs_basi(batch: Vec<InputEvent>) -> Vec<InputEvent> {
-    let Some(terakhir) = batch
-        .iter()
-        .rposition(|e| matches!(e, InputEvent::MouseMoveAbs { .. }))
-    else {
-        return batch;
-    };
-    batch
-        .into_iter()
-        .enumerate()
-        .filter(|(i, e)| !(*i < terakhir && matches!(e, InputEvent::MouseMoveAbs { .. })))
-        .map(|(_, e)| e)
-        .collect()
+    let mut out = Vec::with_capacity(batch.len());
+    for event in batch {
+        if matches!(event, InputEvent::MouseMoveAbs { .. })
+            && matches!(out.last(), Some(InputEvent::MouseMoveAbs { .. }))
+        {
+            *out.last_mut().unwrap() = event;
+        } else {
+            out.push(event);
+        }
+    }
+    out
 }
 
 /// Batas jumlah unit UTF-16 yang diketik dari SATU pesan `0x06 TEXT`.
@@ -615,13 +608,41 @@ mod tests {
         assert_eq!(
             out,
             vec![
+                MouseMoveAbs { x: 100, y: 100 },
                 MouseMoveRel { dx: 3, dy: 0 },
+                MouseMoveAbs { x: 200, y: 200 },
                 MouseButton {
                     button: 0,
                     down: true
                 },
                 MouseMoveAbs { x: 300, y: 300 },
             ]
+        );
+    }
+
+    #[test]
+    fn gerak_berurutan_digabung_tetapi_posisi_drag_dipertahankan() {
+        use super::InputEvent::*;
+        let a = MouseMoveAbs { x: 10, y: 20 };
+        let b = MouseMoveAbs { x: 30, y: 40 };
+        let down = MouseButton {
+            button: 0,
+            down: true,
+        };
+        let up = MouseButton {
+            button: 0,
+            down: false,
+        };
+        assert_eq!(
+            super::buang_abs_basi(vec![
+                a.clone(),
+                b.clone(),
+                down.clone(),
+                a.clone(),
+                b.clone(),
+                up.clone()
+            ]),
+            vec![b.clone(), down, b, up]
         );
     }
 

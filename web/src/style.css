@@ -2838,4 +2838,4 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
 .remote-session .video-surface video { cursor: none; }
 .hud-mouse button { touch-action: none; user-select: none; }
 
-.remote-input-area { position: absolute; inset: 0; z-index: 1; touch-action: none; }
+.remote-input-area { position: absolute; inset: 0; z-index: 1; touch-action: none; cursor: none; }

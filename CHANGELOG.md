@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- Host software: filter bilinear menggantikan nearest-neighbor tanpa mengubah batas H.264 Level3.1. Antrean mouse mempertahankan posisi sebelum klik/drag.
+
 - Kontrol web HP: trackpad default, panah lokal, koordinat gambar tanpa pita hitam, tap/cancel/dua jari dan tahan-geser. Label kualitas menunjukkan target dan batas encoder, bukan janji resolusi/fps.
 
 

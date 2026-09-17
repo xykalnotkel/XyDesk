@@ -1,0 +1,30 @@
+{
+  "result": "PASS",
+  "rustTests": {
+    "lib": 130,
+    "bin": 5,
+    "integration": 3,
+    "fmt": true
+  },
+  "checks": [
+    "absolute moves coalesced only consecutively, positions before buttons retained",
+    "bilinear blend/identity/buffer reuse",
+    "actual SoftwareEncoder RGBA2336x1080 -> SPS Level3.1 -> OpenH264 decode1280x592"
+  ],
+  "limits": {
+    "maxFps": 30,
+    "maxBitrate": 14000000,
+    "maxSize": [
+      1280,
+      720
+    ]
+  },
+  "resizeMicrobenchmark": {
+    "isolatedProductionHelperOptimized": true,
+    "frames": 60,
+    "msPerFrame": 7.768,
+    "environment": "Linux sandbox; not Windows encoder or achieved session FPS"
+  },
+  "firstAttempt": "4-job debug linking exceeded 2GB memory; rerun 1 job without debug info passed",
+  "fieldQualityAndControl": "pending new installer test by user"
+}
