@@ -1,7 +1,6 @@
 Unicode True
 !include "MUI2.nsh"
 !include "x64.nsh"
-!include "FileFunc.nsh"
 
 !ifndef PAYLOAD
   !error "PAYLOAD wajib"
@@ -16,7 +15,8 @@ Unicode True
 !define UNKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\XyDeskHostTest"
 Name "${PRODUCT}"
 OutFile "${OUTPUT}"
-InstallDir "$LOCALAPPDATA\Programs\XyDesk Host Test"
+; Sentinel membedakan default dari /D, yang dihapus NSIS dari $CMDLINE.
+InstallDir "$LOCALAPPDATA\Programs\XyDesk-NSIS-Default-50a751e8"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 SetCompressorDictSize 32
@@ -52,9 +52,8 @@ Function .onInit
   ${EndIf}
   SetShellVarContext current
   SetRegView 64
-  ${GetOptions} $CMDLINE "/D=" $1
-  IfErrors restore_dir init_done
-restore_dir:
+  StrCmp $INSTDIR "$LOCALAPPDATA\Programs\XyDesk-NSIS-Default-50a751e8" 0 init_done
+  StrCpy $INSTDIR "$LOCALAPPDATA\Programs\XyDesk Host Test"
   ReadRegStr $0 HKCU "${UNKEY}" "InstallLocation"
   StrCmp $0 "" init_done
     StrCpy $INSTDIR $0

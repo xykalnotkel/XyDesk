@@ -66,6 +66,15 @@ if ($p.ExitCode -ne 0) { throw 'Uninstall gagal' }
 if ((Test-Path $engine) -or (Test-Path $key) -or (Test-Path $shortcut) -or (Test-Path (Join-Path $desktop 'XyDesk Host Test.lnk'))) { throw 'Uninstall meninggalkan engine/registrasi/shortcut' }
 if (-not (Test-Path $sentinel) -or -not (Test-Path (Join-Path $installed 'keep-user.txt'))) { throw 'Uninstall menghapus data yang harus dipertahankan' }
 $checks.Add('silent uninstall removes engine/registration/shortcuts but preserves identity and extra files')
+$defaultDir = Join-Path $env:LOCALAPPDATA 'Programs\XyDesk Host Test'
+if (Test-Path $defaultDir) { throw 'Folder default sudah ada; tes tidak menyentuhnya' }
+$p = Start-Process -FilePath $Installer -ArgumentList '/S' -Wait -PassThru
+if ($p.ExitCode -ne 0 -or (Get-ItemProperty $key).InstallLocation -ne $defaultDir) { throw 'Lokasi default salah' }
+$p = Start-Process -FilePath (Join-Path $defaultDir 'Uninstall-XyDesk-Host-Test.exe') -ArgumentList '/S' -Wait -PassThru
+if ($p.ExitCode -ne 0 -or (Test-Path $defaultDir) -or (Test-Path $key)) { throw 'Uninstall lokasi default tidak bersih' }
+if (-not (Test-Path $sentinel)) { throw 'Identitas terhapus pada uji default' }
+$checks.Add('default per-user install and uninstall verified separately from explicit /D')
+
 Remove-Item $sentinel
 # Folder base sepenuhnya dibuat tes ini dengan GUID; bukan folder instalasi pengguna.
 Remove-Item $base -Recurse -Force
