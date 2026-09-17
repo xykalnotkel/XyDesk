@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- Web sesi: panah lebih besar/tidak terpotong di tepi, tombol Temukan panah, pemulihan layout; audio play/retry dan mute lokal, diagnostik audio, preferensi terkirim setelah channel siap. URL memakai ID acak (belum resume saat refresh).
+
 - Host software: filter bilinear menggantikan nearest-neighbor tanpa mengubah batas H.264 Level3.1. Antrean mouse mempertahankan posisi sebelum klik/drag.
 
 - Kontrol web HP: trackpad default, panah lokal, koordinat gambar tanpa pita hitam, tap/cancel/dua jari dan tahan-geser. Label kualitas menunjukkan target dan batas encoder, bukan janji resolusi/fps.

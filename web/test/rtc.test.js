@@ -190,3 +190,18 @@ test('keyframe melebihi total decode ditandai inkonsisten', async () => {
  ['video',{id:'video',type:'inbound-rtp',kind:'video',bytesReceived:1425749,framesDecoded:0,keyFramesDecoded:6}],
  ])};assert.match((await session.readStats()).videoState,/tidak konsisten/);
 });
+
+test('mute receiver lokal tidak mengubah SDP atau mic sender', async()=>{
+ const {session}=setup();let stopped=0;const receiver={enabled:true};const sender={enabled:true,stop:()=>stopped++};
+ session.audioTransceiver={direction:'sendrecv',receiver:{track:receiver},sender:{track:sender}};
+ await session.setAudioEnabled(false);assert.equal(receiver.enabled,false);assert.equal(sender.enabled,true);assert.equal(stopped,0);assert.equal(session.audioTransceiver.direction,'sendrecv');
+ await session.setAudioEnabled(true);assert.equal(receiver.enabled,true);
+});
+test('statistik audio terpisah dari video dan energi tak tersedia tidak dikarang',async()=>{
+ const {session}=setup();const report=new Map([
+ ['a',{id:'a',type:'inbound-rtp',kind:'audio',bytesReceived:125,totalAudioEnergy:.5}],
+ ['b',{id:'b',type:'inbound-rtp',mediaType:'audio',bytesReceived:25}],
+ ['v',{id:'v',type:'inbound-rtp',kind:'video',bytesReceived:900}],
+ ]);session.pc={connectionState:'connected',getStats:async()=>report};let s=await session.readStats();assert.equal(s.audioBytesReceived,150);assert.equal(s.audioEnergy,.5);assert.equal(s.bytesReceived,900);
+ report.delete('a');s=await session.readStats();assert.equal(s.audioEnergy,undefined);
+});

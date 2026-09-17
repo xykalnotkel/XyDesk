@@ -1,3 +1,4 @@
+import { cursorLayout, playRemoteAudio, newSessionFragment, isSessionFragment, SESSION_UI_REVISION } from './session_runtime';
 import { imageRect, RemotePointer } from './remote_pointer';
 import { enterSessionFullscreen, leaveSessionFullscreen } from './session_fullscreen';
 import { videoOnlyStream, playRemoteVideo } from './video_playback';
@@ -1993,6 +1994,7 @@ function ConnectScreen({
   const [hostId, setHostId] = useState(() => localStorage.getItem(LAST_HOST_KEY) ?? '');
   const [pin, setPin] = useState('');
   const [phase, setPhase] = useState<RtcPhase | ''>('');
+  const sessionFragmentRef = useRef('');
   const [recents, setRecents] = useState<RecentEntry[]>(loadRecents);
   const [recentsOpen, setRecentsOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -2071,27 +2073,43 @@ function ConnectScreen({
     if (phase === 'connected' && remoteVideoStream) resumeVideo();
   }, [phase, remoteVideoStream, resumeVideo]);
   const [audioOn, setAudioOn] = useState(true);
+  const audioOnRef = useRef(true);
+  const [audioMessage, setAudioMessage] = useState('');
+  const resumeAudio = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.muted = !audioOnRef.current;
+    const expectedStream = audio.srcObject;
+    void playRemoteAudio(audio).then((started) => {
+      if (audioRef.current === audio && audio.srcObject === expectedStream) setAudioMessage(started ? '' : 'Belum ada track suara dari host.');
+    }).catch(() => { if (audio.srcObject === expectedStream) setAudioMessage('Pemutaran suara tertahan. Ketuk Aktifkan suara.'); });
+  };
   const [micOn, setMicOn] = useState(false);
   const [hostMeta, setHostMeta] = useState<HostMeta | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const pinRef = useRef<HTMLInputElement | null>(null);
 
   const connected = phase === 'connected';
-  const cursorRef = useRef<SVGSVGElement | null>(null);
+  const cursorRef = useRef<HTMLDivElement | null>(null);
   const pointerRef = useRef<RemotePointer | null>(null);
   const getImageRect = () => {
     const video = videoRef.current, surface = surfaceRef.current;
     return video && surface ? imageRect(surface.getBoundingClientRect(), video.videoWidth, video.videoHeight) : null;
   };
+  const cursorRaf = useRef(0);
   const paintCursor = () => {
-    const r = getImageRect(), el = cursorRef.current, box = surfaceRef.current?.getBoundingClientRect();
-    if (!el || !box) return;
-    el.style.display = r ? 'block' : 'none';
-    if (r) {
-      const pos = pointerRef.current!.cursor;
-      el.style.left = `${r.left - box.left + pos.x * r.width}px`;
-      el.style.top = `${r.top - box.top + pos.y * r.height}px`;
-    }
+    if (cursorRaf.current) return;
+    cursorRaf.current = requestAnimationFrame(() => {
+      cursorRaf.current = 0;
+      const el = cursorRef.current, surface = surfaceRef.current;
+      if (!el || !surface) return;
+      const box = surface.getBoundingClientRect();
+      const layout = cursorLayout(box, getImageRect(), pointerRef.current!.cursor);
+      el.style.transform = `translate3d(${layout.left}px, ${layout.top}px, 0)`;
+      el.dataset.ready = layout.ready ? 'image' : 'waiting-video';
+      const svg = el.querySelector('svg');
+      if (svg) svg.style.transform = `scale(${layout.flipX ? -1 : 1}, ${layout.flipY ? -1 : 1})`;
+    });
   };
   if (!pointerRef.current) pointerRef.current = new RemotePointer(getImageRect, (event) => {
     if (event.type === 'move') {
@@ -2107,10 +2125,15 @@ function ConnectScreen({
     window.addEventListener('blur', reset);
     document.addEventListener('visibilitychange', visibility);
     const observer = new ResizeObserver(paintCursor);
+    // Cadangan untuk metadata/resize video yang tidak memberi event pada browser.
+    // Tidak dipanggil per decoded frame, dan DOM writes tetap digabung per RAF.
+    const refresh = connected ? window.setInterval(paintCursor, 1000) : 0;
+    paintCursor();
     if (surfaceRef.current) observer.observe(surfaceRef.current);
     if (connected) setHudToast('Geser = gerak panah • ketuk = klik. Tahan tombol kiri + geser untuk drag.');
     return () => {
       reset(); observer.disconnect();
+      clearInterval(refresh); cancelAnimationFrame(cursorRaf.current); cursorRaf.current = 0;
       window.removeEventListener('blur', reset);
       document.removeEventListener('visibilitychange', visibility);
     };
@@ -2179,7 +2202,8 @@ function ConnectScreen({
           setConnectedAt(Date.now());
           saveRecent(hostId);
           setRecents(loadRecents());
-          window.history.replaceState({}, '', '/connect#session');
+          if (!sessionFragmentRef.current) sessionFragmentRef.current = newSessionFragment();
+          window.history.replaceState({}, '', '/connect' + sessionFragmentRef.current);
           setHudToast('Sesi memenuhi layar. Ketuk ikon layar penuh untuk menyembunyikan bilah browser.');
         }
         // Reconnect otomatis HANYA bila sesi pernah live lalu putus
@@ -2206,13 +2230,27 @@ function ConnectScreen({
       };
       // Audio sistem host — diputar lewat elemen audio terpisah.
       session.onAudioTrack = (stream) => {
-        if (audioRef.current) {
-          audioRef.current.srcObject = stream;
-          audioRef.current.volume = prefsRef.current.volume;
-        }
+        if (sessionRef.current !== session || !audioRef.current) return;
+        const audio = audioRef.current;
+        audio.srcObject = stream;
+        audio.volume = prefsRef.current.volume;
+        audio.muted = !audioOnRef.current;
+        void session.setAudioEnabled(audioOnRef.current);
+        resumeAudio();
       };
       // Meta host (daftar layar + status audio) untuk pemilih monitor.
-      session.onMeta = (meta) => setHostMeta(meta);
+      let initialPrefsSent = false;
+      session.onMeta = (meta) => {
+        if (sessionRef.current !== session) return;
+        setHostMeta(meta);
+        // Meta tiba lewat channel input yang sudah terbuka. Jangan kirim
+        // preferensi sebelum channel siap atau mengirim ulang tiap ganti monitor.
+        if (!initialPrefsSent) {
+          initialPrefsSent = true;
+          session.setQuality(QUALITY_META[prefsRef.current.quality]?.num ?? 0);
+          session.setBitrate(prefsRef.current.bitrateMbps);
+        }
+      };
       // Balasan "ambil dari papan klip PC": salin ke papan klip perangkat
       // ini; kalau izin ditolak, tampilkan isinya biar tetap bisa disalin.
       session.onClipboard = async (text) => {
@@ -2248,6 +2286,7 @@ function ConnectScreen({
     if (audioRef.current) audioRef.current.srcObject = null;
     setRemoteVideoStream(null);
     setVideoMessage('');
+    setAudioMessage('');
     setKbOpen(false);
     setPadOpen(false);
     setPanelOpen(false);
@@ -2256,7 +2295,8 @@ function ConnectScreen({
     setHudToast('');
     setPhase('');
     setFasePesan(null);
-    if (window.location.hash === '#session') {
+    sessionFragmentRef.current = '';
+    if (isSessionFragment(window.location.hash)) {
       window.history.replaceState({}, '', '/connect');
     }
     void leaveSessionFullscreen(surfaceRef.current);
@@ -2280,6 +2320,10 @@ function ConnectScreen({
           s.playerFrames = video.getVideoPlaybackQuality?.().totalVideoFrames;
           if ((s.playerFrames ?? 0) > 0) s.noFrameWarning = false;
         }
+        const cursor = cursorRef.current;
+        const audio = audioRef.current;
+        s.cursorState = `${SESSION_UI_REVISION}; ${cursor?.dataset.ready ?? 'not-mounted'}; ${Math.round(pointerRef.current!.cursor.x * 100)}%,${Math.round(pointerRef.current!.cursor.y * 100)}%`;
+        s.audioPlayerState = audio ? `${audio.paused ? 'paused' : 'playing'}; muted=${audio.muted}; volume=${Math.round(audio.volume * 100)}%; readyState=${audio.readyState}; error=${audio.error?.code ?? 'none'}` : 'Belum ada pemutar';
         setStats(s);
       }
     };
@@ -2510,11 +2554,17 @@ function ConnectScreen({
       >
         <video ref={videoRef} autoPlay playsInline muted onLoadedMetadata={paintCursor} onResize={paintCursor} />
         <div className="remote-input-area" aria-hidden="true" />
-        <svg ref={cursorRef} className="remote-control-cursor" viewBox="0 0 24 32" aria-hidden="true">
-          <path d="M2 2 L2 25 L8 20 L13 30 L18 27 L13 18 L22 17 Z" fill="white" stroke="#111" strokeWidth="2" strokeLinejoin="round" />
-        </svg>
+        <div ref={cursorRef} className="remote-control-cursor" aria-hidden="true" data-revision={SESSION_UI_REVISION}>
+          <svg viewBox="0 0 24 32">
+            <path d="M2 2 L2 25 L8 20 L13 30 L18 27 L13 18 L22 17 Z" fill="white" stroke="#111" strokeWidth="2" strokeLinejoin="round" />
+          </svg>
+        </div>
         {/* Audio sistem host (track Opus) — elemen terpisah, tidak di-mute. */}
-        <audio ref={audioRef} autoPlay />
+        <audio ref={audioRef} autoPlay muted={!audioOn} />
+        {connected && audioMessage && <div className="session-audio-notice" role="status">
+          <span>{audioMessage}</span>
+          <button type="button" onClick={() => { audioOnRef.current = true; setAudioOn(true); void sessionRef.current?.setAudioEnabled(true); resumeAudio(); }}>Aktifkan suara</button>
+        </div>}
         {connected && (stats?.noFrameWarning || videoMessage) && (
           <div className="sesi-noframe-banner" role="alert"
             onPointerDown={(e) => e.stopPropagation()}
@@ -2556,7 +2606,10 @@ function ConnectScreen({
           onAudio={() => {
             const next = !audioOn;
             setAudioOn(next);
+            audioOnRef.current = next;
+            if (audioRef.current) audioRef.current.muted = !next;
             void sessionRef.current?.setAudioEnabled(next);
+            if (next) resumeAudio();
           }}
           micOn={micOn}
           onMic={async () => {
@@ -2587,6 +2640,10 @@ function ConnectScreen({
           onDisconnect={disconnect}
         />
         <div className="hud-mouse" aria-hidden="false">
+          <button className="hud-icon-btn" type="button" title="Temukan panah" aria-label="Temukan panah" onClick={() => {
+            pointerRef.current!.reset(); pointerRef.current!.cursor = {x: 0.5, y: 0.5}; pointerRef.current!.sync(); paintCursor();
+            setHudToast('Panah dikembalikan ke tengah gambar. Geser satu jari untuk bergerak.');
+          }}>⌖</button>
           <button
             className="hud-icon-btn"
             title="Klik kiri (tahan untuk drag)"

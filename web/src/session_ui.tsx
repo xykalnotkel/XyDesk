@@ -360,14 +360,14 @@ export type SessionPrefs = {
 };
 
 export const QUALITY_META: Record<StreamQuality, { label: string; desc: string; bitrate: BitrateMbps; num: number }> = {
-  auto:   { label: 'Otomatis', desc: 'Adaptif — menyesuaikan jaringan', bitrate: 0,  num: 0 },
+  auto:   { label: 'Bawaan host', desc: 'Target bawaan host — belum adaptif ke jaringan', bitrate: 0,  num: 0 },
   medium: { label: 'Sedang',   desc: 'Target 8 Mbps • seimbang',    bitrate: 8,  num: 1 },
   high:   { label: 'Tinggi',   desc: 'Target 15 Mbps • detail lebih tinggi',      bitrate: 15, num: 2 },
   ultra:  { label: 'Ultra',    desc: 'Target 25 Mbps • bandwidth tinggi',    bitrate: 25, num: 3 },
 };
 
 export const BITRATE_OPTIONS: { value: BitrateMbps; label: string; hint: string }[] = [
-  { value: 0,  label: 'Otomatis', hint: 'Adaptive' },
+  { value: 0,  label: 'Bawaan host', hint: 'Target bawaan host' },
   { value: 8,  label: '8 Mbps',   hint: 'Hemat' },
   { value: 15, label: '15 Mbps',  hint: 'Seimbang' },
   { value: 25, label: '25 Mbps',  hint: 'Tajam' },
@@ -583,6 +583,7 @@ export function SessionPanel({
                 <StatRow label="Paket hilang" value={`${idNum(stats.lossPct, 1)} %`} />
                 <StatRow label="Codec" value={stats.codec || '—'} />
                 <StatRow label="Status video" value={stats.videoState || '—'} />
+                <StatRow label="Penunjuk kontrol" value={stats.cursorState || '—'} />
                 <StatRow label="Pemutar video" value={stats.playerState || '—'} />
                 <StatRow label="Ukuran pemutar" value={stats.playerSize || '—'} />
                 <StatRow label="Frame pemutar (total)" value={String(stats.playerFrames ?? '—')} />
@@ -618,6 +619,13 @@ export function SessionPanel({
 
       {tab === 'suara' && (
         <>
+          <p className="spanel-section">Status suara</p>
+          <div className="spanel-card">
+            <StatRow label="Pemutar suara" value={stats?.audioPlayerState || 'Menunggu statistik'} />
+            <StatRow label="Byte audio diterima" value={stats?.audioBytesReceived?.toLocaleString('id-ID') ?? '—'} />
+            <StatRow label="Energi audio decode" value={stats?.audioEnergy === undefined ? 'Tidak dilaporkan browser' : String(stats.audioEnergy)} />
+          </div>
+          <p className="spanel-note">Byte audio bisa berupa keheningan. Putar suara di PC dan dengarkan di HP untuk menguji keluaran sebenarnya.</p>
           <p className="spanel-section">Volume</p>
           <div className="spanel-row">
             <div className="spanel-copy">
@@ -702,7 +710,7 @@ export function SessionPanel({
               }
             />
             <StatRow label="Kualitas" value={QUALITY_META[prefs.quality].label} />
-            <StatRow label="Bitrate" value={prefs.bitrateMbps === 0 ? 'Otomatis' : `${prefs.bitrateMbps} Mbps`} />
+            <StatRow label="Bitrate" value={prefs.bitrateMbps === 0 ? 'Bawaan host' : `${prefs.bitrateMbps} Mbps`} />
           </div>
           <button type="button" className="spanel-disconnect" onClick={onDisconnect}>
             Putuskan sesi

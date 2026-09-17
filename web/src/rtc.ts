@@ -242,6 +242,10 @@ export interface SessionStats {
   playerState?: string;
   playerSize?: string;
   playerFrames?: number;
+  cursorState?: string;
+  audioPlayerState?: string;
+  audioBytesReceived?: number;
+  audioEnergy?: number;
   noFrameWarning?: boolean;
 }
 
@@ -715,6 +719,10 @@ export class RtcSession {
       }
       if (stats) {
         stats.rttMs = rttMs;
+        const audioReports = Array.from(report.values()).map(s => s as unknown as Record<string, unknown>).filter(x => x.type === 'inbound-rtp' && (x.kind === 'audio' || x.mediaType === 'audio'));
+        stats.audioBytesReceived = audioReports.reduce((sum, x) => sum + Number(x.bytesReceived ?? 0), 0);
+        const energy = audioReports.filter(x => typeof x.totalAudioEnergy === 'number');
+        if (energy.length) stats.audioEnergy = energy.reduce((sum, x) => sum + Number(x.totalAudioEnergy), 0);
         if (stats.width > 0 && stats.height > 0) {
           this.clearNoFrameWatchdog();
           this.noFrameWarning = false;
@@ -727,18 +735,10 @@ export class RtcSession {
     }
   }
 
-  /// Aktif/nonaktifkan pemutaran audio host.
-  ///
-  /// Menyeluruh `inactive` juga mematikan mic yang sedang dikirim, jadi
-  /// keadaan "dibisukan" memakai `sendonly`: suara host berhenti, mic kamu
-  /// tetap jalan.
+  /// Mute receiver secara lokal, tanpa mengubah SDP atau memutus mic sender.
+  /// Mengubah transceiver.direction tanpa renegosiasi tidak membisukan audio.
   async setAudioEnabled(on: boolean) {
-    if (!this.audioTransceiver) return;
-    try {
-      this.audioTransceiver.direction = on ? 'sendrecv' : 'sendonly';
-    } catch {
-      /* abaikan — audio tidak tersedia */
-    }
+    if (this.audioTransceiver?.receiver.track) this.audioTransceiver.receiver.track.enabled = on;
   }
 
   /// Aktifkan mic browser → host. Gagal → kembalikan pesan error.

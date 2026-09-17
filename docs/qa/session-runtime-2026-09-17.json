@@ -1,0 +1,50 @@
+{
+  "result": "PASS",
+  "boundary": "Real React handlers, Chromium CDP touch events, local canvas stream; stubbed RtcSession transport, not Windows/Android injection",
+  "checks": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "defaultTrackpad": true,
+      "arrowVisible": true,
+      "swipe": true,
+      "tap": true,
+      "cancelNoClick": true,
+      "holdAndDrag": true,
+      "twoFingerScroll": true,
+      "directPositionBeforeClick": true,
+      "nativeFullscreenCursor": true,
+      "metadataRecovery": true,
+      "centerButton": true,
+      "audioPlayRetry": true,
+      "audioMute": true,
+      "savedPrefsSentOnce": true,
+      "randomUrl": true,
+      "pageErrors": []
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "defaultTrackpad": true,
+      "arrowVisible": true,
+      "swipe": true,
+      "tap": true,
+      "cancelNoClick": true,
+      "holdAndDrag": true,
+      "twoFingerScroll": true,
+      "directPositionBeforeClick": true,
+      "nativeFullscreenCursor": true,
+      "metadataRecovery": true,
+      "centerButton": true,
+      "audioPlayRetry": true,
+      "audioMute": true,
+      "savedPrefsSentOnce": true,
+      "randomUrl": true,
+      "pageErrors": []
+    }
+  ]
+}

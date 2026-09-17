@@ -1803,3 +1803,21 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   Panah lokal bukan telemetry dari RDP lain, WGC dapat memiliki kursor ganda,
   batas input absolut mengikuti layar primer yang sudah ada (multi-monitor
   belum diaudit). Audio tidak diperbaiki di sesi ini.
+
+### SESSION — tahap web, sisa refresh/120fps/audio Windows
+
+- User memperjelas: panah hilang normal/fullscreen; "cuma itu keknya" untuk
+  kontrol gagal lain; suara belum diuji. Jangan menyatakan semua kontrol/audio
+  sudah gagal atau overlay baru pasti menyelesaikan Android tanpa field test.
+- Tahap web: pointer-v2 HTML wrapper/36x48/edge flip/RAF+layout recovery1Hz/
+  center button; explicit audio.play+retry dan mute receiver/element tanpa
+  renegosiasi mic; audio counters; saved preferences sent once after meta;
+  URL 256bit display-only. Auto bitrate sebelumnya bukan adaptive, label
+  diperbaiki Bawaan host. Host/backend/driver/versi tidak diubah.
+-42 unit tests + tsc/Vite dan Chromium React/CDP portrait/landscape PASS.
+  Harness session_runtime_smoke: gestures/fullscreen, metadata fallback,
+  center, simulated autoplay denial/retry, audio element mute, saved prefs
+  once, random URL. Transport stub dan audio sintetis: bukan Windows/Android.
+- Sisa besar **BELUM DIKERJAKAN**: refresh resume aman,120fps hardware-
+  negotiated, ACK effective settings/adaptive bitrate, audio Windows actual.
+  Rancangan/risiko dan batas bukti: docs/qa/session-followup-audit-2026-09-17.md.
