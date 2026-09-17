@@ -580,6 +580,12 @@ export function SessionPanel({
                 <StatRow label="Ping" value={stats.rttMs ? `${idNum(stats.rttMs)} ms` : '—'} />
                 <StatRow label="Paket hilang" value={`${idNum(stats.lossPct, 1)} %`} />
                 <StatRow label="Codec" value={stats.codec || '—'} />
+                <StatRow label="Status video" value={stats.videoState || '—'} />
+                <StatRow label="Byte video diterima" value={stats.bytesReceived?.toLocaleString('id-ID') ?? '—'} />
+                <StatRow label="Paket diterima / hilang" value={`${stats.packetsReceived ?? '—'} / ${stats.packetsLost ?? '—'}`} />
+                <StatRow label="Frame diterima / decode" value={`${stats.framesReceived ?? '—'} / ${stats.framesDecoded ?? '—'}`} />
+                <StatRow label="Keyframe decode" value={String(stats.keyFramesDecoded ?? '—')} />
+                <StatRow label="Permintaan PLI / NACK" value={`${stats.pliCount ?? '—'} / ${stats.nackCount ?? '—'}`} />
               </>
             ) : (
               <p className="spanel-note">Angka kualitas muncul begitu koneksi mengalir.</p>

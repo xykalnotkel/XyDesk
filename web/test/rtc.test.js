@@ -133,7 +133,7 @@ test('label codec dibaca dari codecId, bukan field inbound RTP yang tidak ada', 
   };
   try {
     const stats = await session.readStats();
-    assert.equal(stats.codec, 'H264 (42e0)');
+    assert.equal(stats.codec, 'H264 (42e01f)');
   } finally { session.stop(); }
 });
 
@@ -147,4 +147,35 @@ test('stop ketika menunggu token tidak membuka signaling terlambat', async () =>
   await pending;
   assert.equal(sockets.length, 0);
   assert.equal(session.phase, 'ended');
+});
+
+
+test('statistik memakai video utama bukan RTX dan mempertahankan hitungan kecil', async () => {
+  const { session } = setup();
+  const report = new Map([
+    ['h264', { id: 'h264', type: 'codec', mimeType: 'video/H264', sdpFmtpLine: 'profile-level-id=42e01f' }],
+    ['rtx', { id: 'rtx', type: 'codec', mimeType: 'video/rtx' }],
+    ['video', { id: 'video', type: 'inbound-rtp', kind: 'video', codecId: 'h264', bytesReceived: 17, packetsReceived: 2, packetsLost: 1, framesDecoded: 0, pliCount: 3, nackCount: 4 }],
+    ['repair', { id: 'repair', type: 'inbound-rtp', kind: 'video', codecId: 'rtx', bytesReceived: 900 }],
+  ]);
+  session.pc = { connectionState: 'connected', getStats: async () => report };
+  const s = await session.readStats();
+  assert.equal(s.codec, 'H264 (42e01f)');
+  assert.equal(s.bytesReceived, 17);
+  assert.equal(s.packetsReceived, 2);
+  assert.equal(s.packetsLost, 1);
+  assert.equal(s.framesDecoded, 0);
+  assert.equal(s.pliCount, 3);
+  assert.match(s.videoState, /belum ada frame terdecode/);
+});
+
+test('transport Connected tanpa laporan video tidak menyatakan decode berhasil', async () => {
+  const { session } = setup();
+  session.pc = { connectionState: 'connected', getStats: async () => new Map([
+    ['pair', { id: 'pair', type: 'candidate-pair', nominated: true, state: 'succeeded', currentRoundTripTime: 0.23 }],
+  ]) };
+  const s = await session.readStats();
+  assert.equal(s.rttMs, 230);
+  assert.equal(s.bytesReceived, undefined);
+  assert.match(s.videoState, /Belum ada laporan RTP/);
 });

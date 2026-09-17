@@ -356,12 +356,32 @@ impl Session {
             "xydesk".to_owned(),
         ));
         // `add_track` membuat/memakai transceiver video (sendrecv) otomatis.
-        self.pc
-            .add_track(
-                Arc::clone(&track) as Arc<dyn webrtc::track::track_local::TrackLocal + Send + Sync>
-            )
-            .await
-            .context("gagal add track video")?;
+        let sender =
+            self.pc
+                .add_track(Arc::clone(&track)
+                    as Arc<dyn webrtc::track::track_local::TrackLocal + Send + Sync>)
+                .await
+                .context("gagal add track video")?;
+        // NACK diproses interceptor hanya ketika RTCP sender dibaca. Tanpa
+        // reader, paket hilang tidak dikirim ulang walau feedback dinegosiasi.
+        tokio::spawn(async move {
+            let mut last_keyframe: Option<std::time::Instant> = None;
+            while let Ok((packets, _)) = sender.read_rtcp().await {
+                let needs_keyframe = packets.iter().any(|packet| {
+                    packet.as_any().is::<webrtc::rtcp::payload_feedbacks::picture_loss_indication::PictureLossIndication>()
+                        || packet.as_any().is::<webrtc::rtcp::payload_feedbacks::full_intra_request::FullIntraRequest>()
+                });
+                if needs_keyframe
+                    && last_keyframe
+                        .is_none_or(|last| last.elapsed() >= std::time::Duration::from_millis(500))
+                {
+                    crate::screen::request_keyframe();
+                    last_keyframe = Some(std::time::Instant::now());
+                    println!("[xydesk-host] RTCP PLI/FIR diterima — keyframe diminta");
+                }
+            }
+            // close peer menghentikan read_rtcp; tidak meninggalkan task polling.
+        });
         Ok(track)
     }
 

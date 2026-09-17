@@ -230,6 +230,15 @@ export interface SessionStats {
   rttMs: number;
   lossPct: number;
   codec: string;
+  bytesReceived?: number;
+  packetsReceived?: number;
+  packetsLost?: number;
+  framesReceived?: number;
+  framesDecoded?: number;
+  keyFramesDecoded?: number;
+  pliCount?: number;
+  nackCount?: number;
+  videoState?: string;
   noFrameWarning?: boolean;
 }
 
@@ -273,6 +282,7 @@ export class RtcSession {
   private lastBytes = -1;
   private lastFrames = -1;
   private lastAtMs = 0;
+  private lastVideoStatsId = "";
 
   /// Satu-satunya jalan mengubah fase. Menangani watchdog secara terpusat
   /// supaya tidak ada transisi yang lupa mematikan atau menyalakannya.
@@ -631,16 +641,30 @@ export class RtcSession {
   async readStats(): Promise<SessionStats | null> {
     const pc = this.pc;
     if (!pc || pc.connectionState !== 'connected') return null;
-    let stats: SessionStats | null = null;
+    let stats: SessionStats = {
+      width: 0, height: 0, fps: 0, mbps: 0, rttMs: 0, lossPct: 0,
+      codec: '—', videoState: 'Belum ada laporan RTP video',
+    };
     try {
       const report = await pc.getStats();
       let rttMs = 0;
+      // RTX/FEC bukan video utama. Jangan menimpa statistik H264 dengan
+      // laporan repair/track kosong yang kebetulan muncul terakhir.
+      const primary = Array.from(report.values())
+        .map(s => s as unknown as Record<string, unknown>)
+        .filter(x => x.type === 'inbound-rtp' && (x.kind === 'video' || x.mediaType === 'video'))
+        .filter(x => !/\/(rtx|red|ulpfec|flexfec)/i.test(String(report.get(String(x.codecId))?.mimeType ?? '')))
+        .sort((a, b) => Number(b.bytesReceived ?? 0) - Number(a.bytesReceived ?? 0))[0];
       for (const s of report.values() as Iterable<RTCStats>) {
         const x = s as unknown as Record<string, unknown>;
-        if (x.type === 'inbound-rtp' && (x.kind === 'video' || x.mediaType === 'video')) {
+        if (primary && x.id === primary.id && x.type === 'inbound-rtp') {
           const now = performance.now();
           const bytes = Number(x.bytesReceived ?? 0);
           const frames = Number(x.framesDecoded ?? 0);
+          if (this.lastVideoStatsId !== String(x.id)) {
+            this.lastBytes = -1; this.lastFrames = -1; this.lastAtMs = 0;
+            this.lastVideoStatsId = String(x.id);
+          }
           const dt = this.lastAtMs > 0 ? (now - this.lastAtMs) / 1000 : 0;
           const mbps =
             this.lastBytes >= 0 && dt > 0.2
@@ -657,7 +681,7 @@ export class RtcSession {
           const recv = Number(x.packetsReceived ?? 0);
           const codec = report.get(String(x.codecId)) as { sdpFmtpLine?: string; mimeType?: string } | undefined;
           const fmt = String(codec?.sdpFmtpLine ?? '');
-          const profile = /profile-level-id=(\w{4})/i.exec(fmt)?.[1] ?? '';
+          const profile = /profile-level-id=([0-9a-f]{6})/i.exec(fmt)?.[1] ?? '';
           const codecName = String(codec?.mimeType ?? '').replace('video/', '');
           stats = {
             width: Number(x.frameWidth ?? 0),
@@ -667,6 +691,16 @@ export class RtcSession {
             rttMs: 0,
             lossPct: recv + lost > 0 ? (lost / (recv + lost)) * 100 : 0,
             codec: `${codecName || '—'}${profile ? ` (${profile})` : ''}`,
+            bytesReceived: bytes, packetsReceived: recv, packetsLost: lost,
+            framesReceived: typeof x.framesReceived === 'number' ? x.framesReceived : undefined,
+            framesDecoded: frames,
+            keyFramesDecoded: typeof x.keyFramesDecoded === 'number' ? x.keyFramesDecoded : undefined,
+            pliCount: typeof x.pliCount === 'number' ? x.pliCount : undefined,
+            nackCount: typeof x.nackCount === 'number' ? x.nackCount : undefined,
+            videoState: frames > 0 ? 'Frame sudah didecode; periksa tampilan jika masih hitam'
+              : bytes > 0 ? 'Data video diterima, belum ada frame terdecode'
+              : 'Belum tercatat payload video diterima',
+
           };
         } else if (x.type === 'candidate-pair' && (x.nominated || x.selected === true)) {
           if (x.state === 'succeeded' && typeof x.currentRoundTripTime === 'number') {

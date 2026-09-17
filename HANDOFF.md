@@ -1546,3 +1546,27 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - Audit lanjutan GDI: jalur lama GetDIBits masih memakai bitmap terpilih ke DC
   dan pelepasan handle perlu audit ownership/deselection; belum diubah pada
   patch seleksi ini dan belum dibuktikan sebagai penyebab laporan pengguna.
+
+
+## MEDIARX — pemulihan video dan statistik penerimaan
+
+- User mengonfirmasi probe DXGI/GDI menghasilkan piksel RGB bukan nol, tetapi
+  Chrome ukuran/fps/codec kosong, data 0,0 Mbps, RTT 230ms/loss 11,4%.
+  Tidak membaca/merekam kredensial sesi; fokus bukan driver/capture lagi.
+- add_video_track membuang handle sender tanpa read RTCP. Pada webrtc-rs
+  0.11, NACK responder dipanggil di RTCP reader; sebelumnya tidak diproses.
+  Reader kini berjalan sampai sender close, PLI/FIR meminta keyframe dengan
+  batas 500ms. NACK tetap milik interceptor bawaan, bukan retransmisi buatan.
+- Tes real WebRTC baru: minta pengiriman ulang sequence tertentu, verifikasi
+  sequence sama diterima lagi, lalu PLI sampai ke flag encoder. Receiver tes
+  saja menonaktifkan filter replay SRTP untuk mengamati duplikat sengaja;
+  konfigurasi produksi tidak diubah. Fixture awal salah karena filter replay
+  membuang duplikat; setelah dikoreksi, baseline tetap FAIL dan patch PASS.
+  Ini tes NACK/PLI, bukan emulasi loss 11,4% atau decode Android.
+- Web: byte/paket/frame/keyframe/PLI/NACK mentah dan status video; primary
+  dipilih bukan RTX/FEC/track kosong terakhir. Level-id H264 lengkap 6 digit.
+  Connected tanpa inbound video tetap memberi diagnosis, bukan null kosong.
+- Lokal: fmt + Rust 125 lib, 5 bin, 3 integration PASS; web 21 PASS + tsc/Vite
+  build PASS. Tes label lama perlu ekspektasi 6 digit, bukan 4 terpotong.
+  Build ini bukan bundle produksi OAuth; web belum di-deploy. Windows/NSIS
+  untuk engine baru menunggu build-only. Tidak membuat lab atau mengubah RDP.

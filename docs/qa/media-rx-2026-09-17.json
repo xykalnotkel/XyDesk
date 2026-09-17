@@ -1,0 +1,19 @@
+{
+  "baseline": "9b64ddd",
+  "rtcpRegression": "host/tests/rtcp_feedback.rs",
+  "before": "NACK retransmission timeout (corrected fixture)",
+  "after": "same RTP sequence retransmitted; PLI requests encoder keyframe",
+  "testBoundary": "receiver fixture only disables SRTP replay filter to observe deliberate duplicate; production security unchanged; not Android or 11.4 percent loss emulation",
+  "rust": {
+    "lib": 125,
+    "bin": 5,
+    "integration": 3,
+    "format": "PASS"
+  },
+  "web": {
+    "tests": 21,
+    "build": "PASS"
+  },
+  "deployed": false,
+  "windowsCaptureAndroidDecodeProven": false
+}
