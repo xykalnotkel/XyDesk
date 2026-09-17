@@ -1296,3 +1296,13 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-ADMINLIVE. Pemilik mengunggah cli
 - Tes Worker 124/124, panel 15/15, runtime SQLite dan build produksi lolos. Nilai `.env.production` hanya Client ID dan sitekey publik.
 - Snapshot file `tool/check_backend_live.py` memiliki perubahan mode yang sudah ada saat sesi dimulai; tidak disentuh dan tidak disertakan dalam commit.
 - Versi Worker dan panel akan diunggah tanpa aktivasi terlebih dahulu. Hasil deploy dan smoke test dicatat setelah aktivasi.
+
+
+### Hasil aktivasi SESI-20260917-OPERATOR-ADMINLIVE
+
+- Source `9fa11a8` sudah push sebelum upload. Backend `1a892f50-9d4a-4257-98b1-6931c8dc7234` dan panel `f69c671d-9bb2-4773-8ee2-f93b864599ef` aktif 100% trafik. Cloudflare API mengonfirmasi versi deployment.
+- Semua binding lama ada pada versi backend baru. Secret upload hanya menambah TURNSTILE_SECRET; client admin disimpan dalam ADMIN_GOOGLE_CLIENT_ID. GOOGLE_CLIENT_ID/secret lama dan widget proyek lain tidak ditimpa.
+- Bundle live cocok SHA256 `7ea70558e3545cce15e15518240e35cb2394e339792de6b55eadcec3be60719d`. Situs live membuka Google+Turnstile iframe 200, tanpa pageerror/pesan galat login. Screenshot asli di `admin/screenshots/login-live-2026-09-17.png`.
+- Smoke test HTTP: healthz 200; admin health/stats anonim 401; maintenance publik 200 tanpa metadata; POST maintenance anonim 401 tanpa penulisan; login captcha palsu 403.
+- Pemilik masih harus login akun admin + menyelesaikan captcha sendiri, lalu memeriksa panel Backend/Server. Tidak mengklaim authenticated end-to-end atau uji host Windows. Tidak ada restart engine, rotasi global, bump versi, rilis APK/desktop, atau artikel live.
+- Versi lama memuat bypass login: jangan rollback otomatis ke versi lama bila login bermasalah. Utamakan fix-forward atau pembatasan akses sementara yang disetujui operator.

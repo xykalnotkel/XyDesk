@@ -1,5 +1,7 @@
 # Admin XyDesk — konfigurasi dan verifikasi
 
+**Status terbaru (17 September 2026): live di https://admin.xydesk.my.id.** OAuth memakai client admin terpisah; widget Turnstile admin sudah terpasang. Source kode `9fa11a8`. Login akun manusia masih perlu smoke test pemilik.
+
 ## Login
 
 Build produksi membaca identitas publik dari `.env.production`. Untuk override lokal, salin `.env.example` ke `.env.local`:
@@ -62,7 +64,7 @@ Hasil pemeriksaan terakhir 17 September 2026: 15 tes API panel dan 122 tes unit 
 
 Uji Chromium pada build panel dengan seluruh API ditirukan juga lolos: health, kontrol engine nonaktif, draft tanpa POST, simpan satu POST, galat status, dan logout 401; tanpa pageerror.
 
-Belum diuji: login akun Google sungguhan, captcha Turnstile admin, transaksi storage produksi, dan host Windows/VM. Tidak ada deploy/bump versi. Hasil preflight OAuth nyata dijelaskan di bawah.
+Belum diuji: login akun Google sungguhan, penyelesaian captcha oleh manusia, transaksi storage produksi terautentikasi, dan host Windows/VM. Nomor versi aplikasi tidak dinaikkan. Riwayat preflight dan hasil rollout terbaru dijelaskan di bawah.
 
 ## Prioritas berikutnya
 
@@ -73,7 +75,9 @@ Belum diuji: login akun Google sungguhan, captcha Turnstile admin, transaksi sto
 5. Rancang agen host terautentikasi dengan perintah terbatas, otorisasi per perangkat, audit, dan penanganan reconnect sebelum mengaktifkan kontrol server.
 
 
-## Preflight produksi — rollout ditahan (17 September 2026)
+## Riwayat preflight awal — sempat ditahan (17 September 2026)
+
+> Blocker ini diselesaikan memakai client baru khusus admin, bukan dengan mengubah client web. Lihat hasil rollout di akhir dokumen.
 
 Izin operator: verifikasi → push → deploy bila siap; tanpa rotasi secret global, restart host, atau bump versi.
 
@@ -106,3 +110,21 @@ Pemilik membuat OAuth Web client **khusus admin**. Arahan lama untuk menambah or
 - Secret/client ID dari lampiran diarsipkan sesuai permintaan pemilik di `uploads/kuncikerjasama.txt`, di luar repo.
 - Tes audience admin berhasil, audience web ditolak, dan admin tanpa client ID khusus gagal tertutup.
 - Rollout tetap memerlukan smoke test pasca-aktivasi; login akun dan penyelesaian captcha oleh manusia tidak dilakukan otomatis.
+
+
+## Hasil rollout produksi — 17 September 2026
+
+- Kode `9fa11a8` sudah di main sebelum kedua versi diunggah.
+- Worker `xydesk-signaling`: `1a892f50-9d4a-4257-98b1-6931c8dc7234`, menerima 100% trafik.
+- Panel `xydesk-admin`: `f69c671d-9bb2-4773-8ee2-f93b864599ef`, menerima 100% trafik.
+- Upload memakai versi bertahap (`versions upload`) lalu aktivasi eksplisit (`versions deploy`). Seluruh binding lama diperiksa tetap tersedia; hanya menambah `ADMIN_GOOGLE_CLIENT_ID` dan `TURNSTILE_SECRET`. Tidak merotasi secret global, mengubah client web/APK, atau restart engine.
+- Bundle live `index-CHwcNrpT.js` cocok dengan build lokal, SHA256 `7ea70558e3545cce15e15518240e35cb2394e339792de6b55eadcec3be60719d`.
+- Smoke test live: HTML/JS 200, `/healthz` 200; GET health/stats admin tanpa sesi 401; GET maintenance publik 200 tanpa metadata pengubah; POST maintenance tanpa sesi 401 (tidak menulis storage); login dengan captcha palsu 403.
+- Chromium membuka situs produksi tanpa routing tiruan: tombol Google dan iframe Turnstile HTTP 200, tombol login terlihat, tanpa pageerror dan tanpa pesan galat login.
+- **Belum terbukti end-to-end:** login akun admin sungguhan, penyelesaian captcha oleh manusia, health setelah login, serta perubahan maintenance terautentikasi di produksi. Tidak memasukkan akun/password atau mencoba bypass captcha.
+
+Screenshot berikut diambil dari halaman login produksi setelah rollout, bukan mockup:
+
+![Login admin live](screenshots/login-live-2026-09-17.png)
+
+Versi aplikasi tetap 6.8.5. Ini rollout perbaikan layanan, tanpa tag rilis, APK/desktop build, atau publikasi berita. Jangan rollback otomatis ke versi lama karena kode lama memuat bypass login; jika ada masalah, utamakan perbaikan maju atau pembatasan akses sementara dengan persetujuan operator.

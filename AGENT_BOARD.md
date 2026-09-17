@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260917-OPERATOR-ADMINLIVE | Operator - XyDesk Team | Operator (backend + admin) | LAGI KERJA | Client admin terpisah dari web; konfigurasi captcha dan rollout sesuai izin chat | 2026-09-17 |
 | SESI-20260909-OPERATOR-UNIFY | Operator - XyDesk Team | Operator (semua area) | SELESAI | Unifikasi UI/UX: acuan=web (token Paper→web), radius web→8/12/16/20, hapus garis desktop+web, brand installer wizard | 2026-09-09 |
 
 ## Antrean izin push
@@ -188,3 +187,10 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | ID Sesi | Agent | Status | Hasil | Bukti |
 |---|---|---|---|---|
 | SESI-20260917-OPERATOR-ROLLOUT | Operator - XyDesk Team | SELESAI pemeriksaan; deploy DITAHAN | Izin chat verifikasi/push/deploy bila siap. Kode sudah push `bca6da1` ke main; Google GIS menolak origin admin, Turnstile admin belum dikonfigurasi. Tidak mengubah produksi, secret, host, atau nomor versi. | Worker 122/122, panel 15/15, build, runtime SQLite (Wrangler 4.133.0), browser panel API tiruan lolos. Google browser probe: origin ditolak. Tidak dispatch CI. |
+
+
+### Rollout admin selesai — 17 September 2026
+
+| ID Sesi | Agent | Status | Hasil | Bukti |
+|---|---|---|---|---|
+| SESI-20260917-OPERATOR-ADMINLIVE | Operator - XyDesk Team | SELESAI; LIVE | Client admin terpisah, arsip kunci di luar repo, widget Turnstile khusus admin; source 9fa11a8 sudah push; signaling 1a892f50… dan admin f69c671d… aktif 100%. Tidak bump/rotasi global/restart engine. | Worker 124/124; panel 15/15; runtime SQLite; build produksi; bundle SHA256 cocok; smoke test live 200/401/403 sesuai; Google+captcha iframe 200 di browser. Login akun manusia belum diuji. |
