@@ -1742,3 +1742,24 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   tetap live. Hasil Android, audio, NVENC capabilities dan gambar nyata
   masih menunggu bukti; jangan menyatakan akar lapangan eksklusif atau
   memberi jaminan bahwa installer ini pasti menampilkan gambar.
+
+### CONTROL — kontrol HP dan bukti video lapangan (2026-09-17)
+
+- User mengonfirmasi gambar Windows akhirnya tampil dengan engine91ef704:
+  player1280x592/readyState4,1030 frame pemutar dan decode. Kualitas masih
+  bergerigi dan16fps; ini bukti manual user, bukan pengukuran agent.
+- Web: trackpad default pointer coarse, panah lokal posisi absolut, hit-test
+  object-fit contain, tap/cancel terpisah, gesture multi-touch tidak klik,
+  pointer capture tombol kiri+geser dan release blur/visibility/mode/putus.
+  Panah adalah perintah lokal, bukan telemetry posisi/bentuk kursor Windows;
+  WGC yang sudah menggambar kursor dapat memperlihatkan dua panah sementara.
+- Tes web36 PASS + tsc/Vite PASS. Chromium actual React handlers + CDP touch
+  portrait390x844/landscape844x390 PASS (swipe/tap/cancel/drag/scroll/direct
+  position/fullscreen). Stream canvas dan transport stub: BUKAN pembuktian
+  SendInput Windows atau Chrome Android nyata. Harness web/e2e/control_smoke.mjs.
+- Label preset tidak menjanjikan720p60/1080p60 lagi; target dan batas software
+  dibedakan. Statistik bitrate kecil memakai tiga desimal; tidak menganggap
+  total byte bertambah sebagai bukti laju saat ini selalu tinggi.
+- Host dalam pekerjaan terpisah: bilinear fixed-point reusable dan batas
+  coalescing input agar posisi sebelum klik tidak dibuang. Belum dikemas pada
+  checkpoint web ini. Tidak ada driver/RDP/backend/auth changes/version bump.

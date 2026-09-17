@@ -2832,3 +2832,10 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   .remote-session .srail { grid-template-rows: repeat(4, 42px); }
   .remote-session .spanel:not(.no-rail) { right: 164px; width: min(460px, calc(100% - 178px)); }
 }
+
+/* Hotspot panah di ujung kiri atas; tidak menangkap sentuhan/klik. */
+.remote-control-cursor { position: absolute; display: none; width: 24px; height: 32px; margin-left: -2px; margin-top: -2px; z-index: 3; pointer-events: none; filter: drop-shadow(0 1px 2px #0008); }
+.remote-session .video-surface video { cursor: none; }
+.hud-mouse button { touch-action: none; user-select: none; }
+
+.remote-input-area { position: absolute; inset: 0; z-index: 1; touch-action: none; }

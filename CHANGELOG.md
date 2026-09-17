@@ -24,6 +24,9 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- Kontrol web HP: trackpad default, panah lokal, koordinat gambar tanpa pita hitam, tap/cancel/dua jari dan tahan-geser. Label kualitas menunjukkan target dan batas encoder, bukan janji resolusi/fps.
+
+
 ### Fixed
 - H264 software: batasi ukuran kirim ke 1280x720 proporsional, 30fps dan 14Mbps sesuai Level3.1 yang diiklankan, bukan mengirim capture besar dengan SPS Level5.1. Desktop RDP tidak diubah; log membedakan resolusi capture/kirim dan SPS.
 - Sesi web memenuhi viewport saat Connected, tidak lagi terkotak 16:9 dalam halaman. Fullscreen native diminta dari tombol untuk seluruh surface beserta kontrol; fallback tetap memenuhi viewport. Toolbar landscape tidak terpotong, scroll halaman dipulihkan saat sesi berakhir.

@@ -361,9 +361,9 @@ export type SessionPrefs = {
 
 export const QUALITY_META: Record<StreamQuality, { label: string; desc: string; bitrate: BitrateMbps; num: number }> = {
   auto:   { label: 'Otomatis', desc: 'Adaptif — menyesuaikan jaringan', bitrate: 0,  num: 0 },
-  medium: { label: 'Sedang',   desc: '720p60 • ~8 Mbps • seimbang',    bitrate: 8,  num: 1 },
-  high:   { label: 'Tinggi',   desc: '1080p60 • ~15 Mbps • tajam',      bitrate: 15, num: 2 },
-  ultra:  { label: 'Ultra',    desc: '1440p60 • ~25 Mbps • terbaik',    bitrate: 25, num: 3 },
+  medium: { label: 'Sedang',   desc: 'Target 8 Mbps • seimbang',    bitrate: 8,  num: 1 },
+  high:   { label: 'Tinggi',   desc: 'Target 15 Mbps • detail lebih tinggi',      bitrate: 15, num: 2 },
+  ultra:  { label: 'Ultra',    desc: 'Target 25 Mbps • bandwidth tinggi',    bitrate: 25, num: 3 },
 };
 
 export const BITRATE_OPTIONS: { value: BitrateMbps; label: string; hint: string }[] = [
@@ -570,7 +570,7 @@ export function SessionPanel({
               </button>
             ))}
           </div>
-          <p className="spanel-note">Otomatis = host menyesuaikan ke jaringan. Manual = paksa bitrate tetap.</p>
+          <p className="spanel-note">Bitrate adalah target, bukan pemakaian tetap. Resolusi, fps, dan bitrate efektif mengikuti batas encoder host; software kompatibel maksimal 1280×720, 30 fps, 14 Mbps.</p>
 
           <p className="spanel-section">Yang sedang berjalan</p>
           <div className="spanel-card">
@@ -578,7 +578,7 @@ export function SessionPanel({
               <>
                 <StatRow label="Ukuran gambar" value={stats.width ? `${stats.width}×${stats.height}` : '—'} />
                 <StatRow label="Kehalusan" value={stats.fps ? `${idNum(stats.fps)} fps` : '—'} />
-                <StatRow label="Pemakaian data" value={`${idNum(stats.mbps, 1)} Mbps`} />
+                <StatRow label="Pemakaian data" value={`${idNum(stats.mbps, stats.mbps > 0 && stats.mbps < 0.1 ? 3 : 1)} Mbps`} />
                 <StatRow label="Ping" value={stats.rttMs ? `${idNum(stats.rttMs)} ms` : '—'} />
                 <StatRow label="Paket hilang" value={`${idNum(stats.lossPct, 1)} %`} />
                 <StatRow label="Codec" value={stats.codec || '—'} />
@@ -656,7 +656,7 @@ export function SessionPanel({
             </button>
           </div>
           <p className="spanel-note">
-            Langsung: sentuh posisi di layar. Trackpad: geser relatif seperti touchpad HP — cocok untuk game.
+            Trackpad: geser satu jari untuk menggerakkan panah, ketuk untuk klik, dua jari untuk scroll. Tahan tombol klik kiri sambil geser untuk drag. Langsung: sentuh tepat pada gambar. Panah menunjukkan posisi perintah dari perangkat ini, bukan gerakan mouse di PC.
           </p>
           <div className="spanel-row">
             <div className="spanel-copy">

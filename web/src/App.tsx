@@ -1,3 +1,4 @@
+import { imageRect, RemotePointer } from './remote_pointer';
 import { enterSessionFullscreen, leaveSessionFullscreen } from './session_fullscreen';
 import { videoOnlyStream, playRemoteVideo } from './video_playback';
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
@@ -2002,7 +2003,7 @@ function ConnectScreen({
     typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
   const [kbOpen, setKbOpen] = useState(false);
   const [padOpen, setPadOpen] = useState(false);
-  const [trackpad, setTrackpad] = useState(false);
+  const [trackpad, setTrackpad] = useState(() => window.matchMedia?.('(pointer: coarse)').matches ?? false);
   const [panelOpen, setPanelOpen] = useState(false);
   // Password pairing bisa diperlihatkan — sengaja huruf besar semua di sisi
   // host (tanpa I/O/0/1 yang mudah tertukar), jadi lihat-langsung adalah
@@ -2045,13 +2046,6 @@ function ConnectScreen({
   /// `error`. Dipisah dari `labels` karena isinya dinamis (beda sebab, beda
   /// pesan), sedangkan `labels` adalah peta statis.
   const [fasePesan, setFasePesan] = useState<string | null>(null);
-  // Jejak jari untuk mode trackpad: posisi terakhir per pointer, penanda
-  // "sudah bergerak" (pembeda tap vs geser), dan stempel waktu turun.
-  const touchRef = useRef({
-    points: new Map<number, { x: number; y: number }>(),
-    moved: false,
-    downAt: 0,
-  });
   // Ref cermin prefs agar handler yang dibuat di closure lama (mis.
   // onAudioTrack) selalu membaca nilai terbaru.
   const prefsRef = useRef(DEFAULT_PREFS as SessionPrefs);
@@ -2083,6 +2077,45 @@ function ConnectScreen({
   const pinRef = useRef<HTMLInputElement | null>(null);
 
   const connected = phase === 'connected';
+  const cursorRef = useRef<SVGSVGElement | null>(null);
+  const pointerRef = useRef<RemotePointer | null>(null);
+  const getImageRect = () => {
+    const video = videoRef.current, surface = surfaceRef.current;
+    return video && surface ? imageRect(surface.getBoundingClientRect(), video.videoWidth, video.videoHeight) : null;
+  };
+  const paintCursor = () => {
+    const r = getImageRect(), el = cursorRef.current, box = surfaceRef.current?.getBoundingClientRect();
+    if (!el || !box) return;
+    el.style.display = r ? 'block' : 'none';
+    if (r) {
+      const pos = pointerRef.current!.cursor;
+      el.style.left = `${r.left - box.left + pos.x * r.width}px`;
+      el.style.top = `${r.top - box.top + pos.y * r.height}px`;
+    }
+  };
+  if (!pointerRef.current) pointerRef.current = new RemotePointer(getImageRect, (event) => {
+    if (event.type === 'move') {
+      sessionRef.current?.sendInput(InputCodec.mouseMoveAbs(event.x, event.y));
+      paintCursor();
+    } else if (event.type === 'button') {
+      sessionRef.current?.sendInput(InputCodec.mouseButton(event.button, event.down));
+    } else sessionRef.current?.sendInput(InputCodec.scroll(0, event.dy));
+  });
+  useEffect(() => {
+    const reset = () => pointerRef.current?.reset();
+    const visibility = () => { if (document.hidden) reset(); };
+    window.addEventListener('blur', reset);
+    document.addEventListener('visibilitychange', visibility);
+    const observer = new ResizeObserver(paintCursor);
+    if (surfaceRef.current) observer.observe(surfaceRef.current);
+    if (connected) setHudToast('Geser = gerak panah • ketuk = klik. Tahan tombol kiri + geser untuk drag.');
+    return () => {
+      reset(); observer.disconnect();
+      window.removeEventListener('blur', reset);
+      document.removeEventListener('visibilitychange', visibility);
+    };
+  }, [connected]);
+
   const canConnect = hostId.replace(/[\s-]/g, '').length === 9 && pin.length >= 6 && !['pairing', 'negotiating'].includes(phase);
 
   // Layout sesi selalu memenuhi viewport; fullscreen browser hanya dari gesture.
@@ -2208,6 +2241,7 @@ function ConnectScreen({
   const disconnect = useCallback(() => {
     if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
     retryRef.current.tries = 3; // blok retry setelah putus manual
+    pointerRef.current?.reset();
     sessionRef.current?.stop();
     sessionRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
@@ -2265,7 +2299,7 @@ function ConnectScreen({
   }, [hudToast]);
 
   const toggleTrackpad = useCallback(() => {
-    touchRef.current.points.clear();
+    pointerRef.current?.reset();
     setTrackpad((v) => !v);
   }, []);
 
@@ -2317,51 +2351,24 @@ function ConnectScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected]);
 
-  const onPointerMove = (event: React.PointerEvent) => {
-    const element = surfaceRef.current;
-    if (!element) return;
-    const rect = element.getBoundingClientRect();
-    send(InputCodec.mouseMoveAbs((event.clientX - rect.left) / rect.width, (event.clientY - rect.top) / rect.height));
+  const isImageTarget = (e: { target: EventTarget }) => e.target === videoRef.current || e.target === surfaceRef.current || (e.target instanceof HTMLElement && e.target.classList.contains('remote-input-area'));
+  const pointerMode = (e: React.PointerEvent) => trackpad && e.pointerType !== 'mouse';
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isImageTarget(e)) return;
+    const accepted = pointerRef.current!.down(e.pointerId, e.clientX, e.clientY, e.button === 2 ? 1 : e.button === 1 ? 2 : 0, pointerMode(e), performance.now());
+    if (accepted) { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); }
   };
-
-  // ── Mode trackpad: layar jadi touchpad, bukan layar sentuh ──────
-  // Satu jari geser = gerak kursor relatif; ketuk singkat tanpa geser =
-  // klik kiri; dua jari geser = scroll. Cocok untuk HP karena kursor
-  // tidak "meloncat" ke posisi jari. Sensitivitas & perilaku diatur
-  // lewat panel pengaturan sesi.
-  const tpDown = (e: React.PointerEvent) => {
-    const t = touchRef.current;
-    t.points.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (t.points.size === 1) {
-      t.moved = false;
-      t.downAt = performance.now();
-    }
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isImageTarget(e) && !e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    pointerRef.current!.move(e.pointerId, e.clientX, e.clientY, pointerMode(e), prefs.sens, prefs.reverseScroll);
   };
-  const tpMove = (e: React.PointerEvent) => {
-    const t = touchRef.current;
-    const prev = t.points.get(e.pointerId);
-    if (!prev) return; // hover mouse tanpa tekan — abaikan di mode trackpad
-    const dx = e.clientX - prev.x;
-    const dy = e.clientY - prev.y;
-    t.points.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (Math.abs(dx) + Math.abs(dy) > 2) t.moved = true;
-    if (t.points.size >= 2) {
-      // Dua jari: scroll. Arah alami — konten mengikuti jari — kecuali
-      // dibalik lewat pengaturan.
-      const dir = prefs.reverseScroll ? -1 : 1;
-      send(InputCodec.scroll(0, Math.round(dy * 2 * dir)));
-    } else {
-      send(InputCodec.mouseMoveRel(Math.round(dx * prefs.sens), Math.round(dy * prefs.sens)));
-    }
+  const onPointerEnd = (e: React.PointerEvent<HTMLDivElement>, cancel: boolean) => {
+    pointerRef.current!.up(e.pointerId, cancel, prefs.tapClick, performance.now());
   };
-  const tpUp = (e: React.PointerEvent) => {
-    const t = touchRef.current;
-    const known = t.points.delete(e.pointerId);
-    if (!known) return;
-    if (t.points.size === 0 && !t.moved && prefs.tapClick && performance.now() - t.downAt < 300) {
-      send(InputCodec.mouseButton(0, true));
-      send(InputCodec.mouseButton(0, false));
-    }
+  const mouseHold = (e: React.PointerEvent<HTMLButtonElement>, button: number, down: boolean) => {
+    e.stopPropagation(); e.preventDefault();
+    if (down) { e.currentTarget.setPointerCapture(e.pointerId); pointerRef.current!.sync(); }
+    pointerRef.current!.button(button, down);
   };
 
   const labels: Record<string, string> = {
@@ -2493,14 +2500,19 @@ function ConnectScreen({
         ref={surfaceRef}
         className="video-surface"
         hidden={!connected}
-        onPointerMove={trackpad ? tpMove : onPointerMove}
-        onPointerDown={trackpad ? tpDown : (e) => send(InputCodec.mouseButton(e.button === 2 ? 1 : 0, true))}
-        onPointerUp={trackpad ? tpUp : (e) => send(InputCodec.mouseButton(e.button === 2 ? 1 : 0, false))}
-        onPointerCancel={trackpad ? tpUp : undefined}
-        onWheel={(e) => send(InputCodec.scroll(-e.deltaX, -e.deltaY))}
+        onPointerMove={onPointerMove}
+        onPointerDown={onPointerDown}
+        onPointerUp={(e) => onPointerEnd(e, false)}
+        onPointerCancel={(e) => onPointerEnd(e, true)}
+        onLostPointerCapture={(e) => onPointerEnd(e, true)}
+        onWheel={(e) => { if (isImageTarget(e)) send(InputCodec.scroll(-e.deltaX, -e.deltaY)); }}
         onContextMenu={(e) => e.preventDefault()}
       >
-        <video ref={videoRef} autoPlay playsInline muted />
+        <video ref={videoRef} autoPlay playsInline muted onLoadedMetadata={paintCursor} onResize={paintCursor} />
+        <div className="remote-input-area" aria-hidden="true" />
+        <svg ref={cursorRef} className="remote-control-cursor" viewBox="0 0 24 32" aria-hidden="true">
+          <path d="M2 2 L2 25 L8 20 L13 30 L18 27 L13 18 L22 17 Z" fill="white" stroke="#111" strokeWidth="2" strokeLinejoin="round" />
+        </svg>
         {/* Audio sistem host (track Opus) — elemen terpisah, tidak di-mute. */}
         <audio ref={audioRef} autoPlay />
         {connected && (stats?.noFrameWarning || videoMessage) && (
@@ -2578,18 +2590,20 @@ function ConnectScreen({
           <button
             className="hud-icon-btn"
             title="Klik kiri (tahan untuk drag)"
-            onPointerDown={() => send(InputCodec.mouseButton(0, true))}
-            onPointerUp={() => send(InputCodec.mouseButton(0, false))}
-            onPointerCancel={() => send(InputCodec.mouseButton(0, false))}
+            onPointerDown={(e) => mouseHold(e, 0, true)}
+            onPointerUp={(e) => mouseHold(e, 0, false)}
+            onPointerCancel={(e) => mouseHold(e, 0, false)}
+            onLostPointerCapture={(e) => mouseHold(e, 0, false)}
           >
             <img src="/hud-mouse-left.png" alt="Klik kiri" />
           </button>
           <button
             className="hud-icon-btn"
             title="Klik kanan"
-            onPointerDown={() => send(InputCodec.mouseButton(1, true))}
-            onPointerUp={() => send(InputCodec.mouseButton(1, false))}
-            onPointerCancel={() => send(InputCodec.mouseButton(1, false))}
+            onPointerDown={(e) => mouseHold(e, 1, true)}
+            onPointerUp={(e) => mouseHold(e, 1, false)}
+            onPointerCancel={(e) => mouseHold(e, 1, false)}
+            onLostPointerCapture={(e) => mouseHold(e, 1, false)}
           >
             <img src="/hud-mouse-right.png" alt="Klik kanan" />
           </button>
