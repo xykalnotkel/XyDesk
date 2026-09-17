@@ -1,5 +1,9 @@
 # Admin XyDesk — konfigurasi dan verifikasi
 
+## Penggantian login ke username/password + 2FA
+
+Lihat [panduan autentikasi dan setup akun](AUTHENTICATION.md). Login Google dipertahankan hanya untuk setup pertama, lalu ditutup atomik ketika pemilik mengonfirmasi authenticator. Bagian OAuth di bawah merupakan riwayat konfigurasi/bootstrap, bukan metode login permanen setelah akun password aktif.
+
 **Status terbaru (17 September 2026): live di https://admin.xydesk.my.id.** OAuth memakai client admin terpisah; widget Turnstile admin sudah terpasang. Source kode `9fa11a8`. Login akun manusia masih perlu smoke test pemilik.
 
 ## Login

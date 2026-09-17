@@ -1306,3 +1306,15 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-ADMINLIVE. Pemilik mengunggah cli
 - Smoke test HTTP: healthz 200; admin health/stats anonim 401; maintenance publik 200 tanpa metadata; POST maintenance anonim 401 tanpa penulisan; login captcha palsu 403.
 - Pemilik masih harus login akun admin + menyelesaikan captcha sendiri, lalu memeriksa panel Backend/Server. Tidak mengklaim authenticated end-to-end atau uji host Windows. Tidak ada restart engine, rotasi global, bump versi, rilis APK/desktop, atau artikel live.
 - Versi lama memuat bypass login: jangan rollback otomatis ke versi lama bila login bermasalah. Utamakan fix-forward atau pembatasan akses sementara yang disetujui operator.
+
+
+## Username/password + authenticator — 2026-09-17
+
+Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih password+captcha+2FA dan mengizinkan penggantian produksi setelah akun pengganti siap.
+
+- Migrasi dua fase: Google membuktikan pemilik untuk setup pertama; akun password dan penutupan Google/JWT lama baru berlaku dalam transaksi setelah TOTP dikonfirmasi. Tidak membuat akun/password pemilik otomatis.
+- Password PBKDF2-SHA256 100k (batas Workers) + salt + HMAC pepper khusus; TOTP AES-GCM; recovery sekali pakai; limiter IP/username; anti-replay dalam transaksi; sesi cookie HttpOnly host-only satu jam dan logout server-side. POST admin hanya menerima Origin admin; JSON maksimum 8KiB.
+- Secret baru ADMIN_AUTH_KEY khusus admin disiapkan dan diarsipkan di berkas kunci di luar repo. AUTH_SECRET/client web/APK/secret global tidak dirotasi. Password/seed TOTP/kode pemulihan pemilik tidak diminta di chat dan tidak diarsipkan oleh operator.
+- Tes: Worker 144/144; panel 18/18; build, runtime SQLite, dan alur browser terhadap runtime lokal lolos. Browser menguji setup, TOTP, recovery, reload cookie, logout, login recovery, penolakan replay; tanpa pageerror. Captcha dan bootstrap proof ditirukan hanya di lokal.
+- Batas: satu akun admin, belum ada UI ganti password/enrollment ulang/regenerasi recovery/reset mandiri. Kehilangan password atau kedua faktor perlu pemulihan manual terverifikasi; jangan membuat bypass Google. Dokumentasi lengkap di admin/AUTHENTICATION.md.
+- Akun produksi tetap menunggu setup oleh pemilik. Hasil upload/aktivasi dan konfigurasi live dicatat setelah rollout. Perubahan mode tool/check_backend_live.py yang sudah ada tidak ikut commit.

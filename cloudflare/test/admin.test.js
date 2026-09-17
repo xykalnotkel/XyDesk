@@ -4,12 +4,13 @@ import {handleAdmin} from '../src/admin.js';
 import {signJwt,verifyJwt} from '../src/auth.js';
 import {AuthStore} from '../src/authstore.js';
 const secret='admin-unit-test-secret', email='admin@example.com';
-const base={AUTH_SECRET:secret,ADMIN_EMAILS:email,ADMIN_GOOGLE_CLIENT_ID:'admin-google-test-client',GOOGLE_CLIENT_ID:'web-google-test-client',TURNSTILE_SECRET:'captcha-test-secret'};
+const configBinding={idFromName:n=>n,get:()=>({fetch:async()=>Response.json({passwordEnabled:false,setupAvailable:true})})};
+const base={AUTH_STORE:configBinding,AUTH_SECRET:secret,ADMIN_EMAILS:email,ADMIN_GOOGLE_CLIENT_ID:'admin-google-test-client',GOOGLE_CLIENT_ID:'web-google-test-client',TURNSTILE_SECRET:'captcha-test-secret'};
 const originalFetch=globalThis.fetch;
 afterEach(()=>{globalThis.fetch=originalFetch});
-const binding=fn=>({idFromName:n=>n,get:()=>({fetch:fn})});
+const binding=fn=>({idFromName:n=>n,get:()=>({fetch:req=>new URL(req.url).pathname==='/admin/security/config'?Promise.resolve(Response.json({passwordEnabled:false,setupAvailable:true})):fn(req)})});
 async function call(path, {body,env={},claims={email,role:'admin',aud:'xydesk-admin'},anonymous=false}={}) {
-  const headers={};
+  const headers={Origin:'https://admin.xydesk.my.id'};
   if(!anonymous)headers.Authorization=`Bearer ${await signJwt(claims,secret,60)}`;
   const request=new Request(`https://signal.example/admin/${path}`,{method:body!==undefined?'POST':'GET',headers,body:body!==undefined?JSON.stringify(body):undefined});
   return handleAdmin(request,{...base,...env},new URL(request.url));

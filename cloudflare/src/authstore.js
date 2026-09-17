@@ -1,3 +1,4 @@
+import { AdminSecurity } from './admin_security.js';
 import { validMaintenancePatch, emptyMaintenance } from './maintenance.js';
 // XyDesk AuthStore — Durable Object yang menyimpan user & OTP (KV storage)
 // dan menjalankan alur auth (request-otp, verify-otp, google, me).
@@ -71,6 +72,13 @@ export class AuthStore {
       return json({ error: 'auth-not-configured' }, 503);
     }
 
+    if (path.startsWith('/admin/security/') && request.headers.get('x-internal-admin') === '1') {
+      let body = {};
+      if (request.method === 'POST') {
+        try { body = await request.json(); } catch { return json({ error: 'bad-json' }, 400); }
+      } else if (request.method !== 'GET' || path !== '/admin/security/config') return json({ error: 'method-not-allowed' }, 405);
+      return new AdminSecurity(this.ctx.storage, this.env).fetch(path.slice('/admin/security/'.length), body);
+    }
     if (path === '/auth/request-otp' && request.method === 'POST') {
       return this.requestOtp(request);
     }

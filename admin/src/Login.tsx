@@ -1,59 +1,37 @@
-import { useEffect, useRef, useState } from 'react'
-import { loginAdmin, TURNSTILE_SITEKEY } from './api'
-
-declare global {
-  interface Window {
-    turnstile?: {
-      render:(el:HTMLElement, options:{sitekey:string;callback:(t:string)=>void;'expired-callback':()=>void;'error-callback':()=>void})=>string
-      reset:(id:string)=>void
-      remove:(id:string)=>void
-    }
-    google?: {accounts:{id:{initialize:(opts:{client_id:string;callback:(r:{credential:string})=>void})=>void;renderButton:(el:HTMLElement,opts:{theme:string;size:string})=>void}}}
-  }
+import { useEffect, useState } from 'react'
+import GoogleBootstrap from './GoogleBootstrap'
+import Captcha from './Captcha'
+import { fetchAuthConfig, passwordLogin } from './api'
+import type { AuthConfig, SessionStatus } from './api'
+export default function Login({onLogin}:{onLogin:(session:SessionStatus)=>void}){
+  const [config,setConfig]=useState<AuthConfig|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0)
+  useEffect(()=>{let active=true;setError('');fetchAuthConfig().then(c=>{if(active)setConfig(c)}).catch(e=>{if(active)setError(String(e))});return()=>{active=false}},[retry])
+  if(!config)return <div className="login-wrap"><div className="login-card"><h1>XyDesk Admin</h1>{error?<><p className="error" role="alert">{error}</p><button className="btn" onClick={()=>setRetry(v=>v+1)}>Coba lagi</button></>:<p>Memeriksa metode login...</p>}</div></div>
+  if(!config.passwordEnabled&&!config.setupAvailable)return <div className="login-wrap"><div className="login-card"><h1>Setup belum tersedia</h1><p>Konfigurasi keamanan server belum siap. Hubungi pemilik server; jangan kirim password ke chat.</p><button className="btn" onClick={()=>setRetry(v=>v+1)}>Periksa lagi</button></div></div>
+  if(!config.passwordEnabled)return <GoogleBootstrap onLogin={onLogin}/>
+  return <PasswordLogin onLogin={onLogin}/>
 }
-const CLIENT_ID=(import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || ''
-export default function Login({onLogin}:{onLogin:(token:string)=>void}){
-  const captcha=useRef<HTMLDivElement>(null)
-  const googleButton=useRef<HTMLDivElement>(null)
-  const captchaToken=useRef('')
-  const working=useRef(false)
-  const [error,setError]=useState('')
-  const [busy,setBusy]=useState(false)
-  useEffect(()=>{
-    if(!CLIENT_ID || !TURNSTILE_SITEKEY){ setError('Login belum dikonfigurasi: Google Client ID dan Turnstile sitekey diperlukan.'); return }
-    let disposed=false, initialized=false, widget:string|undefined
-    const initialize=()=>{
-      if(initialized || !window.google || !window.turnstile || !captcha.current || !googleButton.current) return
-      initialized=true
-      widget=window.turnstile.render(captcha.current,{
-        sitekey:TURNSTILE_SITEKEY, callback:t=>{captchaToken.current=t},
-        'expired-callback':()=>{captchaToken.current=''},
-        'error-callback':()=>{captchaToken.current='';setError('Captcha gagal dimuat. Muat ulang halaman.')}
-      })
-      window.google.accounts.id.initialize({client_id:CLIENT_ID,callback:async result=>{
-        if(disposed || working.current) return
-        if(!captchaToken.current){setError('Selesaikan captcha sebelum memilih akun Google.');return}
-        working.current=true;setBusy(true);setError('')
-        const token=captchaToken.current;captchaToken.current=''
-        try{const session=await loginAdmin(result.credential,token);if(!disposed) onLogin(session.token)}
-        catch(e){if(!disposed) setError(String(e))}
-        finally{
-          working.current=false
-          if(!disposed){setBusy(false);if(widget) window.turnstile?.reset(widget)}
-        }
-      }})
-      window.google.accounts.id.renderButton(googleButton.current,{theme:'outline',size:'large'})
-    }
-    initialize()
-    const interval=setInterval(initialize,200)
-    const timeout=setTimeout(()=>{clearInterval(interval);if(!initialized)setError('Layanan Google atau captcha tidak dapat dimuat. Periksa jaringan lalu muat ulang.')},15000)
-    return ()=>{disposed=true;clearInterval(interval);clearTimeout(timeout);captchaToken.current='';if(widget)window.turnstile?.remove(widget);googleButton.current?.replaceChildren()}
-  },[onLogin])
-  return <div className="login-wrap"><div className="login-card">
-    <div className="login-head"><img src="/logo.png" alt="XyDesk"/><div><h1>XyDesk Admin</h1><p>Masuk menggunakan akun Google admin yang diizinkan.</p></div></div>
-    <div ref={captcha} style={{minHeight:65}}/>
-    <div ref={googleButton}/>
-    {busy && <p role="status">Memverifikasi akun...</p>}
-    {error && <p className="error" role="alert">{error}</p>}
-  </div></div>
+function PasswordLogin({onLogin}:{onLogin:(session:SessionStatus)=>void}){
+  const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[code,setCode]=useState('')
+  const [recovery,setRecovery]=useState(false),[captcha,setCaptcha]=useState(''),[nonce,setNonce]=useState(0)
+  const [busy,setBusy]=useState(false),[error,setError]=useState('')
+  const submit=async(e:React.FormEvent)=>{
+    e.preventDefault();if(busy||!captcha)return
+    setBusy(true);setError('')
+    try{const status=await passwordLogin(username,password,code,recovery,captcha);setPassword('');setCode('');onLogin(status)}
+    catch(e){setError(String(e));setCode('')}
+    finally{setBusy(false);setCaptcha('');setNonce(v=>v+1)}
+  }
+  return <div className="login-wrap"><form className="login-card" onSubmit={submit}>
+    <div className="login-head"><img src="/logo.png" alt="XyDesk"/><div><h1>XyDesk Admin</h1><p>Username, password, dan verifikasi dua langkah.</p></div></div>
+    <div className="field"><label htmlFor="admin-username">Username</label><input id="admin-username" autoComplete="username" autoCapitalize="none" value={username} onChange={e=>setUsername(e.target.value)} minLength={3} maxLength={32} required disabled={busy}/></div>
+    <div className="field"><label htmlFor="admin-password">Password</label><input id="admin-password" type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} maxLength={128} required disabled={busy}/></div>
+    <div className="field"><label htmlFor="admin-code">{recovery?'Kode pemulihan':'Kode authenticator'}</label><input id="admin-code" autoComplete="one-time-code" inputMode={recovery?'text':'numeric'} value={code} onChange={e=>setCode(e.target.value)} maxLength={recovery?64:6} required disabled={busy}/></div>
+    <label style={{fontSize:12,display:'flex',gap:8}}><input type="checkbox" checked={recovery} onChange={e=>{setRecovery(e.target.checked);setCode('')}} disabled={busy}/> Gunakan kode pemulihan sekali pakai</label>
+    <Captcha onToken={setCaptcha} nonce={nonce}/>
+    <button type="button" className="btn" onClick={()=>setNonce(v=>v+1)} disabled={busy}>Muat ulang captcha</button>
+    {error&&<p className="error" role="alert">{error}</p>}
+    <button className="btn primary block" type="submit" disabled={busy||!captcha} style={{marginTop:12}}>{busy?'Memeriksa...':'Masuk'}</button>
+    <p className="muted" style={{fontSize:12}}>Sesi disimpan sebagai cookie aman, bukan token yang bisa dibaca JavaScript. Kode authenticator yang sudah dipakai harus menunggu periode berikutnya.</p>
+  </form></div>
 }

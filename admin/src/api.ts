@@ -69,7 +69,7 @@ export async function loginAdmin(googleIdToken: string, turnstileToken: string):
   return j
 }
 
-export function logoutAdmin() {
+function clearAdminSession() {
   setAdminToken(null)
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('xydesk-admin-logout'))
 }
@@ -80,9 +80,9 @@ async function adminFetch(path: string, init?: RequestInit) {
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string> || {}) }
   if (token) headers['authorization'] = `Bearer ${token}`
   if (init?.body && !(headers['content-type'])) headers['content-type'] = 'application/json'
-  const r = await fetch(`${SIGNAL_BASE}${path}`, { ...init, headers })
+  const r = await fetch(`${SIGNAL_BASE}${path}`, { ...init, headers, credentials:'include' })
   if (r.status === 401) {
-    logoutAdmin()
+    clearAdminSession()
     throw new Error('Sesi admin habis — login ulang')
   }
   return r
@@ -182,4 +182,48 @@ export async function fetchHealth(): Promise<Health> {
   const r=await adminFetch('/admin/health')
   if(!r.ok) throw new Error(`Pemeriksaan gagal (HTTP ${r.status})`)
   return await r.json()
+}
+
+export interface SessionStatus { email:string; username?:string; setupRequired:boolean }
+export interface AuthConfig { passwordEnabled:boolean; setupAvailable:boolean }
+const authErrors:Record<string,string>={
+  'invalid-credentials':'Username, password, atau kode keamanan tidak sesuai. Kode authenticator yang sudah digunakan tidak dapat dipakai lagi.',
+  'captcha-invalid':'Captcha tidak valid atau kedaluwarsa. Selesaikan captcha lagi.',
+  'too-many-attempts':'Terlalu banyak percobaan. Tunggu 15 menit sebelum mencoba lagi.',
+  'setup-closed':'Akun admin sudah dikonfigurasi. Muat ulang lalu masuk dengan username.',
+  'setup-closed-or-changed':'Setup sudah berubah atau selesai. Muat ulang halaman.',
+  'setup-expired':'Setup kedaluwarsa. Mulai lagi dari awal.',
+  'recent-login-required':'Untuk setup, keluar lalu login Google lagi agar verifikasi masih baru.',
+  'invalid-authenticator-code':'Kode authenticator tidak cocok. Periksa jam perangkat lalu coba kode terbaru.',
+  'google-login-disabled':'Login Google sudah dimatikan. Muat ulang lalu gunakan username dan password.',
+  'username-3-32-password-14-128':'Username 3–32 karakter (huruf kecil, angka, titik, garis bawah, atau tanda minus). Password 14–128 karakter.',
+}
+async function readAuthResponse<T>(r:Response):Promise<T> {
+  const data=await r.json().catch(()=>({error:'invalid-response'}))
+  if(!r.ok) throw new Error(authErrors[data.error] || `Permintaan gagal (HTTP ${r.status}). ${data.error||''}`)
+  return data as T
+}
+export async function fetchAuthConfig():Promise<AuthConfig> {
+  return readAuthResponse(await fetch(`${SIGNAL_BASE}/admin/auth/config`,{credentials:'include'}))
+}
+export async function fetchAdminSession():Promise<SessionStatus> {
+  return readAuthResponse(await adminFetch('/admin/session'))
+}
+export async function passwordLogin(username:string,password:string,code:string,recovery:boolean,turnstileToken:string):Promise<SessionStatus> {
+  const r=await fetch(`${SIGNAL_BASE}/admin/password-login`,{method:'POST',credentials:'include',headers:{'content-type':'application/json'},body:JSON.stringify({username,password,code,recovery,turnstileToken})})
+  const status=await readAuthResponse<SessionStatus>(r)
+  setAdminToken(null)
+  return status
+}
+export async function startAdminSetup(username:string,password:string):Promise<{secret:string;otpauthUri:string;expiresAt:number}> {
+  return readAuthResponse(await adminFetch('/admin/setup/start',{method:'POST',body:JSON.stringify({username,password})}))
+}
+export async function confirmAdminSetup(code:string):Promise<SessionStatus & {recoveryCodes:string[]}> {
+  const status=await readAuthResponse<SessionStatus & {recoveryCodes:string[]}>(await adminFetch('/admin/setup/confirm',{method:'POST',body:JSON.stringify({code})}))
+  setAdminToken(null)
+  return status
+}
+export async function logoutAdmin() {
+  await readAuthResponse(await adminFetch('/admin/logout',{method:'POST',body:'{}'}))
+  clearAdminSession()
 }

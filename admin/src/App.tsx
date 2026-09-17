@@ -1,12 +1,13 @@
 import Login from './Login'
+import Setup from './Setup'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import {
   LayoutDashboard, Users, MonitorSmartphone, Link2, Cloud, Cpu, Server, Wrench, ScrollText, Settings,
   Search, Bell, LogOut, ShieldCheck, Activity, Database, HardDrive, Globe, Power, RotateCcw, Ban, Eye, Pencil, Trash2, Pause, AlertTriangle
 } from 'lucide-react'
-import { fetchStats, fetchUsers, fetchDevices, getAdminToken, logoutAdmin, saveMaintenance, fetchHealth, fetchMaintenance, banUser, setUserRole, revokeUser, kickDevice, terminateSession, purgeHosting, fetchLogs } from './api'
+import { fetchStats, fetchUsers, fetchDevices, fetchAdminSession, logoutAdmin, saveMaintenance, fetchHealth, fetchMaintenance, banUser, setUserRole, revokeUser, kickDevice, terminateSession, purgeHosting, fetchLogs } from './api'
 
-import type { Stats, MaintenanceState, MaintenanceService } from './api'
+import type { Stats, MaintenanceState, MaintenanceService, SessionStatus } from './api'
 
 type Page = 'dashboard'|'users'|'devices'|'sessions'|'hosting'|'backend'|'server'|'maintenance'|'logs'|'settings'
 
@@ -30,9 +31,13 @@ function useStats(token: string | null){
 }
 
 export default function App(){
-  const [token,setToken]=useState<string|null>(()=> getAdminToken())
+  const [session,setSession]=useState<SessionStatus|null>(null)
+  const [checking,setChecking]=useState(true)
+  const [sessionError,setSessionError]=useState('')
+  const token=session&&!session.setupRequired?'cookie-or-bootstrap':null
+  useEffect(()=>{let active=true;fetchAdminSession().then(s=>{if(active)setSession(s)}).catch(()=>{}).finally(()=>{if(active)setChecking(false)});return()=>{active=false}},[])
   useEffect(()=>{
-    const expired=()=>setToken(null)
+    const expired=()=>{setSession(null);setChecking(false)}
     window.addEventListener('xydesk-admin-logout',expired)
     return ()=>window.removeEventListener('xydesk-admin-logout',expired)
   },[])
@@ -41,8 +46,10 @@ export default function App(){
   const [q,setQ]=useState('')
   const [sidebarOpen,setSidebarOpen]=useState(false)
 
-  const onLogin=useCallback((t:string)=>{ setToken(t); location.hash='#dashboard' },[])
-  if(!token) return <Login onLogin={onLogin} />
+  const onLogin=useCallback((s:SessionStatus)=>{setSession(s);setChecking(false);setSessionError('');location.hash='#dashboard'},[])
+  if(checking)return <div className="login-wrap"><p>Memeriksa sesi...</p></div>
+  if(!session)return <Login onLogin={onLogin}/>
+  if(session.setupRequired)return <Setup onComplete={onLogin}/>
 
   return (
     <div className="layout">
@@ -71,10 +78,10 @@ export default function App(){
         <div className="sidebar-foot">
           <div className="avatar">AD</div>
           <div style={{flex:1}}>
-            <div style={{fontWeight:900, fontSize:13}}>Admin Utama</div>
-            <div className="muted mono" style={{fontSize:11}}>admin@xydesk.my.id</div>
+            <div style={{fontWeight:900, fontSize:13}}>{session.username||'Admin'}</div>
+            <div className="muted mono" style={{fontSize:11}}>{session.email}</div>
           </div>
-          <button className="btn" onClick={()=>{ logoutAdmin(); setToken(null) }} style={{padding:'6px 8px'}}><LogOut size={14}/> Keluar</button>
+          <button className="btn" onClick={()=>{void logoutAdmin().catch(e=>setSessionError(String(e)))}} style={{padding:'6px 8px'}}><LogOut size={14}/> Keluar</button>
         </div>
       </aside>
 
@@ -93,6 +100,7 @@ export default function App(){
         </div>
 
         <div className="content">
+          {sessionError&&<p className="error" role="alert">{sessionError}</p>}
           {statsError && <div className="error" role="alert">{statsError} — mencoba lagi otomatis setiap 15 detik.</div>}
           {page==='dashboard' && <Dashboard stats={stats} q={q} />}
           {page==='users' && <UsersPage q={q} />}
@@ -232,7 +240,6 @@ function SessionsPage(){
   const [msg,setMsg]=useState('')
   const load=async()=>{
     try{
-      await fetch('https://signal.xydesk.my.id/hub/stats', { headers: { 'Authorization': `Bearer ${getAdminToken()}` } }).catch(()=>null)
       // fallback: devices as sessions
       const devs = await fetchDevices()
       setRows(devs.map((d:any)=> ({ id: d.id, host: d.name, client: '—', codec: d.capture, dur: '-' })))
@@ -360,7 +367,7 @@ function LogsPage(){
   return (<><h1 style={{fontSize:20}}>Logs — Realtime</h1>{error && <div className="error" role="alert">{error} — daftar terakhir mungkin sudah tidak terbaru.</div>}<div className="card" style={{marginTop:12}}><div className="row" style={{marginBottom:8}}><input placeholder="filter: ban, kick, role" value={q} onChange={e=> setQ(e.target.value)} style={{flex:1, padding:'10px'}}/><button className="btn primary" onClick={load}>Refresh</button></div><pre className="mono" style={{background:'#0F0F14', color:'#EDE9FE', padding:12, maxHeight:360, overflow:'auto', fontSize:11}}>{filtered.length===0 ? 'Belum ada log admin — realtime 0' : filtered.map((l:any)=> `${new Date(l.at).toLocaleString()} [${l.action}] ${l.email||l.id||''} by ${l.by}`).join('\n')}</pre></div></>)
 }
 function SettingsPage(){
-  return (<><h1 style={{fontSize:20}}>Settings</h1><div className="grid2" style={{marginTop:12}}><div className="card"><h3>Brand</h3><p className="muted" style={{fontSize:12}}>Kotak tegas, no rounded, custom total, #7C3AED.</p><div className="row" style={{marginTop:8}}><span style={{width:28, height:28, background:'#7C3AED', display:'inline-block', border:'1px solid var(--border)'}}/><span style={{width:28, height:28, background:'#EDE9FE', display:'inline-block', border:'1px solid var(--border)'}}/></div></div><div className="card"><h3>Keamanan</h3><p className="muted" style={{fontSize:12}}>Login + Turnstile + role ADMIN/support/viewer — tanpa emoji, lucide-react.</p><div className="row"><span className="badge dark"><ShieldCheck size={12}/> Turnstile ON</span><span className="badge ok"><Activity size={12}/> 2FA ready</span></div></div></div></>)
+  return (<><h1 style={{fontSize:20}}>Settings</h1><div className="grid2" style={{marginTop:12}}><div className="card"><h3>Brand</h3><p className="muted" style={{fontSize:12}}>Kotak tegas, no rounded, custom total, #7C3AED.</p><div className="row" style={{marginTop:8}}><span style={{width:28, height:28, background:'#7C3AED', display:'inline-block', border:'1px solid var(--border)'}}/><span style={{width:28, height:28, background:'#EDE9FE', display:'inline-block', border:'1px solid var(--border)'}}/></div></div><div className="card"><h3>Keamanan</h3><p className="muted" style={{fontSize:12}}>Username, password, captcha, dan authenticator. Sesi disimpan dalam cookie HttpOnly.</p><div className="row"><span className="badge dark"><ShieldCheck size={12}/> Turnstile ON</span><span className="badge ok"><Activity size={12}/> TOTP aktif</span></div></div></div></>)
 }
 
 // @ts-ignore

@@ -25,6 +25,7 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Fixed
+- Sesi admin setelah aktivasi password memakai cookie HttpOnly host-only, pemeriksaan Origin pada POST, dan pencabutan sesi saat logout; JWT Google lama ditolak setelah migrasi.
 - OAuth admin memakai client khusus melalui `ADMIN_GOOGLE_CLIENT_ID`; client web/APK tidak diubah dan tidak menjadi fallback untuk login admin. Konfigurasi publik build admin dipisahkan dari secret.
 - Worker: entrypoint runtime hanya mengekspor handler dan kelas Durable Object; konstanta helper untuk tes tidak lagi membuat startup workerd gagal.
 - Backend admin: hapus fallback identitas Google palsu dan bypass captcha; pakai verifikasi Google dengan signature helper yang benar, hostname Turnstile, dan sesi admin audience khusus satu jam.
@@ -37,6 +38,7 @@ Kebijakan rilis:
 - Logs: kegagalan HTTP ditampilkan sebagai galat, bukan daftar kosong yang tampak sukses.
 
 ### Added
+- Setup satu kali username/password + TOTP, kode pemulihan sekali pakai, limiter login, enkripsi seed TOTP, dan verifier password ber-pepper. Google ditutup hanya setelah akun baru terverifikasi; tidak membuat password pemilik otomatis.
 - `cloudflare npm run test:runtime`: uji bundle pada runtime SQLite lokal, mencakup transaksi, konflik konkurensi, audit, health, dan pembatasan akses.
 - Endpoint admin health read-only untuk Worker/AuthStore/Hub; status engine dinyatakan belum tersedia.
 - Panduan konfigurasi dan rollout di `admin/README.md`; total 28 tes backend admin baru dan 3 tes API panel tambahan.

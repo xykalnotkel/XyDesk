@@ -69,3 +69,29 @@ test('health gagal tidak menjadi status sehat',async()=>{
   globalThis.fetch=async()=>new Response('',{status:503})
   await assert.rejects(api.fetchHealth,/503/)
 })
+
+test('login password mengirim cookie dan tidak menyimpan sesi baru di localStorage',async()=>{
+  api.setAdminToken('legacy-bootstrap')
+  globalThis.fetch=async(url,init)=>{
+    assert.equal(url,'https://signal.xydesk.my.id/admin/password-login')
+    assert.equal(init.credentials,'include')
+    assert.deepEqual(JSON.parse(init.body),{username:'owner',password:'test-long-password',code:'123456',recovery:false,turnstileToken:'captcha'})
+    return Response.json({email:'owner@example.com',username:'owner',setupRequired:false})
+  }
+  const session=await api.passwordLogin('owner','test-long-password','123456',false,'captcha')
+  assert.equal(session.setupRequired,false);assert.equal(api.getAdminToken(),null)
+})
+test('logout gagal tidak mengaku sesi sudah dihapus',async()=>{
+  api.setAdminToken('legacy-bootstrap')
+  globalThis.fetch=async()=>Response.json({error:'logout-failed'},{status:503})
+  await assert.rejects(api.logoutAdmin,/503/)
+  assert.equal(api.getAdminToken(),'legacy-bootstrap')
+})
+test('konfirmasi setup menghapus token Google lokal setelah server berhasil',async()=>{
+  api.setAdminToken('legacy-bootstrap')
+  globalThis.fetch=async(url,init)=>{
+    assert.equal(url,'https://signal.xydesk.my.id/admin/setup/confirm');assert.equal(init.credentials,'include');assert.equal(init.headers.authorization,'Bearer legacy-bootstrap')
+    return Response.json({email:'owner@example.com',username:'owner',setupRequired:false,recoveryCodes:['test-recovery-only']})
+  }
+  const status=await api.confirmAdminSetup('123456');assert.equal(status.recoveryCodes.length,1);assert.equal(api.getAdminToken(),null)
+})

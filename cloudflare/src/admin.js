@@ -28,27 +28,67 @@ async function verifyTurnstile(token, ip, env) {
 }
 
 export async function handleAdmin(request, env, url) {
+  try { return await handleAdminRequest(request, env, url) }
+  catch { return json({error:'admin-service-unavailable'},503,env,request) }
+}
+async function handleAdminRequest(request, env, url) {
   const path = url.pathname
   // CORS preflight
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders(request, env) })
   }
 
-  // Login tidak butuh auth
+  if (!['GET','HEAD','OPTIONS'].includes(request.method) && !adminOrigin(request, env)) {
+    return json({error:'origin-not-allowed'},403,env,request)
+  }
+  if (Number(request.headers.get('content-length') || 0) > 8192) return json({error:'request-too-large'},413,env,request)
+  if (path === '/admin/auth/config' && request.method === 'GET') {
+    return json(await securityConfig(env),200,env,request)
+  }
   if (path === '/admin/login' && request.method === 'POST') {
+    if ((await securityConfig(env)).passwordEnabled) return json({error:'google-login-disabled'},410,env,request)
     return handleLogin(request, env)
   }
-
-  // Maintenance GET boleh public (untuk web banner), tapi POST wajib admin
-  if (path === '/admin/maintenance' && request.method === 'GET' && !request.headers.get('Authorization')) {
+  if (path === '/admin/password-login' && request.method === 'POST') {
+    let body
+    try { body=await limitedJson(request) }catch{return json({error:'bad-json'},400,env,request)}
+    if (!body || typeof body!=='object') return json({error:'bad-json'},400,env,request)
+    if (!await verifyTurnstile(body.turnstileToken,request.headers.get('CF-Connecting-IP')||'',env)) return json({error:'captcha-invalid'},403,env,request)
+    return securityResponse('login',{username:body.username,password:body.password,code:body.code,recovery:body.recovery===true,ip:request.headers.get('CF-Connecting-IP')||''},env,request,true)
+  }
+  const cookie = cookieToken(request)
+  if (path === '/admin/maintenance' && request.method === 'GET' && !request.headers.get('Authorization') && !cookie) {
     return readMaintenance(request, env)
   }
-  // semua endpoint lain butuh admin JWT
-  const auth = request.headers.get('Authorization') || ''
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
-  const payload = await verifyJwt(token, env.AUTH_SECRET || env.XYDESK_SECRET)
-  if (!payload || payload.aud !== 'xydesk-admin' || payload.role !== 'admin' || !isAdminEmail(payload.email, env)) {
-    return json({ error: 'unauthorized — admin only' }, 401, env, request)
+  if (path === '/admin/logout' && request.method === 'POST') {
+    if (cookie) {
+      const r=await securityRequest('logout',{token:cookie},env)
+      if (!r.ok && r.status!==401) return json({error:'logout-failed'},503,env,request)
+    }
+    const r=json({ok:true},200,env,request);r.headers.set('Set-Cookie',sessionCookie('',0));return r
+  }
+  let payload, setupRequired=false
+  const config=await securityConfig(env)
+  if (config.passwordEnabled) {
+    if (!cookie) return json({error:'unauthorized'},401,env,request)
+    const r=await securityRequest('session',{token:cookie},env)
+    if (!r.ok) return json({error:r.status===401?'unauthorized':'session-unavailable'},r.status===401?401:503,env,request)
+    payload=await r.json()
+  } else {
+    const auth=request.headers.get('Authorization')||''
+    payload=await verifyJwt(auth.startsWith('Bearer ')?auth.slice(7):'',env.AUTH_SECRET||env.XYDESK_SECRET)
+    if (!payload || payload.aud!=='xydesk-admin' || payload.role!=='admin' || !isAdminEmail(payload.email,env)) return json({error:'unauthorized'},401,env,request)
+    setupRequired=true
+  }
+  if (path === '/admin/session' && request.method === 'GET') return json({email:payload.email,username:payload.username,setupRequired},200,env,request)
+  if (path.startsWith('/admin/setup/') && request.method === 'POST') {
+    if (!setupRequired) return json({error:'setup-closed'},409,env,request)
+    if (path==='/admin/setup/start' && (!payload.iat || Date.now()/1000-payload.iat>600)) return json({error:'recent-login-required'},403,env,request)
+    let body;try{body=await limitedJson(request)}catch{return json({error:'bad-json'},400,env,request)}
+    if (!body || typeof body!=='object') return json({error:'bad-json'},400,env,request)
+    if (path==='/admin/setup/start') return securityResponse('setup/start',{actor:payload.email,username:body.username,password:body.password},env,request)
+    if (path==='/admin/setup/confirm') return securityResponse('setup/confirm',{actor:payload.email,code:body.code},env,request,true)
+    return json({error:'not-found'},404,env,request)
   }
 
   // Stats NYATA — dari Hub (onlineDevices realtime) + AuthStore (totalUsers/guest) — gada placeholder
@@ -160,7 +200,7 @@ export async function handleAdmin(request, env, url) {
 
   if (path === '/admin/maintenance' && request.method === 'POST') {
     let body
-    try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    try { body = await limitedJson(request) } catch { return json({ error: 'bad-json' }, 400, env, request) }
     if (!validMaintenancePatch(body)) return json({ error: 'bad-maintenance' }, 400, env, request)
     try {
       const result = await internalJson(env.AUTH_STORE, 'auth', '/admin/maintenance', {
@@ -186,7 +226,7 @@ export async function handleAdmin(request, env, url) {
 
   // === SEMUA AKSI NYATA — GADA DUMMY ===
   if (path === '/admin/users/ban' && request.method === 'POST') {
-    let body; try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    let body; try { body = await limitedJson(request) } catch { return json({ error: 'bad-json' }, 400, env, request) }
     const { email } = body
     if (!email) return json({ error: 'email required' }, 400, env, request)
     try {
@@ -197,7 +237,7 @@ export async function handleAdmin(request, env, url) {
     } catch (e) { return json({ error: String(e) }, 500, env, request) }
   }
   if (path === '/admin/users/role' && request.method === 'POST') {
-    let body; try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    let body; try { body = await limitedJson(request) } catch { return json({ error: 'bad-json' }, 400, env, request) }
     const { email, role } = body
     if (!email || !['admin','support','viewer'].includes(role)) return json({ error: 'bad role' }, 400, env, request)
     try {
@@ -207,7 +247,7 @@ export async function handleAdmin(request, env, url) {
     } catch (e) { return json({ error: String(e) }, 500, env, request) }
   }
   if (path === '/admin/users/revoke' && request.method === 'POST') {
-    let body; try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    let body; try { body = await limitedJson(request) } catch { return json({ error: 'bad-json' }, 400, env, request) }
     const { email } = body
     try {
       const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
@@ -216,7 +256,7 @@ export async function handleAdmin(request, env, url) {
     } catch (e) { return json({ error: String(e) }, 500, env, request) }
   }
   if (path === '/admin/devices/kick' && request.method === 'POST') {
-    let body; try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    let body; try { body = await limitedJson(request) } catch { return json({ error: 'bad-json' }, 400, env, request) }
     const { id } = body
     if (!id) return json({ error: 'id required' }, 400, env, request)
     try {
@@ -227,7 +267,7 @@ export async function handleAdmin(request, env, url) {
     } catch (e) { return json({ error: String(e) }, 500, env, request) }
   }
   if (path === '/admin/sessions/terminate' && request.method === 'POST') {
-    let body; try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+    let body; try { body = await limitedJson(request) } catch { return json({ error: 'bad-json' }, 400, env, request) }
     const { id } = body
     try {
       const hid = env.HUB.idFromName('global')
@@ -254,7 +294,7 @@ export async function handleAdmin(request, env, url) {
 
 async function handleLogin(request, env) {
   let body
-  try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+  try { body = await limitedJson(request) } catch { return json({ error: 'bad-json' }, 400, env, request) }
   if (!body || typeof body !== 'object') return json({ error:'bad-json' }, 400, env, request)
   const { googleIdToken, turnstileToken } = body
   if (typeof googleIdToken !== 'string' || !googleIdToken || typeof turnstileToken !== 'string' || !turnstileToken) return json({ error:'missing-token' },400,env,request)
@@ -281,9 +321,10 @@ async function handleLogin(request, env) {
 function corsHeaders(request, env) {
   const origin = request.headers.get('Origin') || ''
   const configured = String(env.CORS_ORIGINS || 'https://app.xydesk.my.id,https://xydesk-admin.pages.dev,https://admin.xydesk.my.id').split(',').map(s=>s.trim()).filter(Boolean)
-  const allow = configured.includes('*') ? '*' : configured.includes(origin) ? origin : (configured[0] || '*')
+  const allow = configured.includes(origin) ? origin : ''
   return {
-    'Access-Control-Allow-Origin': allow,
+    'Access-Control-Allow-Origin': adminOrigin(request,env) ? origin : allow,
+    ...(adminOrigin(request,env) ? {'Access-Control-Allow-Credentials':'true'} : {}),
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
     'Access-Control-Max-Age': '86400',
@@ -293,6 +334,8 @@ function corsHeaders(request, env) {
 
 function json(obj, status, env, request) {
   const headers = { 'cache-control':'no-store', 'content-type': 'application/json', ...corsHeaders(request||{ headers: new Map() }, env) }
+  if(status===429) headers['Retry-After']='900'
+  if(status===401) headers['Set-Cookie']=sessionCookie('',0)
   return new Response(JSON.stringify(obj), { status, headers })
 }
 
@@ -311,10 +354,64 @@ async function internalJson(binding, name, path, init = {}) {
 async function readMaintenance(request,env) {
   try {
     const data = await internalJson(env.AUTH_STORE,'auth','/admin/maintenance')
-    if (!request.headers.get('Authorization')) {
+    if (!request.headers.get('Authorization') && !cookieToken(request)) {
       const {web,desktop,android,signal,message}=data
       return json({web,desktop,android,signal,message},200,env,request)
     }
     return json(data,200,env,request)
   } catch { return json({error:'maintenance-unavailable'},503,env,request) }
+}
+
+function adminOrigin(request,env) {
+  const origins=String(env.ADMIN_ORIGINS||'https://admin.xydesk.my.id').split(',').map(s=>s.trim())
+  return origins.includes(request.headers.get('Origin')||'')
+}
+function cookieToken(request) {
+  return (request.headers.get('Cookie')||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('__Host-xydesk_admin='))?.slice('__Host-xydesk_admin='.length)||''
+}
+function sessionCookie(token,ttl=3600) {
+  return `__Host-xydesk_admin=${token}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=${ttl}`
+}
+async function securityRequest(path,body,env) {
+  const stub=env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
+  let timer
+  try {return await Promise.race([
+    stub.fetch(new Request('https://internal/admin/security/'+path,{method:body===undefined?'GET':'POST',headers:{'x-internal-admin':'1','content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)})),
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('security-timeout')),10000)})
+  ])} finally {clearTimeout(timer)}
+}
+async function securityConfig(env) {
+  const r=await securityRequest('config',undefined,env)
+  if(!r.ok) throw new Error('security-unavailable')
+  const data=await r.json()
+  if(typeof data.passwordEnabled!=='boolean') throw new Error('invalid-security-config')
+  return data
+}
+async function securityResponse(path,body,env,request,setCookie=false) {
+  const r=await securityRequest(path,body,env),data=await r.json()
+  const token=data.token
+  delete data.token
+  const response=json(data,r.status,env,request)
+  if(r.ok && setCookie) {
+    if(typeof token!=='string' || !/^[A-Z2-7]{52}$/.test(token)) throw new Error('invalid-session-token')
+    response.headers.set('Set-Cookie',sessionCookie(token))
+  }
+  return response
+}
+
+async function limitedJson(request) {
+  const reader=request.body?.getReader()
+  if(!reader) throw new Error('bad-json')
+  const decoder=new TextDecoder();let bytes=0,text=''
+  try {
+    while(true) {
+      const {done,value}=await reader.read()
+      if(done)break
+      bytes+=value.byteLength
+      if(bytes>8192){await reader.cancel();throw new Error('request-too-large')}
+      text+=decoder.decode(value,{stream:true})
+    }
+    text+=decoder.decode()
+    return JSON.parse(text)
+  } finally {reader.releaseLock()}
 }
