@@ -1382,3 +1382,26 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - Status saat persiapan: YAML dan guard workflow diperiksa lokal; kompilasi/link
   Windows, smoke executable, dan validasi PowerShell menunggu hasil build-only.
   Tidak boleh menyebut paket executable valid sebelum hasil tersebut tersedia.
+
+
+### WINDOWSPACK — artefak final tervalidasi
+
+- Build awal `35251924013` (source `ce415f5`) sukses. Paket final menambahkan
+  EULA/inventaris dan file notice/lisensi dependency yang tersedia; build ulang
+  **35253045929** dari **c5feae3839bae1c90e142d49c697bda018ee7ede** sukses:
+  https://github.com/xykalnotkel/XyDesk/actions/runs/35253045929
+- Gerbang Rust Linux lulus; executable **Windows x64 MSVC benar-benar
+  dikompilasi dan di-link**, `--help` dijalankan pada Windows. Parser PowerShell,
+  pemeriksaan PE x64/checksum, serta penolakan checksum rusak lulus pada Windows.
+- Paket `XyDesk-Host-Test-x64-c5feae3.zip`, 7.521.926 byte; executable
+  16.731.648 byte. ZIP diunduh dari artefak run final, SHA-256 ZIP dan engine
+  dicocokkan, source SHA/target/versi 6.8.5 diperiksa; CRC seluruh ZIP lulus.
+  Bukti terstruktur: `docs/qa/windows-host-manual-2026-09-17.json`.
+- SHA-256 ZIP: `613cef395bd862cdf823857d02ac5a7057505413de863f7dd7ebad97f6f2238e`.
+- Diserahkan melalui workspace `deliverables/` bersama checksum dan panduan.
+  Ini paket engine uji unsigned, bukan installer/rilis baru; tidak mengganti UI
+  desktop Tauri atau instalasi lama. Launcher memakai identitas terpisah.
+- **Tidak ada Test Lab/RDP baru, restart RDP/host lama, deploy produksi, rilis,
+  atau bump versi.** Dua run tersebut hanya menyiapkan paket uji.
+- `hardwareTested:false`: capture/input/audio/stabilitas pada RDP pemilik
+  tetap menunggu uji manual; keberhasilan compiler tidak menggantikan itu.

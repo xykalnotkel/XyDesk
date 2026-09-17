@@ -1,0 +1,15 @@
+{
+  "run": "https://github.com/xykalnotkel/XyDesk/actions/runs/35253045929",
+  "sourceSha": "c5feae3839bae1c90e142d49c697bda018ee7ede",
+  "package": "XyDesk-Host-Test-x64-c5feae3.zip",
+  "packageSha256": "613cef395bd862cdf823857d02ac5a7057505413de863f7dd7ebad97f6f2238e",
+  "engineSha256": "058bed366bc58ade31326d13187526b5428a35a5c2f5d07ee5e61992ae2b2142",
+  "sizeBytes": 7521926,
+  "validation": [
+    "Linux Rust regression tests",
+    "Windows MSVC compile/link",
+    "Windows executable --help",
+    "PowerShell parser and package integrity"
+  ],
+  "hardwareTested": false
+}
