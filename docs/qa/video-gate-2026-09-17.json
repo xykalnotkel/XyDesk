@@ -1,0 +1,17 @@
+{
+  "date": "2026-09-17",
+  "baseline": "1ca169b",
+  "regression": "host/tests/gated_capture.rs",
+  "before": "FAIL: capture tidak pernah armed",
+  "after": "PASS: idle pre-Connected -> arm -> H264 RTP received -> close with idle open frame channel",
+  "checks": {
+    "rustfmt": "PASS",
+    "rust_lib": 122,
+    "rust_bin": 5,
+    "loopback": 1,
+    "gated_capture": 1
+  },
+  "environment": "Linux, real WebRTC peers, gated synthetic encoder; no Windows capture or Android decoder tested",
+  "field_result": "User confirms connected black screen on existing Windows RDP and Chrome Android; this regression proves a code defect, not that it is the only field cause",
+  "deployed": false
+}

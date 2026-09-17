@@ -1448,3 +1448,24 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - Reproduksi memerlukan payload ZIP ber-SHA yang dipin. Artefak GitHub lama
   memiliki masa retensi; gunakan salinan ZIP tervalidasi jika artefak kedaluwarsa,
   jangan diam-diam mengganti dengan rilis terbaru yang berbeda hash.
+
+
+## VIDEOGATE — regresi layar hitam, 2026-09-17
+
+- Pengguna mengonfirmasi Chrome Android tersambung tetapi hitam pada RDP yang
+  sudah dimiliki. Pairing/DC open tidak membuktikan adanya frame. Kredensial
+  yang ditempel pengguna tidak digunakan/disimpan; tidak mereset identitas.
+- Reproduksi baru menahan frame sampai capture armed, seperti gerbang Windows.
+  Kode baseline 1ca169b gagal karena pump menunggu frame sebelum memeriksa
+  Connected lagi. Setelah bounded wait 50ms, tes yang sama menerima RTP H264
+  dan pump berhenti saat peer ditutup walau channel frame masih terbuka/diam.
+- Lokal: fmt PASS; Rust 122 lib + 5 bin + 1 loopback + 1 gated capture PASS.
+  Bukti `docs/qa/video-gate-2026-09-17.json`. Tes ini Linux/sumber sintetis
+  bergated, bukan bukti DXGI/GDI/SendInput atau decode Android di RDP pengguna.
+- Installer yang sebelumnya diserahkan tetap c5feae3, belum berisi patch ini.
+  Persiapan engine/kemasan baru tidak boleh dianggap sudah dikirim atau diuji
+  sebelum hasil Windows tersedia. Tidak mengoperasikan RDP/driver/tscon.
+- Web fullscreen terpisah: pemanggilan setelah negosiasi tidak punya gesture
+  dan layout video tetap 16:9 dalam halaman. Belum diperbaiki/deploy; perlu
+  viewport session fallback dan tombol Fullscreen langsung dari gesture.
+- Audio WASAPI 0x80070057 masih terpisah dan belum diperbaiki.

@@ -15,6 +15,9 @@ use crate::control::ControlState;
 use crate::screen::{self, EncodedFrame};
 use crate::session::Session;
 
+/// Batas tidur saat sumber diam: perubahan state tidak bergantung pada frame.
+const CONNECTION_POLL_INTERVAL: Duration = Duration::from_millis(50);
+
 /// Jeda antar pengiriman ulang IDR simpanan sambil menunggu IDR hidup.
 ///
 /// Cukup rapat agar gambar muncul sepersekian detik setelah `Connected`, cukup
@@ -181,25 +184,27 @@ pub async fn pump_video(
             // Transport belum siap: frame apa pun yang ditulis sekarang
             // (termasuk IDR+SPS/PPS) akan hilang di jaringan. Buang.
             rescue = None;
-            if frames.recv().await.is_none() {
+            // Capture Windows menunggu arm_capture di atas. Menunggu frame
+            // tanpa batas di sini membuat keduanya saling menunggu selamanya.
+            if matches!(
+                tokio::time::timeout(CONNECTION_POLL_INTERVAL, frames.recv()).await,
+                Ok(None)
+            ) {
                 break; // channel tutup — sesi selesai
             }
             continue;
         }
 
-        // Connected. Bila penyelamatan aktif, jangan tidur tanpa batas: layar
-        // yang diam tidak menghasilkan frame, dan decoder klien menunggu IDR.
-        let diterima = match rescue
-            .as_ref()
-            .map(|r| r.next.saturating_duration_since(Instant::now()))
-        {
-            // `None` dari sini punya dua arti — jeda penyelamatan tiba, atau
-            // channel tutup — dan dibedakan di bawah lewat `frames.is_closed()`.
-            Some(wait) => tokio::time::timeout(wait, frames.recv())
-                .await
-                .unwrap_or_default(),
-            None => frames.recv().await,
-        };
+        // Tetap periksa transport saat sumber diam, termasuk ketika tidak ada
+        // IDR simpanan. Timeout state tidak berarti channel sudah selesai.
+        let wait = rescue.as_ref().map_or(CONNECTION_POLL_INTERVAL, |r| {
+            r.next
+                .saturating_duration_since(Instant::now())
+                .min(CONNECTION_POLL_INTERVAL)
+        });
+        let diterima = tokio::time::timeout(wait, frames.recv())
+            .await
+            .unwrap_or_default();
 
         match diterima {
             Some(frame) => {
@@ -223,7 +228,7 @@ pub async fn pump_video(
                     break; // channel tutup — sesi selesai
                 }
                 let Some(r) = rescue.as_mut() else {
-                    break; // tidak ada penyelamatan: tidak akan ada frame lagi
+                    continue; // sumber masih hidup, hanya belum ada frame
                 };
                 let now = Instant::now();
                 if now >= r.until {
@@ -234,6 +239,9 @@ pub async fn pump_video(
                     );
                     rescue = None;
                     continue;
+                }
+                if now < r.next {
+                    continue; // tick pemeriksaan transport, bukan jadwal kirim IDR
                 }
                 r.next = now + KEYFRAME_RESCUE_INTERVAL;
                 r.sent += 1;
