@@ -1417,3 +1417,34 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   yang dibundel. Identitas dan file tambahan dipertahankan; folder lain ditolak.
 - Persiapan lokal: empat tes Python dan kompilasi makensis berhasil. Validasi
   Windows install/shortcut/reinstall/uninstall menunggu run pengemasan.
+
+
+### NSIS — hasil akhir dan file yang diserahkan
+
+- Source installer **93c267fdaf09ed366115a4c1272bcba241ae6ce0**; run final
+  **35263867951** sukses:
+  https://github.com/xykalnotkel/XyDesk/actions/runs/35263867951
+- Lima tes builder Python, kompilasi NSIS 3.12 di Windows, install silent pada
+  path berspasi, checksum/--help engine terpasang, registrasi Apps, shortcut
+  Desktop/Start Menu dan perintahnya di Windows PowerShell, reinstall, penolakan
+  folder lain, uninstall dengan preservasi identitas/file tambahan, serta jalur
+  default per-user semuanya lulus. Wizard interaktif tidak diklaim diuji visual.
+- Artefak **XyDesk-Host-Test-Setup-x64.exe**, **4.304.237 byte**, diunduh dari
+  artefak run sukses dan SHA-256 dicocokkan dengan laporan serta sidecar:
+  `5f51e49bf8c4dcbcece46b900e7b89004f9f4897b8e6c9f42cd0fa7c10dd4a97`.
+  Bukti: `docs/qa/nsis-installer-2026-09-17.json`; file pengguna di `deliverables/`.
+- Engine tetap MSVC x64 dari c5feae3, SHA-256 tidak berubah. Stub installer
+  NSIS x86-unicode normal untuk pemasangan payload x64; guard menolak OS x86.
+  Versi produk tetap 6.8.5. Installer unsigned, bukan rilis publik baru.
+- Kegagalan yang diperbaiki, bukan disembunyikan: run 35262965721 gagal pada
+  shortcut; diagnosis 35263269909 menunjukkan Windows PowerShell tidak menemukan
+  Get-FileHash. Launcher kini memakai SHA-256 .NET tanpa autoload cmdlet itu.
+  Run 35263474949 melewati shortcut tetapi mendeteksi /D eksplisit tidak dihormati;
+  pemilihan direktori bawaan/eksplisit diperbaiki dengan sentinel. Pemeriksaan
+  default/custom/reinstall/uninstall berikutnya semuanya lulus di run final.
+- Tidak ada lab/RDP baru, restart host lama, deploy backend/web, rilis/tag, atau
+  bump versi. Host hanya dimulai lewat shortcut atas tindakan pengguna. Remote
+  desktop/capture/input di RDP pemilik masih menunggu pengujian manual.
+- Reproduksi memerlukan payload ZIP ber-SHA yang dipin. Artefak GitHub lama
+  memiliki masa retensi; gunakan salinan ZIP tervalidasi jika artefak kedaluwarsa,
+  jangan diam-diam mengganti dengan rilis terbaru yang berbeda hash.

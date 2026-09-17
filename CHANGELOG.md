@@ -25,6 +25,7 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Fixed
+- Launcher host uji memakai SHA-256 .NET agar tidak bergantung pada autoload Get-FileHash di Windows PowerShell; installer NSIS membedakan direktori default dan /D eksplisit tanpa mengabaikan pilihan pengguna.
 - Host menutup media dan mencabut izin pairing saat signaling putus; Hub mengaitkan answer dengan nonce socket agar kick/close memberitahu peer terkait, termasuk client yang mengabaikan close.
 - Web: cleanup pada fase terminal, antrean SDP/ICE, validasi asal pesan media, UUID client, tipe clipboard biner, track tanpa stream, dan label codec dari statistik yang benar.
 - Host LAN-only menerima STUN kosong; lockfile diselaraskan dengan manifest 6.8.5 yang sudah ada; koreksi parser FU-A pada tes loopback.
