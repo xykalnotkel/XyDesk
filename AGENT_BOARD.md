@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260917-OPERATOR-PLAYBACK | Operator - XyDesk Team | Web | LAGI KERJA | Video-only sink, explicit play dan diagnosis statistik yang hilang; tanpa installer/driver/RDP intervention | 2026-09-17 |
 | SESI-20260909-OPERATOR-UNIFY | Operator - XyDesk Team | Operator (semua area) | SELESAI | Unifikasi UI/UX: acuan=web (token Paper→web), radius web→8/12/16/20, hapus garis desktop+web, brand installer wizard | 2026-09-09 |
 
 ## Antrean izin push
@@ -110,6 +109,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260917-OPERATOR-PLAYBACK | Operator - XyDesk Team | Web | SELESAI | Video-only sink, play/gesture retry, keadaan DOM dan missing decode bukan nol. 26 tes/build/Chromium playback PASS. Deploy effc912 versi 1c6587f1 diverifikasi; host tetap, Android manual belum terbukti. | 2026-09-17 |
 | SESI-20260917-OPERATOR-MEDIARX | Operator - XyDesk Team | Host + Web + NSIS | SELESAI | NACK retransmisi/PLI merah→hijau; Rust 125+5+3, web 21, Chromium decode lokal PASS. Windows 35273970970, NSIS 35274547571 PASS. Web deploy 22a28371 disetujui user, bundle/browser diverifikasi. RDP→Android manual belum terbukti. | 2026-09-17 |
 | SESI-20260917-OPERATOR-RDPBACKEND | Operator - XyDesk Team | Host + NSIS | SELESAI | RDP benar memilih GDI; probe seluruh RGB; Rust 125+5+1+1 PASS. Engine eea2aca Windows 35270293201 dan NSIS 35270898713 PASS. User RDP/Chrome di HP sama; capture/decode manual belum terbukti. Tanpa deploy/driver/lab/restart. | 2026-09-17 |
 | SESI-20260917-OPERATOR-VIDEOGATE | Operator - XyDesk Team | Host + NSIS | SELESAI | Regresi capture gate merah→hijau, Rust 122+5+1+1; engine 9887131 Windows run 35268184807 PASS; NSIS 35268695633 install/shortcut/reinstall/uninstall PASS. Artefak VideoFix diverifikasi; RDP→Android manual, fullscreen/audio masih belum terbukti/diperbaiki. Tanpa deploy/restart/lab/bump. | 2026-09-17 |

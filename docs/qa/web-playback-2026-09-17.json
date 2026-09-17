@@ -1,0 +1,48 @@
+{
+  "sourceSha": "effc9120d0f74ad7fa13b58431093bcd5382830a",
+  "version": "1c6587f1-34f4-44b0-826e-7dc1d99988a2",
+  "url": "https://app.xydesk.my.id",
+  "asset": "/assets/index-DLboefwX.js",
+  "sha256": "41de9d92ac60df8354904a69e133029e12ccee098a103355aacccf0b2b502ec4",
+  "bytes": 301557,
+  "contentType": "text/javascript",
+  "liveBytesEqualBuild": true,
+  "oauthClientPreserved": true,
+  "before": {
+    "id": "25efc971-e59d-42e4-b088-3557ee85d894",
+    "versions": [
+      {
+        "version_id": "53afa4d5-8c1b-4474-8084-32feca060899",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-09-17T21:16:19.67409Z"
+  },
+  "oldAsset": "/assets/index-CKW9VRRw.js",
+  "backendChanged": false,
+  "hostChanged": false,
+  "browserPlayback": {
+    "result": "PASS",
+    "boundary": "Chromium DOM with synthetic canvas + silent audio; production helper, not RDP/Android/H264 decode",
+    "inputTracks": [
+      "audio",
+      "video"
+    ],
+    "videoSinkTracks": [
+      "video"
+    ],
+    "paused": false,
+    "readyState": 4,
+    "width": 640,
+    "height": 360,
+    "frames": 2
+  },
+  "unitTests": 26,
+  "androidTested": false,
+  "liveBrowser": {
+    "status": 200,
+    "formVisible": true,
+    "pageErrors": [],
+    "paired": false
+  }
+}

@@ -1628,3 +1628,25 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   dirty/untracked. Fetch main: 12 berkas perubahan remote sudah byte-identik
   dengan worktree. Reset mixed ke main menjaga isi berkas dan perubahan
   mode tool/check_backend_live.py; tidak membuang kerja pengguna.
+
+
+### PLAYBACK — sudah live, host tetap
+
+- Web final source **effc912**, versi **1c6587f1-34f4-44b0-826e-7dc1d99988a2**.
+  `/assets/index-DLboefwX.js`, SHA-256
+  `41de9d92ac60df8354904a69e133029e12ccee098a103355aacccf0b2b502ec4`.
+  OAuth web dipertahankan dari bundle sebelumnya; backend/host tidak disentuh.
+- Deploy pertama 610984e/53afa4d5; final menambahkan stopPropagation pada
+  pointer tombol pemutar agar tidak sekaligus mengklik desktop remote. Kedua
+  deploy diverifikasi byte-identik; final browser /connect HTTP200/form
+  terlihat/tanpa pageerror, tanpa login atau pairing ke host user.
+- Tes Chromium helper produksi: stream canvas 640x360 + audio diam dipisah
+  menjadi video-only; play berhasil, readyState4, paused=false, 2 frame
+  pemutar. Bukan tes H264/RDP/Android atau bukti audio sebagai akar masalah.
+  26 tes web + build ulang final PASS. Bukti `docs/qa/web-playback-2026-09-17.json`.
+- User cukup putus sesi XyDesk, reload web, connect memakai host MediaFix
+  yang sama. Bila perlu ketuk Putar video; laporkan Pemutar video, Ukuran
+  pemutar, Frame pemutar(total), dan frame decode (missing kini bukan 0).
+- Masih belum terbukti: decode/render H264 2336x1080 di Chrome Android user,
+  dukungan level/resolusi dan penerapan label kualitas720p pada encoder.
+  Jangan membangun installer capture lagi tanpa bukti dari pemutar.
