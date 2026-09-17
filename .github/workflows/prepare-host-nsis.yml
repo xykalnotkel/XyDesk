@@ -20,7 +20,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: XyDesk-Host-Manual-x64
-          run-id: 35268184807
+          run-id: 35270293201
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: payload-download
       - name: Pasang compiler NSIS
@@ -35,7 +35,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Tes builder gagal' }
           $compiler = @('C:\Program Files (x86)\NSIS\makensis.exe', 'C:\Program Files\NSIS\makensis.exe') | Where-Object { Test-Path $_ } | Select-Object -First 1
           if (-not $compiler) { throw 'makensis.exe tidak ditemukan' }
-          python packaging/nsis/build_installer.py payload-download/XyDesk-Host-Test-x64-9887131.zip --work nsis-work --output installer-output/XyDesk-Host-Test-Setup-x64.exe --source-sha $env:GITHUB_SHA --makensis $compiler
+          python packaging/nsis/build_installer.py payload-download/XyDesk-Host-Test-x64-eea2aca.zip --work nsis-work --output installer-output/XyDesk-Host-Test-Setup-x64.exe --source-sha $env:GITHUB_SHA --makensis $compiler
           if ($LASTEXITCODE -ne 0) { throw 'Build installer gagal' }
       - name: Uji install, shortcut, reinstall, dan uninstall
         shell: pwsh

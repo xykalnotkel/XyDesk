@@ -21,7 +21,7 @@ $checks.Add('non-empty unrelated directory rejected without changes')
 if ((RunSetup $installed) -ne 0) { throw 'Silent install gagal' }
 $engine = Join-Path $installed 'xydesk-host.exe'
 $manifest = Get-Content (Join-Path $installed 'manifest.json') -Raw | ConvertFrom-Json
-$expected = '2a579abf970f153b6e1a8c198325be3a1cc6c9ea8f7e1d5f14fe2f2e1265a19b'
+$expected = '3c290f559e6fa29f4a3a43a7d48c731fb1f13aec23781034b8a99ce46657b8a9'
 if ((Get-FileHash $engine -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Payload engine berubah saat dipasang' }
 if ($manifest.sha256 -ne $expected) { throw 'Manifest engine salah' }
 & $engine --help | Out-Null

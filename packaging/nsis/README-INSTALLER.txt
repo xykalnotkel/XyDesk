@@ -1,7 +1,8 @@
 XyDesk Host Test — installer NSIS Windows x64
 
 Paket engine uji 6.8.5; bukan installer aplikasi desktop lengkap.
-Engine MSVC 9887131 memperbaiki penantian melingkar capture sebelum Connected.
+Engine MSVC eea2aca memilih GDI secara nyata untuk sesi RDP.
+Perbaikan penantian capture dari 9887131 tetap disertakan.
 Tes regresi WebRTC lulus; tampilan RDP/Android tetap perlu diuji manual.
 
 PASANG DAN MULAI
@@ -35,14 +36,20 @@ Saat host dijalankan manual, mekanisme capture/driver produk yang sudah ada
 tetap berlaku. Jangan mengganti driver atau memakai tscon secara spekulatif.
 
 BILA LAYAR HITAM
-Setelah pairing, periksa apakah log "koneksi Connected — keyframe segar
-diminta" muncul. Laporkan hanya pesan video dan jumlah frame; jangan kirim
+Setelah pairing, periksa apakah "capture gdi-bitblt mulai" muncul.
+Pada sesi RDP, engine ini tidak mencoba membuat/memasang virtual display. Laporkan hanya pesan video dan jumlah frame; jangan kirim
 ID/password/token atau konsol lengkap. Fullscreen web dan audio bukan bagian
 dari patch ini.
 
 Buka PowerShell di folder instalasi, jalankan:
   .\xydesk-host.exe --capture-test
-Laporkan hasil backend/jumlah frame, keadaan RDP, dan client yang dipakai.
+Saat probe, tampilkan Notepad putih dan gerakkan jendelanya.
+Laporkan hanya baris dxgi/gdi, jumlah frame, dan RGB-nonzero.
+Probe membaca piksel lokal tetapi tidak menyimpan screenshot atau membuka
+signaling. RGB-nonzero bukan bukti desktop benar atau decoder Android berhasil.
+Sebutkan apakah RDP terlihat di perangkat lain atau berada di HP yang sama
+dan masuk background ketika Anda berpindah ke Chrome. Jangan ubah driver,
+memutus RDP, atau menjalankan tscon hanya berdasarkan log.
 Baca juga README-MANUAL.md untuk urutan uji lengkap dan batas pengujian.
 
 BATAS DAN LISENSI
