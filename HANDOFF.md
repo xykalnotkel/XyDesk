@@ -1672,3 +1672,19 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   RDP/Android fisik, bukan bukti bug decode user sudah selesai.
 - Bukti docs/qa/session-fullscreen-2026-09-17.json dan screenshot fixture
   landscape. Tidak ada screenshot desktop user atau kredensial sesi.
+
+
+### SESSIONFULL — deploy final
+
+- Source **1fecff4d7fc40ee5f724b611d83c21d29cb70052**, worker web versi **fe8a8cd7-959e-4341-8b24-02baf34e3430**.
+- JS `/assets/index-ClKrOKWS.js`, SHA256 `aa461f7cc410af68dbad3a27f1d976cf5fece88d477f835245d3c36516b02776`.
+- CSS `/assets/index-DbUqPjs1.css`, SHA256 `716653010862e3ba3421e9c25cbb873c01791a1d8595dd44494e5c9278122e35`.
+- JS/CSS live byte-identik dan content-type benar; konfigurasi OAuth web
+  dipertahankan dari bundle live sebelumnya. Browser viewport390x844
+  /connect HTTP200/form terlihat/tanpa pageerror; tidak pairing host user.
+- Bukti `docs/qa/session-fullscreen-production-2026-09-17.json`.
+  Sesi viewport otomatis setelah connect, native fullscreen via tombol;
+  browser yang menolak tetap viewport, bukan janji bilah browser hilang
+  tanpa gesture. Host/driver/RDP/backend/audio/versi tidak diubah.
+- Pengguna perlu reload web sebelum koneksi berikutnya. Perbaikan
+  fullscreen terpisah dari status decode video di Android yang belum terbukti.

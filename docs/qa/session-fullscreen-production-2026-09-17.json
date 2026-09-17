@@ -1,0 +1,35 @@
+{
+  "sourceSha": "1fecff4d7fc40ee5f724b611d83c21d29cb70052",
+  "version": "fe8a8cd7-959e-4341-8b24-02baf34e3430",
+  "url": "https://app.xydesk.my.id",
+  "asset": "/assets/index-ClKrOKWS.js",
+  "sha256": "aa461f7cc410af68dbad3a27f1d976cf5fece88d477f835245d3c36516b02776",
+  "cssAsset": "/assets/index-DbUqPjs1.css",
+  "cssSha256": "716653010862e3ba3421e9c25cbb873c01791a1d8595dd44494e5c9278122e35",
+  "contentType": "text/javascript",
+  "cssContentType": "text/css",
+  "liveBytesEqualBuild": true,
+  "oauthClientPreserved": true,
+  "before": {
+    "id": "40c8b7f1-b20b-421f-ac34-eb91b133e775",
+    "versions": [
+      {
+        "version_id": "1c6587f1-34f4-44b0-826e-7dc1d99988a2",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-09-17T21:16:58.990694Z"
+  },
+  "oldAsset": "/assets/index-DLboefwX.js",
+  "backendChanged": false,
+  "hostChanged": false,
+  "unitTests": 29,
+  "androidDeviceTested": false,
+  "liveBrowser": {
+    "status": 200,
+    "formVisible": true,
+    "pageErrors": [],
+    "paired": false,
+    "viewport": "390x844"
+  }
+}
