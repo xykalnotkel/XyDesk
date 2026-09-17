@@ -103,3 +103,12 @@ test('setup tidak boleh memakai JWT Google yang sudah lama',async()=>{
   const original=Date.now;Date.now=()=>original()+700000;
   try{assert.equal((await route(env,'setup/start',{username:'owner',password},{Authorization:'Bearer '+token})).status,403)}finally{Date.now=original}
 });
+
+test('login recovery paralel memiliki audit terpisah pada milidetik yang sama',async()=>{
+  const {service,storage,result}=await setup();const original=Date.now,now=original();Date.now=()=>now;
+  try {
+    const results=await Promise.all(result.recoveryCodes.slice(0,2).map(code=>service.fetch('login',{username:'owner',password,code,recovery:true,ip:'audit-ip'})));
+    assert.deepEqual(results.map(r=>r.status),[200,200]);
+    assert.equal([...storage.values.values()].filter(v=>v.action==='security-recovery-login').length,2);
+  }finally{Date.now=original}
+});

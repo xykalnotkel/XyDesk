@@ -158,7 +158,7 @@ export class AdminSecurity {
         }
         await txn.put(CREDENTIALS, current);
         await txn.put(sessionKey, { email: current.email, username: current.username, version: current.version, expiresAt: now + SESSION_TTL * 1000 });
-        await txn.put(`admin:log:${now}:security:login`, { action: recoveryHash ? 'security-recovery-login' : 'security-login', at: now, by: current.email });
+        await txn.put(`admin:log:${now}:security:login:${crypto.randomUUID()}`, { action: recoveryHash ? 'security-recovery-login' : 'security-login', at: now, by: current.email });
         return true;
       });
       if (!success) return json({ error: 'invalid-credentials' }, 401);
