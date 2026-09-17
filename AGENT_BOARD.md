@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260917-OPERATOR-PASSWORDMFA | Operator - XyDesk Team | Operator (admin + backend) | LAGI KERJA | Izin chat username/password + captcha + TOTP; Google dimatikan setelah setup akun terverifikasi | 2026-09-17 |
 | SESI-20260909-OPERATOR-UNIFY | Operator - XyDesk Team | Operator (semua area) | SELESAI | Unifikasi UI/UX: acuan=web (token Paper→web), radius web→8/12/16/20, hapus garis desktop+web, brand installer wizard | 2026-09-09 |
 
 ## Antrean izin push
@@ -195,3 +194,10 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | ID Sesi | Agent | Status | Hasil | Bukti |
 |---|---|---|---|---|
 | SESI-20260917-OPERATOR-ADMINLIVE | Operator - XyDesk Team | SELESAI; LIVE | Client admin terpisah, arsip kunci di luar repo, widget Turnstile khusus admin; source 9fa11a8 sudah push; signaling 1a892f50… dan admin f69c671d… aktif 100%. Tidak bump/rotasi global/restart engine. | Worker 124/124; panel 15/15; runtime SQLite; build produksi; bundle SHA256 cocok; smoke test live 200/401/403 sesuai; Google+captcha iframe 200 di browser. Login akun manusia belum diuji. |
+
+
+### Password + TOTP selesai di kode/produksi — setup menunggu pemilik
+
+| ID Sesi | Agent | Status | Hasil | Bukti |
+|---|---|---|---|---|
+| SESI-20260917-OPERATOR-PASSWORDMFA | Operator - XyDesk Team | SELESAI rollout; MENUNGGU SETUP PEMILIK | Source 1d81c31; backend 61c7b94a… dan panel aab0142f… aktif 100%. Password+TOTP+recovery+cookie tersedia. Google otomatis ditutup hanya setelah setup terverifikasi; saat pemeriksaan akun belum dibuat. | Worker 145/145, panel 18/18, runtime SQLite, browser lokal lolos; bundle live cocok; smoke live 200/401/403; bootstrap browser tanpa pageerror. Tidak membuat kredensial pemilik, rotasi global, restart engine, bump, atau rilis APK. |

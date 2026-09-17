@@ -38,7 +38,7 @@ Kebijakan rilis:
 - Logs: kegagalan HTTP ditampilkan sebagai galat, bukan daftar kosong yang tampak sukses.
 
 ### Added
-- Setup satu kali username/password + TOTP, kode pemulihan sekali pakai, limiter login, enkripsi seed TOTP, dan verifier password ber-pepper. Google ditutup hanya setelah akun baru terverifikasi; tidak membuat password pemilik otomatis.
+- Setup satu kali username/password + TOTP, kode pemulihan sekali pakai, limiter login, enkripsi seed TOTP, verifier password ber-pepper, dan audit login paralel yang tidak saling menimpa. Google ditutup hanya setelah akun baru terverifikasi; tidak membuat password pemilik otomatis.
 - `cloudflare npm run test:runtime`: uji bundle pada runtime SQLite lokal, mencakup transaksi, konflik konkurensi, audit, health, dan pembatasan akses.
 - Endpoint admin health read-only untuk Worker/AuthStore/Hub; status engine dinyatakan belum tersedia.
 - Panduan konfigurasi dan rollout di `admin/README.md`; total 28 tes backend admin baru dan 3 tes API panel tambahan.

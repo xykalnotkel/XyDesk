@@ -45,3 +45,17 @@ Jika halaman ditutup sebelum konfirmasi, login Google masih tersedia. Tidak ada 
 Pemeriksaan browser lokal menjalankan build panel terhadap runtime backend lokal: setup → konfirmasi TOTP → kode pemulihan → cookie HttpOnly → reload → logout → login recovery → replay ditolak, tanpa pageerror. Proof bootstrap dan captcha ditirukan dalam pengujian ini, bukan bypass produksi.
 
 Pengguna tetap harus melakukan setup dan login nyata sendiri. Operator tidak mengisi atau mengetahui password/seed TOTP pemilik saat rollout.
+
+
+## Status rollout 17 September 2026
+
+Paket aktif di produksi; **akun password masih menunggu setup pemilik** pada pemeriksaan terakhir (`passwordEnabled:false`, `setupAvailable:true`). Google masih tersedia hanya untuk tahap bootstrap; jangan menulis bahwa Google sudah dimatikan sebelum pemilik mengonfirmasi TOTP.
+
+- Source `1d81c31` (fitur utama `006d766`) dipush sebelum upload.
+- Backend `61c7b94a-3acb-4ea1-8a9e-090e30d93594`, panel `aab0142f-0939-46d0-b3a4-368962d0b38b`, aktif 100%.
+- Worker 145/145 tes; panel 18/18; runtime SQLite dan alur browser lokal lengkap lolos.
+- Bundle live `index-DkKsVdYt.js`, SHA256 `33107e169e9f77f1d99fcf466aae787e6884b65faa38a6f0e225bec630747361`, cocok dengan build.
+- Smoke live: config/healthz 200; session dan setup anonim 401; captcha palsu dan Origin asing 403. Chromium membuka bootstrap, tombol Google dan iframe Turnstile 200, tanpa pageerror atau pesan galat login.
+- Login/password/TOTP milik pemilik **belum diuji di produksi**, karena operator tidak membuat atau mengetahui kredensial pribadi pemilik. Penggantian metode aktif akan terjadi ketika pemilik menyelesaikan setup.
+
+![Bootstrap sebelum akun password diaktifkan — screenshot produksi](screenshots/bootstrap-password-mfa-live-2026-09-17.png)

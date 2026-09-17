@@ -4,7 +4,7 @@
 
 Lihat [panduan autentikasi dan setup akun](AUTHENTICATION.md). Login Google dipertahankan hanya untuk setup pertama, lalu ditutup atomik ketika pemilik mengonfirmasi authenticator. Bagian OAuth di bawah merupakan riwayat konfigurasi/bootstrap, bukan metode login permanen setelah akun password aktif.
 
-**Status terbaru (17 September 2026): live di https://admin.xydesk.my.id.** OAuth memakai client admin terpisah; widget Turnstile admin sudah terpasang. Source kode `9fa11a8`. Login akun manusia masih perlu smoke test pemilik.
+**Status terbaru (17 September 2026): paket username/password + authenticator live di https://admin.xydesk.my.id.** Akun password menunggu setup pemilik; Google hanya untuk bootstrap dan ditutup setelah TOTP terverifikasi. Source `1d81c31`. Ikuti [panduan setup](AUTHENTICATION.md). Bagian rollout OAuth di bawah merupakan riwayat sebelumnya.
 
 ## Login
 

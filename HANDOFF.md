@@ -1318,3 +1318,14 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - Tes: Worker 144/144; panel 18/18; build, runtime SQLite, dan alur browser terhadap runtime lokal lolos. Browser menguji setup, TOTP, recovery, reload cookie, logout, login recovery, penolakan replay; tanpa pageerror. Captcha dan bootstrap proof ditirukan hanya di lokal.
 - Batas: satu akun admin, belum ada UI ganti password/enrollment ulang/regenerasi recovery/reset mandiri. Kehilangan password atau kedua faktor perlu pemulihan manual terverifikasi; jangan membuat bypass Google. Dokumentasi lengkap di admin/AUTHENTICATION.md.
 - Akun produksi tetap menunggu setup oleh pemilik. Hasil upload/aktivasi dan konfigurasi live dicatat setelah rollout. Perubahan mode tool/check_backend_live.py yang sudah ada tidak ikut commit.
+
+
+### Rollout PASSWORDMFA selesai — akun menunggu pemilik
+
+- Source utama `006d766`, disusul `1d81c31` (audit login paralel tidak saling menimpa), sudah di main sebelum upload.
+- Backend `61c7b94a-3acb-4ea1-8a9e-090e30d93594` dan panel `aab0142f-0939-46d0-b3a4-368962d0b38b` aktif 100%. Semua binding lama dipertahankan; hanya menambahkan secret ADMIN_AUTH_KEY. Tidak merotasi key global atau mengubah client web/APK.
+- Tes akhir: Worker 145/145, panel 18/18, runtime SQLite dan browser lokal lengkap lolos. Screenshot bootstrap produksi `admin/screenshots/bootstrap-password-mfa-live-2026-09-17.png` tidak memuat password/seed/recovery milik pemilik.
+- Smoke pertama tepat setelah aktivasi gagal assertion tanpa merekam isi respons; penyebabnya tidak dibuktikan. Pemeriksaan ulang: config/healthz 200, session/setup anonim 401, captcha palsu/Origin asing 403; browser live Google+Turnstile iframe 200, tanpa pageerror/error login. Bundle SHA256 cocok `33107e169e9f77f1d99fcf466aae787e6884b65faa38a6f0e225bec630747361`.
+- Status produksi terakhir: `passwordEnabled:false`, `setupAvailable:true`. **Google BELUM ditutup**, karena pemilik belum membuat akun dan mengonfirmasi authenticator. Ini sengaja mempertahankan akses sesuai izin: Google ditutup setelah pengganti siap.
+- Langkah pemilik: buka admin → Google untuk verifikasi awal → username/password → tambah kunci ke authenticator → konfirmasi 6 digit → simpan 10 kode recovery → dashboard. Sesudah konfirmasi, Google/JWT lama ditolak dan sesi password memakai cookie HttpOnly.
+- Operasional lanjutan: belum ada UI ganti password/regenerasi recovery/reset mandiri; jangan membuka kembali bootstrap sebagai jalan pintas. Ikuti admin/AUTHENTICATION.md dan minta izin khusus untuk pemulihan atau rotasi key yang dapat memutus akun.
