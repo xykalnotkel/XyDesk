@@ -120,7 +120,7 @@ async fn loopback_video_flows_and_input_roundtrips() -> anyhow::Result<()> {
                             pos += 2 + sz;
                         }
                     } else if nal == 28 && pl.len() >= 2 {
-                        let inner = (pl[1] & 0x1E) >> 1;
+                        let inner = pl[1] & 0x1F;
                         if inner == 7 || inner == 8 {
                             param = true;
                         }

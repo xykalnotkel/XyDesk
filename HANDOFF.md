@@ -1326,6 +1326,45 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - Backend `61c7b94a-3acb-4ea1-8a9e-090e30d93594` dan panel `aab0142f-0939-46d0-b3a4-368962d0b38b` aktif 100%. Semua binding lama dipertahankan; hanya menambahkan secret ADMIN_AUTH_KEY. Tidak merotasi key global atau mengubah client web/APK.
 - Tes akhir: Worker 145/145, panel 18/18, runtime SQLite dan browser lokal lengkap lolos. Screenshot bootstrap produksi `admin/screenshots/bootstrap-password-mfa-live-2026-09-17.png` tidak memuat password/seed/recovery milik pemilik.
 - Smoke pertama tepat setelah aktivasi gagal assertion tanpa merekam isi respons; penyebabnya tidak dibuktikan. Pemeriksaan ulang: config/healthz 200, session/setup anonim 401, captcha palsu/Origin asing 403; browser live Google+Turnstile iframe 200, tanpa pageerror/error login. Bundle SHA256 cocok `33107e169e9f77f1d99fcf466aae787e6884b65faa38a6f0e225bec630747361`.
-- Status produksi terakhir: `passwordEnabled:false`, `setupAvailable:true`. **Google BELUM ditutup**, karena pemilik belum membuat akun dan mengonfirmasi authenticator. Ini sengaja mempertahankan akses sesuai izin: Google ditutup setelah pengganti siap.
+- Snapshot sebelum pemilik menyelesaikan aktivasi: `passwordEnabled:false`, `setupAvailable:true`. **Google BELUM ditutup**, karena pemilik belum membuat akun dan mengonfirmasi authenticator. Ini sengaja mempertahankan akses sesuai izin: Google ditutup setelah pengganti siap.
 - Langkah pemilik: buka admin → Google untuk verifikasi awal → username/password → tambah kunci ke authenticator → konfirmasi 6 digit → simpan 10 kode recovery → dashboard. Sesudah konfirmasi, Google/JWT lama ditolak dan sesi password memakai cookie HttpOnly.
 - Operasional lanjutan: belum ada UI ganti password/regenerasi recovery/reset mandiri; jangan membuka kembali bootstrap sebagai jalan pintas. Ikuti admin/AUTHENTICATION.md dan minta izin khusus untuk pemulihan atau rotasi key yang dapat memutus akun.
+
+
+## Aktivasi pemilik dan inti remote — 2026-09-17
+
+### Akun admin sudah aktif
+
+- Setelah pemilik menyelesaikan setup, pemeriksaan publik mengembalikan
+  `passwordEnabled:true, setupAvailable:true`; `POST /admin/login` mengembalikan
+  410 `google-login-disabled`. Snapshot pending-owner di atas adalah sejarah,
+  bukan keadaan terakhir. `setupAvailable` berarti key server tersedia, bukan
+  bootstrap boleh dibuka kembali.
+- Pemilik melaporkan memakai generator OTP pihak ketiga. Penanganan seed oleh
+  situs itu tidak diverifikasi; jangan menyatakan terbukti bocor. Rekomendasi:
+  reenrollment lewat aplikasi authenticator lokal tepercaya, setelah alur aman
+  tersedia. Tidak ada reset akun/seed atau pemutusan sesi otomatis.
+
+### REMOTECORE tahap pertama
+
+- Role Operator, permintaan langsung: semua pekerjaan, terutama remote desktop
+  nyata. Hasil dan cara reproduksi: `docs/REMOTE_CORE_QA.md` + `docs/qa/`.
+- Lulus lokal: Rust 122+5+1; Worker 151; web 19 + build; Worker/SQLite → binary
+  Rust → decode H264 Chromium, input mengubah bitrate, kick host, reconnect,
+  kick client yang mengabaikan close, lalu putus manual. **Bukan tes Windows.**
+- Perubahan mencakup cleanup host saat signaling putus; hubungan media Hub
+  memakai nonce attachment; lifecycle/antrean SDP-ICE dan diagnosis web.
+  Tidak deploy/restart produksi/dispatch rilis/bump versi. Lockfile hanya
+  menyusul versi 6.8.5 yang sebelumnya sudah ditetapkan.
+- [ ] Host/Operator: uji Windows DXGI/NVENC dan SendInput aktual; 30 menit,
+  audio, multi-monitor, dan galat SDP/ICE yang masih merambat keluar engine.
+- [ ] Backend/Host: TURN host masih belum diberikan dari main; endpoint
+  kredensial hanya menerima token client. Uji relay dan jaringan UDP diblokir.
+- [ ] Flutter: selaraskan cleanup error dan antrean ICE, lalu uji SDK/HP nyata.
+- [ ] Backend: audit enforcement ban/revoke untuk token yang sudah diterbitkan;
+  server-agent terautentikasi belum diimplementasikan pada tahap ini.
+- [ ] Admin: ganti password, ganti authenticator, recovery regeneration,
+  reauthentication, serta invalidasi sesi terkait masih antre.
+- [ ] CI/Release: rollout terpisah setelah persetujuan dan lab; link media Hub
+  baru ada setelah answer baru, tidak otomatis pada sesi sebelum upgrade.
+  Jangan menganggap push kode sebagai rilis atau bukti Windows sudah bekerja.

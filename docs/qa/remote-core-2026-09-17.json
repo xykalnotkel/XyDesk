@@ -1,0 +1,33 @@
+{
+  "testedAt": "2026-09-17T17:01:53.263Z",
+  "environment": "Linux synthetic capture → Rust OpenH264 → WebRTC → Chromium; local Worker + SQLite",
+  "checks": [
+    "host-token: registrasi perangkat baru melalui AuthStore",
+    "password salah ditolak, tanpa sesi media",
+    "pairing benar → offer/answer + ICE → H264 ter-decode dan dirender",
+    "input biner browser → decoder host → bitrate berubah ke 3 Mbps",
+    "kick Hub menutup sesi host dan menghentikan frame video",
+    "host dapat pairing dan streaming lagi setelah signaling tersambung ulang",
+    "kick client yang mengabaikan close tetap menghentikan media di host",
+    "putus manual client membebaskan slot host tanpa menunggu ICE timeout"
+  ],
+  "video": {
+    "framesDecoded": 7,
+    "width": 320,
+    "height": 180,
+    "colors": 147,
+    "codec": "video/H264",
+    "candidates": {
+      "local": "host",
+      "remote": "host"
+    },
+    "connection": "connected",
+    "input": "open",
+    "phase": "connected"
+  },
+  "limitations": [
+    "mouse/key dikirim tetapi Injector Linux no-op; SendInput Windows belum dibuktikan",
+    "TURN/internet, DXGI/NVENC, Android, audio, 30 menit dan glass-to-glass belum diuji"
+  ],
+  "result": "PASS"
+}

@@ -52,6 +52,7 @@ function fakeSocket(meta, outbox) {
     deserializeAttachment: () => meta,
     serializeAttachment: (m) => Object.assign(meta, m),
     send: (data) => outbox.push(JSON.parse(data)),
+    close: () => {},
   };
 }
 
@@ -212,4 +213,70 @@ test('alasan dari host diteruskan apa adanya ke client', async () => {
   assert.equal(out[0].from, '111222333', 'server menimpa from dengan id pengirim');
   assert.equal(out[0].reason, 'password salah');
   assert.equal(out[0].retry_in, 4);
+});
+
+
+// Pemutusan media berdasarkan attachment (tetap tersedia saat hibernasi).
+const answerMsg = to => ({ type: 'answer', to, sdp: { type: 'answer', sdp: 'fixture' } });
+
+test('close client mengirim bye hanya ke host yang menjawabnya, satu kali', async () => {
+  const out = [], other = [];
+  const { hub, host, hostOut, socks } = harness([{ id: 'c1', out }, { id: 'c2', out: other }]);
+  await hub.relay(host, answerMsg('c1'));
+  await hub.webSocketClose(socks[1]);
+  assert.equal(hostOut.length, 0);
+  await hub.webSocketClose(socks[0]);
+  assert.deepEqual(hostOut, [{ type: 'bye', from: 'c1', reason: 'peer-disconnected' }]);
+  await hub.webSocketClose(socks[0]);
+  assert.equal(hostOut.length, 1);
+  assert.equal(other.length, 0);
+});
+
+test('kick client mencabut media meski tidak ada callback close dari client', async () => {
+  const out = [];
+  const { hub, host, hostOut } = harness([{ id: 'c1', out }]);
+  await hub.relay(host, answerMsg('c1'));
+  const res = await hub.fetch(new Request('https://internal/kick', { method: 'POST', body: JSON.stringify({ id: 'c1' }) }));
+  assert.equal(res.status, 200);
+  assert.deepEqual(hostOut, [{ type: 'bye', from: 'c1', reason: 'admin-disconnect' }]);
+});
+
+test('offer saja tidak menciptakan ikatan media', async () => {
+  const out = [];
+  const { hub, hostOut, socks } = harness([{ id: 'c1', out }]);
+  await hub.relay(socks[0], { type: 'offer', to: '111222333', sdp: { sdp: 'fixture' } });
+  await hub.webSocketClose(socks[0]);
+  assert.equal(hostOut.filter(m => m.type === 'bye').length, 0);
+});
+
+test('close host mengirim bye ke client sesi, bukan client lain', async () => {
+  const out = [], other = [];
+  const { hub, host } = harness([{ id: 'c1', out }, { id: 'c2', out: other }]);
+  await hub.relay(host, answerMsg('c1'));
+  await hub.webSocketError(host);
+  assert.equal(out.at(-1).type, 'bye');
+  assert.equal(out.at(-1).from, '111222333');
+  assert.equal(other.length, 0);
+});
+
+test('close socket lama tidak memutus client baru dengan ID yang sama', async () => {
+  const out = [];
+  const { hub, host, hostOut, socks } = harness([{ id: 'c1', out }]);
+  await hub.relay(host, answerMsg('c1'));
+  const old = fakeSocket({ ...socks[0].deserializeAttachment() }, []);
+  socks[0].serializeAttachment({ connectionId: 'socket-baru' });
+  await hub.relay(host, answerMsg('c1'));
+  await hub.webSocketClose(old);
+  assert.equal(hostOut.length, 0);
+  await hub.webSocketClose(socks[0]);
+  assert.equal(hostOut.length, 1);
+});
+
+test('bye biasa menghapus ikatan sehingga close tidak mengirim bye ganda', async () => {
+  const out = [];
+  const { hub, host, hostOut, socks } = harness([{ id: 'c1', out }]);
+  await hub.relay(host, answerMsg('c1'));
+  await hub.relay(socks[0], { type: 'bye', to: '111222333' });
+  await hub.webSocketClose(socks[0]);
+  assert.equal(hostOut.length, 1);
 });

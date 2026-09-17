@@ -126,6 +126,12 @@ impl Session {
             .build();
 
         let mut ice_servers = Vec::new();
+        // CLI mendokumentasikan --stun "" sebagai LAN-only. URL kosong
+        // bukan URI STUN yang valid dan sebelumnya menggagalkan seluruh offer.
+        let stun: Vec<_> = stun
+            .into_iter()
+            .filter(|url| !url.trim().is_empty())
+            .collect();
         if !stun.is_empty() {
             ice_servers.push(RTCIceServer {
                 urls: stun,

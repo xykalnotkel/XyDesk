@@ -8,7 +8,8 @@
     "deploy": "wrangler deploy",
     "test": "node --test",
     "check": "npm test && wrangler deploy --dry-run --outdir .wrangler/dry-run",
-    "test:runtime": "wrangler deploy --dry-run --outdir .wrangler/runtime-test && node tool/runtime-check.mjs"
+    "test:runtime": "wrangler deploy --dry-run --outdir .wrangler/runtime-test && node tool/runtime-check.mjs",
+    "test:remote": "node tool/remote-core-check.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.123.0"

@@ -113,6 +113,7 @@ export class Hub {
           try { const a = ws.deserializeAttachment(); return a && a.id === id; } catch { return false; }
         });
         if (!target) return new Response(JSON.stringify({ error: 'not-online', id }), { status: 404, headers: { 'content-type': 'application/json' } });
+        this.detachMedia(target, 'admin-disconnect');
         try { target.close(1000, 'kicked by admin ' + (body.by || '')); } catch {}
         // log admin action
         await this.ctx.storage.put(`admin:log:${Date.now()}:${id}`, { action: url.pathname.slice(1), id, by: body.by || 'admin', at: Date.now() });
@@ -124,6 +125,7 @@ export class Hub {
     const [client, server] = Object.values(pair);
 
     const meta = {
+      connectionId: crypto.randomUUID(),
       id: request.headers.get('x-xydesk-id') || '',
       role: request.headers.get('x-xydesk-role') || 'client',
       name: request.headers.get('x-xydesk-name') || '',
@@ -238,6 +240,23 @@ export class Hub {
       }
     }
 
+    // Satu host melayani satu client. Ikatan dibuat dari answer host yang
+    // terautentikasi, bukan dari offer yang dapat dikirim tanpa pairing.
+    // Nonce socket mencegah close terlambat memutus socket baru ber-ID sama.
+    if (msg.type === 'answer') {
+      target.connectionId ||= crypto.randomUUID();
+      peer.serializeAttachment(target);
+      meta.mediaClient = target.connectionId;
+      ws.serializeAttachment(meta);
+    } else if (msg.type === 'bye') {
+      const host = meta.role === 'host' ? meta : target;
+      const client = meta.role === 'client' ? meta : target;
+      if (client.connectionId && host.mediaClient === client.connectionId) {
+        host.mediaClient = null;
+        (meta.role === 'host' ? ws : peer).serializeAttachment(host);
+      }
+    }
+
     peer.send(JSON.stringify({ ...msg, from: meta.id }));
 
     if (msg.type === 'pair-response') {
@@ -327,11 +346,46 @@ export class Hub {
     return this.ctx.getWebSockets();
   }
 
+  // Tidak cukup menutup signaling client: client yang mengabaikan close
+  // masih dapat mengirim input lewat media P2P. Host harus menerima bye
+  // langsung dari Hub. Tidak broadcast ID ke peer yang tidak terkait.
+  detachMedia(ws, reason) {
+    const meta = ws.deserializeAttachment();
+    if (!meta) return;
+    if (meta.role === 'host') {
+      const nonce = meta.mediaClient;
+      meta.mediaClient = null;
+      ws.serializeAttachment(meta);
+      if (!nonce) return;
+      // Jangan biarkan close host lama meruntuhkan sesi penggantinya.
+      const replacement = this.sockets().some(peer => {
+        const a = peer.deserializeAttachment();
+        return peer !== ws && a?.role === 'host' && a.id === meta.id && a.mediaClient === nonce;
+      });
+      if (replacement) return;
+      const client = this.sockets().find(peer => {
+        const a = peer.deserializeAttachment();
+        return a?.role === 'client' && a.connectionId === nonce;
+      });
+      if (client) this.send(client, { type: 'bye', from: meta.id, reason });
+    } else if (meta.role === 'client' && meta.connectionId) {
+      for (const host of this.sockets()) {
+        const a = host.deserializeAttachment();
+        if (a?.role !== 'host' || a.mediaClient !== meta.connectionId) continue;
+        a.mediaClient = null;
+        host.serializeAttachment(a);
+        this.send(host, { type: 'bye', from: meta.id, reason });
+      }
+    }
+  }
+
   async webSocketClose(ws) {
+    this.detachMedia(ws, 'peer-disconnected');
     ws.close(1011, 'closed');
   }
 
   async webSocketError(ws) {
+    this.detachMedia(ws, 'peer-disconnected');
     ws.close(1011, 'error');
   }
 }

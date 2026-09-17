@@ -12,8 +12,11 @@ meng-encode, dan mengirim via WebRTC ke client.
 | **Media plane: track video H264 + encode → RTP → decode** | ✅ implementasi tersedia (openh264, pola frame) |
 | Sumber video: capture layar (DXGI) + encode (NVENC) | ✅ implementasi tersedia (`screen.rs` + `nvenc.rs`); ⏳ belum diverifikasi di lab Windows |
 
-Artinya: jalur media **sudah terbukti end-to-end** — host meng-encode frame
-(openh264) → kirim lewat RTP → client menerima & men-decode. Di Windows,
+Pada uji lokal 17 September 2026, **binary Rust → H264 → Chromium** sudah
+terbukti decode dan render pada pola uji 320×180, melalui Worker/Hub SQLite
+dan kode client web asli. Tes juga memeriksa input pengubah bitrate, kick,
+reconnect, dan putus manual. Ini bukan bukti capture atau SendInput Windows;
+lihat [hasil dan batas pengujian](../docs/REMOTE_CORE_QA.md). Di Windows,
 `screen.rs` menangkap layar via DXGI Desktop Duplication (`windows-capture`)
 lalu meng-encode dengan **NVENC** bila GPU NVIDIA tersedia, dan jatuh ke
 openh264 (software) bila tidak. Yang belum dilakukan: verifikasi di lab

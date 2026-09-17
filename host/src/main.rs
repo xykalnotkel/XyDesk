@@ -129,6 +129,25 @@ fn release_slot(
     });
 }
 
+/// Akhir koneksi signaling juga akhir otorisasi sesi media. Arc yang masih
+/// dipegang task encoder/input tidak ikut mati saat variabel `active` dibuang.
+async fn close_signaling_session(
+    active: &mut Option<Arc<Session>>,
+    paired: &Arc<Mutex<PairedPeers>>,
+    control: &Arc<Mutex<ControlState>>,
+) -> Result<()> {
+    *recover_lock(paired) = PairedPeers::new();
+    {
+        let mut state = recover_lock(control);
+        state.mark_stopped();
+        state.state = EngineState::Connecting;
+    }
+    if let Some(session) = active.take() {
+        session.close().await?;
+    }
+    Ok(())
+}
+
 #[derive(Parser, Debug)]
 #[command(name = "xydesk-host", about = "XyDesk host — stream layar ke client")]
 struct Args {
@@ -971,6 +990,12 @@ async fn main() -> Result<()> {
             }
         } // while let Some(m) = ws.next().await
 
+        // Cabut izin dan tutup media SEBELUM backoff/reconnect. PairGuard
+        // tetap hidup: putus-sambung tidak mereset rem brute force.
+        if let Err(error) = close_signaling_session(&mut active, &paired, &control).await {
+            eprintln!("[xydesk-host] penutupan media gagal: {error:#}");
+        }
+
         // Keluar dari while = koneksi putus. Sambung ulang dalam proses
         // (jeda pendek agar tidak berputar tanpa henti bila server down).
         println!("[xydesk-host] koneksi signaling putus — sambung ulang...");
@@ -1112,4 +1137,42 @@ fn jalankan_capture_test() {
 #[cfg(not(target_os = "windows"))]
 fn jalankan_capture_test() {
     println!("--capture-test hanya bermakna di Windows (backend capture ada di sana).");
+}
+
+#[cfg(test)]
+mod signaling_cleanup_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn signaling_putus_menutup_peer_dan_mencabut_semua_izin() {
+        // URL kosong adalah kontrak --stun "" (LAN-only), bukan URI invalid.
+        let session = Arc::new(Session::new(vec![String::new()], vec![]).await.unwrap());
+        let paired = Arc::new(Mutex::new(PairedPeers::new()));
+        let now = std::time::Instant::now();
+        recover_lock(&paired).grant("aktif", now);
+        recover_lock(&paired).authorize_offer("aktif", now).unwrap();
+        recover_lock(&paired).grant("menunggu", now);
+        let control = Arc::new(Mutex::new(ControlState::new(
+            "100200300".into(),
+            "test-only".into(),
+            "ws://local".into(),
+        )));
+        recover_lock(&control).set_streaming("aktif".into(), session.clone(), None);
+        let mut active = Some(session.clone());
+        close_signaling_session(&mut active, &paired, &control)
+            .await
+            .unwrap();
+        assert!(active.is_none());
+        assert_eq!(
+            session.peer().connection_state(),
+            RTCPeerConnectionState::Closed
+        );
+        assert_eq!(recover_lock(&paired).tracked(), 0);
+        assert!(recover_lock(&control).session.is_none());
+        assert_eq!(recover_lock(&control).state, EngineState::Connecting);
+        // Pemanggilan ulang aman, termasuk koneksi tanpa sesi.
+        close_signaling_session(&mut active, &paired, &control)
+            .await
+            .unwrap();
+    }
 }

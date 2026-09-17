@@ -250,6 +250,7 @@ export class RtcSession {
   public noFrameWarning = false;
   private phase: RtcPhase | '' = '';
   private wsFailed = false;
+  private messages: Promise<void> = Promise.resolve();
 
   /// Pesan kegagalan terakhir, siap ditampilkan ke pengguna. `null` bila tidak
   /// ada kesalahan. Padanan `RtcService.lastError` di sisi Flutter.
@@ -282,6 +283,9 @@ export class RtcSession {
   /// keluar selain memuat ulang halaman. Flutter sudah menutup lubang ini
   /// (watchdog 20 detik di `rtc_service.dart`); web belum.
   private setPhase(next: RtcPhase, message?: string) {
+    if (['ended', 'error', 'rejected', 'host-busy', 'peer-offline'].includes(next)) {
+      this.closeTransport();
+    }
     this.phase = next;
     if (message !== undefined) this.lastError = message;
 
@@ -292,7 +296,7 @@ export class RtcSession {
       this.clearWatchdog();
       // Fase terminal yang bukan `error` berarti bukan kegagalan — bersihkan
       // pesan lama supaya UI tidak menampilkan sisa galat dari percobaan lalu.
-      if (next !== 'error') this.lastError = null;
+      if (next !== 'error' && message === undefined) this.lastError = null;
     }
 
     if (next === 'connected') {
@@ -350,9 +354,10 @@ export class RtcSession {
 
   async start(jwt: string, hostId: string, pin: string) {
     this.hostId = hostId.replace(/[\s-]/g, '');
-    this.deviceId = `web-${Date.now() % 1000000}`;
+    this.deviceId = `web-${crypto.randomUUID()}`;
     this.wsFailed = false;
     this.token = await signalToken(jwt, this.deviceId);
+    if (this.stopped) return;
 
     this.setPhase('pairing');
     const ws = new WebSocket(
@@ -361,6 +366,7 @@ export class RtcSession {
     this.ws = ws;
 
     ws.onopen = () => {
+      if (this.stopped) return;
       this.send({ type: 'hello', to: this.deviceId, reason: 'client' });
       this.send({
         type: 'pair',
@@ -393,7 +399,15 @@ export class RtcSession {
       }
       this.setPhase('ended');
     };
-    ws.onmessage = (ev) => void this.handle(JSON.parse(ev.data as string));
+    // WebSocket menjaga urutan pesan, bukan selesainya operasi async.
+    // Kandidat ICE harus menunggu setRemoteDescription dari jawaban selesai.
+    ws.onmessage = (ev) => {
+      this.messages = this.messages.then(async () => {
+        if (!this.stopped) await this.handle(JSON.parse(ev.data as string));
+      }).catch(() => {
+        if (!this.stopped) this.fail('Negosiasi WebRTC gagal. Coba hubungkan ulang.');
+      });
+    };
   }
 
   private send(m: SignalMessage) {
@@ -401,6 +415,7 @@ export class RtcSession {
   }
 
   private async handle(m: SignalMessage) {
+    if (['pair-response', 'answer', 'ice', 'bye'].includes(m.type) && m.from !== this.hostId) return;
     switch (m.type) {
       case 'pair-response':
         if (!m.accepted) {
@@ -457,6 +472,7 @@ export class RtcSession {
       { urls: ['stun:stun.cloudflare.com:3478'] },
     ];
     const turnServers = await turnIce(this.deviceId, this.token);
+    if (this.stopped) return;
     iceServers.push(...turnServers);
 
     const pc = new RTCPeerConnection({
@@ -479,6 +495,7 @@ export class RtcSession {
     // sesi yang dirombak (host membangun Session baru untuk setiap offer).
     this.audioTransceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
     this.input = pc.createDataChannel('input');
+    this.input.binaryType = 'arraybuffer';
     this.input.onmessage = (ev) => {
       // Balasan biner: 0x08 CLIPBOARD_SET (isi papan klip PC).
       if (ev.data instanceof ArrayBuffer) {
@@ -501,7 +518,7 @@ export class RtcSession {
     };
 
     pc.onicecandidate = (ev) => {
-      if (!ev.candidate) return;
+      if (this.stopped || !ev.candidate) return;
       this.send({
         type: 'ice',
         to: this.hostId,
@@ -513,10 +530,10 @@ export class RtcSession {
       });
     };
     pc.ontrack = (ev) => {
-      if (ev.streams[0]) {
-        if (ev.track.kind === 'video') this.onTrack(ev.streams[0]);
-        else if (ev.track.kind === 'audio') this.onAudioTrack(ev.streams[0]);
-      }
+      if (this.stopped) return;
+      const stream = ev.streams[0] ?? new MediaStream([ev.track]);
+      if (ev.track.kind === 'video') this.onTrack(stream);
+      else if (ev.track.kind === 'audio') this.onAudioTrack(stream);
     };
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === 'connected') {
@@ -638,9 +655,10 @@ export class RtcSession {
           this.lastAtMs = now;
           const lost = Math.max(0, Number(x.packetsLost ?? 0));
           const recv = Number(x.packetsReceived ?? 0);
-          const fmt = String(x.sdpFmtpsLine ?? '');
+          const codec = report.get(String(x.codecId)) as { sdpFmtpLine?: string; mimeType?: string } | undefined;
+          const fmt = String(codec?.sdpFmtpLine ?? '');
           const profile = /profile-level-id=(\w{4})/i.exec(fmt)?.[1] ?? '';
-          const codecName = String(x.mimeType ?? '').replace('video/', '');
+          const codecName = String(codec?.mimeType ?? '').replace('video/', '');
           stats = {
             width: Number(x.frameWidth ?? 0),
             height: Number(x.frameHeight ?? 0),
@@ -713,15 +731,23 @@ export class RtcSession {
     this.micStream = undefined;
   }
 
-  stop() {
+  private closeTransport() {
     if (this.stopped) return;
     this.stopped = true;
+    this.clearWatchdog();
     this.clearNoFrameWatchdog();
     this.noFrameWarning = false;
     void this.disableMic();
+    if (this.ws?.readyState === WebSocket.OPEN && this.hostId) {
+      try { this.send({ type: 'bye', to: this.hostId }); } catch { /* socket sudah putus */ }
+    }
     this.input?.close();
     this.pc?.close();
     this.ws?.close();
+  }
+
+  stop() {
+    if (this.stopped) return;
     this.setPhase('ended');
   }
 }
