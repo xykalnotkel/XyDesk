@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260917-OPERATOR-RDPBACKEND | Operator - XyDesk Team | Host + NSIS | LAGI KERJA | Pemilihan GDI nyata di RDP, diagnostik piksel tanpa data layar; tanpa lab/driver/RDP intervention | 2026-09-17 |
 | SESI-20260909-OPERATOR-UNIFY | Operator - XyDesk Team | Operator (semua area) | SELESAI | Unifikasi UI/UX: acuan=web (token Paper→web), radius web→8/12/16/20, hapus garis desktop+web, brand installer wizard | 2026-09-09 |
 
 ## Antrean izin push
@@ -110,6 +109,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260917-OPERATOR-RDPBACKEND | Operator - XyDesk Team | Host + NSIS | SELESAI | RDP benar memilih GDI; probe seluruh RGB; Rust 125+5+1+1 PASS. Engine eea2aca Windows 35270293201 dan NSIS 35270898713 PASS. User RDP/Chrome di HP sama; capture/decode manual belum terbukti. Tanpa deploy/driver/lab/restart. | 2026-09-17 |
 | SESI-20260917-OPERATOR-VIDEOGATE | Operator - XyDesk Team | Host + NSIS | SELESAI | Regresi capture gate merah→hijau, Rust 122+5+1+1; engine 9887131 Windows run 35268184807 PASS; NSIS 35268695633 install/shortcut/reinstall/uninstall PASS. Artefak VideoFix diverifikasi; RDP→Android manual, fullscreen/audio masih belum terbukti/diperbaiki. Tanpa deploy/restart/lab/bump. | 2026-09-17 |
 | SESI-20260917-OPERATOR-NSIS | Operator - XyDesk Team | Operator: installer NSIS per-user | SELESAI | Installer 4.304.237 byte; source 93c267f, [CI 35263867951](https://github.com/xykalnotkel/XyDesk/actions/runs/35263867951) sukses. Builder 5 tes; Windows install/shortcut/reinstall/uninstall/default/custom dan preservasi data lulus; unduhan SHA-256 cocok. Bug WinPS Get-FileHash dan /D diperbaiki; riwayat gagal di HANDOFF. Tanpa lab/RDP/deploy/rilis/bump; uji remote aktual tetap manual. | 2026-09-17 |
 | SESI-20260917-OPERATOR-WINDOWSPACK | Operator - XyDesk Team | Operator: paket host Windows x64 | SELESAI | Arahan pemilik: tanpa lab baru, uji/pasang manual sendiri. Build-only final [35253045929](https://github.com/xykalnotkel/XyDesk/actions/runs/35253045929) sukses dari c5feae3: gerbang Rust, MSVC compile/link, executable --help, parser/PE/checksum PowerShell termasuk hash salah. ZIP 7.521.926 byte diunduh dan diverifikasi; bukti docs/qa/windows-host-manual-2026-09-17.json. Tanpa release/deploy/bump/restart produksi; runtime RDP belum diuji. | 2026-09-17 |

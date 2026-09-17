@@ -1,0 +1,22 @@
+{
+  "result": "PASS",
+  "sourceSha": "12e6d4463b2d2b17af8f95263cdd2b353091fcc1",
+  "testedAt": "2026-09-17T20:28:15.7528564Z",
+  "installer": "XyDesk-Host-Test-Setup-x64.exe",
+  "sha256": "ced0c669a3a52e73cfe9371863dd935525cd428beaee22d9bfe7c69c17c85446",
+  "bytes": 4298729,
+  "engineSha256": "3c290f559e6fa29f4a3a43a7d48c731fb1f13aec23781034b8a99ce46657b8a9",
+  "checks": [
+    "non-empty unrelated directory rejected without changes",
+    "silent install to path with spaces; installed MSVC engine hash and --help verified",
+    "Apps registration, desktop/Start Menu shortcuts and actual PowerShell shortcut command verified",
+    "reinstall preserves extra files; different install location cannot hijack registration",
+    "silent uninstall removes engine/registration/shortcuts but preserves identity and extra files",
+    "default per-user install and uninstall verified separately from explicit /D"
+  ],
+  "remoteDesktopHardwareTested": false,
+  "productionDeployed": false,
+  "ciRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35270898713",
+  "downloadVerified": true,
+  "deliveredFilename": "XyDesk-Host-Test-RDP-GDI-eea2aca-Setup-x64.exe"
+}

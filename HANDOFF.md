@@ -1516,3 +1516,33 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - Batas: seleksi backend bukan bukti capture GDI benar pada RDP pengguna;
   frame capture bukan bukti RTP/decode. Sumber desktop dan statistik decode
   Android belum terukur. Fullscreen/audio tetap terpisah dan belum diperbaiki.
+
+
+### RDPBACKEND — hasil kemasan dan koreksi lingkungan pengguna
+
+- Pengguna memilih **RDP di HP yang sama** dengan Chrome; berpindah aplikasi
+  membuat RDP background. Ini variabel diagnosis, bukan bukti pasti penyebab.
+  Pembanding manual: split-screen jika didukung, atau probe capture saat RDP
+  foreground. Tidak meminta perangkat baru atau menganggap foreground RDP
+  sebagai solusi akhir unattended remote desktop.
+- Engine **eea2aca1f0dbbdf65f585afaf610bb0cc83d2502**, build-only Windows
+  **35270293201** PASS; ZIP 548 anggota/CRC/source/hash/PE diverifikasi.
+  Payload disimpan di `/home/user/artifacts/XyDesk-Host-Test-x64-eea2aca.zip`.
+- NSIS **12e6d4463b2d2b17af8f95263cdd2b353091fcc1**, run **35270898713**
+  PASS: default/custom install, shortcut aktual, reinstall, uninstall/data.
+  https://github.com/xykalnotkel/XyDesk/actions/runs/35270898713
+- Artefak penyerahan `XyDesk-Host-Test-RDP-GDI-eea2aca-Setup-x64.exe`,
+  **4.298.729 byte**, SHA-256
+  `ced0c669a3a52e73cfe9371863dd935525cd428beaee22d9bfe7c69c17c85446`.
+  Folder `deliverables/rdp-gdi-eea2aca/` beserta checksum/README/laporan.
+  Bukti `docs/qa/{windows,nsis}-rdp-backend-2026-09-17.json`.
+- Engine SHA-256
+  `3c290f559e6fa29f4a3a43a7d48c731fb1f13aec23781034b8a99ce46657b8a9`.
+  Tidak deploy, bump, restart pengguna, lab, driver, atau tscon. Uji capture
+  GDI sebenarnya/RDP background/decode Android masih manual dan belum terbukti.
+- Dampak: policy RDP kini benar memilih GDI dan diagnostik tidak menyatakan
+  piksel sampai ke client hanya berdasarkan counter capture. Tidak ada
+  screenshot baru: isi layar pengguna tidak dibaca/disimpan oleh operator.
+- Audit lanjutan GDI: jalur lama GetDIBits masih memakai bitmap terpilih ke DC
+  dan pelepasan handle perlu audit ownership/deselection; belum diubah pada
+  patch seleksi ini dan belum dibuktikan sebagai penyebab laporan pengguna.
