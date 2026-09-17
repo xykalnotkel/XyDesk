@@ -1,0 +1,40 @@
+{
+  "result": "PASS",
+  "sourceSha": "5f189d6db6e21a37069941b03a0213daa5c7d198",
+  "workerVersion": "d929ff32-2fe4-4aab-b469-af2733f6a873",
+  "assets": [
+    {
+      "asset": "/assets/index-CBDCTv7c.js",
+      "sha256": "d78e6fd600bb8099e91f3e651ba5da5f2fca7fe5e2057a0e9adf397fd2ff7bed",
+      "type": "text/javascript",
+      "exactBuildMatch": true
+    },
+    {
+      "asset": "/assets/rolldown-runtime-CbXtAM7H.js",
+      "sha256": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+      "type": "text/javascript",
+      "exactBuildMatch": true
+    },
+    {
+      "asset": "/assets/index-DZHNBbpz.css",
+      "sha256": "309e2d88fc1e1e7940bfacd5dca3bd4be8974586bd6fac843eded50d21ac3dbd",
+      "type": "text/css",
+      "exactBuildMatch": true
+    }
+  ],
+  "webOAuthPreserved": true,
+  "backendOrHostChanged": false,
+  "limitations": [
+    "Android cursor visibility pending field confirmation",
+    "Windows audio not field tested",
+    "Refresh resume not implemented",
+    "120fps not implemented"
+  ],
+  "browser": {
+    "status": 200,
+    "connectFormVisible": true,
+    "errors": [],
+    "authenticated": false,
+    "paired": false
+  }
+}

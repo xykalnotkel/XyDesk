@@ -1821,3 +1821,18 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - Sisa besar **BELUM DIKERJAKAN**: refresh resume aman,120fps hardware-
   negotiated, ACK effective settings/adaptive bitrate, audio Windows actual.
   Rancangan/risiko dan batas bukti: docs/qa/session-followup-audit-2026-09-17.md.
+
+### SESSION — hasil deploy tahap web
+
+- Source5f189d6; worker **d929ff32-2fe4-4aab-b469-af2733f6a873**.
+  Live JS/assets/index-CBDCTv7c.js dan CSS/assets/index-DZHNBbpz.css sama
+  byte/SHA dengan build produksi; OAuth WEB sama. Anonymous390x844/connect
+  status200/form/noerrors PASS. Bukti session-runtime-production JSON.
+- Tidak ada installer baru, perubahan host/Hub/backend/RDP/driver/versi.
+  Untuk verifikasi HP: muat ulang web sebelum konek kembali; tombol⌖
+  Temukan panah; tab Gambar menampilkan Penunjuk kontrol pointer-v2.
+  Jika tetap hilang butuh screenshot sesi + baris tersebut, tanpa kredensial.
+- Tahap web ditutup; request menyeluruh user **masih parsial**. Prioritas
+  berikutnya resume token contract end-to-end, capability/120fps + settings
+  ACK, Windows audio field test. Tidak ada proses implementasi lanjutan
+  yang berjalan sendiri setelah penyerahan ini.
