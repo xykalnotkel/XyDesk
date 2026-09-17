@@ -1,0 +1,22 @@
+{
+  "result": "PASS",
+  "sourceSha": "afd601025d7c741f89cad53a968cf5e0dd8755ac",
+  "testedAt": "2026-09-17T21:51:41.8656521Z",
+  "installer": "XyDesk-Host-Test-Setup-x64.exe",
+  "sha256": "e94880fce971bf4c471dca6d2c1ba4ae88121e1d19656a0a7ceed8e08e9b91d4",
+  "bytes": 4305195,
+  "engineSha256": "0c2b5db90570def6f1b3f213d94ae6af802720522a06c598456d8b684436bf9b",
+  "checks": [
+    "non-empty unrelated directory rejected without changes",
+    "silent install to path with spaces; installed MSVC engine hash and --help verified",
+    "Apps registration, desktop/Start Menu shortcuts and actual PowerShell shortcut command verified",
+    "reinstall preserves extra files; different install location cannot hijack registration",
+    "silent uninstall removes engine/registration/shortcuts but preserves identity and extra files",
+    "default per-user install and uninstall verified separately from explicit /D"
+  ],
+  "remoteDesktopHardwareTested": false,
+  "productionDeployed": false,
+  "ciRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35278907733",
+  "downloadVerified": true,
+  "deliveredFilename": "XyDesk-Host-Test-H264Compat-91ef704-Setup-x64.exe"
+}

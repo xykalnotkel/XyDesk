@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260917-OPERATOR-H264COMPAT | Operator - XyDesk Team | Host + NSIS | LAGI KERJA | Ukur SPS produksi, sesuaikan software ke batas H264 Level3.1; tanpa mengubah RDP/driver | 2026-09-17 |
 | SESI-20260909-OPERATOR-UNIFY | Operator - XyDesk Team | Operator (semua area) | SELESAI | Unifikasi UI/UX: acuan=web (token Paper→web), radius web→8/12/16/20, hapus garis desktop+web, brand installer wizard | 2026-09-09 |
 
 ## Antrean izin push
@@ -110,6 +109,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260917-OPERATOR-H264COMPAT | Operator - XyDesk Team | Host + NSIS | SELESAI | Probe SPS5.1 vs SDP3.1; software resize1280x592/30fps/SPS3.1. Rust128+5+3, OpenH264 decode, Chromium12frame PASS. Windows35278330146/NSIS35278907733 PASS. Android manual belum terbukti; tanpa web/driver/RDP changes. | 2026-09-17 |
 | SESI-20260917-OPERATOR-SESSIONFULL | Operator - XyDesk Team | Web | SELESAI | Viewport session + fullscreen gesture + kontrol landscape. 29 tes/build/4 viewport/native entry-exit/fallback PASS. Deploy 1fecff4 versi fe8a8cd7; JS/CSS/browser live diverifikasi. Tanpa host/driver/backend. | 2026-09-17 |
 | SESI-20260917-OPERATOR-PLAYBACK | Operator - XyDesk Team | Web | SELESAI | Video-only sink, play/gesture retry, keadaan DOM dan missing decode bukan nol. 26 tes/build/Chromium playback PASS. Deploy effc912 versi 1c6587f1 diverifikasi; host tetap, Android manual belum terbukti. | 2026-09-17 |
 | SESI-20260917-OPERATOR-MEDIARX | Operator - XyDesk Team | Host + Web + NSIS | SELESAI | NACK retransmisi/PLI merah→hijau; Rust 125+5+3, web 21, Chromium decode lokal PASS. Windows 35273970970, NSIS 35274547571 PASS. Web deploy 22a28371 disetujui user, bundle/browser diverifikasi. RDP→Android manual belum terbukti. | 2026-09-17 |

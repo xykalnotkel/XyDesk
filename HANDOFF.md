@@ -1712,3 +1712,33 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   Bitrate target >14Mbps dibatasi software dan nilai efektif dicetak di log.
 - Resize nearest-neighbor memakai buffer ulang; teks kecil dapat teralias.
   Input absolut sudah dinormalisasi; desktop asli tidak di-resize.
+
+
+### H264COMPAT — hasil akhir dan penyerahan
+
+- Engine **91ef7043879320b797297b8438c177bee9a975ee**, build-only Windows
+  **35278330146** PASS (gerbang Rust + MSVC compile/link/help/parser/hash).
+  ZIP 548 anggota/CRC/source/hash/PE diverifikasi; salinan di
+  `/home/user/artifacts/XyDesk-Host-Test-x64-91ef704.zip`.
+- Chromium WebCodecs dikonfigurasi avc1.42e01f dan menerima **12/12 frame**
+  bitstream kelas SoftwareEncoder produksi dari RGBA sintetis2336x1080,
+  semuanya1280x592, tanpa error; pixel render bukan nol. Bukan RTP network
+  test atau Android. Bukti chromium-h264-compat di docs/qa.
+- NSIS source **afd601025d7c741f89cad53a968cf5e0dd8755ac**, run
+  **35278907733** PASS; install custom/default, shortcut PowerShell aktual,
+  reinstall, uninstall/preservasi data.
+  https://github.com/xykalnotkel/XyDesk/actions/runs/35278907733
+- Installer **4.305.195 byte**, SHA256
+  `e94880fce971bf4c471dca6d2c1ba4ae88121e1d19656a0a7ceed8e08e9b91d4`,
+  di `deliverables/h264-compat-91ef704/XyDesk-Host-Test-H264Compat-91ef704-Setup-x64.exe`,
+  bersama checksum/README/laporan. Engine hash
+  `0c2b5db90570def6f1b3f213d94ae6af802720522a06c598456d8b684436bf9b`.
+- User perlu berhenti host uji lewat Ctrl+C sebelum reinstall lokasi sama.
+  Identitas dipertahankan, RDP tetap terbuka. Log baru harus membedakan
+  capture2336x1080 dan kirim1280x592/maks30fps/SPS42c01f. Log capture tetap
+  ukuran asli bukan bukti bahwa scaling gagal.
+- Tidak deploy web/backend, tidak ganti driver/resolusi RDP, tidak restart
+  host user, tidak lab baru, tidak bump versi. Fullscreen web sebelumnya
+  tetap live. Hasil Android, audio, NVENC capabilities dan gambar nyata
+  masih menunggu bukti; jangan menyatakan akar lapangan eksklusif atau
+  memberi jaminan bahwa installer ini pasti menampilkan gambar.
