@@ -258,11 +258,11 @@ async function handleLogin(request, env) {
   if (!body || typeof body !== 'object') return json({ error:'bad-json' }, 400, env, request)
   const { googleIdToken, turnstileToken } = body
   if (typeof googleIdToken !== 'string' || !googleIdToken || typeof turnstileToken !== 'string' || !turnstileToken) return json({ error:'missing-token' },400,env,request)
-  if (!(env.TURNSTILE_SECRET || env.TURNSTILE_SECRET_KEY) || !(env.GOOGLE_CLIENT_ID || env.GOOGLE_WEB_CLIENT_ID)) return json({error:'login-not-configured'},503,env,request)
+  if (!(env.TURNSTILE_SECRET || env.TURNSTILE_SECRET_KEY) || !env.ADMIN_GOOGLE_CLIENT_ID) return json({error:'login-not-configured'},503,env,request)
   const ip = request.headers.get('CF-Connecting-IP') || ''
   if (!await verifyTurnstile(turnstileToken, ip, env)) return json({ error:'captcha-invalid' },403,env,request)
   let info
-  try { info = await verifyGoogleIdToken({ GOOGLE_CLIENT_ID:env.GOOGLE_CLIENT_ID || env.GOOGLE_WEB_CLIENT_ID }, googleIdToken) }
+  try { info = await verifyGoogleIdToken({ GOOGLE_CLIENT_ID:env.ADMIN_GOOGLE_CLIENT_ID }, googleIdToken) }
   catch { return json({error:'google-token-invalid'},401,env,request) }
   if (!info.ok) return json({error:info.error},info.status || 401,env,request)
   const email = info.email

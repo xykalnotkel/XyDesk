@@ -2,12 +2,12 @@
 
 ## Login
 
-Salin `.env.example` ke `.env.local` untuk build lokal:
+Build produksi membaca identitas publik dari `.env.production`. Untuk override lokal, salin `.env.example` ke `.env.local`:
 
 - `VITE_GOOGLE_CLIENT_ID`: OAuth Web client ID; tambahkan origin admin yang benar di Google Authorized JavaScript Origins.
 - `VITE_TURNSTILE_SITEKEY`: sitekey produksi untuk hostname admin. Tidak ada fallback captcha test.
 
-Worker membutuhkan `GOOGLE_CLIENT_ID` (atau `GOOGLE_WEB_CLIENT_ID`), `TURNSTILE_SECRET` (atau `TURNSTILE_SECRET_KEY`), `AUTH_SECRET` (atau `XYDESK_SECRET`), dan allowlist `ADMIN_EMAILS`. Jangan simpan secret di frontend.
+Worker membutuhkan `ADMIN_GOOGLE_CLIENT_ID` khusus admin (tanpa fallback ke client web/APK), `TURNSTILE_SECRET` (atau `TURNSTILE_SECRET_KEY`), `AUTH_SECRET` (atau `XYDESK_SECRET`), dan allowlist `ADMIN_EMAILS`. Jangan simpan secret di frontend.
 `ADMIN_TURNSTILE_HOSTNAMES` dapat diisi daftar hostname dipisahkan koma; default `admin.xydesk.my.id,xydesk-admin.pages.dev`.
 
 Login memakai Google Identity Services dan token Turnstile sekali pakai. Worker memeriksa signature/audience/issuer/expiry/email terverifikasi Google, hostname captcha, dan email allowlist. Sesi berlaku satu jam, membawa `aud=xydesk-admin` serta `role=admin`. JWT lama dan JWT akun biasa tidak diterima oleh endpoint admin. HTTP 401 mengembalikan panel ke Login.
@@ -94,3 +94,15 @@ https://admin.xydesk.my.id
 Jangan mengganti Client ID atau menghapus origin/redirect URI yang sudah ada. Tambahkan `https://xydesk-admin.pages.dev` hanya bila domain tersebut memang akan dipakai untuk login; domain produksi utama adalah admin.xydesk.my.id. Perubahan ini tidak dapat dilakukan dengan token GitHub/Cloudflare yang tersedia. Tidak perlu membagikan password Google atau client secret ke chat.
 
 Setelah tersimpan, ulangi probe GIS; bila origin diterima, buat widget Turnstile khusus hostname admin, simpan secretnya ke Worker melalui secret binding, isi nilai publik build, kemudian rollout backend + panel dan lakukan smoke test di origin resmi. Jangan deploy build lokal tanpa env login.
+
+
+## Client admin terpisah — lanjutan 17 September 2026
+
+Pemilik membuat OAuth Web client **khusus admin**. Arahan lama untuk menambah origin ke client XyDesk Web tidak dipakai; client web/APK tetap dipertahankan.
+
+- `ADMIN_GOOGLE_CLIENT_ID`: `495336144977-bbtbsdunjrfsfcgki96h6vgq0i5rvs8a.apps.googleusercontent.com`. Origin `https://admin.xydesk.my.id` diterima Google GIS (iframe tombol HTTP 200 dan tombol tampil pada pemeriksaan Chromium).
+- Tidak memakai redirect URI; GIS popup mengembalikan credential ke callback JavaScript. Client secret tidak dipakai aplikasi atau Worker dan tidak masuk Git.
+- Widget Turnstile **XyDesk Admin** dibuat khusus hostname admin.xydesk.my.id, mode managed. Sitekey publik `0x4AAAAAAE6jQZaig7vJKhQs`; secretnya disiapkan melalui secret binding, tanpa menimpa secret web/APK.
+- Secret/client ID dari lampiran diarsipkan sesuai permintaan pemilik di `uploads/kuncikerjasama.txt`, di luar repo.
+- Tes audience admin berhasil, audience web ditolak, dan admin tanpa client ID khusus gagal tertutup.
+- Rollout tetap memerlukan smoke test pasca-aktivasi; login akun dan penyelesaian captcha oleh manusia tidak dilakukan otomatis.

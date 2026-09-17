@@ -4,7 +4,7 @@ import {handleAdmin} from '../src/admin.js';
 import {signJwt,verifyJwt} from '../src/auth.js';
 import {AuthStore} from '../src/authstore.js';
 const secret='admin-unit-test-secret', email='admin@example.com';
-const base={AUTH_SECRET:secret,ADMIN_EMAILS:email,GOOGLE_CLIENT_ID:'google-test-client',TURNSTILE_SECRET:'captcha-test-secret'};
+const base={AUTH_SECRET:secret,ADMIN_EMAILS:email,ADMIN_GOOGLE_CLIENT_ID:'admin-google-test-client',GOOGLE_CLIENT_ID:'web-google-test-client',TURNSTILE_SECRET:'captcha-test-secret'};
 const originalFetch=globalThis.fetch;
 afterEach(()=>{globalThis.fetch=originalFetch});
 const binding=fn=>({idFromName:n=>n,get:()=>({fetch:fn})});
@@ -38,15 +38,17 @@ test('JWT admin tidak diterima lewat query',async()=>{
   const token=await signJwt({email,role:'admin',aud:'xydesk-admin'},secret,60);
   assert.equal((await call(`stats?token=${token}`,{anonymous:true})).status,401);
 });
-test('Google RS256 valid menghasilkan sesi admin khusus',async()=>{
+for (const [audience, expectedStatus] of [[base.ADMIN_GOOGLE_CLIENT_ID,200],[base.GOOGLE_CLIENT_ID,401]]) test(`Google audience ${audience}: HTTP ${expectedStatus}`,async()=>{
   const keys=await crypto.subtle.generateKey({name:'RSASSA-PKCS1-v1_5',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['sign','verify']);
   const jwk=await crypto.subtle.exportKey('jwk',keys.publicKey);jwk.kid='admin-test';
   const enc=v=>Buffer.from(JSON.stringify(v)).toString('base64url');
-  const data=`${enc({alg:'RS256',kid:jwk.kid})}.${enc({email,email_verified:true,sub:'google-sub',aud:base.GOOGLE_CLIENT_ID,iss:'https://accounts.google.com',exp:Math.floor(Date.now()/1000)+60})}`;
+  const data=`${enc({alg:'RS256',kid:jwk.kid})}.${enc({email,email_verified:true,sub:'google-sub',aud:audience,iss:'https://accounts.google.com',exp:Math.floor(Date.now()/1000)+60})}`;
   const sig=await crypto.subtle.sign('RSASSA-PKCS1-v1_5',keys.privateKey,new TextEncoder().encode(data));
   globalThis.fetch=async url=>String(url).includes('siteverify')?captcha():Response.json({keys:[jwk]});
   const r=await call('login',{anonymous:true,body:{googleIdToken:`${data}.${Buffer.from(sig).toString('base64url')}`,turnstileToken:'valid'}});
-  assert.equal(r.status,200);const session=await r.json();const payload=await verifyJwt(session.token,secret);
+  assert.equal(r.status,expectedStatus);
+  if(expectedStatus!==200){ assert.equal((await r.json()).error,'bad-audience');return }
+  const session=await r.json();const payload=await verifyJwt(session.token,secret);
   assert.equal(payload.aud,'xydesk-admin');assert.equal(payload.email,email);assert.equal(payload.exp-payload.iat,3600);
   assert.equal(r.headers.get('cache-control'),'no-store');
 });
@@ -104,4 +106,8 @@ test('storage gagal ditulis tidak menghasilkan sukses endpoint', async()=>{
 test('public maintenance tidak membocorkan identitas pengubah',async()=>{
   const r=await call('maintenance',{anonymous:true,env:{AUTH_STORE:binding(async()=>Response.json({web:true,desktop:false,android:false,signal:false,message:'Perawatan',revision:2,by:email}))}});
   assert.equal((await r.json()).by,undefined);
+});
+
+test('client web tidak menjadi fallback jika client admin belum dikonfigurasi',async()=>{
+  assert.equal((await call('login',{anonymous:true,env:{ADMIN_GOOGLE_CLIENT_ID:''},body:{googleIdToken:'token',turnstileToken:'captcha'}})).status,503);
 });

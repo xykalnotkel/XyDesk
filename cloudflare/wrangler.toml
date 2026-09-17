@@ -15,6 +15,8 @@ routes = [
 # Browser produksi yang boleh memanggil API. Klien native tidak mengirim
 # Origin, jadi pembatasan ini tidak mengganggu Android/desktop.
 [vars]
+# OAuth Web khusus admin; tidak mengganti client web/APK yang ada.
+ADMIN_GOOGLE_CLIENT_ID = "495336144977-bbtbsdunjrfsfcgki96h6vgq0i5rvs8a.apps.googleusercontent.com"
 CORS_ORIGINS = "https://app.xydesk.my.id,https://xydesk-admin.pages.dev,https://admin.xydesk.my.id"
 # Client ID OAuth tipe "Desktop app" untuk shell Electron. Client ID bukan
 # rahasia (ia ikut terkirim di URL browser pengguna), jadi aman sebagai var.

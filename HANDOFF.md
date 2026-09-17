@@ -1284,3 +1284,15 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-ROLLOUT. Operator memilih verifik
 - Langkah berikutnya: pemilik memperbaiki origin di Google Console → ulang probe → widget+secret Turnstile admin → build dengan env publik → deploy backend dan panel → verifikasi bundle serta smoke test. Jangan deploy build saat ini tanpa env.
 
 Verifikasi akhir rollout ditahan: commit kode `bca6da1` sudah push ke `main`, dikonfirmasi lewat GitHub API. Tidak ada Actions untuk commit tersebut saat pemeriksaan. Versi produksi signaling tetap `9c59a320-70aa-49ca-8933-37d4dd56727c`; admin tetap `577e5ea9-61bd-41b1-b9fd-37aff028d012`. Secret scan staged diff: 0 kecocokan kredensial lampiran.
+
+
+## OAuth admin terpisah dan rollout — 2026-09-17
+
+Operator - XyDesk Team, SESI-20260917-OPERATOR-ADMINLIVE. Pemilik mengunggah client OAuth khusus admin dan meminta penyimpanan di berkas kunci; rollout melanjutkan izin verifikasi/push/deploy sebelumnya.
+
+- Client admin tersimpan di berkas kunci di luar repo; client secret tidak digunakan dalam aplikasi. `ADMIN_GOOGLE_CLIENT_ID` wajib dan tidak memakai fallback client web/APK. Konfigurasi `GOOGLE_CLIENT_ID` lama di Worker tetap dipertahankan.
+- Google GIS asli menerima origin admin dengan client baru: HTTP 200 dan tombol terlihat; build produksi juga diperiksa di browser dengan layanan Google asli, tanpa pageerror. Belum login akun manusia.
+- Widget Turnstile khusus admin dibuat, tidak mengubah widget proyek lain. Secret disiapkan untuk upload versi Worker secara aditif, bukan rotasi secret global.
+- Tes Worker 124/124, panel 15/15, runtime SQLite dan build produksi lolos. Nilai `.env.production` hanya Client ID dan sitekey publik.
+- Snapshot file `tool/check_backend_live.py` memiliki perubahan mode yang sudah ada saat sesi dimulai; tidak disentuh dan tidak disertakan dalam commit.
+- Versi Worker dan panel akan diunggah tanpa aktivasi terlebih dahulu. Hasil deploy dan smoke test dicatat setelah aktivasi.

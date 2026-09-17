@@ -25,6 +25,7 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Fixed
+- OAuth admin memakai client khusus melalui `ADMIN_GOOGLE_CLIENT_ID`; client web/APK tidak diubah dan tidak menjadi fallback untuk login admin. Konfigurasi publik build admin dipisahkan dari secret.
 - Worker: entrypoint runtime hanya mengekspor handler dan kelas Durable Object; konstanta helper untuk tes tidak lagi membuat startup workerd gagal.
 - Backend admin: hapus fallback identitas Google palsu dan bypass captcha; pakai verifikasi Google dengan signature helper yang benar, hostname Turnstile, dan sesi admin audience khusus satu jam.
 - Maintenance backend: transaksi batch + audit log + pemeriksaan revision; galat storage menjadi 503 dan konflik menjadi 409, tidak sukses palsu. Pembacaan publik tidak mengungkap email pengubah.
