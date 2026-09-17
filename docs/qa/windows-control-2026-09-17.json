@@ -1,0 +1,25 @@
+{
+  "run": 35283806642,
+  "sourceSha": "1f8948f3f5ab4970d29cd03a70cd94ece9a33f39",
+  "zipPath": "/home/user/artifacts/control-windows/XyDesk-Host-Test-x64-1f8948f.zip",
+  "zipSha256": "6df81bd38fc2a2717d48a4ac0b574cc0b3a965cc7ad27b1bd60760850f7519b0",
+  "engineSha256": "fef550b39d4a6ad8d556334bf2fa34d6cb5d8528ca944845d4bcae825dbd46d0",
+  "engineBytes": 16823808,
+  "members": 548,
+  "crc": true,
+  "x64PE": true,
+  "manifest": {
+    "sourceSha": "1f8948f3f5ab4970d29cd03a70cd94ece9a33f39",
+    "version": "6.8.5",
+    "target": "x86_64-pc-windows-msvc",
+    "sha256": "fef550b39d4a6ad8d556334bf2fa34d6cb5d8528ca944845d4bcae825dbd46d0",
+    "builtAt": "2026-09-17T22:52:20.7982826Z",
+    "validation": [
+      "Linux Rust regression tests",
+      "Windows MSVC compile/link",
+      "Windows executable --help",
+      "PowerShell parser and package integrity"
+    ],
+    "hardwareTested": false
+  }
+}

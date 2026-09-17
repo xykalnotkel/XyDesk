@@ -1,11 +1,11 @@
 {
   "result": "PASS",
-  "sourceSha": "9912f07",
-  "workerVersion": "65f8ef0f-3a09-4b39-a7db-29f8f765eaad",
+  "sourceSha": "1f8948f",
+  "workerVersion": "8d88b081-c4ba-4cad-b499-8f3658b1d79f",
   "checks": [
     {
-      "asset": "/assets/index-DnQduGjN.js",
-      "sha256": "4bb8d2c237598031b7f0d62d3627c75da9010b7f035c5e3a72fbfbd9fbc69605",
+      "asset": "/assets/index-BKgmZPbY.js",
+      "sha256": "7b9531eec91329ac2d2a93838611f2465e9dc93cc9fae7ca696b8a1ef0dfb39c",
       "contentType": "text/javascript",
       "exactBuildMatch": true
     },
@@ -16,8 +16,8 @@
       "exactBuildMatch": true
     },
     {
-      "asset": "/assets/index-DNDdP5PL.css",
-      "sha256": "d51f602807fc4790e26147687494a7a60a0690a7dab54ea07bdb32379965ea1e",
+      "asset": "/assets/index-DMLqdJzN.css",
+      "sha256": "81d39c422dd1c9c75c2b89a59d26361c7ee5d0264bdcf3b7bd28f68ee99bacb9",
       "contentType": "text/css",
       "exactBuildMatch": true
     }
@@ -25,7 +25,7 @@
   "webOAuthPreserved": true,
   "backendChanged": false,
   "fieldControlTest": "pending user",
-  "initialVerification": "Immediate asset fetch did not match; fresh fetch later matched. No second deploy.",
+  "initialVerification": "Immediate asset fetch did not match; fresh fetch later matched. Verified again after CSS cursor fix deploy.",
   "browser": {
     "status": 200,
     "connectFormVisible": true,

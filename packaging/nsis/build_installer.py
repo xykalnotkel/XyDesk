@@ -8,8 +8,8 @@ import shutil
 import subprocess
 import zipfile
 
-EXPECTED_ZIP_SHA = '36fe117eebf692af88efb85f23f112be759fd0ef63126bc3d3475525db526857'
-EXPECTED_ENGINE_SHA = '0c2b5db90570def6f1b3f213d94ae6af802720522a06c598456d8b684436bf9b'
+EXPECTED_ZIP_SHA = '6df81bd38fc2a2717d48a4ac0b574cc0b3a965cc7ad27b1bd60760850f7519b0'
+EXPECTED_ENGINE_SHA = 'fef550b39d4a6ad8d556334bf2fa34d6cb5d8528ca944845d4bcae825dbd46d0'
 HERE = Path(__file__).resolve().parent
 
 

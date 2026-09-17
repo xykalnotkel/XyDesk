@@ -1,12 +1,14 @@
 XyDesk Host Test — installer NSIS Windows x64
 
 Paket engine uji 6.8.5; bukan installer aplikasi desktop lengkap.
-Engine MSVC 91ef704 membatasi H264 software sesuai Level 3.1:
+Engine MSVC 1f8948f memakai filter bilinear dan mempertahankan posisi
+mouse sebelum klik/drag saat antrean input menumpuk. H264 software Level 3.1:
 maksimal 1280x720 proporsional, 30fps, 14Mbps. Sumber 2336x1080 dikirim
 sebagai 1280x592. Desktop/RDP tidak diubah ukurannya.
 Pemulihan RTCP dan pemilihan GDI RDP tetap disertakan.
 Perbaikan penantian capture dari 9887131 tetap disertakan.
-Tes regresi WebRTC lulus; tampilan RDP/Android tetap perlu diuji manual.
+Versi kompatibilitas sebelumnya sudah tampil di Chrome Android pengguna.
+Ketajaman dan kontrol pada paket baru ini tetap perlu diuji manual.
 
 PASANG DAN MULAI
 Jika versi uji sebelumnya masih berjalan, putuskan sesi web lalu tekan Ctrl+C
@@ -14,7 +16,8 @@ di konsol XyDesk Host Test milik Anda. Jangan tutup/disconnect aplikasi RDP.
 Pasang ulang ke lokasi yang sama; identitas uji dipertahankan.
 1. Jalankan installer .exe. Pilih folder kosong; default terpisah dari XyDesk lama.
 2. Setelah selesai, klik shortcut "XyDesk Host Test" di Desktop atau Start Menu.
-3. Biarkan RDP terbuka dan desktop tidak terkunci untuk tes pertama.
+3. Setelah host siap, beralih ke Chrome HP tanpa mengakhiri sesi RDP.
+   Tidak perlu mempertahankan aplikasi RDP di depan.
 4. Masukkan ID/password yang ditampilkan host ke client web/APK.
 5. Uji tampilan Notepad, gerakan pointer, klik, ketikan, dan pairing ulang.
 
@@ -40,7 +43,7 @@ tetap berlaku. Jangan mengganti driver atau memakai tscon secara spekulatif.
 
 BILA LAYAR MASIH HITAM
 Cari log baru seperti:
-  video software: capture 2336x1080 -> kirim 1280x592, maks 30 fps,
+  video software: capture 2336x1080 -> kirim 1280x592, filter bilinear, maks 30 fps,
   bitrate 8000000 bps, SPS 42c01f
 Baris "capture gdi-bitblt 2336x1080" tetap wajar: itu ukuran sumber,
 bukan ukuran gambar yang dikirim. Jangan simpulkan resize gagal dari baris itu.
@@ -48,9 +51,26 @@ bukan ukuran gambar yang dikirim. Jangan simpulkan resize gagal dari baris itu.
 Di web lihat Pemutar video, Ukuran pemutar, Frame pemutar(total),
 serta Frame diterima/decode. Kirim hanya angka dan baris video software;
 jangan sertakan ID/password/token atau konsol lengkap.
-Label target 720p60 pada web bukan batas encoder software ini: 30fps.
+Preset web adalah target bitrate; fps aktual dapat lebih rendah dari 30fps.
 Batas lebih tinggi dan NVENC belum diselaraskan pada patch software ini.
 Tidak perlu mengulang probe capture atau memasang driver untuk menguji patch.
+
+KONTROL HP (WEB TERBARU)
+Muat ulang app.xydesk.my.id sebelum konek setelah pembaruan web.
+- Trackpad aktif otomatis pada layar sentuh: geser satu jari = gerak panah.
+- Ketuk singkat = klik kiri. Ketuk dua kali = klik dua kali.
+- Geser dua jari = scroll; bukan klik atau perpindahan panah.
+- Tahan tombol mouse kiri dengan satu jari, geser gambar dengan jari lain
+  untuk drag. Lepas tombol untuk menjatuhkan objek.
+- Tombol mouse kanan = klik kanan. Kontrol > Sensitivitas mengatur gerak.
+- Mode Langsung: sentuh titik di gambar; pita hitam bukan bagian desktop.
+Panah menunjukkan posisi perintah lokal, bukan telemetry kursor Windows;
+mouse yang digerakkan dari aplikasi RDP lain tidak otomatis diikuti panah.
+Capture WGC yang menyertakan cursor bisa memperlihatkan dua panah sementara.
+
+Gambar tetap diperkecil menjadi 1280x592 untuk sumber2336x1080. Bilinear
+mengurangi gerigi, bukan mengembalikan seluruh detail desktop asli. Ada biaya
+CPU tambahan; kelancaran aktual mengikuti VM, bukan janji selalu30fps.
 
 BATAS DAN LISENSI
 Installer dan engine uji belum ditandatangani Authenticode. Periksa checksum
