@@ -1,0 +1,22 @@
+{
+  "result": "PASS",
+  "sourceSha": "54c8ff9c44762e056e4977b6523e932bcce733a6",
+  "testedAt": "2026-09-17T20:06:01.0478413Z",
+  "installer": "XyDesk-Host-Test-Setup-x64.exe",
+  "sha256": "ba8be12cc44a73e2259c31d2bef9e6cc9558771bf57f86d04763348c1033ce6c",
+  "bytes": 4294751,
+  "engineSha256": "2a579abf970f153b6e1a8c198325be3a1cc6c9ea8f7e1d5f14fe2f2e1265a19b",
+  "checks": [
+    "non-empty unrelated directory rejected without changes",
+    "silent install to path with spaces; installed MSVC engine hash and --help verified",
+    "Apps registration, desktop/Start Menu shortcuts and actual PowerShell shortcut command verified",
+    "reinstall preserves extra files; different install location cannot hijack registration",
+    "silent uninstall removes engine/registration/shortcuts but preserves identity and extra files",
+    "default per-user install and uninstall verified separately from explicit /D"
+  ],
+  "remoteDesktopHardwareTested": false,
+  "productionDeployed": false,
+  "ciRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35268695633",
+  "downloadVerified": true,
+  "deliveredFilename": "XyDesk-Host-Test-VideoFix-9887131-Setup-x64.exe"
+}

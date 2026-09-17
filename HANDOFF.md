@@ -1469,3 +1469,30 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   dan layout video tetap 16:9 dalam halaman. Belum diperbaiki/deploy; perlu
   viewport session fallback dan tombol Fullscreen langsung dari gesture.
 - Audio WASAPI 0x80070057 masih terpisah dan belum diperbaiki.
+
+
+### VIDEOGATE — installer perbaikan tervalidasi
+
+- Engine source **9887131867ce614239aa0f6fae8214634c9b84fb**, Windows build-only
+  **35268184807** sukses (gerbang Linux + MSVC compile/link/help/parser/checksum).
+  ZIP payload 548 member/CRC, source/PE/hash diperiksa; salinan lokal tersimpan
+  di `/home/user/artifacts/XyDesk-Host-Test-x64-9887131.zip`.
+- NSIS source **54c8ff9c44762e056e4977b6523e932bcce733a6**, run
+  **35268695633** sukses; instalasi custom/default, shortcut PowerShell aktual,
+  reinstall/uninstall dan preservasi data lulus.
+  https://github.com/xykalnotkel/XyDesk/actions/runs/35268695633
+- Installer diunduh dan diverifikasi: **4.294.751 byte**, SHA-256
+  `ba8be12cc44a73e2259c31d2bef9e6cc9558771bf57f86d04763348c1033ce6c`.
+  Nama penyerahan dibedakan dari paket lama:
+  `XyDesk-Host-Test-VideoFix-9887131-Setup-x64.exe`, folder workspace
+  `deliverables/video-fix-9887131/` dengan checksum, panduan, dan laporan.
+- Bukti `docs/qa/windows-video-gate-2026-09-17.json` dan
+  `docs/qa/nsis-video-gate-2026-09-17.json`. Engine SHA-256
+  `2a579abf970f153b6e1a8c198325be3a1cc6c9ea8f7e1d5f14fe2f2e1265a19b`.
+- Pemilik perlu menghentikan **host uji saja** lewat Ctrl+C sebelum reinstall
+  ke folder sama; RDP tetap terbuka. Identitas tidak direset. Tidak ada
+  deploy web/backend, restart host pengguna, lab baru, driver/tscon, atau
+  bump versi. Fullscreen dan WASAPI belum diperbaiki; hasil RDP→Android
+  dengan installer baru tetap menunggu pengujian manual pengguna.
+- Dampak pengguna: menghilangkan satu penyebab startup video macet. Tidak
+  ada screenshot remote baru karena perangkat pengguna tidak dioperasikan.
