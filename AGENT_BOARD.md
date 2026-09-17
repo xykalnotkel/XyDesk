@@ -186,4 +186,4 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Status | Hasil | Bukti |
 |---|---|---|---|---|
-| SESI-20260917-OPERATOR-ROLLOUT | Operator - XyDesk Team | SELESAI pemeriksaan; deploy DITAHAN | Izin chat verifikasi/push/deploy bila siap. Kode siap push; Google GIS menolak origin admin, Turnstile admin belum dikonfigurasi. Tidak mengubah produksi, secret, host, atau nomor versi. | Worker 122/122, panel 15/15, build, runtime SQLite (Wrangler 4.133.0), browser panel API tiruan lolos. Google browser probe: origin ditolak. Tidak dispatch CI. |
+| SESI-20260917-OPERATOR-ROLLOUT | Operator - XyDesk Team | SELESAI pemeriksaan; deploy DITAHAN | Izin chat verifikasi/push/deploy bila siap. Kode sudah push `bca6da1` ke main; Google GIS menolak origin admin, Turnstile admin belum dikonfigurasi. Tidak mengubah produksi, secret, host, atau nomor versi. | Worker 122/122, panel 15/15, build, runtime SQLite (Wrangler 4.133.0), browser panel API tiruan lolos. Google browser probe: origin ditolak. Tidak dispatch CI. |
