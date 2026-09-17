@@ -1688,3 +1688,27 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   tanpa gesture. Host/driver/RDP/backend/audio/versi tidak diubah.
 - Pengguna perlu reload web sebelum koneksi berikutnya. Perbaikan
   fullscreen terpisah dari status decode video di Android yang belum terbukti.
+
+
+## H264COMPAT — paket tiba, renderer Android tanpa metadata
+
+- Statistik user: RTP bytes/frame bertambah, renderer playing tetapi
+  readyState0/0x0/0 frame; log salinan terminal rusak tidak diinterpretasi.
+- Probe dengan konfigurasi software produksi lama: 2336x1080 -> SPS
+  **42c033** (Level5.1), 9928 macroblock. 1280x592/720 dengan 60fps ->
+  **42c020** (Level3.2). Track mengiklankan **42e01f** (Level3.1). Ini
+  reproduksi konfigurasi lokal, bukan bitstream yang disadap dari user.
+- SoftwareEncoder baru memperkecil RGBA proporsional ke batas1280x720,
+  dimensi genap; user2336x1080 menjadi1280x592. Config Level3.1/30fps/
+  <=14Mbps, pacing GDI30/DXGI software30/WGC software30, durasi RTP target
+  software33,333ms. Source desktop/driver/resolusi RDP tidak diubah.
+- Tes encode RGBA2336x1080 nyata lewat kelas produksi menghasilkan SPS
+  **42c01f** dan OpenH264 decoder mengeluarkan1280x592. Tes ukuran/aspek,
+  batas3600macroblock/108000macroblock-per-sec dan buffer rusak PASS.
+  fmt + Rust128lib/5bin/3integration PASS. Belum bukti Android.
+- Hardware NVENC tidak diubah; negosiasi kemampuan/resolusi hardware yang
+  lebih tinggi masih perlu audit terpisah. Pilihan kualitas web lama masih
+  terutama mengubah bitrate, bukan janji software selalu mencapai720p60.
+  Bitrate target >14Mbps dibatasi software dan nilai efektif dicetak di log.
+- Resize nearest-neighbor memakai buffer ulang; teks kecil dapat teralias.
+  Input absolut sudah dinormalisasi; desktop asli tidak di-resize.

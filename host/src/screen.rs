@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc};
 
 use openh264::encoder::{
-    BitRate, Complexity, Encoder, EncoderConfig, FrameRate, IntraFramePeriod, Profile,
+    BitRate, Complexity, Encoder, EncoderConfig, FrameRate, IntraFramePeriod, Level, Profile,
     RateControlMode, SpsPpsStrategy, UsageType,
 };
 use openh264::formats::YUVBuffer;
@@ -174,15 +174,18 @@ pub fn set_target_bitrate_bps(bps: u32) -> bool {
     true
 }
 
-/// FPS nominal jalur produksi (target roadmap 1080p60). Dipakai sebagai
-/// durasi sampel video (RTP timestamp maju per frame) dan pacing sumber
-/// pola uji.
+/// Target jalur hardware. Software memakai batas Level 3.1 (30 fps).
 pub const NOMINAL_FPS: u32 = 60;
 
-/// Durasi satu frame pada [`NOMINAL_FPS`] — dipakai sebagai `duration`
-/// sampel video saat menulis ke track RTP.
+/// Durasi target sampel RTP dan pacing pola uji. Software 30 fps tidak
+/// boleh diberi timestamp seolah-olah mengalir pada 60 fps.
 pub fn frame_duration() -> std::time::Duration {
-    std::time::Duration::from_micros(1_000_000 / u64::from(NOMINAL_FPS))
+    let fps = if nvenc_active() {
+        NOMINAL_FPS
+    } else {
+        crate::software_video::MAX_FPS
+    };
+    std::time::Duration::from_micros(1_000_000 / u64::from(fps))
 }
 
 /// Frame H264 ter-encode beserta metrik produksinya. Timestamp dibawa sejak
@@ -229,7 +232,8 @@ pub const IDR_INTERVAL_FRAMES: u32 = 120;
 ///     "bitrate can't be controlled ... without enabling skip frame" —
 ///     dengan skip mati, mode bitrate tidak berfungsi dan stream bisa
 ///     meledak jauh di atas 8 Mbps (memacetkan Wi-Fi rumah).
-///   - IDR berkala 120 frame (~2 dtk @60fps): pulih cepat dari packet loss.
+///   - IDR berkala 120 frame (~4 dtk @30fps), ditambah permintaan PLI/FIR.
+///   - Level 3.1, maksimal 30 fps/14 Mbps; SoftwareEncoder membatasi dimensi.
 ///
 /// Catatan jujur dari `--bench`: openh264 (software) tidak kuat menembus
 /// target <10 ms @1080p60 (di 640x360 saja sudah ~30 ms). Hardware encode
@@ -238,8 +242,11 @@ pub fn prod_encoder_config() -> EncoderConfig {
     EncoderConfig::new()
         .usage_type(UsageType::ScreenContentRealTime)
         .rate_control_mode(RateControlMode::Bitrate)
-        .bitrate(BitRate::from_bps(target_bitrate_bps()))
-        .max_frame_rate(FrameRate::from_hz(60.0))
+        .bitrate(BitRate::from_bps(
+            target_bitrate_bps().min(crate::software_video::MAX_BITRATE),
+        ))
+        .max_frame_rate(FrameRate::from_hz(crate::software_video::MAX_FPS as f32))
+        .level(Level::Level_3_1)
         .skip_frames(true)
         .profile(Profile::Baseline)
         .complexity(Complexity::Low)
@@ -876,8 +883,7 @@ pub fn nvenc_active() -> bool {
 mod windows {
     use std::sync::mpsc;
 
-    use openh264::encoder::Encoder;
-    use openh264::formats::{RgbaSliceU8, YUVBuffer};
+    use crate::software_video::SoftwareEncoder;
     use windows_capture::capture::{Context, GraphicsCaptureApiHandler};
     use windows_capture::frame::Frame;
     use windows_capture::graphics_capture_api::InternalCaptureControl;
@@ -892,7 +898,7 @@ mod windows {
     /// diketahui saat itu.
     enum EncoderKind {
         Nvenc(crate::nvenc::NvEnc),
-        Soft(Box<Encoder>),
+        Soft(Box<SoftwareEncoder>),
     }
 
     impl EncoderKind {
@@ -908,13 +914,7 @@ mod windows {
                     crate::pixfmt::rgba_to_nv12(rgba_tight, width, height, nv12);
                     enc.encode(nv12)
                 }
-                EncoderKind::Soft(enc) => {
-                    let rgba = RgbaSliceU8::new(rgba_tight, (width, height));
-                    let yuv = YUVBuffer::from_rgb_source(rgba);
-                    enc.encode(&yuv)
-                        .map(|b| b.to_vec())
-                        .map_err(|e| format!("openh264: {e}"))
-                }
+                EncoderKind::Soft(enc) => enc.encode(rgba_tight, width, height),
             };
             // Satu tempat untuk kedua encoder: IDR disimpan sebagai penyelamat
             // layar hitam (lihat `remember_keyframe`). Frame yang dihasilkan
@@ -954,6 +954,7 @@ mod windows {
         log_terakhir: std::time::Instant,
         /// Jumlah frame saat log terakhir dicetak — untuk fps per interval.
         frame_log_terakhir: u64,
+        last_software_frame: Option<std::time::Instant>,
     }
 
     impl GraphicsCaptureApiHandler for ScreenCapturer {
@@ -964,10 +965,7 @@ mod windows {
             // Encoder dibangun lazy di frame pertama (resolusi belum diketahui
             // di sini). Sementara diisi fallback software; `on_frame_arrived`
             // akan mengganti ke NVENC bila GPU NVIDIA tersedia.
-            let encoder = Encoder::with_api_config(
-                openh264::OpenH264API::from_source(),
-                super::prod_encoder_config(),
-            )?;
+            let encoder = SoftwareEncoder::new()?;
             Ok(Self {
                 encoder: EncoderKind::Soft(Box::new(encoder)),
                 sender: ctx.flags,
@@ -979,6 +977,7 @@ mod windows {
                 encode_count: 0,
                 log_terakhir: std::time::Instant::now(),
                 frame_log_terakhir: 0,
+                last_software_frame: None,
             })
         }
 
@@ -1063,6 +1062,18 @@ mod windows {
                         width, height
                     );
                 }
+            }
+
+            if matches!(self.encoder, EncoderKind::Soft(_)) {
+                let interval =
+                    std::time::Duration::from_secs_f64(1.0 / crate::software_video::MAX_FPS as f64);
+                if self
+                    .last_software_frame
+                    .is_some_and(|last| captured_at.duration_since(last) < interval)
+                {
+                    return Ok(());
+                }
+                self.last_software_frame = Some(captured_at);
             }
 
             // Ukur encode (termasuk konversi RGBA→NV12 di jalur NVENC): target
@@ -1185,10 +1196,7 @@ mod windows {
 
         // Resolusi sudah diketahui di depan (beda dari WGC yang baru tahu di
         // frame pertama), jadi NVENC bisa dicoba sekali di sini.
-        let mut encoder = EncoderKind::Soft(Box::new(Encoder::with_api_config(
-            openh264::OpenH264API::from_source(),
-            super::prod_encoder_config(),
-        )?));
+        let mut encoder = EncoderKind::Soft(Box::new(SoftwareEncoder::new()?));
         super::NVENC_ACTIVE.store(false, std::sync::atomic::Ordering::Relaxed);
         if w % 2 == 0 && h % 2 == 0 {
             match crate::nvenc::NvEnc::new(w as u32, h as u32, super::target_bitrate_bps()) {
@@ -1326,10 +1334,7 @@ mod windows {
         let w = cap.width();
         let h = cap.height();
 
-        let mut encoder = EncoderKind::Soft(Box::new(Encoder::with_api_config(
-            openh264::OpenH264API::from_source(),
-            super::prod_encoder_config(),
-        )?));
+        let mut encoder = EncoderKind::Soft(Box::new(SoftwareEncoder::new()?));
         super::NVENC_ACTIVE.store(false, std::sync::atomic::Ordering::Relaxed);
         if w % 2 == 0 && h % 2 == 0 {
             match crate::nvenc::NvEnc::new(w as u32, h as u32, super::target_bitrate_bps()) {
@@ -1348,6 +1353,13 @@ mod windows {
         }
 
         let mut nv12: Vec<u8> = Vec::new();
+        let interval = std::time::Duration::from_secs_f64(
+            1.0 / if matches!(encoder, EncoderKind::Soft(_)) {
+                crate::software_video::MAX_FPS as f64
+            } else {
+                TARGET_FPS as f64
+            },
+        );
         let tunggu_ms = (1000 / TARGET_FPS) as u32;
         let mut detik_terakhir = std::time::Instant::now();
         let mut frame_detik = 0u64;
@@ -1411,6 +1423,10 @@ mod windows {
                 enc_sum = 0;
                 enc_max = 0;
                 enc_n = 0;
+            }
+            let elapsed = captured_at.elapsed();
+            if elapsed < interval {
+                std::thread::sleep(interval - elapsed);
             }
         }
         println!("[xydesk-host] capture dxgi-duplication berhenti (monitor {monitor})");
@@ -1564,12 +1580,12 @@ mod tests {
     }
 
     #[test]
-    fn durasi_frame_nominal_60fps() {
+    fn durasi_frame_software_30fps() {
         let d = frame_duration();
         let us = d.as_micros();
         assert!(
-            (16_000..=17_000).contains(&us),
-            "durasi frame harus ~16,667 ms, dapat {us} us"
+            (33_000..=34_000).contains(&us),
+            "durasi frame software harus ~33,333 ms, dapat {us} us"
         );
     }
 
