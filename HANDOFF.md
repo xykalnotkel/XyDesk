@@ -1650,3 +1650,25 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - Masih belum terbukti: decode/render H264 2336x1080 di Chrome Android user,
   dukungan level/resolusi dan penerapan label kualitas720p pada encoder.
   Jangan membangun installer capture lagi tanpa bukti dari pemutar.
+
+
+## SESSIONFULL — fullscreen sesi web
+
+- Permintaan user: layar sesi fullscreen di web. Host/installer tidak diubah.
+- Connected memakai fixed viewport 100dvh, header/footer berada di belakang
+  sesi, video contain (tidak dipotong/ditarik). Native Fullscreen API hanya
+  dari tombol pada surface yang memuat video+kontrol; bukan dokumen/elemen
+  video sendirian atau callback negosiasi tanpa gesture. Penolakan dilaporkan,
+  layout viewport tetap berlaku. Tidak memaksa native video iOS yang
+  menghilangkan kontrol input. Landscape lock best-effort setelah fullscreen.
+- Toolbar memakai dua/tiga kolom pada tinggi pendek, panel minimum width
+  tidak keluar viewport, safe-area tepi dipertimbangkan. Pointer-up rail
+  tidak diteruskan menjadi klik remote. Body scroll dikunci selama Connected
+  dan nilai sebelumnya dipulihkan lewat cleanup effect.
+- 29 unit tes + tsc/Vite PASS. Chromium layout fixture memakai CSS produksi,
+  SSR SessionRail asli dan helper fullscreen: 390x844, 844x390, 568x320,
+  1366x768 memenuhi viewport + seluruh tombol terlihat; native entry/exit,
+  penolakan native + fallback, dan layout disconnect PASS. Bukan sesi
+  RDP/Android fisik, bukan bukti bug decode user sudah selesai.
+- Bukti docs/qa/session-fullscreen-2026-09-17.json dan screenshot fixture
+  landscape. Tidak ada screenshot desktop user atau kredensial sesi.

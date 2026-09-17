@@ -1,3 +1,4 @@
+import { enterSessionFullscreen, leaveSessionFullscreen } from './session_fullscreen';
 import { videoOnlyStream, playRemoteVideo } from './video_playback';
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
@@ -2084,54 +2085,38 @@ function ConnectScreen({
   const connected = phase === 'connected';
   const canConnect = hostId.replace(/[\s-]/g, '').length === 9 && pin.length >= 6 && !['pairing', 'negotiating'].includes(phase);
 
-  // Fullscreen: tombol = toggle (masuk/keluar), dan state disinkronkan lewat
-  // fullscreenchange supaya Esc/batal dari browser juga tercermin di UI.
+  // Layout sesi selalu memenuhi viewport; fullscreen browser hanya dari gesture.
   const [fullscreenOn, setFullscreenOn] = useState(false);
   useEffect(() => {
-    const onFsChange = () => setFullscreenOn(Boolean(document.fullscreenElement));
-    document.addEventListener('fullscreenchange', onFsChange);
-    // iOS Safari: fullscreen elemen <video> tidak memicu fullscreenchange di
-    // document; ia mengirim event webkit sendiri pada elemen videonya.
-    const v = videoRef.current;
-    const onBegin = () => setFullscreenOn(true);
-    const onEnd = () => setFullscreenOn(false);
-    v?.addEventListener('webkitbeginfullscreen', onBegin);
-    v?.addEventListener('webkitendfullscreen', onEnd);
-    return () => {
-      document.removeEventListener('fullscreenchange', onFsChange);
-      v?.removeEventListener('webkitbeginfullscreen', onBegin);
-      v?.removeEventListener('webkitendfullscreen', onEnd);
-    };
+    if (!connected) return;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = overflow; };
   }, [connected]);
+  useEffect(() => {
+    const onFsChange = () => setFullscreenOn(document.fullscreenElement === surfaceRef.current && !!surfaceRef.current);
+    document.addEventListener('fullscreenchange', onFsChange);
+    onFsChange();
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
-  const enterImmersive = useCallback(async () => {
-    try {
-      if (!document.fullscreenElement) {
-        if (typeof document.documentElement.requestFullscreen === 'function') {
-          await document.documentElement.requestFullscreen();
-        } else {
-          // iOS Safari: Fullscreen API hanya tersedia pada elemen <video>.
-          const v = videoRef.current as
-            | (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
-            | null;
-          v?.webkitEnterFullscreen?.();
-        }
-      }
-    } catch {
-      // Permintaan fullscreen ditolak browser (mis. tanpa gestur pengguna).
+  const toggleFullscreen = useCallback(async () => {
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    if (document.fullscreenElement === surface) {
+      await leaveSessionFullscreen(surface);
+      return;
+    }
+    const entered = await enterSessionFullscreen(surface);
+    if (!entered) {
+      setHudToast('Fullscreen browser tidak tersedia atau ditolak. Sesi tetap memenuhi area halaman.');
+      return;
     }
     try {
       const orientation = screen.orientation as ScreenOrientation & { lock?: (value: string) => Promise<void> };
       await orientation.lock?.('landscape');
-    } catch {
-      // Orientation lock bersifat best-effort dan tergantung browser.
-    }
+    } catch { /* Rotasi mengikuti dukungan dan pengaturan perangkat. */ }
   }, []);
-
-  const toggleFullscreen = useCallback(() => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void enterImmersive();
-  }, [enterImmersive]);
 
   const connect = async (isRetry = false) => {
     localStorage.setItem(LAST_HOST_KEY, hostId);
@@ -2142,9 +2127,8 @@ function ConnectScreen({
       retryRef.current.wasConnected = false;
       setRetryInfo('');
     }
-    // PENTING: fullscreen + rotasi landscape TIDAK dipanggil di sini.
-    // Selama pairing/negosiasi pengguna tetap di layar form; layar baru
-    // berputar setelah transport benar-benar connected.
+    // Pairing tetap di form. Layout viewport aktif setelah Connected;
+    // fullscreen native/rotasi hanya diminta dari tombol pengguna.
     try {
       const jwt = await ensureToken();
       const session = new RtcSession();
@@ -2163,7 +2147,7 @@ function ConnectScreen({
           saveRecent(hostId);
           setRecents(loadRecents());
           window.history.replaceState({}, '', '/connect#session');
-          void enterImmersive();
+          setHudToast('Sesi memenuhi layar. Ketuk ikon layar penuh untuk menyembunyikan bilah browser.');
         }
         // Reconnect otomatis HANYA bila sesi pernah live lalu putus
         // (jaringan goyah) — bukan untuk pairing gagal/password salah.
@@ -2241,7 +2225,7 @@ function ConnectScreen({
     if (window.location.hash === '#session') {
       window.history.replaceState({}, '', '/connect');
     }
-    if (document.fullscreenElement) void document.exitFullscreen();
+    void leaveSessionFullscreen(surfaceRef.current);
   }, []);
   useEffect(() => disconnect, [disconnect]);
 

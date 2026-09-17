@@ -145,6 +145,8 @@ export function SessionRail({
         className="srail-pill"
         title="Tampilkan kontrol"
         aria-label="Tampilkan kontrol"
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
         onClick={onToggleCollapsed}
       >
         <IcChevronLeft />
@@ -152,7 +154,7 @@ export function SessionRail({
     );
   }
   return (
-    <div className="srail" role="toolbar" aria-label="Kontrol sesi" onPointerDown={(e) => e.stopPropagation()}>
+    <div className="srail" role="toolbar" aria-label="Kontrol sesi" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
       <button type="button" className="srail-btn" title="Sembunyikan kontrol" aria-label="Sembunyikan kontrol" onClick={onToggleCollapsed}>
         <IcChevronRight />
       </button>

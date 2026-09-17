@@ -1,0 +1,42 @@
+{
+  "result": "PASS",
+  "boundary": "Chromium layout fixture using production CSS, SSR SessionRail and fullscreen helper; not an RDP session or Android device",
+  "checks": [
+    {
+      "width": 390,
+      "height": 844,
+      "surfaceFillsViewport": true,
+      "allControlsVisible": true
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "surfaceFillsViewport": true,
+      "allControlsVisible": true
+    },
+    {
+      "width": 568,
+      "height": 320,
+      "surfaceFillsViewport": true,
+      "allControlsVisible": true
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "surfaceFillsViewport": true,
+      "allControlsVisible": true
+    },
+    {
+      "nativeFullscreenSurfaceWithControls": true
+    },
+    {
+      "exitFullscreen": true
+    },
+    {
+      "rejectedNativeKeepsViewport": true
+    },
+    {
+      "disconnectedLayoutRestored": true
+    }
+  ]
+}

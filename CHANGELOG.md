@@ -25,6 +25,7 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Fixed
+- Sesi web memenuhi viewport saat Connected, tidak lagi terkotak 16:9 dalam halaman. Fullscreen native diminta dari tombol untuk seluruh surface beserta kontrol; fallback tetap memenuhi viewport. Toolbar landscape tidak terpotong, scroll halaman dipulihkan saat sesi berakhir.
 - Pemutar web: pisahkan track video dari audio, panggil play setelah sesi tampil, sediakan retry melalui gesture, dan laporkan keadaan elemen video. Penghitung decode yang tidak tersedia tidak lagi ditampilkan sebagai nol.
 - Video host: baca RTCP sender agar interceptor memproses NACK/retransmisi dan PLI/FIR meminta keyframe (dibatasi 500ms). Statistik web memilih video utama, bukan RTX, serta menampilkan byte/paket/frame/keyframe dan PLI/NACK tanpa pembulatan Mbps.
 - Host RDP: benar-benar memilih GDI, bukan hanya mencetak fallback sambil menjalankan DXGI; jalur RDP tidak memanggil pembuatan/pemasangan virtual display. Diagnostik membedakan sampel pojok dari seluruh RGB, dan nol frame tidak lagi menyuruh tscon.

@@ -2785,3 +2785,50 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
   .hero-orb.orb-3 { width: 52px; height: 52px; }
   /* REMOVED hero-float-card */ .hero-float-card-old { padding: 6px 10px; font-size: 11px; }
 }
+
+
+/* Sesi aktif menutupi halaman, termasuk ketika Fullscreen API ditolak. */
+.remote-session {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #000;
+}
+.remote-session > .video-surface,
+.video-surface:fullscreen {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+  touch-action: auto;
+}
+.remote-session .video-surface video { object-fit: contain; touch-action: none; }
+.video-surface::backdrop { background: #000; }
+.remote-session .srail { right: max(12px, env(safe-area-inset-right)); }
+.remote-session .srail-pill { right: max(6px, env(safe-area-inset-right)); }
+.remote-session .sesi-waktu { top: max(12px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); }
+.remote-session .hud-mouse { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); }
+.remote-session .spanel { min-width: 0; }
+.remote-session .spanel.no-rail { min-width: 0; }
+/* Toolbar dilipat menjadi kolom, bukan terpotong saat HP landscape. */
+@media (max-height: 620px) {
+  .remote-session .srail {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(6, 42px);
+    grid-auto-columns: 42px;
+  }
+  .remote-session .srail-sep { display: none; }
+  .remote-session .spanel:not(.no-rail) { right: 118px; width: min(460px, calc(100% - 132px)); }
+}
+@media (max-height: 340px) {
+  .remote-session .srail { grid-template-rows: repeat(4, 42px); }
+  .remote-session .spanel:not(.no-rail) { right: 164px; width: min(460px, calc(100% - 178px)); }
+}
