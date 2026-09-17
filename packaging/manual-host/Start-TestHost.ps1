@@ -5,9 +5,13 @@ $ErrorActionPreference = 'Stop'
 $engine = Join-Path $PSScriptRoot 'xydesk-host.exe'
 $manifest = Get-Content (Join-Path $PSScriptRoot 'manifest.json') -Raw | ConvertFrom-Json
 if (-not (Test-Path -LiteralPath $engine -PathType Leaf)) { throw 'Engine tidak ditemukan. Ekstrak seluruh ZIP dahulu.' }
-$hash = (Get-FileHash -LiteralPath $engine -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($hash -ne $manifest.sha256) { throw 'Checksum engine tidak cocok. Jangan jalankan paket ini.' }
+# SHA-256 lewat .NET agar tidak bergantung pada autoload Get-FileHash
+# (Windows PowerShell 5.1 dapat mewarisi PSModulePath milik PowerShell 7).
 $bytes = [IO.File]::ReadAllBytes($engine)
+$sha = [Security.Cryptography.SHA256]::Create()
+try { $hash = [BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-', '').ToLowerInvariant() }
+finally { $sha.Dispose() }
+if ($hash -ne $manifest.sha256) { throw 'Checksum engine tidak cocok. Jangan jalankan paket ini.' }
 if ($bytes.Length -lt 256 -or $bytes[0] -ne 0x4d -or $bytes[1] -ne 0x5a) { throw 'Berkas bukan executable Windows.' }
 $pe = [BitConverter]::ToInt32($bytes, 0x3c)
 if ($pe -lt 0 -or $pe + 6 -gt $bytes.Length -or [BitConverter]::ToUInt32($bytes, $pe) -ne 0x4550 -or [BitConverter]::ToUInt16($bytes, $pe + 4) -ne 0x8664) { throw 'Paket ini harus berisi PE Windows x64.' }

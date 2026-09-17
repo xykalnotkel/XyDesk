@@ -27,6 +27,13 @@ class BuilderTests(unittest.TestCase):
                 builder.prepare(bad, root / 'work', 'fixture')
             self.assertFalse((root / 'work').exists())
 
+    def test_launcher_hash_does_not_require_get_filehash_cmdlet(self):
+        source = Path(__file__).parents[1].joinpath('manual-host/Start-TestHost.ps1').read_text()
+        commands = '\n'.join(line for line in source.splitlines() if not line.lstrip().startswith('#'))
+        self.assertNotIn('Get-FileHash', commands)
+        self.assertIn('[Security.Cryptography.SHA256]::Create()', commands)
+        self.assertIn('ComputeHash($bytes)', commands)
+
     def test_installer_has_no_recursive_delete_or_auto_start(self):
         source = Path(__file__).with_name('host-test.nsi').read_text()
         commands = '\n'.join(line for line in source.splitlines() if not line.lstrip().startswith(';'))

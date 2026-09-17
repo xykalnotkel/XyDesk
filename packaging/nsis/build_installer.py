@@ -49,6 +49,7 @@ def prepare(archive, work, source_sha):
         raise ValueError('Versi/arsitektur payload tidak cocok')
     if hashlib.sha256((payload / 'xydesk-host.exe').read_bytes()).hexdigest() != EXPECTED_ENGINE_SHA:
         raise ValueError('Engine berubah')
+    shutil.copy2(HERE.parent / 'manual-host' / 'Start-TestHost.ps1', payload / 'Start-TestHost.ps1')
     shutil.copy2(HERE.parent / 'windows' / 'xydesk.ico', payload / 'xydesk.ico')
     shutil.copy2(HERE / 'README-INSTALLER.txt', payload / 'README-INSTALLER.txt')
     (payload / 'installer-source.json').write_text(json.dumps({
