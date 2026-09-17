@@ -1777,3 +1777,29 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   PASS setelah fetch awal belum cocok. CSS lanjutan menyembunyikan kursor
   browser pada lapisan input supaya pointer mouse fisik tidak dobel lokal.
 - Windows build/NSIS berikutnya diperlukan; belum mengubah host user.
+
+### CONTROL — penyerahan akhir
+
+- Host **1f8948f3f5ab4970d29cd03a70cd94ece9a33f39**, Windows build-only **35283806642** PASS.
+  Manifest source/hash, ZIP548/CRC dan x64PE diverifikasi.
+  Engine SHA256 `fef550b39d4a6ad8d556334bf2fa34d6cb5d8528ca944845d4bcae825dbd46d0`.
+- NSIS source **ddfd36ffa22c9c7b923774bfb6ceb2ca485278db**, run **35284257815** PASS:
+  https://github.com/xykalnotkel/XyDesk/actions/runs/35284257815
+  Installer **4306626bytes**, SHA256 `a2211ee6c18b4ab75aaf96eac62523a03a60458d31f97e97c88f198f4f8be29b`.
+  SHA sidecar/validation sama, engine dalam hasil install sama dengan Windows.
+- Deliverable `/home/user/deliverables/control-1f8948f/XyDesk-Host-Test-Control-Bilinear-1f8948f-Setup-x64.exe` bersama README/checksum/NSIS-VALIDATION.json.
+- Web final source1f8948f, worker8d88b081-c4ba-4cad-b499-8f3658b1d79f;
+  JS/assets/index-BKgmZPbY.js + CSS/assets/index-DMLqdJzN.css exact build/live.
+  Google client WEB tetap sama; anonymous390x844/connect200/form/noerror PASS.
+  Perbaikan CSS lapisan input cursor:none memerlukan deploy kedua setelah
+  checkpoint65f8ef0f; bukan retry deploy karena verifikasi awal.
+- Cara uji manual: putuskan sesi web, Ctrl+C hanya host uji sendiri, reinstall
+  folder sama dan start sekali. Reload web. Geser1jari/ketuk/scroll2jari/
+  tombol kiri tahan + geser. Identitas tidak dihapus. Tidak restart RDP,
+  ubah driver/backend/auth/versi/lab. Tidak perlu RDP selalu foreground HP.
+- Field video pada engine sebelumnya91ef704 sudah dikonfirmasi user.
+  Kontrol/ketajaman/fps paket baru masih perlu konfirmasi Windows/Android;
+  jangan menyebut Chromium mock transport sebagai bukti SendInput Windows.
+  Panah lokal bukan telemetry dari RDP lain, WGC dapat memiliki kursor ganda,
+  batas input absolut mengikuti layar primer yang sudah ada (multi-monitor
+  belum diaudit). Audio tidak diperbaiki di sesi ini.

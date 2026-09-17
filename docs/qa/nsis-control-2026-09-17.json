@@ -1,0 +1,29 @@
+{
+  "run": 35284257815,
+  "sourceSha": "ddfd36ffa22c9c7b923774bfb6ceb2ca485278db",
+  "installerPath": "/home/user/artifacts/control-nsis/XyDesk-Host-Test-Setup-x64.exe",
+  "installerSha256": "a2211ee6c18b4ab75aaf96eac62523a03a60458d31f97e97c88f198f4f8be29b",
+  "installerBytes": 4306626,
+  "validation": {
+    "result": "PASS",
+    "sourceSha": "ddfd36ffa22c9c7b923774bfb6ceb2ca485278db",
+    "testedAt": "2026-09-17T22:54:22.3693920Z",
+    "installer": "XyDesk-Host-Test-Setup-x64.exe",
+    "sha256": "a2211ee6c18b4ab75aaf96eac62523a03a60458d31f97e97c88f198f4f8be29b",
+    "bytes": 4306626,
+    "engineSha256": "fef550b39d4a6ad8d556334bf2fa34d6cb5d8528ca944845d4bcae825dbd46d0",
+    "checks": [
+      "non-empty unrelated directory rejected without changes",
+      "silent install to path with spaces; installed MSVC engine hash and --help verified",
+      "Apps registration, desktop/Start Menu shortcuts and actual PowerShell shortcut command verified",
+      "reinstall preserves extra files; different install location cannot hijack registration",
+      "silent uninstall removes engine/registration/shortcuts but preserves identity and extra files",
+      "default per-user install and uninstall verified separately from explicit /D"
+    ],
+    "remoteDesktopHardwareTested": false,
+    "productionDeployed": false
+  },
+  "deliveredInstaller": "/home/user/deliverables/control-1f8948f/XyDesk-Host-Test-Control-Bilinear-1f8948f-Setup-x64.exe",
+  "sidecarAndValidationHashMatch": true,
+  "validatedEngineMatchesWindowsBuild": true
+}

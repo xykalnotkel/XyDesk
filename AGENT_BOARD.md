@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260917-OPERATOR-CONTROL | Operator - XyDesk Team | Web + Host + NSIS | LAGI KERJA | Trackpad HP, penunjuk lokal tersinkron input absolut, koordinat letterbox, release/cancel; filter resize; uji sebelum push/deploy scoped. Android video sudah dikonfirmasi user. | 2026-09-17 |
 | SESI-20260909-OPERATOR-UNIFY | Operator - XyDesk Team | Operator (semua area) | SELESAI | Unifikasi UI/UX: acuan=web (token Paper→web), radius web→8/12/16/20, hapus garis desktop+web, brand installer wizard | 2026-09-09 |
 
 ## Antrean izin push
@@ -110,6 +109,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260917-OPERATOR-CONTROL | Operator - XyDesk Team | Web + Host + NSIS | SELESAI | Web36 + Chromium touch portrait/landscape PASS; live8d88b081 exact assets/OAuth. Rust130+5+3 PASS; Windows35283806642/NSIS35284257815 PASS. Bilinear + input ordering + cursor/trackpad. Field control/quality pending user. | 2026-09-17 |
 | SESI-20260917-OPERATOR-H264COMPAT | Operator - XyDesk Team | Host + NSIS | SELESAI | Probe SPS5.1 vs SDP3.1; software resize1280x592/30fps/SPS3.1. Rust128+5+3, OpenH264 decode, Chromium12frame PASS. Windows35278330146/NSIS35278907733 PASS. Android manual belum terbukti; tanpa web/driver/RDP changes. | 2026-09-17 |
 | SESI-20260917-OPERATOR-SESSIONFULL | Operator - XyDesk Team | Web | SELESAI | Viewport session + fullscreen gesture + kontrol landscape. 29 tes/build/4 viewport/native entry-exit/fallback PASS. Deploy 1fecff4 versi fe8a8cd7; JS/CSS/browser live diverifikasi. Tanpa host/driver/backend. | 2026-09-17 |
 | SESI-20260917-OPERATOR-PLAYBACK | Operator - XyDesk Team | Web | SELESAI | Video-only sink, play/gesture retry, keadaan DOM dan missing decode bukan nol. 26 tes/build/Chromium playback PASS. Deploy effc912 versi 1c6587f1 diverifikasi; host tetap, Android manual belum terbukti. | 2026-09-17 |
