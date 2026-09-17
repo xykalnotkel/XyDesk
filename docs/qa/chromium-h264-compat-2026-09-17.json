@@ -1,0 +1,63 @@
+{
+  "result": "PASS",
+  "boundary": "Chromium WebCodecs decoding production software H264 from synthetic RGBA2336x1080; not Android, not an RTP network test",
+  "frames": 12,
+  "sizes": [
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ],
+    [
+      1280,
+      592
+    ]
+  ],
+  "errors": [],
+  "pixel": [
+    233,
+    233,
+    233,
+    255
+  ],
+  "codec": "avc1.42e01f"
+}

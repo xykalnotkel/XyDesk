@@ -1,8 +1,10 @@
 XyDesk Host Test — installer NSIS Windows x64
 
 Paket engine uji 6.8.5; bukan installer aplikasi desktop lengkap.
-Engine MSVC fb6d635 membaca feedback RTCP video: NACK untuk retransmisi
-dan PLI/FIR untuk meminta keyframe. Pemilihan GDI RDP tetap disertakan.
+Engine MSVC 91ef704 membatasi H264 software sesuai Level 3.1:
+maksimal 1280x720 proporsional, 30fps, 14Mbps. Sumber 2336x1080 dikirim
+sebagai 1280x592. Desktop/RDP tidak diubah ukurannya.
+Pemulihan RTCP dan pemilihan GDI RDP tetap disertakan.
 Perbaikan penantian capture dari 9887131 tetap disertakan.
 Tes regresi WebRTC lulus; tampilan RDP/Android tetap perlu diuji manual.
 
@@ -36,27 +38,19 @@ Installer tidak memasang service, driver, autostart, firewall rule, atau RDP.
 Saat host dijalankan manual, mekanisme capture/driver produk yang sudah ada
 tetap berlaku. Jangan mengganti driver atau memakai tscon secara spekulatif.
 
-BILA LAYAR HITAM
-Web sudah menyediakan penghitung mentah. Muat ulang halaman sebelum pairing,
-buka Pengaturan > Gambar dan periksa Byte video, Paket diterima/hilang,
-Frame diterima/decode, Keyframe decode, serta PLI/NACK. Codec dan FPS kosong
-saja tidak cukup untuk menentukan penyebab. Jangan sertakan identitas/token.
+BILA LAYAR MASIH HITAM
+Cari log baru seperti:
+  video software: capture 2336x1080 -> kirim 1280x592, maks 30 fps,
+  bitrate 8000000 bps, SPS 42c01f
+Baris "capture gdi-bitblt 2336x1080" tetap wajar: itu ukuran sumber,
+bukan ukuran gambar yang dikirim. Jangan simpulkan resize gagal dari baris itu.
 
-Setelah pairing, periksa apakah "capture gdi-bitblt mulai" muncul.
-Pada sesi RDP, engine ini tidak mencoba membuat/memasang virtual display. Laporkan hanya pesan video dan jumlah frame; jangan kirim
-ID/password/token atau konsol lengkap. Fullscreen web dan audio bukan bagian
-dari patch ini.
-
-Buka PowerShell di folder instalasi, jalankan:
-  .\xydesk-host.exe --capture-test
-Saat probe, tampilkan Notepad putih dan gerakkan jendelanya.
-Laporkan hanya baris dxgi/gdi, jumlah frame, dan RGB-nonzero.
-Probe membaca piksel lokal tetapi tidak menyimpan screenshot atau membuka
-signaling. RGB-nonzero bukan bukti desktop benar atau decoder Android berhasil.
-Sebutkan apakah RDP terlihat di perangkat lain atau berada di HP yang sama
-dan masuk background ketika Anda berpindah ke Chrome. Jangan ubah driver,
-memutus RDP, atau menjalankan tscon hanya berdasarkan log.
-Baca juga README-MANUAL.md untuk urutan uji lengkap dan batas pengujian.
+Di web lihat Pemutar video, Ukuran pemutar, Frame pemutar(total),
+serta Frame diterima/decode. Kirim hanya angka dan baris video software;
+jangan sertakan ID/password/token atau konsol lengkap.
+Label target 720p60 pada web bukan batas encoder software ini: 30fps.
+Batas lebih tinggi dan NVENC belum diselaraskan pada patch software ini.
+Tidak perlu mengulang probe capture atau memasang driver untuk menguji patch.
 
 BATAS DAN LISENSI
 Installer dan engine uji belum ditandatangani Authenticode. Periksa checksum

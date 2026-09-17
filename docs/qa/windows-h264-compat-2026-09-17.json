@@ -1,0 +1,13 @@
+{
+  "ciRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35278330146",
+  "run": 35278330146,
+  "sourceSha": "91ef7043879320b797297b8438c177bee9a975ee",
+  "archiveName": "XyDesk-Host-Test-x64-91ef704.zip",
+  "zipSha256": "36fe117eebf692af88efb85f23f112be759fd0ef63126bc3d3475525db526857",
+  "engineSha256": "0c2b5db90570def6f1b3f213d94ae6af802720522a06c598456d8b684436bf9b",
+  "zipBytes": 7549590,
+  "engineBytes": 16820736,
+  "members": 548,
+  "hardwareTested": false,
+  "downloadVerified": true
+}
