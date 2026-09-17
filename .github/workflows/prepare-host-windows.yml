@@ -1,0 +1,106 @@
+name: Prepare Host Windows
+
+# Build-only untuk paket uji manual; bukan workflow Build/Release/Test Lab.
+# Nama berbeda mencegah workflow_run Release/Deploy Web ikut berjalan.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Gerbang regresi host (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: sudo apt-get update -qq && sudo apt-get install -y nasm
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            host/target
+          key: manual-host-linux-${{ hashFiles('host/Cargo.lock') }}
+      - name: Format dan tes Rust terkunci
+        working-directory: host
+        run: cargo fmt --check && cargo test --locked -j 2
+
+  package:
+    name: Engine Windows x64 (MSVC)
+    needs: host-tests
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: NASM untuk OpenH264
+        shell: pwsh
+        run: |
+          if (-not (Get-Command nasm -ErrorAction SilentlyContinue)) {
+            choco install nasm --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'NASM gagal dipasang' }
+            'C:\Program Files\NASM' >> $env:GITHUB_PATH
+          }
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            host/target
+          key: manual-host-windows-x64-${{ hashFiles('host/Cargo.lock') }}
+      - name: Kompilasi dan link engine Windows
+        working-directory: host
+        run: cargo build --locked --release --target x86_64-pc-windows-msvc --bin xydesk-host
+      - name: Paket, smoke executable, parser launcher, dan checksum
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = 'manual-host-package'
+          New-Item -ItemType Directory $dir -Force | Out-Null
+          Copy-Item 'host/target/x86_64-pc-windows-msvc/release/xydesk-host.exe' $dir
+          Copy-Item 'packaging/manual-host/*' $dir
+          & "$dir/xydesk-host.exe" --help | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Executable --help gagal' }
+          $version = (Select-String '^version = "([^"]+)"' host/Cargo.toml | Select-Object -First 1).Matches.Groups[1].Value
+          $manifest = [ordered]@{
+            sourceSha = $env:GITHUB_SHA
+            version = $version
+            target = 'x86_64-pc-windows-msvc'
+            sha256 = (Get-FileHash "$dir/xydesk-host.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+            builtAt = [DateTime]::UtcNow.ToString('o')
+            validation = @('Linux Rust regression tests', 'Windows MSVC compile/link', 'Windows executable --help', 'PowerShell parser and package integrity')
+            hardwareTested = $false
+          }
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content "$dir/manifest.json" -Encoding utf8
+          $tokens = $null; $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path "$dir/Start-TestHost.ps1"), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count) { throw ($errors | Out-String) }
+          & "$dir/Start-TestHost.ps1" -CheckOnly
+          # Pemeriksa harus menolak hash yang salah, bukan hanya lulus happy path.
+          $correct = Get-Content "$dir/manifest.json" -Raw
+          $bad = $correct | ConvertFrom-Json
+          $bad.sha256 = '0' * 64
+          $bad | ConvertTo-Json -Depth 4 | Set-Content "$dir/manifest.json" -Encoding utf8
+          $rejected = $false
+          try { & "$dir/Start-TestHost.ps1" -CheckOnly } catch { $rejected = $true }
+          Set-Content "$dir/manifest.json" $correct -Encoding utf8
+          if (-not $rejected) { throw 'Checksum rusak tidak ditolak' }
+          & "$dir/Start-TestHost.ps1" -CheckOnly
+          $name = "XyDesk-Host-Test-x64-$($env:GITHUB_SHA.Substring(0,7)).zip"
+          Compress-Archive -Path "$dir/*" -DestinationPath $name
+          (Get-FileHash $name -Algorithm SHA256).Hash.ToLowerInvariant() + "  $name" | Set-Content "$name.sha256" -Encoding ascii
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-Host-Manual-x64
+          path: |
+            XyDesk-Host-Test-x64-*.zip
+            XyDesk-Host-Test-x64-*.zip.sha256
+          if-no-files-found: error
+          retention-days: 14

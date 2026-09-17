@@ -1368,3 +1368,17 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - [ ] CI/Release: rollout terpisah setelah persetujuan dan lab; link media Hub
   baru ada setelah answer baru, tidak otomatis pada sesi sebelum upgrade.
   Jangan menganggap push kode sebagai rilis atau bukti Windows sudah bekerja.
+
+
+## Paket Windows untuk RDP milik pemilik — 2026-09-17
+
+- Pemilik memakai VM/RDP GitHub Actions yang sudah tersedia dan menolak lab baru.
+  Pemasangan/pengujian dilakukan sendiri; tugas sesi menyiapkan dan memvalidasi paket.
+- `Prepare Host Windows` adalah build-only terpisah dari `Build`, sehingga tidak
+  memicu workflow_run Release/Deploy Web. Tidak memakai secret RDP/Tailscale, tidak
+  membuka RDP, tidak merestart host lama, dan tidak menaikkan versi.
+- Paket berisi engine MSVC x64, manifest source SHA/checksum, launcher manual,
+  dan panduan capture/input di RDP. Identitas launcher terpisah dari instalasi lama.
+- Status saat persiapan: YAML dan guard workflow diperiksa lokal; kompilasi/link
+  Windows, smoke executable, dan validasi PowerShell menunggu hasil build-only.
+  Tidak boleh menyebut paket executable valid sebelum hasil tersebut tersedia.

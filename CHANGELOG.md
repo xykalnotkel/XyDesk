@@ -41,6 +41,7 @@ Kebijakan rilis:
 - Logs: kegagalan HTTP ditampilkan sebagai galat, bukan daftar kosong yang tampak sukses.
 
 ### Added
+- Paket uji host Windows x64 terpisah: workflow build-only MSVC, smoke executable, launcher manual dengan verifikasi PE/checksum dan identitas uji terisolasi; tanpa Test Lab, installer, rilis, atau deploy otomatis.
 - Harness remote lintas runtime memakai Worker/SQLite, binary host Rust, dan Chromium: pairing, decode/render H264, kontrol bitrate, kick dua arah, reconnect, dan putus manual. Bukti serta batas Windows/TURN di `docs/REMOTE_CORE_QA.md`.
 - Setup satu kali username/password + TOTP, kode pemulihan sekali pakai, limiter login, enkripsi seed TOTP, verifier password ber-pepper, dan audit login paralel yang tidak saling menimpa. Google ditutup hanya setelah akun baru terverifikasi; tidak membuat password pemilik otomatis.
 - `cloudflare npm run test:runtime`: uji bundle pada runtime SQLite lokal, mencakup transaksi, konflik konkurensi, audit, health, dan pembatasan akses.
