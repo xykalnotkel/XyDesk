@@ -1,0 +1,22 @@
+{
+  "result": "PASS",
+  "sourceSha": "571b3c19005f42526839e74f38cac8528a6a3835",
+  "testedAt": "2026-09-17T21:04:50.5697838Z",
+  "installer": "XyDesk-Host-Test-Setup-x64.exe",
+  "sha256": "76a177cda17ff3f713f2c0b2717108e07844ff789dd896afb35b8de2167b0cb5",
+  "bytes": 4310333,
+  "engineSha256": "bca213dd7a01fa56ae52293c217d8356a96acf98c2abf26ac4780d5acea9de89",
+  "checks": [
+    "non-empty unrelated directory rejected without changes",
+    "silent install to path with spaces; installed MSVC engine hash and --help verified",
+    "Apps registration, desktop/Start Menu shortcuts and actual PowerShell shortcut command verified",
+    "reinstall preserves extra files; different install location cannot hijack registration",
+    "silent uninstall removes engine/registration/shortcuts but preserves identity and extra files",
+    "default per-user install and uninstall verified separately from explicit /D"
+  ],
+  "remoteDesktopHardwareTested": false,
+  "productionDeployed": false,
+  "ciRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35274547571",
+  "downloadVerified": true,
+  "deliveredFilename": "XyDesk-Host-Test-MediaFix-fb6d635-Setup-x64.exe"
+}

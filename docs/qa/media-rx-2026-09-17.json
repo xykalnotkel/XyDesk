@@ -14,6 +14,12 @@
     "tests": 21,
     "build": "PASS"
   },
-  "deployed": false,
-  "windowsCaptureAndroidDecodeProven": false
+  "deployed": {
+    "web": true,
+    "hostOnUserRdp": false,
+    "backend": false
+  },
+  "windowsCaptureAndroidDecodeProven": false,
+  "localChromium": "PASS: H264 320x180, 5 frames decoded, 155 sampled colors, direct local ICE",
+  "installer": "docs/qa/nsis-media-rx-2026-09-17.json"
 }

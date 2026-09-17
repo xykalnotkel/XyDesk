@@ -1570,3 +1570,38 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   build PASS. Tes label lama perlu ekspektasi 6 digit, bukan 4 terpotong.
   Build ini bukan bundle produksi OAuth; web belum di-deploy. Windows/NSIS
   untuk engine baru menunggu build-only. Tidak membuat lab atau mengubah RDP.
+
+
+### MEDIARX — hasil akhir paket dan deploy web yang disetujui
+
+- User secara eksplisit memilih **Ya, terapkan ke web** untuk statistik media;
+  tanpa backend/driver/RDP restart. Web source **fb6d635c4c382b9e985d4f53f4a1ebd2b796ea79**
+  deployed sebagai versi **22a28371-f623-4fc2-b471-a3f399d5cad3**.
+  Asset `/assets/index-CWeoN7fA.js`, SHA-256
+  `52cd2accbdfab29c1a3e7b1080bce61256045f42b5b966043039d7134e1a9fb5`.
+  Client OAuth diekstrak dari bundle live lama, dipakai build produksi, dan
+  dicocokkan sebelum deploy. Backend/OAuth APK tidak diubah.
+- Verifikasi: bundle live byte-identik + text/javascript; browser Chromium
+  membuka /connect HTTP 200, form terlihat, tanpa pageerror; tidak pairing
+  ke perangkat user. Verifikasi langsung pertama gagal, pengambilan ulang
+  cocok; tidak ada deploy kedua. Bukti web-media-rx-production di docs/qa.
+- Harness Worker lokal → Rust → Chromium kembali PASS: H264 320x180, 5 frame
+  decoded, 155 warna sampel; bitrate/kick/reconnect/manual disconnect PASS.
+  Bukti media-rx-chromium di docs/qa. Bukan RDP/Android/TURN/loss internet.
+- Engine build Windows **35273970970** PASS; watcher lokal sempat timeout API,
+  bukan kegagalan build. Status sukses diperiksa ulang. MSVC/--help/PE/hash
+  dan ZIP 548 anggota diverifikasi; payload di /home/user/artifacts/.
+- NSIS source **571b3c19005f42526839e74f38cac8528a6a3835**, run
+  **35274547571** PASS: install custom/default, shortcut PowerShell aktual,
+  reinstall, uninstall/preservasi data. Installer **4.310.333 byte**, SHA-256
+  `76a177cda17ff3f713f2c0b2717108e07844ff789dd896afb35b8de2167b0cb5`.
+  Penyerahan: `deliverables/media-fix-fb6d635/XyDesk-Host-Test-MediaFix-fb6d635-Setup-x64.exe`
+  bersama checksum/README/laporan. Engine hash
+  `bca213dd7a01fa56ae52293c217d8356a96acf98c2abf26ac4780d5acea9de89`.
+- Tidak restart host/RDP user, tidak memasang driver, tidak lab baru, tidak
+  deploy backend atau bump versi. User perlu Ctrl+C host uji saja, reinstall
+  lokasi sama, lalu reload web sebelum pairing agar memakai statistik baru.
+- **Belum selesai:** hasil RDP→Chrome Android pada jaringan user, decode
+  di resolusi 2336x1080, loss 11,4%, audio/fullscreen, serta audit GDI lama.
+  Klaim hanya pemulihan RTCP yang direproduksi dan statistik live, bukan
+  janji layar user pasti tampil. Screenshot baru hanya pola uji lokal.

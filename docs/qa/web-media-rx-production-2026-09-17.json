@@ -9,170 +9,27 @@
   "liveBytesEqualBuild": true,
   "oauthClientPreserved": true,
   "oauthMethod": "production client ID extracted from previous live bundle and asserted in new build before deploy",
-  "previousDeployments": {
-    "deployments": [
-      {
-        "id": "97e487f3-3a86-4883-a677-8039711bd79a",
-        "source": "wrangler",
-        "strategy": "percentage",
-        "author_email": "akuntiktok76y@gmail.com",
-        "annotations": {
-          "workers/triggered_by": "deployment"
-        },
-        "versions": [
-          {
-            "version_id": "46eca638-caf2-44e1-b2e4-94ae1cae2354",
-            "percentage": 100
-          }
-        ],
-        "created_on": "2026-09-13T21:38:18.698989Z"
-      },
-      {
-        "id": "b3132e44-43c2-487a-b916-c410faf62653",
-        "source": "wrangler",
-        "strategy": "percentage",
-        "author_email": "akuntiktok76y@gmail.com",
-        "annotations": {
-          "workers/triggered_by": "deployment"
-        },
-        "versions": [
-          {
-            "version_id": "086a7552-9bdd-479d-8658-667759a782f7",
-            "percentage": 100
-          }
-        ],
-        "created_on": "2026-09-13T20:03:17.459753Z"
-      },
-      {
-        "id": "a3e2bbe0-8639-4b6e-b464-46460fa8f6b6",
-        "source": "wrangler",
-        "strategy": "percentage",
-        "author_email": "akuntiktok76y@gmail.com",
-        "annotations": {
-          "workers/triggered_by": "deployment"
-        },
-        "versions": [
-          {
-            "version_id": "0035c16c-b836-4e0c-a88e-3f62db944199",
-            "percentage": 100
-          }
-        ],
-        "created_on": "2026-09-13T19:47:23.937722Z"
-      },
-      {
-        "id": "913d28b0-300f-4992-8a0f-d4001e43309a",
-        "source": "wrangler",
-        "strategy": "percentage",
-        "author_email": "akuntiktok76y@gmail.com",
-        "annotations": {
-          "workers/triggered_by": "deployment"
-        },
-        "versions": [
-          {
-            "version_id": "b02a2c06-639f-49e2-9248-680ea0dece32",
-            "percentage": 100
-          }
-        ],
-        "created_on": "2026-09-13T17:41:47.603781Z"
-      },
-      {
-        "id": "b7ae36bb-3eab-4215-9d1b-505835410d0b",
-        "source": "wrangler",
-        "strategy": "percentage",
-        "author_email": "akuntiktok76y@gmail.com",
-        "annotations": {
-          "workers/triggered_by": "deployment"
-        },
-        "versions": [
-          {
-            "version_id": "446b2aff-22c9-40ab-b4a5-673cb2b75281",
-            "percentage": 100
-          }
-        ],
-        "created_on": "2026-09-11T21:27:53.974062Z"
-      },
-      {
-        "id": "6b9c5a27-effa-46ab-8de1-506873d9888d",
-        "source": "wrangler",
-        "strategy": "percentage",
-        "author_email": "akuntiktok76y@gmail.com",
-        "annotations": {
-          "workers/triggered_by": "deployment"
-        },
-        "versions": [
-          {
-            "version_id": "4a20abe5-1e0c-4d4a-8b9e-b0c00bac5f91",
-            "percentage": 100
-          }
-        ],
-        "created_on": "2026-09-11T20:53:58.081892Z"
-      },
-      {
-        "id": "e5f4120a-8117-4603-933f-7cbfb0f5d58b",
-        "source": "wrangler",
-        "strategy": "percentage",
-        "author_email": "akuntiktok76y@gmail.com",
-        "annotations": {
-          "workers/triggered_by": "deployment"
-        },
-        "versions": [
-          {
-            "version_id": "a45f8743-3dc4-438d-96fb-d05acb2d5793",
-            "percentage": 100
-          }
-        ],
-        "created_on": "2026-09-11T20:38:12.87871Z"
-      },
-      {
-        "id": "bea5bb40-1a9b-4783-81da-a7ccc28dae70",
-        "source": "wrangler",
-        "strategy": "percentage",
-        "author_email": "akuntiktok76y@gmail.com",
-        "annotations": {
-          "workers/triggered_by": "deployment"
-        },
-        "versions": [
-          {
-            "version_id": "92c752c9-da77-47f3-92ae-172239307fb9",
-            "percentage": 100
-          }
-        ],
-        "created_on": "2026-09-11T19:46:57.034167Z"
-      },
-      {
-        "id": "c2694829-7797-4d3f-ac25-2d1cc4924b4d",
-        "source": "wrangler",
-        "strategy": "percentage",
-        "author_email": "akuntiktok76y@gmail.com",
-        "annotations": {
-          "workers/triggered_by": "deployment"
-        },
-        "versions": [
-          {
-            "version_id": "f70e1907-363d-4ba4-be0b-2d4621ad60c5",
-            "percentage": 100
-          }
-        ],
-        "created_on": "2026-09-11T19:02:06.405623Z"
-      },
-      {
-        "id": "b8179373-3f5e-4921-ac71-fded2de66e39",
-        "source": "wrangler",
-        "strategy": "percentage",
-        "author_email": "akuntiktok76y@gmail.com",
-        "annotations": {
-          "workers/triggered_by": "deployment"
-        },
-        "versions": [
-          {
-            "version_id": "a5365e3b-ba59-4d5f-abc8-ce29612d6bcd",
-            "percentage": 100
-          }
-        ],
-        "created_on": "2026-09-09T18:55:54.029584Z"
-      }
-    ]
-  },
+  "previousDeployments": [
+    {
+      "id": "97e487f3-3a86-4883-a677-8039711bd79a",
+      "strategy": "percentage",
+      "versions": [
+        {
+          "version_id": "46eca638-caf2-44e1-b2e4-94ae1cae2354",
+          "percentage": 100
+        }
+      ],
+      "created_on": "2026-09-13T21:38:18.698989Z"
+    }
+  ],
   "backendChanged": false,
-  "initialImmediateVerification": "failed; later fresh fetch matched exact bytes and content-type; no second deployment"
+  "initialImmediateVerification": "failed; later fresh fetch matched exact bytes and content-type; no second deployment",
+  "browserCheck": {
+    "status": 200,
+    "title": "XyDesk \u2014 Remote Desktop Android, Windows & Web",
+    "formVisible": true,
+    "pageErrors": [],
+    "authenticated": false,
+    "paired": false
+  }
 }
