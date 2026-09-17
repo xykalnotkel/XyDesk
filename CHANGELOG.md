@@ -25,6 +25,7 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Fixed
+- Host RDP: benar-benar memilih GDI, bukan hanya mencetak fallback sambil menjalankan DXGI; jalur RDP tidak memanggil pembuatan/pemasangan virtual display. Diagnostik membedakan sampel pojok dari seluruh RGB, dan nol frame tidak lagi menyuruh tscon.
 - Host video: penantian frame kini dibatasi agar state Connected dapat menyalakan capture Windows yang belum menghasilkan frame. Koneksi tertutup tetap menghentikan pump saat sumber diam; jadwal penyelamatan IDR tidak dipercepat oleh tick state.
 - Launcher host uji memakai SHA-256 .NET agar tidak bergantung pada autoload Get-FileHash di Windows PowerShell; installer NSIS membedakan direktori default dan /D eksplisit tanpa mengabaikan pilihan pengguna.
 - Host menutup media dan mencabut izin pairing saat signaling putus; Hub mengaitkan answer dengan nonce socket agar kick/close memberitahu peer terkait, termasuk client yang mengabaikan close.

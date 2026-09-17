@@ -104,11 +104,7 @@ impl GdiCapture {
     pub fn grab(&mut self) -> Result<(&[u8], usize, usize), String> {
         let bgra = self.dalam.ambil()?;
         crate::pixfmt::bgra_to_rgba(bgra, &mut self.rgba);
-        // Deteksi frame hitam total — gejala VM tanpa desktop / sesi terkunci.
-        // Kalau semua piksel 0, itu bukan wallpaper hitam user (wallpaper hitam
-        // masih punya taskbar / kursor), melainkan BitBlt dari DC kosong.
-        // Kita tetap kirim (biar client tidak diam), tapi log peringatan
-        // supaya operator tau ini bukan salah encoder.
+        // Sampel pojok bukan bukti seluruh desktop hitam atau sesi terkunci.
         if self.rgba.len() >= 4 && self.rgba.iter().take(100).all(|&b| b == 0) {
             // Cek 100 byte pertama saja — cepat, cukup untuk deteksi.
             // Log hanya sekali per 5 detik biar tidak spam.
@@ -122,7 +118,7 @@ impl GdiCapture {
                 }
             };
             if should_warn {
-                eprintln!("[xydesk-host] GDI: frame tampak hitam total — mungkin sesi RDP terkunci / VM tanpa desktop aktif");
+                eprintln!("[xydesk-host] GDI: sampel pojok bernilai nol; bukan bukti seluruh frame hitam. Gunakan --capture-test untuk hitungan RGB seluruh frame");
                 unsafe {
                     LAST_WARN = Some(now);
                 }

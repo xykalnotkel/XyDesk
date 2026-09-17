@@ -101,8 +101,32 @@ pub fn bgra_to_rgba(bgra: &[u8], out: &mut Vec<u8>) {
     }
 }
 
+/// Hitung piksel RGB bukan nol pada buffer RGBA/BGRA rapat. Alpha diabaikan.
+/// Diagnostik lokal saja: tidak menyimpan atau mengirim isi layar.
+pub fn rgb_nonzero_pixels(pixels: &[u8]) -> usize {
+    pixels
+        .chunks_exact(4)
+        .filter(|p| p[0] != 0 || p[1] != 0 || p[2] != 0)
+        .count()
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn diagnostik_rgb_mengabaikan_alpha_dan_memeriksa_seluruh_buffer() {
+        let mut frame = vec![0; 4096];
+        assert_eq!(super::rgb_nonzero_pixels(&frame), 0);
+        for alpha in frame.iter_mut().skip(3).step_by(4) {
+            *alpha = 255;
+        }
+        assert_eq!(super::rgb_nonzero_pixels(&frame), 0);
+        frame[4092] = 1; // piksel terakhir, bukan sampel pojok
+        assert_eq!(super::rgb_nonzero_pixels(&frame), 1);
+        frame[1] = 255;
+        assert_eq!(super::rgb_nonzero_pixels(&frame), 2);
+        assert_eq!(super::rgb_nonzero_pixels(&[]), 0);
+    }
+
     use super::*;
 
     /// Frame RGBA8 solid `w`x`h` berisi satu warna (alpha 255).

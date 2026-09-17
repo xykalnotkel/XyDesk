@@ -354,30 +354,32 @@ pub fn spawn_frame_source() -> FrameSource {
         let alive_watch = alive.clone();
         std::thread::spawn(move || {
             let mut current = wanted_display();
-            // Deteksi RDP — penyebab #1 hitam di lab GitHub Actions
-            if is_rdp_session() {
-                eprintln!("[xydesk-host] RDP session terdeteksi (SM_REMOTESESSION=1) — DXGI tidak akan jalan, GDI fallback GetDC(0) aktif. Tutup RDP = lock = hitam, pakai tscon /dest:console untuk disconnect tanpa lock.");
-            }
-            // Virtual display driver — driver-first untuk headless/RDP (jangan DXGI fisik)
-            crate::virtual_display::ensure_display();
-            // Jika headless/RDP dan driver ada, pakai virtual display sebagai backend utama (bukan DXGI fisik)
-            if crate::virtual_display::needs_virtual_display()
-                && crate::virtual_display::is_driver_installed()
-            {
-                // Coba buat virtual display kalau belum ada
-                crate::virtual_display::ensure_virtual_display_created();
-                if let Some(v_idx) = crate::virtual_display::virtual_display_index() {
-                    eprintln!(
+            let rdp = is_rdp_session();
+            BACKEND.store(backend_awal_sesi(rdp), Ordering::Relaxed);
+            if rdp {
+                eprintln!("[xydesk-host] RDP terdeteksi — memilih gdi-bitblt untuk desktop sesi aktif; tidak membuat atau memasang virtual display");
+            } else {
+                // Virtual display driver — driver-first untuk headless/RDP (jangan DXGI fisik)
+                crate::virtual_display::ensure_display();
+                // Jika headless/RDP dan driver ada, pakai virtual display sebagai backend utama (bukan DXGI fisik)
+                if crate::virtual_display::needs_virtual_display()
+                    && crate::virtual_display::is_driver_installed()
+                {
+                    // Coba buat virtual display kalau belum ada
+                    crate::virtual_display::ensure_virtual_display_created();
+                    if let Some(v_idx) = crate::virtual_display::virtual_display_index() {
+                        eprintln!(
                         "[xydesk-host] HEADLESS+driver → pakai virtual display driver (index {}, bukan DXGI fisik) agar work di RDP/headless kayak RDP",
                         v_idx
                     );
-                    current = v_idx;
-                    BACKEND.store(BACKEND_VIRTUAL, std::sync::atomic::Ordering::Relaxed);
-                } else {
-                    // Driver ada tapi virtual display belum muncul — tetap pakai VIRTUAL backend, nanti akan coba buat lagi di loop
-                    if BACKEND.load(std::sync::atomic::Ordering::Relaxed) == BACKEND_DXGI {
+                        current = v_idx;
                         BACKEND.store(BACKEND_VIRTUAL, std::sync::atomic::Ordering::Relaxed);
-                        eprintln!("[xydesk-host] headless+driver → set backend ke virtual-display-driver (menunggu virtual display muncul)");
+                    } else {
+                        // Driver ada tapi virtual display belum muncul — tetap pakai VIRTUAL backend, nanti akan coba buat lagi di loop
+                        if BACKEND.load(std::sync::atomic::Ordering::Relaxed) == BACKEND_DXGI {
+                            BACKEND.store(BACKEND_VIRTUAL, std::sync::atomic::Ordering::Relaxed);
+                            eprintln!("[xydesk-host] headless+driver → set backend ke virtual-display-driver (menunggu virtual display muncul)");
+                        }
                     }
                 }
             }
@@ -489,7 +491,7 @@ pub fn spawn_frame_source() -> FrameSource {
                                 {
                                     if is_rdp_session() {
                                         eprintln!(
-                                            "[xydesk-host] PERINGATAN: tidak ada backend capture yang mengirim frame (30+ detik, armed) — RDP session terdeteksi! DXGI tidak jalan di RDP, tutup RDP = lock = hitam. Jalankan tscon $env:SESSIONNAME /dest:console lalu konek via XyDesk. Layar client akan hitam sampai ada desktop aktif"
+                                            "[xydesk-host] PERINGATAN: capture RDP belum menghasilkan frame. Status lock tidak diukur; periksa desktop sesi aktif dan hasil --capture-test. Tidak perlu mengubah driver atau memutus RDP"
                                         );
                                     } else {
                                         eprintln!(
@@ -540,7 +542,7 @@ pub fn spawn_frame_source() -> FrameSource {
                     nol_beruntun += 1;
                     if is_rdp_session() && nol_beruntun == 3 {
                         eprintln!(
-                            "[xydesk-host] PERINGATAN: capture {} armed tapi 0 frame selama {} detik (total {} frame) — RDP terdeteksi, kemungkinan sesi terkunci setelah tutup RDP. Pakai tscon /dest:console",
+                            "[xydesk-host] PERINGATAN: capture {} armed tapi 0 frame selama {} detik (total {} frame) — RDP terdeteksi; nol frame bukan bukti sesi terkunci (layar diam juga dapat tidak menghasilkan pembaruan)",
                             backend_label(),
                             nol_beruntun,
                             total
@@ -717,6 +719,16 @@ pub const BACKEND_VIRTUAL: u8 = 3;
 /// tidak mengirim frame — jadi nilainya hasil pengukuran, bukan preferensi.
 static BACKEND: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(BACKEND_DXGI);
 
+/// Backend awal sesi; RDP harus menangkap desktop sesi, bukan output DXGI.
+#[cfg(any(target_os = "windows", test))]
+fn backend_awal_sesi(rdp: bool) -> u8 {
+    if rdp {
+        BACKEND_GDI
+    } else {
+        BACKEND_DXGI
+    }
+}
+
 /// Nama backend untuk log, control API, dan UI.
 pub fn label_backend(id: u8) -> &'static str {
     match id {
@@ -765,8 +777,8 @@ pub fn capture_armed() -> bool {
 static FRAMES_TOTAL: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 /// Catat satu frame tertangkap. Dipanggil setiap backend tepat sebelum frame
-/// ter-encode diserahkan ke channel — bukan saat frame mentah diterima, supaya
-/// angka ini berarti "ada yang sampai ke client".
+/// ter-encode diserahkan ke channel. Ini bukan bukti frame terkirim melalui RTP
+/// atau berhasil didecode client; antrean penuh juga dapat membuang frame.
 ///
 /// Hanya jalur Windows: di platform lain sumber frame-nya pola uji dan tidak
 /// ikut rantai backend, jadi tanpa cfg fungsi ini dead code dan clippy
@@ -1512,6 +1524,16 @@ pub mod test_support {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn rdp_memilih_gdi_bukan_sekadar_mencetak_fallback() {
+        assert_eq!(super::backend_awal_sesi(true), super::BACKEND_GDI);
+    }
+
+    #[test]
+    fn sesi_console_tetap_memilih_dxgi() {
+        assert_eq!(super::backend_awal_sesi(false), super::BACKEND_DXGI);
+    }
+
     use super::*;
 
     #[test]

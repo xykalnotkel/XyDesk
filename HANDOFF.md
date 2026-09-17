@@ -1496,3 +1496,23 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   dengan installer baru tetap menunggu pengujian manual pengguna.
 - Dampak pengguna: menghilangkan satu penyebab startup video macet. Tidak
   ada screenshot remote baru karena perangkat pengguna tidak dioperasikan.
+
+
+## RDPBACKEND — laporan ulang hitam, 2026-09-17
+
+- User menguji engine 9887131: Connected dan capture berjalan, tetapi Android
+  tetap hitam. Tidak menyalin kredensial/log identitas pengguna.
+- Bug konkret: cabang RDP hanya mencetak GDI aktif; BACKEND tetap DXGI.
+  Kini policy awal RDP=GDI, console=DXGI; RDP melewati ensure_display dan
+  pemilihan virtual display agar tidak mengubah driver/display pengguna.
+- Label hitam total lama hanya mengukur 100/400 byte pojok, bukan seluruh
+  frame. Label diperbaiki; --capture-test menghitung seluruh RGB frame
+  terakhir (alpha diabaikan), tanpa screenshot/file/network/signaling.
+  Error DXGI di tengah probe tidak lagi melewati tes GDI.
+- Tes policy dengan perilaku default lama gagal (DXGI bukan GDI); policy baru
+  lulus. Tes RGB memeriksa alpha opaque, pojok nol/piksel terakhir berwarna,
+  dua piksel berwarna, dan buffer kosong. Linux fmt + 125 lib + 5 bin +
+  1 gated capture + 1 loopback lulus. Windows build/installer menunggu.
+- Batas: seleksi backend bukan bukti capture GDI benar pada RDP pengguna;
+  frame capture bukan bukti RTP/decode. Sumber desktop dan statistik decode
+  Android belum terukur. Fullscreen/audio tetap terpisah dan belum diperbaiki.

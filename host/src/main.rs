@@ -1107,11 +1107,18 @@ fn jalankan_capture_test() {
                         println!(
                             "dxgi-duplication : putus di tengah uji — {e} ({n} frame sejauh ini)"
                         );
-                        return;
+                        break;
                     }
                 }
             }
             println!("dxgi-duplication : {n} frame / 2,5 dtk ({w}x{h})");
+            if n > 0 {
+                println!(
+                    "dxgi RGB-nonzero (frame terakhir): {}/{} piksel",
+                    xydesk_host::pixfmt::rgb_nonzero_pixels(cap.pixels()),
+                    cap.pixels().len() / 4
+                );
+            }
         }
         Err(e) => println!("dxgi-duplication : GAGAL dibuka — {e}"),
     }
@@ -1121,16 +1128,31 @@ fn jalankan_capture_test() {
         Ok(mut cap) => {
             let t = std::time::Instant::now();
             let mut n = 0u64;
+            let mut rgb_last = None;
             while t.elapsed() < DUR {
-                if cap.grab().is_ok() {
-                    n += 1;
+                match cap.grab() {
+                    Ok((pixels, _, _)) => {
+                        n += 1;
+                        rgb_last = Some((
+                            xydesk_host::pixfmt::rgb_nonzero_pixels(pixels),
+                            pixels.len() / 4,
+                        ));
+                    }
+                    Err(e) => {
+                        println!("gdi-bitblt: gagal mengambil frame — {e}");
+                        break;
+                    }
                 }
                 std::thread::sleep(std::time::Duration::from_millis(16));
             }
             println!("gdi-bitblt       : {n} frame / 2,5 dtk");
+            if let Some((nonzero, total)) = rgb_last {
+                println!("gdi RGB-nonzero (frame terakhir): {nonzero}/{total} piksel");
+            }
         }
         Err(e) => println!("gdi-bitblt       : GAGAL dibuka — {e}"),
     }
+    println!("RGB-nonzero bukan bukti gambar desktop benar; nol RGB juga sah untuk layar hitam. Uji dengan Notepad putih terlihat dan digerakkan. Tidak menyimpan gambar atau memakai signaling.");
     println!("catatan: windows-graphics-capture diukur saat sesi berjalan (lihat framesCaptured di /status)");
 }
 

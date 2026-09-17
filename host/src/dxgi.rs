@@ -224,8 +224,8 @@ impl DxgiCapture {
             }
             self.context.Unmap(&self.staging, 0);
         }
-        // Deteksi frame hitam total di DXGI juga — di VM GPU kadang duplikasi
-        // berhasil tapi frame hitam karena adapter salah.
+        // Sampel pojok hanya petunjuk. Wallpaper/area hitam yang sah dapat
+        // memenuhi kondisi ini; pengukuran seluruh RGB ada di --capture-test.
         if self.buf.iter().take(400).all(|&b| b == 0) {
             static mut LAST_WARN: Option<std::time::Instant> = None;
             let now = std::time::Instant::now();
@@ -237,7 +237,7 @@ impl DxgiCapture {
                 }
             };
             if should {
-                eprintln!("[xydesk-host] DXGI: frame hitam total terdeteksi — mungkin GPU hibrida / VM tanpa output");
+                eprintln!("[xydesk-host] DXGI: sampel pojok bernilai nol; bukan bukti seluruh frame hitam. Gunakan --capture-test untuk hitungan RGB seluruh frame");
                 unsafe {
                     LAST_WARN = Some(now);
                 }

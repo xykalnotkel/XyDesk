@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-17",
+  "priorEngine": "9887131",
+  "field": "connected and DXGI frame counts increase; user still sees black in Chrome Android",
+  "defect": "RDP branch logged GDI but left BACKEND at DXGI",
+  "fix": "RDP starts GDI; skips virtual display provisioning; console keeps DXGI policy",
+  "diagnostics": "RGB-nonzero across whole last frame in local --capture-test; corner-zero no longer labelled entire black frame",
+  "checks": {
+    "rustfmt": "PASS",
+    "rustLib": 125,
+    "rustBin": 5,
+    "loopback": 1,
+    "gatedCapture": 1
+  },
+  "rdpCaptureTested": false,
+  "androidDecodeTested": false,
+  "deployed": false
+}
