@@ -1,0 +1,49 @@
+name: Prepare Host NSIS
+
+# Pengemasan installer saja; tidak membuka Test Lab, mengubah versi, atau deploy.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  installer:
+    name: Build dan uji installer NSIS Windows
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: XyDesk-Host-Manual-x64
+          run-id: 35253045929
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: payload-download
+      - name: Pasang compiler NSIS
+        shell: pwsh
+        run: |
+          choco install nsis --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler NSIS tidak tersedia' }
+      - name: Uji builder dan kompilasi installer
+        shell: pwsh
+        run: |
+          python -m unittest discover -s packaging/nsis -p 'test_*.py'
+          if ($LASTEXITCODE -ne 0) { throw 'Tes builder gagal' }
+          $compiler = @('C:\Program Files (x86)\NSIS\makensis.exe', 'C:\Program Files\NSIS\makensis.exe') | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $compiler) { throw 'makensis.exe tidak ditemukan' }
+          python packaging/nsis/build_installer.py payload-download/XyDesk-Host-Test-x64-c5feae3.zip --work nsis-work --output installer-output/XyDesk-Host-Test-Setup-x64.exe --source-sha $env:GITHUB_SHA --makensis $compiler
+          if ($LASTEXITCODE -ne 0) { throw 'Build installer gagal' }
+      - name: Uji install, shortcut, reinstall, dan uninstall
+        shell: pwsh
+        run: |
+          ./packaging/nsis/test-installer.ps1 -Installer installer-output/XyDesk-Host-Test-Setup-x64.exe -Report installer-output/NSIS-VALIDATION.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XyDesk-Host-NSIS-x64
+          path: installer-output/*
+          if-no-files-found: error
+          retention-days: 14

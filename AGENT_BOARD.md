@@ -80,6 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260917-OPERATOR-NSIS | Operator - XyDesk Team | Operator: installer NSIS paket host uji | LAGI KERJA | Permintaan langsung: jadikan installer NSIS. Payload MSVC c5feae3 dipertahankan; install/uninstall Windows diuji build-only, tanpa lab/RDP/deploy/rilis/bump. | 2026-09-17 |
 | SESI-20260909-OPERATOR-UNIFY | Operator - XyDesk Team | Operator (semua area) | SELESAI | Unifikasi UI/UX: acuan=web (token Paper→web), radius web→8/12/16/20, hapus garis desktop+web, brand installer wizard | 2026-09-09 |
 
 ## Antrean izin push

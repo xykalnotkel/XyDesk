@@ -1405,3 +1405,15 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   atau bump versi.** Dua run tersebut hanya menyiapkan paket uji.
 - `hardwareTested:false`: capture/input/audio/stabilitas pada RDP pemilik
   tetap menunggu uji manual; keberhasilan compiler tidak menggantikan itu.
+
+
+## Installer NSIS — 2026-09-17
+
+- Permintaan pemilik: jadikan paket sebelumnya installer NSIS. Role Operator.
+- Engine tetap payload MSVC c5feae3; builder mengunci SHA-256 ZIP dan executable.
+  `Prepare Host NSIS` hanya pengemasan dan tes install/uninstall, bukan Test Lab
+  atau workflow Build/Release. Tidak mengubah versi atau host/RDP produksi.
+- Instalasi per-user terpisah, shortcut manual, uninstaller hanya daftar berkas
+  yang dibundel. Identitas dan file tambahan dipertahankan; folder lain ditolak.
+- Persiapan lokal: empat tes Python dan kompilasi makensis berhasil. Validasi
+  Windows install/shortcut/reinstall/uninstall menunggu run pengemasan.
