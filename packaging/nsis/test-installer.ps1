@@ -38,8 +38,17 @@ $link = $shell.CreateShortcut($shortcut)
 if ($link.Arguments -notlike '*Start-TestHost.ps1*') { throw 'Target shortcut salah' }
 # Uji perintah shortcut dengan CheckOnly, tanpa NoExit, tanpa meminta token/stream.
 $argsCheck = $link.Arguments.Replace('-NoExit ', '') + ' -CheckOnly'
-$p = Start-Process -FilePath $link.TargetPath -ArgumentList $argsCheck -Wait -PassThru -WindowStyle Hidden
-if ($p.ExitCode -ne 0) { throw 'Launcher shortcut gagal CheckOnly di Windows PowerShell' }
+Write-Host ('CheckOnly target: ' + $link.TargetPath)
+Write-Host ('CheckOnly args: ' + $argsCheck)
+$stdout = Join-Path $base 'launcher-out.txt'
+$stderr = Join-Path $base 'launcher-error.txt'
+$p = Start-Process -FilePath $link.TargetPath -ArgumentList $argsCheck -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+if ($p.ExitCode -ne 0) {
+    Write-Host ('CheckOnly exit: ' + $p.ExitCode)
+    Get-Content $stdout -ErrorAction SilentlyContinue | Select-Object -First 20
+    Get-Content $stderr -ErrorAction SilentlyContinue | Select-Object -First 20
+    throw 'Launcher shortcut gagal CheckOnly di Windows PowerShell'
+}
 $checks.Add('Apps registration, desktop/Start Menu shortcuts and actual PowerShell shortcut command verified')
 Set-Content (Join-Path $installed 'keep-user.txt') 'user-file'
 if ((RunSetup $installed) -ne 0) { throw 'Reinstall di lokasi sendiri gagal' }
