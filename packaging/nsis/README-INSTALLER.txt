@@ -1,7 +1,8 @@
 XyDesk Host Test — installer NSIS Windows x64
 
 Paket engine uji 6.8.5; bukan installer aplikasi desktop lengkap.
-Engine MSVC eea2aca memilih GDI secara nyata untuk sesi RDP.
+Engine MSVC fb6d635 membaca feedback RTCP video: NACK untuk retransmisi
+dan PLI/FIR untuk meminta keyframe. Pemilihan GDI RDP tetap disertakan.
 Perbaikan penantian capture dari 9887131 tetap disertakan.
 Tes regresi WebRTC lulus; tampilan RDP/Android tetap perlu diuji manual.
 
@@ -36,6 +37,11 @@ Saat host dijalankan manual, mekanisme capture/driver produk yang sudah ada
 tetap berlaku. Jangan mengganti driver atau memakai tscon secara spekulatif.
 
 BILA LAYAR HITAM
+Web sudah menyediakan penghitung mentah. Muat ulang halaman sebelum pairing,
+buka Pengaturan > Gambar dan periksa Byte video, Paket diterima/hilang,
+Frame diterima/decode, Keyframe decode, serta PLI/NACK. Codec dan FPS kosong
+saja tidak cukup untuk menentukan penyebab. Jangan sertakan identitas/token.
+
 Setelah pairing, periksa apakah "capture gdi-bitblt mulai" muncul.
 Pada sesi RDP, engine ini tidak mencoba membuat/memasang virtual display. Laporkan hanya pesan video dan jumlah frame; jangan kirim
 ID/password/token atau konsol lengkap. Fullscreen web dan audio bukan bagian
