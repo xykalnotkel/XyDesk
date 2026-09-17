@@ -1605,3 +1605,26 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   di resolusi 2336x1080, loss 11,4%, audio/fullscreen, serta audit GDI lama.
   Klaim hanya pemulihan RTCP yang direproduksi dan statistik live, bukan
   janji layar user pasti tampil. Screenshot baru hanya pola uji lokal.
+
+
+## PLAYBACK — byte/frame tiba, tetapi video belum tampil
+
+- Laporan user: 1.425.749 byte/1.841 paket/720 frame diterima, framesDecoded
+  ditampilkan 0 tetapi keyFramesDecoded 6. Ini bukan bukti video tidak masuk.
+- readStats memakai framesDecoded ?? 0; field yang tidak diekspos browser
+  dipalsukan menjadi nol. Kini missing tetap undefined dan inkonsistensi
+  keyframe > total ditandai, bukan disimpulkan decoder gagal.
+- Video DOM sebelumnya menerima stream audio+video dengan MSID sama, tanpa
+  play eksplisit. Kini video-only stream, play setelah connected/visible,
+  tombol Putar video dari gesture dan laporan paused/readyState/error,
+  videoWidth/Height, total frame pemutar. Audio tetap elemen terpisah.
+- Banner tidak lagi menyalahkan layar host/driver untuk semua kasus. Track
+  terlambat dari sesi lama diabaikan; disconnect melepas srcObject tanpa
+  menghentikan track peer secara sembarang.
+- Web 26 tes + tsc/Vite PASS. Test playback memakai elemen/MediaStream mock,
+  bukan bukti Android; tidak mengklaim autoplay/audio sebagai penyebab pasti.
+  Host fb6d635 tetap dipakai; tidak perlu NSIS/capture probe lagi.
+- Workspace awal menunjuk fb6d635 dengan hasil tahap sebelumnya sebagai
+  dirty/untracked. Fetch main: 12 berkas perubahan remote sudah byte-identik
+  dengan worktree. Reset mixed ke main menjaga isi berkas dan perubahan
+  mode tool/check_backend_live.py; tidak membuang kerja pengguna.

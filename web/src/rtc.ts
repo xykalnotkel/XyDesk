@@ -239,6 +239,9 @@ export interface SessionStats {
   pliCount?: number;
   nackCount?: number;
   videoState?: string;
+  playerState?: string;
+  playerSize?: string;
+  playerFrames?: number;
   noFrameWarning?: boolean;
 }
 
@@ -660,7 +663,7 @@ export class RtcSession {
         if (primary && x.id === primary.id && x.type === 'inbound-rtp') {
           const now = performance.now();
           const bytes = Number(x.bytesReceived ?? 0);
-          const frames = Number(x.framesDecoded ?? 0);
+          const frames = typeof x.framesDecoded === 'number' ? x.framesDecoded : undefined;
           if (this.lastVideoStatsId !== String(x.id)) {
             this.lastBytes = -1; this.lastFrames = -1; this.lastAtMs = 0;
             this.lastVideoStatsId = String(x.id);
@@ -671,11 +674,11 @@ export class RtcSession {
               ? Math.max(0, ((bytes - this.lastBytes) * 8) / dt / 1e6)
               : 0;
           const fps =
-            this.lastFrames >= 0 && dt > 0.2
+            frames !== undefined && this.lastFrames >= 0 && dt > 0.2
               ? Math.max(0, (frames - this.lastFrames) / dt)
               : 0;
           this.lastBytes = bytes;
-          this.lastFrames = frames;
+          this.lastFrames = frames ?? -1;
           this.lastAtMs = now;
           const lost = Math.max(0, Number(x.packetsLost ?? 0));
           const recv = Number(x.packetsReceived ?? 0);
@@ -697,7 +700,9 @@ export class RtcSession {
             keyFramesDecoded: typeof x.keyFramesDecoded === 'number' ? x.keyFramesDecoded : undefined,
             pliCount: typeof x.pliCount === 'number' ? x.pliCount : undefined,
             nackCount: typeof x.nackCount === 'number' ? x.nackCount : undefined,
-            videoState: frames > 0 ? 'Frame sudah didecode; periksa tampilan jika masih hitam'
+            videoState: frames === undefined ? 'Penghitung decode tidak tersedia; periksa pemutar'
+              : typeof x.keyFramesDecoded === 'number' && x.keyFramesDecoded > frames ? 'Statistik decode tidak konsisten; periksa pemutar'
+              : frames > 0 ? 'Frame sudah didecode; periksa tampilan jika masih hitam'
               : bytes > 0 ? 'Data video diterima, belum ada frame terdecode'
               : 'Belum tercatat payload video diterima',
 

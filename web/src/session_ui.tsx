@@ -581,6 +581,9 @@ export function SessionPanel({
                 <StatRow label="Paket hilang" value={`${idNum(stats.lossPct, 1)} %`} />
                 <StatRow label="Codec" value={stats.codec || '—'} />
                 <StatRow label="Status video" value={stats.videoState || '—'} />
+                <StatRow label="Pemutar video" value={stats.playerState || '—'} />
+                <StatRow label="Ukuran pemutar" value={stats.playerSize || '—'} />
+                <StatRow label="Frame pemutar (total)" value={String(stats.playerFrames ?? '—')} />
                 <StatRow label="Byte video diterima" value={stats.bytesReceived?.toLocaleString('id-ID') ?? '—'} />
                 <StatRow label="Paket diterima / hilang" value={`${stats.packetsReceived ?? '—'} / ${stats.packetsLost ?? '—'}`} />
                 <StatRow label="Frame diterima / decode" value={`${stats.framesReceived ?? '—'} / ${stats.framesDecoded ?? '—'}`} />

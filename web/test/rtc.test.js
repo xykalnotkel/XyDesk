@@ -179,3 +179,14 @@ test('transport Connected tanpa laporan video tidak menyatakan decode berhasil',
   assert.equal(s.bytesReceived, undefined);
   assert.match(s.videoState, /Belum ada laporan RTP/);
 });
+
+test('framesDecoded yang hilang tidak dipalsukan sebagai nol', async () => {
+ const {session}=setup();session.pc={connectionState:'connected',getStats:async()=>new Map([
+ ['video',{id:'video',type:'inbound-rtp',kind:'video',bytesReceived:1425749,framesReceived:720,keyFramesDecoded:6}],
+ ])};const s=await session.readStats();assert.equal(s.framesDecoded,undefined);assert.equal(s.keyFramesDecoded,6);assert.match(s.videoState,/tidak tersedia/);
+});
+test('keyframe melebihi total decode ditandai inkonsisten', async () => {
+ const {session}=setup();session.pc={connectionState:'connected',getStats:async()=>new Map([
+ ['video',{id:'video',type:'inbound-rtp',kind:'video',bytesReceived:1425749,framesDecoded:0,keyFramesDecoded:6}],
+ ])};assert.match((await session.readStats()).videoState,/tidak konsisten/);
+});

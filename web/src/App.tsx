@@ -1,3 +1,4 @@
+import { videoOnlyStream, playRemoteVideo } from './video_playback';
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
 import {
@@ -2057,6 +2058,23 @@ function ConnectScreen({
   const retryRef = useRef({ tries: 0, timer: 0 as ReturnType<typeof setTimeout> | 0, wasConnected: false });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [remoteVideoStream, setRemoteVideoStream] = useState<MediaStream | null>(null);
+  const [videoMessage, setVideoMessage] = useState('');
+  const resumeVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !remoteVideoStream) return;
+    setVideoMessage('Menunggu pemutar video');
+    void playRemoteVideo(video, remoteVideoStream).then(() => {
+      if (video.srcObject === remoteVideoStream) setVideoMessage('');
+    }).catch((error: unknown) => {
+      if (video.srcObject !== remoteVideoStream) return;
+      const name = error instanceof Error ? error.name : 'Error';
+      setVideoMessage(`Pemutaran tertahan (${name}). Ketuk Putar video.`);
+    });
+  }, [remoteVideoStream]);
+  useEffect(() => {
+    if (phase === 'connected' && remoteVideoStream) resumeVideo();
+  }, [phase, remoteVideoStream, resumeVideo]);
   const [audioOn, setAudioOn] = useState(true);
   const [micOn, setMicOn] = useState(false);
   const [hostMeta, setHostMeta] = useState<HostMeta | null>(null);
@@ -2166,7 +2184,8 @@ function ConnectScreen({
         }
       };
       session.onTrack = (stream) => {
-        if (videoRef.current) videoRef.current.srcObject = stream;
+        if (sessionRef.current !== session) return;
+        setRemoteVideoStream(videoOnlyStream(stream));
       };
       // Audio sistem host — diputar lewat elemen audio terpisah.
       session.onAudioTrack = (stream) => {
@@ -2207,6 +2226,10 @@ function ConnectScreen({
     retryRef.current.tries = 3; // blok retry setelah putus manual
     sessionRef.current?.stop();
     sessionRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (audioRef.current) audioRef.current.srcObject = null;
+    setRemoteVideoStream(null);
+    setVideoMessage('');
     setKbOpen(false);
     setPadOpen(false);
     setPanelOpen(false);
@@ -2231,7 +2254,16 @@ function ConnectScreen({
     let alive = true;
     const poll = async () => {
       const s = await sessionRef.current?.readStats();
-      if (alive && s) setStats(s);
+      if (alive && s) {
+        const video = videoRef.current;
+        if (video) {
+          s.playerState = `${video.paused ? 'paused' : 'playing'}; readyState=${video.readyState}; error=${video.error?.code ?? 'none'}`;
+          s.playerSize = `${video.videoWidth}×${video.videoHeight}`;
+          s.playerFrames = video.getVideoPlaybackQuality?.().totalVideoFrames;
+          if ((s.playerFrames ?? 0) > 0) s.noFrameWarning = false;
+        }
+        setStats(s);
+      }
     };
     void poll();
     const t = setInterval(() => void poll(), 1000);
@@ -2487,19 +2519,19 @@ function ConnectScreen({
         <video ref={videoRef} autoPlay playsInline muted />
         {/* Audio sistem host (track Opus) — elemen terpisah, tidak di-mute. */}
         <audio ref={audioRef} autoPlay />
-        {connected && stats?.noFrameWarning && (
+        {connected && (stats?.noFrameWarning || videoMessage) && (
           <div className="sesi-noframe-banner" role="alert">
             <div className="sesi-noframe-text">
-              <strong>Belum ada gambar</strong>
-              <span>Host PC mungkin layar mati, terkunci, atau monitor belum dipilih.</span>
+              <strong>Video belum tampil</strong>
+              <span>{videoMessage || stats?.videoState || 'Menunggu video dari host.'}</span>
             </div>
             <button
               type="button"
               className="btn primary"
               style={{ padding: '6px 14px', fontSize: '12px' }}
-              onClick={() => setPanelOpen(true)}
+              onClick={resumeVideo}
             >
-              Pilih Layar
+              Putar video
             </button>
           </div>
         )}

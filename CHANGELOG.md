@@ -25,6 +25,7 @@ Kebijakan rilis:
 ## [Belum terbit]
 
 ### Fixed
+- Pemutar web: pisahkan track video dari audio, panggil play setelah sesi tampil, sediakan retry melalui gesture, dan laporkan keadaan elemen video. Penghitung decode yang tidak tersedia tidak lagi ditampilkan sebagai nol.
 - Video host: baca RTCP sender agar interceptor memproses NACK/retransmisi dan PLI/FIR meminta keyframe (dibatasi 500ms). Statistik web memilih video utama, bukan RTX, serta menampilkan byte/paket/frame/keyframe dan PLI/NACK tanpa pembulatan Mbps.
 - Host RDP: benar-benar memilih GDI, bukan hanya mencetak fallback sambil menjalankan DXGI; jalur RDP tidak memanggil pembuatan/pemasangan virtual display. Diagnostik membedakan sampel pojok dari seluruh RGB, dan nol frame tidak lagi menyuruh tscon.
 - Host video: penantian frame kini dibatasi agar state Connected dapat menyalakan capture Windows yang belum menghasilkan frame. Koneksi tertutup tetap menghentikan pump saat sumber diam; jadwal penyelamatan IDR tidak dipercepat oleh tick state.
