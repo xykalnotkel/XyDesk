@@ -1,9 +1,13 @@
 XyDesk Host Test — installer NSIS Windows x64
 
 Paket engine uji 6.8.5; bukan installer aplikasi desktop lengkap.
-Engine sama dengan paket MSVC c5feae3 yang sebelumnya sudah diuji.
+Engine MSVC 9887131 memperbaiki penantian melingkar capture sebelum Connected.
+Tes regresi WebRTC lulus; tampilan RDP/Android tetap perlu diuji manual.
 
 PASANG DAN MULAI
+Jika versi uji sebelumnya masih berjalan, putuskan sesi web lalu tekan Ctrl+C
+di konsol XyDesk Host Test milik Anda. Jangan tutup/disconnect aplikasi RDP.
+Pasang ulang ke lokasi yang sama; identitas uji dipertahankan.
 1. Jalankan installer .exe. Pilih folder kosong; default terpisah dari XyDesk lama.
 2. Setelah selesai, klik shortcut "XyDesk Host Test" di Desktop atau Start Menu.
 3. Biarkan RDP terbuka dan desktop tidak terkunci untuk tes pertama.
@@ -31,6 +35,11 @@ Saat host dijalankan manual, mekanisme capture/driver produk yang sudah ada
 tetap berlaku. Jangan mengganti driver atau memakai tscon secara spekulatif.
 
 BILA LAYAR HITAM
+Setelah pairing, periksa apakah log "koneksi Connected — keyframe segar
+diminta" muncul. Laporkan hanya pesan video dan jumlah frame; jangan kirim
+ID/password/token atau konsol lengkap. Fullscreen web dan audio bukan bagian
+dari patch ini.
+
 Buka PowerShell di folder instalasi, jalankan:
   .\xydesk-host.exe --capture-test
 Laporkan hasil backend/jumlah frame, keadaan RDP, dan client yang dipakai.
