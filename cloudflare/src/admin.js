@@ -1,3 +1,4 @@
+import { validMaintenancePatch } from './maintenance.js'
 // XyDesk Admin — endpoint nyata untuk admin.xydesk.my.id
 // Konek ke web + apk via Durable Object yang sama
 import { signJwt, verifyJwt, verifyGoogleIdToken } from './auth.js'
@@ -12,16 +13,17 @@ function isAdminEmail(email, env) {
 
 async function verifyTurnstile(token, ip, env) {
   const secret = env.TURNSTILE_SECRET || env.TURNSTILE_SECRET_KEY || ''
-  // sitekey test 1x000... sengaja bypass biar dev gampang
-  if (!secret || token === '1x00000000000000000000AA' || token.startsWith('fake')) return true
+  if (!secret || typeof token !== 'string' || !token || token.startsWith('fake')) return false
   try {
     const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ secret, response: token, remoteip: ip })
     })
+    if (!r.ok) return false
     const j = await r.json()
-    return !!j.success
+    const hosts = String(env.ADMIN_TURNSTILE_HOSTNAMES || 'admin.xydesk.my.id,xydesk-admin.pages.dev').split(',').map(s=>s.trim())
+    return j.success === true && hosts.includes(j.hostname)
   } catch { return false }
 }
 
@@ -39,19 +41,13 @@ export async function handleAdmin(request, env, url) {
 
   // Maintenance GET boleh public (untuk web banner), tapi POST wajib admin
   if (path === '/admin/maintenance' && request.method === 'GET' && !request.headers.get('Authorization')) {
-    // public read — tanpa auth, langsung dari AuthStore
-    try {
-      const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
-      const r = await stub.fetch(new Request('https://auth/admin/maintenance', { headers: { 'x-internal-admin': '1' } }))
-      if (r.ok) return json(await r.json(), 200, env, request)
-    } catch {}
-    return json({ web:false, desktop:false, android:false, signal:false, message:'' }, 200, env, request)
+    return readMaintenance(request, env)
   }
   // semua endpoint lain butuh admin JWT
   const auth = request.headers.get('Authorization') || ''
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : url.searchParams.get('token') || ''
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
   const payload = await verifyJwt(token, env.AUTH_SECRET || env.XYDESK_SECRET)
-  if (!payload || !isAdminEmail(payload.email, env)) {
+  if (!payload || payload.aud !== 'xydesk-admin' || payload.role !== 'admin' || !isAdminEmail(payload.email, env)) {
     return json({ error: 'unauthorized — admin only' }, 401, env, request)
   }
 
@@ -65,17 +61,19 @@ export async function handleAdmin(request, env, url) {
       const id = env.AUTH_STORE.idFromName('auth')
       const stub = env.AUTH_STORE.get(id)
       const r = await stub.fetch(new Request('https://auth/admin/stats', { headers: { 'x-internal-admin': '1' } }))
+      if (!r.ok) throw new Error('upstream-failed')
       if (r.ok) {
         const j = await r.json()
         totalUsers = j.totalUsers || 0
         guest = j.guest || 0
       }
-    } catch {}
+    } catch { return json({error:'stats-unavailable'},503,env,request) }
     // Hub — onlineDevices realtime (WebSocket Hibernation)
     try {
       const id = env.HUB.idFromName('global')
       const stub = env.HUB.get(id)
       const r = await stub.fetch(new Request('https://hub/stats'))
+      if (!r.ok) throw new Error('upstream-failed')
       if (r.ok) {
         const hj = await r.json()
         onlineDevices = hj.onlineDevices || 0
@@ -83,21 +81,21 @@ export async function handleAdmin(request, env, url) {
         totalSockets = hj.totalSockets || 0
         devices = hj.devices || []
       }
-    } catch {}
+    } catch { return json({error:'stats-unavailable'},503,env,request) }
     // Fallback kalau storage kosong (fresh install) — tetap tampil 0, bukan dummy 2483
     const stats = {
       totalUsers,
       guest,
-      mau: Math.max(0, totalUsers - guest),
+      mau: null,
       onlineDevices,
       onlineClients,
       totalSockets,
-      totalDevices: Math.max(totalUsers, onlineDevices),
-      activeSessions: Math.min(onlineDevices, onlineClients),
-      todaySessions: totalSockets,
+      totalDevices: null,
+      activeSessions: null,
+      todaySessions: null,
       devices,
-      revenue: 0, // nanti konek ke Billing D1
-      revenueSubs: 0,
+      revenue: null, // Billing belum terhubung
+      revenueSubs: null,
     }
     return json(stats, 200, env, request)
   }
@@ -125,7 +123,7 @@ export async function handleAdmin(request, env, url) {
         return json(filtered, 200, env, request)
       }
     } catch (e) {}
-    return json([], 200, env, request)
+    return json({ error: 'data-unavailable' }, 503, env, request)
   }
 
   if (path === '/admin/devices' && request.method === 'GET') {
@@ -144,57 +142,46 @@ export async function handleAdmin(request, env, url) {
           version: '—',
           arch: '—',
           user: '—',
-          capture: 'WGC',
+          capture: 'unknown',
           status: 'online',
-          latency: 0,
+          latency: null,
           since: d.since
         }))
         const filtered = q ? mapped.filter(d=> `${d.name} ${d.id}`.toLowerCase().includes(q)) : mapped
         return json(filtered, 200, env, request)
       }
     } catch {}
-    return json([], 200, env, request)
+    return json({ error: 'data-unavailable' }, 503, env, request)
   }
 
   if (path === '/admin/maintenance' && request.method === 'GET') {
-    // NYATA — dari AuthStore storage
-    try {
-      const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
-      const r = await stub.fetch(new Request('https://auth/admin/maintenance', { headers: { 'x-internal-admin': '1' } }))
-      if (r.ok) {
-        const j = await r.json()
-        // j bisa object tunggal atau { web, desktop, ... }
-        if (j && typeof j === 'object' && ('web' in j || 'message' in j)) return json(j, 200, env, request)
-      }
-    } catch {}
-    return json({ web:false, desktop:false, android:false, signal:false, message:'' }, 200, env, request)
+    return readMaintenance(request, env)
   }
 
   if (path === '/admin/maintenance' && request.method === 'POST') {
     let body
     try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
-    const { service, enabled, message } = body
-    if (!['web','desktop','android','signal'].includes(service)) return json({ error: 'bad service' }, 400, env, request)
-    // NYATA — simpan ke AuthStore
+    if (!validMaintenancePatch(body)) return json({ error: 'bad-maintenance' }, 400, env, request)
     try {
-      const stub = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'))
-      // baca existing dulu biar tidak overwrite service lain
-      let current = {}
-      try {
-        const r = await stub.fetch(new Request('https://auth/admin/maintenance', { headers: { 'x-internal-admin': '1' } }))
-        if (r.ok) current = await r.json()
-      } catch {}
-      current[service] = enabled
-      if (message !== undefined) current.message = message
-      current.at = Date.now()
-      current.by = payload.email
-      await stub.fetch(new Request('https://auth/admin/maintenance', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-internal-admin': '1' },
-        body: JSON.stringify(current)
-      }))
-    } catch (e) {}
-    return json({ ok: true }, 200, env, request)
+      const result = await internalJson(env.AUTH_STORE, 'auth', '/admin/maintenance', {
+        method: 'POST', body: JSON.stringify({ ...body, by: payload.email })
+      })
+      return json(result, 200, env, request)
+    } catch (e) { return json({ error: e.status === 409 ? 'maintenance-conflict' : 'maintenance-unavailable' }, e.status === 409 ? 409 : 503, env, request) }
+  }
+
+  if (path === '/admin/health' && request.method === 'GET') {
+    const probe = async (binding, name, path) => {
+      const started = Date.now()
+      try { await internalJson(binding, name, path); return { status:'ok', latencyMs:Date.now()-started } }
+      catch { return { status:'unavailable', latencyMs:Date.now()-started } }
+    }
+    const [authStore, hub] = await Promise.all([
+      probe(env.AUTH_STORE, 'auth', '/admin/health'), probe(env.HUB, 'global', '/stats')
+    ])
+    return json({ checkedAt:Date.now(), worker:{status:'ok'}, authStore, hub,
+      engine:{status:'unavailable', reason:'Belum ada agen kontrol host terautentikasi.'}
+    }, 200, env, request)
   }
 
   // === SEMUA AKSI NYATA — GADA DUMMY ===
@@ -251,7 +238,7 @@ export async function handleAdmin(request, env, url) {
   }
   if (path === '/admin/hosting/purge' && request.method === 'POST') {
     // purge cache app.xydesk.my.id via Cloudflare API (butuh CLOUDFLARE_API_TOKEN)
-    return json({ ok: true, purged: 'app.xydesk.my.id', at: Date.now(), by: payload.email }, 200, env, request)
+    return json({ error: 'purge-not-configured' }, 501, env, request)
   }
   if (path === '/admin/logs' && request.method === 'GET') {
     try {
@@ -259,7 +246,7 @@ export async function handleAdmin(request, env, url) {
       const r = await stub.fetch(new Request('https://auth/admin/logs', { headers: { 'x-internal-admin': '1' } }))
       if (r.ok) return json(await r.json(), 200, env, request)
     } catch {}
-    return json({ logs: [] }, 200, env, request)
+    return json({ error: 'logs-unavailable' }, 503, env, request)
   }
 
   return json({ error: 'not-found' }, 404, env, request)
@@ -268,27 +255,17 @@ export async function handleAdmin(request, env, url) {
 async function handleLogin(request, env) {
   let body
   try { body = await request.json() } catch { return json({ error: 'bad-json' }, 400, env, request) }
+  if (!body || typeof body !== 'object') return json({ error:'bad-json' }, 400, env, request)
   const { googleIdToken, turnstileToken } = body
-  if (!googleIdToken || !turnstileToken) return json({ error: 'missing token' }, 400, env, request)
-
+  if (typeof googleIdToken !== 'string' || !googleIdToken || typeof turnstileToken !== 'string' || !turnstileToken) return json({ error:'missing-token' },400,env,request)
+  if (!(env.TURNSTILE_SECRET || env.TURNSTILE_SECRET_KEY) || !(env.GOOGLE_CLIENT_ID || env.GOOGLE_WEB_CLIENT_ID)) return json({error:'login-not-configured'},503,env,request)
   const ip = request.headers.get('CF-Connecting-IP') || ''
-  const okTurn = await verifyTurnstile(turnstileToken, ip, env)
-  if (!okTurn) return json({ error: 'captcha gagal — Turnstile' }, 403, env, request)
-
-  // Verifikasi Google ID token — pakai helper yang sudah ada
-  let email = ''
-  try {
-    const info = await verifyGoogleIdToken(googleIdToken, env.GOOGLE_CLIENT_ID || env.GOOGLE_WEB_CLIENT_ID || '')
-    if (!info || !info.email) throw new Error('no email')
-    email = info.email
-  } catch {
-    // Fallback untuk demo: kalau googleIdToken adalah base64 fake dari frontend demo, decode
-    try {
-      const decoded = JSON.parse(atob(googleIdToken))
-      email = decoded.email || ''
-    } catch {}
-    if (!email) return json({ error: 'google token invalid' }, 401, env, request)
-  }
+  if (!await verifyTurnstile(turnstileToken, ip, env)) return json({ error:'captcha-invalid' },403,env,request)
+  let info
+  try { info = await verifyGoogleIdToken({ GOOGLE_CLIENT_ID:env.GOOGLE_CLIENT_ID || env.GOOGLE_WEB_CLIENT_ID }, googleIdToken) }
+  catch { return json({error:'google-token-invalid'},401,env,request) }
+  if (!info.ok) return json({error:info.error},info.status || 401,env,request)
+  const email = info.email
 
   if (!isAdminEmail(email, env)) {
     return json({ error: 'bukan admin — email tidak diizinkan' }, 403, env, request)
@@ -297,7 +274,7 @@ async function handleLogin(request, env) {
   const secret = env.AUTH_SECRET || env.XYDESK_SECRET
   if (!secret) return json({ error: 'auth-not-configured' }, 503, env, request)
 
-  const token = await signJwt({ email, role: 'admin', sub: email }, secret, 60*60*24*7)
+  const token = await signJwt({ email, role: 'admin', sub: email, aud: 'xydesk-admin' }, secret, 60*60)
   return json({ token, email, role: 'admin' }, 200, env, request)
 }
 
@@ -315,6 +292,29 @@ function corsHeaders(request, env) {
 }
 
 function json(obj, status, env, request) {
-  const headers = { 'content-type': 'application/json', ...corsHeaders(request||{ headers: new Map() }, env) }
+  const headers = { 'cache-control':'no-store', 'content-type': 'application/json', ...corsHeaders(request||{ headers: new Map() }, env) }
   return new Response(JSON.stringify(obj), { status, headers })
+}
+
+async function internalJson(binding, name, path, init = {}) {
+  const stub = binding.get(binding.idFromName(name))
+  let timer
+  try {
+    const response = await Promise.race([
+      stub.fetch(new Request(`https://internal${path}`, { ...init, headers:{'x-internal-admin':'1','content-type':'application/json'} })),
+      new Promise((_,reject)=>{ timer=setTimeout(()=>reject(new Error('upstream-timeout')),5000) })
+    ])
+    if (!response.ok) throw Object.assign(new Error('upstream-failed'),{status:response.status})
+    return await response.json()
+  } finally { clearTimeout(timer) }
+}
+async function readMaintenance(request,env) {
+  try {
+    const data = await internalJson(env.AUTH_STORE,'auth','/admin/maintenance')
+    if (!request.headers.get('Authorization')) {
+      const {web,desktop,android,signal,message}=data
+      return json({web,desktop,android,signal,message},200,env,request)
+    }
+    return json(data,200,env,request)
+  } catch { return json({error:'maintenance-unavailable'},503,env,request) }
 }

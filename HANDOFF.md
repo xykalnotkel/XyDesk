@@ -1238,3 +1238,47 @@ _(kosong)_
   (bukan `tamu-xxxx`), selaras `web/src/news.ts` — selesai di kode oleh
   Laras (2026-09-03).
 
+
+
+## Lanjutan admin — 2026-09-17
+
+Dari Operator - XyDesk Team, SESI-20260917-OPERATOR-ADMIN. Pemeriksaan kode lokal di afdc9f5, bukan verifikasi produksi.
+
+### Untuk: Backend / Edge dan Operator
+- [ ] Prioritas: `cloudflare/src/admin.js` POST maintenance menelan exception dan tidak memeriksa status respons penyimpanan AuthStore; tetap mengembalikan `ok: true`. GET juga mengganti kegagalan storage dengan semua flag false. UI kini baca ulang setelah simpan, tetapi ini **tidak menjamin persistensi** jika backend memberi hasil fallback. Perbaiki propagasi galat dan tambahkan uji kegagalan storage. Penyimpanan empat layanan belum atomik dan dapat parsial; pertimbangkan endpoint batch dengan kontrol konkurensi.
+- [ ] `admin/src/App.tsx` Login masih membentuk `btoa({email,pass})` sebagai Google ID token, bukan GIS asli. Turnstile render hanya diperiksa sekali saat mount, fallback sitekey masih test. Perlu scope/izin autentikasi tersendiri; jangan klaim login produksi sudah berfungsi.
+- [ ] API menghapus token saat 401, tetapi React App belum otomatis kembali ke Login. Perlu penanganan sesi konsisten di pekerjaan autentikasi.
+- [ ] Sisa UI belum nyata: kontrol Dashboard, beberapa status Hosting/Backend/Settings, tombol Server, Rollback/DNS, dan Deploy Ulang yang memanggil purge. Audit lanjutan perlu mencocokkan setiap aksi dengan kontrak endpoint; jangan menganggap seluruh admin bebas dummy.
+
+### Hasil lokal & bahan artikel (belum diterbitkan)
+- Statistik yang gagal kini terlihat gagal, bukan angka contoh; data di-refresh 15 detik setelah ada token. Dashboard tidak menampilkan tren/grafik/health rekaan.
+- Maintenance menjadi draft sampai tombol Simpan ditekan, tombol dinonaktifkan saat proses, dan hasil dibaca ulang. Jika gagal atau parsial, muat ulang wajib sebelum mencoba lagi.
+- Galat log ditampilkan; daftar terakhir diberi peringatan mungkin tidak terbaru.
+- Bukti: `npm run build` lolos (TypeScript + Vite); `npm test` 12/12 lolos dengan fetch tiruan. Belum uji browser, login Google, perangkat nyata, endpoint produksi, maupun screenshot build rilis. Tidak ada kredensial dipakai, push, deploy, bump versi, atau artikel live.
+
+
+## Backend + server — 2026-09-17 (lanjutan)
+
+Operator - XyDesk Team, SESI-20260917-OPERATOR-BACKEND, atas arahan chat “gas aja ... fokus backend + server”. Hasil lokal, belum push/deploy.
+
+- Selesai di kode: fallback Google palsu dan bypass Turnstile dihapus; panggilan verifier disesuaikan `(env,idToken)` dan hasil `ok` diperiksa. Sesi admin harus role admin + audience xydesk-admin + email allowlist; hanya header Bearer, TTL satu jam. Semua sesi admin lama harus login ulang.
+- Selesai di kode: panel memakai GIS, tidak meminta password/payload palsu; memuat widget async, menangani captcha kedaluwarsa/error, dan kembali ke login saat 401.
+- Selesai di kode: maintenance empat layanan satu transaksi AuthStore termasuk audit log, revision conflict 409, storage failure 503. UI batch menggantikan empat POST; draft diverifikasi dengan baca ulang. GET publik tidak memuat email pengubah.
+- Selesai di kode: health read-only AuthStore/Hub (timeout per probe 5 detik); halaman Backend/Server menampilkan hasil probe, bukan grafik uptime/secrets palsu. Engine belum punya agen kontrol; tidak ada restart/capture-test/benchmark/deploy yang dijalankan.
+- Selesai di kode: purge palsu menjadi 501; galat list/log/stats bukan data kosong sukses. Metrik yang tidak diukur pada stats menjadi null, capture perangkat tidak lagi diasumsikan WGC.
+- Bukti: `cloudflare npm test` 122/122, `admin npm test` 15/15; tsc+Vite build dan Wrangler 4.123.0 dry-run di Node 22 lolos. Tidak ada uji browser, Cloudflare runtime, atau host Windows; semua fetch/storage test ditirukan.
+- Untuk CI/Release: ikuti `admin/README.md` sebelum rollout; konfigurasi Google origin/sitekey/secret belum diperiksa di produksi. Rollout frontend/backend harus terkoordinasi; jangan deploy login tanpa konfigurasi.
+- Untuk Backend/Edge: lakukan penilaian dampak bypass lama. Audience baru melindungi endpoint admin, tetapi tidak membatalkan JWT lama di endpoint non-admin. Keputusan rotasi secret global memerlukan rencana pemutusan sesi. Enforcement ban/role/revoke dan registri sesi masih perlu audit tersendiri.
+- Bahan artikel belum terbit: status backend kini berasal dari pembacaan nyata; penyimpanan maintenance tidak mengaku sukses saat gagal; konflik edit ditolak, login tidak lagi memakai formulir password palsu. Screenshot rilis belum tersedia.
+
+
+## Rollout — 2026-09-17 (ditahan setelah preflight)
+
+Operator - XyDesk Team, SESI-20260917-OPERATOR-ROLLOUT. Operator memilih verifikasi → push → deploy jika siap; tanpa restart host, rotasi global, bump versi.
+
+- GitHub push permission dan token Cloudflare aktif. Main masih afdc9f5 saat preflight. Semua perubahan lokal dua sesi sebelumnya digabung untuk push bersama.
+- Blocker: probe Chromium dengan GIS asli di origin admin menghasilkan HTTP 403 pada iframe tombol + `The given origin is not allowed for the given client ID.` Client ID cocok dengan bundle web produksi. Pemilik akun perlu menambahkan `https://admin.xydesk.my.id` ke Authorized JavaScript origins pada OAuth Web client. Detail dan Client ID publik ada di `admin/README.md`.
+- Blocker: tidak ada secret Turnstile di Worker signaling dan tidak ada widget hostname admin. Belum dibuat/diubah karena OAuth belum siap; dapat dikonfigurasi setelah origin Google diperbaiki.
+- Tes: Worker 122/122, panel 15/15, tsc+Vite build; runtime SQLite lokal dan browser panel API tiruan lolos. Runtime menemukan startup gagal akibat ekspor konstanta `HOST_REFRESH_TTL` dari entrypoint lama; `src/entry.js` hanya mengekspor handler/DO dan wrangler memakai entrypoint itu. Tes runtime yang dapat diulang ditambahkan ke `cloudflare/tool/runtime-check.mjs`.
+- Tidak ada deploy, dispatch workflow, perubahan secret/Google, penulisan maintenance produksi, atau restart. Health publik tetap `ok`. Jangan klaim perbaikan keamanan sudah live.
+- Langkah berikutnya: pemilik memperbaiki origin di Google Console → ulang probe → widget+secret Turnstile admin → build dengan env publik → deploy backend dan panel → verifikasi bundle serta smoke test. Jangan deploy build saat ini tanpa env.

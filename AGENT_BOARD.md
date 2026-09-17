@@ -172,3 +172,18 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260909-OPERATOR-FIXPACK | Operator - XyDesk Team | Operator (semua area) | SELESAI | Audit + fixpack 2026-09-09, push `a3ca02b` + `4bd98f5`: (1) updater desktop end-to-end — kunci `windows` di `update.json`, `update.rs` (check/download/install, URL persis + SHA-256 + ukuran), kartu Pengaturan, kontrak `get_info` diluruskan (`appVersion`/`signalingHttp`/`win32`, versi dari Cargo), 6 uji Rust (CI `cargo test` x64 hijau); (2) Flutter `InputCodec.textChunked` + `sendText` + 4 uji, parser update toleran kunci `windows` + 4 uji (68/68 hijau, analyze bersih); (3) web `selfName` dari profil akun; (4) hub Go meneruskan `Name`/`Platform` + uji relay; (5) `build-apk-only.yml` diperbaiki (signing, dart-define, hapus step palsu) — run perdana sukses + artefak 42.8 MB; (6) `news/seed.sql` cermin penuh (5 alias diluruskan, 5 artikel lama ditarik, artikel `changelog-v6-5-2` retroaktif + sampul 1424x752); ENAM-404 live 200 semua; false alarm login Google ditutup (var sudah dual-ID); 4 branch mati dihapus; HANDOFF + CHANGELOG [Belum terbit]. CI: Build run 34381569809 hijau 12/12, APK-only 34380397729 sukses, deploy-web + Release sukses | 2026-09-09 |
 | SESI-20260909-OPERATOR-LOGO | Operator - XyDesk Team | Operator (semua area) | SELESAI | Ikon launcher hitam → logo asli: akar di `tool/gen_logo.py` (sumber gelap diputihkan + tile gelap dipanggang) dicabut — tile terang #F5F3FF, warna asli dipertahankan, sumber diganjal persegi, sumber terang digagalkan eksplisit; regenerasi 10 mipmap + 4 .ico + XML + web icons (tile lum 0.76, foreground transparan 43% opak); gerbang CI baru `tool/check_icons.py` (uji negatif lolos); audit_assets 21/21 hijau. Dipicu keluhan operator di chat | 2026-09-09 |
 | SESI-20260911-BACKEND-TURN | Alif - XySpace Team | Backend / Edge | SELESAI | TURN 1 relay live (ExpressTurn direct free.expressturn.com:3478 000000002101739639, 0 ms, tanpa fetch) + email OTP Gmail ok (RESEND_FROM XyDesk <auth@mail.xystudio.my.id> terkunci, RESEND_API_KEY sync GitHub+Worker, Version b154ed52/437db77e) + news email/OneSignal sync (EMAIL_FROM auth@mail.xystudio.my.id, ONESIGNAL 90c4d811) + ADMIN_SECRET rotasi libsodium sealed + sync + verifikasi live healthz/turn-ice/OTP/news (94 cloudflare + 40 news hijau, tool/check_backend_live.py) + docs/BACKEND_FIX_20260911.md | 2026-09-11 |
+
+### Sesi lokal selesai — 2026-09-17
+
+| ID Sesi | Agent | Status | Hasil | Bukti |
+|---|---|---|---|---|
+| SESI-20260917-OPERATOR-ADMIN | Operator - XyDesk Team | SELESAI LOKAL; belum push | Admin: statistik tanpa fallback dummy, galat log, maintenance draft + verifikasi baca ulang. Blocker login/backend dicatat di HANDOFF. Tidak bump/deploy. | npm run build lolos; npm test 12/12; tidak ada run CI remote atau uji browser |
+
+| SESI-20260917-OPERATOR-BACKEND | Operator - XyDesk Team | SELESAI LOKAL; belum push | Arahan chat: fokus backend + server. Login fail-closed, maintenance transaksi batch+revision, health read-only, panel GIS dan health. Tanpa deploy/restart/bump versi. | Worker 122/122, panel 15/15, tsc+Vite dan Wrangler dry-run lolos. Belum uji browser/Cloudflare runtime/host nyata. |
+
+
+### Rollout 17 September — preflight ditahan
+
+| ID Sesi | Agent | Status | Hasil | Bukti |
+|---|---|---|---|---|
+| SESI-20260917-OPERATOR-ROLLOUT | Operator - XyDesk Team | SELESAI pemeriksaan; deploy DITAHAN | Izin chat verifikasi/push/deploy bila siap. Kode siap push; Google GIS menolak origin admin, Turnstile admin belum dikonfigurasi. Tidak mengubah produksi, secret, host, atau nomor versi. | Worker 122/122, panel 15/15, build, runtime SQLite (Wrangler 4.133.0), browser panel API tiruan lolos. Google browser probe: origin ditolak. Tidak dispatch CI. |

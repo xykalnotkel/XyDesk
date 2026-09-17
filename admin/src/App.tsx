@@ -1,28 +1,48 @@
-import { useEffect, useState, useCallback } from 'react'
+import Login from './Login'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import {
   LayoutDashboard, Users, MonitorSmartphone, Link2, Cloud, Cpu, Server, Wrench, ScrollText, Settings,
-  Search, Bell, LogOut, ShieldCheck, Activity, Database, HardDrive, Globe, Power, RotateCcw, Ban, Eye, Pencil, Trash2, Play, Pause, AlertTriangle
+  Search, Bell, LogOut, ShieldCheck, Activity, Database, HardDrive, Globe, Power, RotateCcw, Ban, Eye, Pencil, Trash2, Pause, AlertTriangle
 } from 'lucide-react'
-import { fetchStats, fetchUsers, fetchDevices, getAdminToken, loginAdmin, logoutAdmin, setMaintenance, fetchMaintenance, TURNSTILE_SITEKEY, banUser, setUserRole, revokeUser, kickDevice, terminateSession, purgeHosting, fetchLogs } from './api'
+import { fetchStats, fetchUsers, fetchDevices, getAdminToken, logoutAdmin, saveMaintenance, fetchHealth, fetchMaintenance, banUser, setUserRole, revokeUser, kickDevice, terminateSession, purgeHosting, fetchLogs } from './api'
+
+import type { Stats, MaintenanceState, MaintenanceService } from './api'
 
 type Page = 'dashboard'|'users'|'devices'|'sessions'|'hosting'|'backend'|'server'|'maintenance'|'logs'|'settings'
 
-declare global { interface Window { turnstile?: { render: (el: string|HTMLElement, opts: { sitekey: string; callback: (t: string)=>void })=>string; reset: (id:string)=>void } } }
-
-function useStats(){
-  const [s,setS]=useState<Awaited<ReturnType<typeof fetchStats>>|null>(null)
-  useEffect(()=>{ fetchStats().then(setS) },[])
-  return s
+function useStats(token: string | null){
+  const [s,setS]=useState<Stats|null>(null)
+  const [error,setError]=useState('')
+  useEffect(()=>{
+    let active=true
+    setS(null)
+    setError('')
+    if(!token) return
+    const load=async()=>{
+      try { const data=await fetchStats(); if(active){ setS(data); setError('') } }
+      catch(e){ if(active){ setS(null); setError(String(e)) } }
+    }
+    void load()
+    const id=setInterval(load,15000)
+    return ()=>{ active=false; clearInterval(id) }
+  },[token])
+  return {stats:s,error}
 }
 
 export default function App(){
   const [token,setToken]=useState<string|null>(()=> getAdminToken())
+  useEffect(()=>{
+    const expired=()=>setToken(null)
+    window.addEventListener('xydesk-admin-logout',expired)
+    return ()=>window.removeEventListener('xydesk-admin-logout',expired)
+  },[])
   const [page,setPage]=useState<Page>('dashboard')
-  const stats=useStats()
+  const {stats,error:statsError}=useStats(token)
   const [q,setQ]=useState('')
   const [sidebarOpen,setSidebarOpen]=useState(false)
 
-  if(!token) return <Login onLogin={t=>{ setToken(t); location.hash='#dashboard' }} />
+  const onLogin=useCallback((t:string)=>{ setToken(t); location.hash='#dashboard' },[])
+  if(!token) return <Login onLogin={onLogin} />
 
   return (
     <div className="layout">
@@ -66,13 +86,14 @@ export default function App(){
             <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Cari user, deviceId, sesi, hosting..." />
           </div>
           <div className="row" style={{marginLeft:'auto'}}>
-            <span className="pill live"><Activity size={14}/> All systems operational</span>
+            <span className="pill live"><Activity size={14}/> Status layanan belum diverifikasi</span>
             <button className="btn"><Bell size={14}/> 3</button>
             <span className="badge dark"><ShieldCheck size={12}/> SECURE</span>
           </div>
         </div>
 
         <div className="content">
+          {statsError && <div className="error" role="alert">{statsError} — mencoba lagi otomatis setiap 15 detik.</div>}
           {page==='dashboard' && <Dashboard stats={stats} q={q} />}
           {page==='users' && <UsersPage q={q} />}
           {page==='devices' && <DevicesPage q={q} />}
@@ -89,9 +110,15 @@ export default function App(){
   )
 }
 
-function Dashboard({stats, q}:{stats: ReturnType<typeof useStats>, q:string}){
+function Dashboard({stats, q}:{stats: Stats|null, q:string}){
   const [devices,setDevices]=useState<Awaited<ReturnType<typeof fetchDevices>>>([])
-  useEffect(()=>{ fetchDevices(q).then(setDevices) },[q])
+  const [deviceError,setDeviceError]=useState('')
+  useEffect(()=>{
+    let active=true
+    setDevices([]); setDeviceError('')
+    fetchDevices(q).then(d=>{ if(active) setDevices(d) }).catch(e=>{ if(active) setDeviceError(String(e)) })
+    return ()=>{ active=false }
+  },[q])
   return (
     <>
       <div style={{display:'flex', gap:10, alignItems:'end', flexWrap:'wrap', marginBottom:12}}>
@@ -106,38 +133,20 @@ function Dashboard({stats, q}:{stats: ReturnType<typeof useStats>, q:string}){
       </div>
 
       <div className="grid4">
-        <div className="card kpi"><h3>Total Users</h3><div className="val">{stats?.totalUsers ?? '—'}</div><div className="sub">MAU {stats?.mau ?? '—'} • Guest {stats?.guest ?? '—'}</div><div className="foot">+8.2% vs bulan lalu</div></div>
-        <div className="card kpi"><h3>Perangkat Online</h3><div className="val">{stats?.totalDevices ?? '—'} <span className="badge ok">{stats?.onlineDevices ?? 0} online</span></div><div className="sub">Signal Hub • Durable Object</div><div className="foot">Puncak 20:00 — 221</div></div>
-        <div className="card kpi"><h3>Sesi Aktif</h3><div className="val">{stats?.activeSessions ?? '—'} <span className="muted" style={{fontSize:12}}>/ {stats?.todaySessions ?? '—'} hari ini</span></div><div className="sub">Avg 24ms LAN • P2P 91%</div><div className="foot">3 Web • 20 APK/Desktop</div></div>
-        <div className="card kpi"><h3>Revenue Sewa PC</h3><div className="val">Rp {(stats?.revenue ?? 0).toLocaleString('id-ID')}</div><div className="sub">{stats?.revenueSubs ?? 0} sewa aktif</div><div className="foot">+12% MoM</div></div>
+        <div className="card kpi"><h3>Total Users</h3><div className="val">{stats?.totalUsers ?? '—'}</div><div className="sub">MAU {stats?.mau ?? '—'} • Guest {stats?.guest ?? '—'}</div><div className="foot">Metrik historis belum tersedia</div></div>
+        <div className="card kpi"><h3>Perangkat Online</h3><div className="val">{stats?.totalDevices ?? '—'} <span className="badge ok">{stats?.onlineDevices ?? '—'} online</span></div><div className="sub">Signal Hub • Durable Object</div><div className="foot">Metrik historis belum tersedia</div></div>
+        <div className="card kpi"><h3>Sesi Aktif</h3><div className="val">{stats?.activeSessions ?? '—'} <span className="muted" style={{fontSize:12}}>/ {stats?.todaySessions ?? '—'} hari ini</span></div><div className="sub">Metrik historis belum tersedia</div><div className="foot">Metrik historis belum tersedia</div></div>
+        <div className="card kpi"><h3>Revenue Sewa PC</h3><div className="val">Rp {stats?.revenue != null ? stats.revenue.toLocaleString('id-ID') : '—'}</div><div className="sub">{stats?.revenueSubs ?? '—'} sewa aktif</div><div className="foot">Metrik historis belum tersedia</div></div>
       </div>
 
-      <div className="grid2" style={{marginTop:12}}>
-        <div className="card">
-          <h3>Pertumbuhan User — 14 hari</h3>
-          <div className="chart">
-            <svg viewBox="0 0 600 160" preserveAspectRatio="none">
-              <defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7C3AED" stopOpacity=".18"/><stop offset="1" stopColor="#7C3AED" stopOpacity="0"/></linearGradient></defs>
-              <path d="M0 110 L50 100 L100 85 L150 92 L200 62 L250 70 L300 52 L350 55 L400 38 L450 44 L500 28 L550 30 L600 22 L600 160 L0 160 Z" fill="url(#g2)"/>
-              <path d="M0 110 L50 100 L100 85 L150 92 L200 62 L250 70 L300 52 L350 55 L400 38 L450 44 L500 28 L550 30 L600 22" fill="none" stroke="#7C3AED" strokeWidth="3"/>
-              <circle cx="550" cy="30" r="5" fill="#7C3AED" stroke="#fff" strokeWidth="2"/>
-            </svg>
-          </div>
-          <div className="muted" style={{fontSize:11, marginTop:6}}>Data nyata dari /admin/stats (fallback mock kalau Worker belum deploy).</div>
-        </div>
-        <div className="card">
-          <h3>Health — Hosting / Backend / Signal</h3>
-          <div className="maint">
-            <div className="maint-row"><div><strong>signal.xydesk.my.id</strong><p>WebSocket Hub</p></div><span className="badge ok">OK 42ms</span></div>
-            <div className="maint-row"><div><strong>app.xydesk.my.id</strong><p>Pages Vite • hero 2D kartun</p></div><span className="badge ok">v6.8.1</span></div>
-            <div className="maint-row"><div><strong>admin.xydesk.my.id</strong><p>Panel ini — kotak, custom, Turnstile</p></div><span className="badge dark">LIVE</span></div>
-            <div className="maint-row"><div><strong>APK + Desktop</strong><p>6.8.1 window fix</p></div><span className="badge ok">ONLINE</span></div>
-          </div>
-        </div>
+      <div className="card" style={{marginTop:12}}>
+        <h3>Riwayat & kesehatan layanan</h3>
+        <p className="muted">API belum menyediakan grafik pertumbuhan dan pengukuran kesehatan layanan. Statistik di atas diperbarui setiap 15 detik; tanda — berarti data belum tersedia.</p>
       </div>
 
       <div className="card" style={{marginTop:12}}>
         <h3>Perangkat terbaru — terhubung nyata ke Host</h3>
+        {deviceError && <div className="error" role="alert">{deviceError}</div>}
         <table className="table">
           <thead><tr><th>Device</th><th>User</th><th>Capture</th><th>Status</th><th>Aksi</th></tr></thead>
           <tbody>
@@ -248,139 +257,110 @@ function HostingPage(){
     </div>
   </>)
 }
-function BackendPage(){
-  return (<>
-    <h1 style={{fontSize:20}}>Backend — Worker & API</h1>
-    <div className="grid2" style={{marginTop:12}}>
-      <div className="card"><h3>Worker Health</h3><div className="chart"><svg viewBox="0 0 600 140"><path d="M0 80 L120 60 L240 70 L360 30 L480 40 L600 25" fill="none" stroke="#059669" strokeWidth="3"/></svg></div><div className="mono muted" style={{marginTop:6}}>CORS https://app.xydesk.my.id • 99.92%</div></div>
-      <div className="card"><h3>Secrets</h3><div className="mono" style={{display:'grid', gap:6, fontSize:12}}><div>XYDESK_SECRET <span className="badge ok">SET</span></div><div>ADMIN_SECRET <span className="badge ok">SET</span></div><div>TURNSTILE_SECRET <span className="badge ok">SET</span></div></div><button className="btn" style={{marginTop:10}}><ShieldCheck size={14}/> Rotate</button></div>
-    </div>
-  </>)
-}
-function ServerPage(){
-  return (<>
-    <h1 style={{fontSize:20}}>Server — Engine & VM</h1>
-    <div className="card" style={{marginTop:12}}>
-      <div className="row"><button className="btn"><Play size={14}/> Run --capture-test</button><button className="btn"><Activity size={14}/> Bench 1920</button><button className="btn"><Power size={14}/> Restart engines</button><button className="btn primary"><Server size={14}/> Re-deploy signal</button></div>
-      <div className="divider"/><div className="mono muted">xydesk-host.exe --capture-test 2.5s/backend • diagnose hitam</div>
-    </div>
-  </>)
+function BackendPage(){ return <HealthPage server={false}/> }
+function ServerPage(){ return <HealthPage server/> }
+function HealthPage({server}:{server:boolean}){
+  const [health,setHealth]=useState<Awaited<ReturnType<typeof fetchHealth>>|null>(null)
+  const [error,setError]=useState('')
+  const [busy,setBusy]=useState(false)
+  const load=async()=>{
+    setBusy(true); setError(''); setHealth(null)
+    try{ setHealth(await fetchHealth()) }catch(e){ setError(String(e)) }finally{ setBusy(false) }
+  }
+  useEffect(()=>{ void load() },[])
+  return <>
+    <h1>{server?'Server — Engine & konektivitas':'Backend — Worker & penyimpanan'}</h1>
+    <button className="btn" disabled={busy} onClick={load}>{busy?'Memeriksa...':'Periksa sekarang'}</button>
+    {error && <p className="error" role="alert">{error}</p>}
+    {health && <div className="card" style={{marginTop:12}}>
+      <p>Terakhir diperiksa: {new Date(health.checkedAt).toLocaleString('id-ID')}</p>
+      <div className="maint-row"><strong>Worker</strong><span>{health.worker.status}</span></div>
+      <div className="maint-row"><strong>AuthStore (baca storage)</strong><span>{health.authStore.status} · {health.authStore.latencyMs} ms</span></div>
+      <div className="maint-row"><strong>Hub (RPC statistik)</strong><span>{health.hub.status} · {health.hub.latencyMs} ms</span></div>
+      <p className="muted">Latensi adalah waktu RPC internal saat pemeriksaan, bukan latensi streaming atau uptime historis.</p>
+    </div>}
+    {server && <div className="card" style={{marginTop:12}}>
+      <h3>Kontrol engine belum terhubung</h3>
+      <p>{health?.engine.reason || 'Belum ada agen kontrol host terautentikasi.'}</p>
+      <p className="muted">Capture test, benchmark, restart engine, dan deploy tidak dijalankan dari panel ini.</p>
+      <button className="btn" disabled>Restart engine tidak tersedia</button>
+    </div>}
+  </>
 }
 function MaintenancePage(){
-  const [state,setState]=useState({web:false, desktop:false, android:false, signal:true, message:''})
+  const [state,setState]=useState<MaintenanceState|null>(null)
   const [msg,setMsg]=useState('')
-  const [saving,setSaving]=useState(false)
-  useEffect(()=>{ fetchMaintenance().then((m:any)=>{ setState(m); setMsg(m.message||'') }) },[])
-  const toggle=useCallback(async (k:keyof typeof state)=>{
-    const next={...state, [k]: !state[k] as any}
-    setState(next)
-    try{ await setMaintenance(k as any, !!next[k], msg) }catch(e){ alert(String(e)) }
-  },[state,msg])
+  const [error,setError]=useState('')
+  const [notice,setNotice]=useState('')
+  const [busy,setBusy]=useState(false)
+  const lock=useRef(false)
+  const load=async()=>{
+    if(lock.current) return
+    lock.current=true; setBusy(true); setError(''); setNotice('')
+    try { const data=await fetchMaintenance(); setState(data); setMsg(data.message||'') }
+    catch(e){ setState(null); setError(String(e)) }
+    finally { lock.current=false; setBusy(false) }
+  }
+  useEffect(()=>{ void load() },[])
+  const toggle=(service:MaintenanceService)=>{
+    if(!state || lock.current) return
+    setState({...state,[service]:!state[service]})
+    setNotice('Perubahan belum disimpan.')
+  }
   const save=async()=>{
-    setSaving(true)
-    try{
-      for(const k of ['web','desktop','android','signal'] as const) await setMaintenance(k, (state as any)[k], msg)
-      alert('Maintenance tersimpan — terhubung ke Worker')
-    }catch(e){ alert(String(e)) }
-    setSaving(false)
+    if(!state || lock.current) return
+    lock.current=true; setBusy(true); setError(''); setNotice('')
+    try {
+      await saveMaintenance(state,msg)
+      const confirmed=await fetchMaintenance()
+      if(['web','desktop','android','signal'].some(k=>confirmed[k as MaintenanceService]!==state[k as MaintenanceService]) || confirmed.message!==msg){
+        throw new Error('Hasil baca ulang tidak sesuai. Penyimpanan belum dapat dipastikan.')
+      }
+      setState(confirmed); setMsg(confirmed.message)
+      setNotice('Maintenance tersimpan dan terverifikasi melalui baca ulang.')
+    } catch(e){
+      setError(`${String(e)} Sebagian perubahan mungkin sudah tersimpan. Muat ulang status sebelum mencoba lagi.`)
+      setState(null)
+    } finally { lock.current=false; setBusy(false) }
   }
   return (<>
     <h1 style={{fontSize:20}}>Maintenance — Web / App / Signal</h1>
-    <p className="muted" style={{fontSize:12}}>Toggle nyata — flag disimpan di Worker KV, dibaca web & apk.</p>
+    <p className="muted">Ubah pilihan lalu simpan. Toggle tidak langsung mengubah layanan.</p>
+    {error && <div className="error" role="alert">{error}</div>}
+    {notice && <p role="status">{notice}</p>}
+    <button className="btn" disabled={busy} onClick={load}>{busy?'Memproses...':'Muat ulang status'}</button>
     <div className="grid2" style={{marginTop:12}}>
       <div className="card maint">
-        <div className="maint-row"><div><strong>Web</strong><p>app.xydesk.my.id</p></div><button className={`toggle ${state.web?'on':''}`} onClick={()=>toggle('web')} aria-label="web"/></div>
-        <div className="maint-row"><div><strong>Desktop</strong><p>XyDesk.exe auto-update</p></div><button className={`toggle ${state.desktop?'on':''}`} onClick={()=>toggle('desktop')} aria-label="desktop"/></div>
-        <div className="maint-row"><div><strong>Android</strong><p>APK</p></div><button className={`toggle ${state.android?'on':''}`} onClick={()=>toggle('android')} aria-label="android"/></div>
-        <div className="maint-row"><div><strong>Signal</strong><p>WS Hub</p></div><button className={`toggle ${state.signal?'on':''}`} onClick={()=>toggle('signal')} aria-label="signal"/></div>
-        <label style={{fontSize:11, fontWeight:900, letterSpacing:'.06em', textTransform:'uppercase', color:'var(--muted)'}}>Pesan banner</label>
-        <textarea rows={3} value={msg} onChange={e=>setMsg(e.target.value)} placeholder="Sedang maintenance 6.8.1 — bentar ya..." />
-        <button className="btn primary block" onClick={save} disabled={saving}>{saving?'Menyimpan...':'Simpan & Publish'}</button>
+        {(['web','desktop','android','signal'] as const).map(k=>(
+          <div className="maint-row" key={k}><strong>{k}</strong>
+            <button className={`toggle ${state?.[k]?'on':''}`} role="switch" aria-checked={!!state?.[k]} aria-label={k} disabled={!state||busy} onClick={()=>toggle(k)}/>
+          </div>
+        ))}
+        {!state && <p className="muted">Status layanan belum tersedia. Kontrol dinonaktifkan.</p>}
+        <label htmlFor="maintenance-message">Pesan banner</label>
+        <textarea id="maintenance-message" rows={3} value={msg} disabled={!state||busy} onChange={e=>{setMsg(e.target.value);setNotice('Perubahan belum disimpan.')}} />
+        <button className="btn primary block" onClick={save} disabled={!state||busy}>{busy?'Memproses...':'Simpan & Publish'}</button>
       </div>
-      <div className="card"><h3>Preview Banner</h3><div style={{background:'var(--purple)', color:'#fff', padding:14, fontWeight:900, textAlign:'center'}}>{msg || 'Maintenance — Web akan kembali 10 menit lagi'}</div><p className="muted" style={{fontSize:11, marginTop:8}}>Web baca flag via /admin/maintenance (public).</p></div>
+      <div className="card"><h3>Preview Banner</h3><div style={{background:'var(--purple)',color:'#fff',padding:14,fontWeight:900,textAlign:'center'}}>{msg||'Belum ada pesan banner'}</div><p className="muted">Pratinjau pesan, bukan status layanan live.</p></div>
     </div>
   </>)
 }
 function LogsPage(){
   const [logs,setLogs]=useState<any[]>([])
+  const [error,setError]=useState('')
   const [q,setQ]=useState('')
   const load=async()=>{
     try{
       const l = await fetchLogs()
-      setLogs(l)
-    }catch(e){ console.error(e) }
+      setLogs(l); setError('')
+    }catch(e){ setError(String(e)) }
   }
   useEffect(()=>{ load(); const id=setInterval(load,5000); return ()=> clearInterval(id) },[])
   const filtered = q ? logs.filter((l:any)=> JSON.stringify(l).toLowerCase().includes(q.toLowerCase())) : logs
-  return (<><h1 style={{fontSize:20}}>Logs — Realtime</h1><div className="card" style={{marginTop:12}}><div className="row" style={{marginBottom:8}}><input placeholder="filter: ban, kick, role" value={q} onChange={e=> setQ(e.target.value)} style={{flex:1, padding:'10px'}}/><button className="btn primary" onClick={load}>Refresh</button></div><pre className="mono" style={{background:'#0F0F14', color:'#EDE9FE', padding:12, maxHeight:360, overflow:'auto', fontSize:11}}>{filtered.length===0 ? 'Belum ada log admin — realtime 0' : filtered.map((l:any)=> `${new Date(l.at).toLocaleString()} [${l.action}] ${l.email||l.id||''} by ${l.by}`).join('\n')}</pre></div></>)
+  return (<><h1 style={{fontSize:20}}>Logs — Realtime</h1>{error && <div className="error" role="alert">{error} — daftar terakhir mungkin sudah tidak terbaru.</div>}<div className="card" style={{marginTop:12}}><div className="row" style={{marginBottom:8}}><input placeholder="filter: ban, kick, role" value={q} onChange={e=> setQ(e.target.value)} style={{flex:1, padding:'10px'}}/><button className="btn primary" onClick={load}>Refresh</button></div><pre className="mono" style={{background:'#0F0F14', color:'#EDE9FE', padding:12, maxHeight:360, overflow:'auto', fontSize:11}}>{filtered.length===0 ? 'Belum ada log admin — realtime 0' : filtered.map((l:any)=> `${new Date(l.at).toLocaleString()} [${l.action}] ${l.email||l.id||''} by ${l.by}`).join('\n')}</pre></div></>)
 }
 function SettingsPage(){
   return (<><h1 style={{fontSize:20}}>Settings</h1><div className="grid2" style={{marginTop:12}}><div className="card"><h3>Brand</h3><p className="muted" style={{fontSize:12}}>Kotak tegas, no rounded, custom total, #7C3AED.</p><div className="row" style={{marginTop:8}}><span style={{width:28, height:28, background:'#7C3AED', display:'inline-block', border:'1px solid var(--border)'}}/><span style={{width:28, height:28, background:'#EDE9FE', display:'inline-block', border:'1px solid var(--border)'}}/></div></div><div className="card"><h3>Keamanan</h3><p className="muted" style={{fontSize:12}}>Login + Turnstile + role ADMIN/support/viewer — tanpa emoji, lucide-react.</p><div className="row"><span className="badge dark"><ShieldCheck size={12}/> Turnstile ON</span><span className="badge ok"><Activity size={12}/> 2FA ready</span></div></div></div></>)
-}
-
-function Login({onLogin}:{onLogin:(t:string)=>void}){
-  const [email,setEmail]=useState('')
-  const [pass,setPass]=useState('')
-  const [turnstileToken,setTurnstileToken]=useState('')
-  const [err,setErr]=useState('')
-  const [loading,setLoading]=useState(false)
-
-  useEffect(()=>{
-    if(!window.turnstile) return
-    const id = window.turnstile.render('#turnstile', {
-      sitekey: TURNSTILE_SITEKEY,
-      callback: (t:string)=> setTurnstileToken(t)
-    })
-    return ()=>{ try{ window.turnstile?.reset(id) }catch{} }
-  },[])
-
-  const submit=async(e:React.FormEvent)=>{
-    e.preventDefault()
-    setErr('')
-    if(!turnstileToken) { setErr('Selesaikan captcha Turnstile dulu'); return }
-    setLoading(true)
-    try{
-      // Google ID token palsu untuk demo — di prod pakai Google Identity Services
-      const fakeGoogleId = btoa(JSON.stringify({ email, pass }))
-      const sess = await loginAdmin(fakeGoogleId, turnstileToken)
-      onLogin(sess.token)
-    }catch(ex:any){
-      setErr(ex?.message || 'Login gagal')
-    }finally{ setLoading(false) }
-  }
-
-  return (
-    <div className="login-wrap">
-      <form className="login-card" onSubmit={submit}>
-        <div className="login-head">
-          <img src="/logo.png" alt="" />
-          <div>
-            <h1>XyDesk Admin</h1>
-            <p>Panel login — konek nyata ke Worker + Turnstile</p>
-          </div>
-          <span className="badge dark" style={{marginLeft:'auto'}}><ShieldCheck size={12}/> SECURE</span>
-        </div>
-
-        <div className="field"><label>Email</label><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@xydesk.my.id" required /></div>
-        <div className="field"><label>Password / Google</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" required /></div>
-
-        <div className="turnstile-wrap">
-          <div id="turnstile" style={{minHeight:65}} />
-          {!turnstileToken && <span className="muted" style={{fontSize:11}}>Turnstile: {TURNSTILE_SITEKEY.slice(0,14)}… — verifikasi nyata ke Cloudflare</span>}
-        </div>
-
-        {err && <div className="error">{err}</div>}
-
-        <button className="btn primary block" style={{marginTop:14}} disabled={loading} type="submit">
-          {loading ? 'Memeriksa...' : 'Masuk — Verifikasi Turnstile'}
-        </button>
-
-        <div className="muted" style={{fontSize:11, marginTop:10, textAlign:'center'}}>
-          APK & Web login pakai token yang sama — sinyal via <span className="mono">signal.xydesk.my.id</span>
-        </div>
-      </form>
-    </div>
-  )
 }
 
 // @ts-ignore

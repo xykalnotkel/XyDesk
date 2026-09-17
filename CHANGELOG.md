@@ -22,6 +22,25 @@ Kebijakan rilis:
 - **Banner artikel wajib 3D glossy morphing + floating motion blur** —
   lihat `docs/NEWS_STYLE.md` §11.
 
+## [Belum terbit]
+
+### Fixed
+- Worker: entrypoint runtime hanya mengekspor handler dan kelas Durable Object; konstanta helper untuk tes tidak lagi membuat startup workerd gagal.
+- Backend admin: hapus fallback identitas Google palsu dan bypass captcha; pakai verifikasi Google dengan signature helper yang benar, hostname Turnstile, dan sesi admin audience khusus satu jam.
+- Maintenance backend: transaksi batch + audit log + pemeriksaan revision; galat storage menjadi 503 dan konflik menjadi 409, tidak sukses palsu. Pembacaan publik tidak mengungkap email pengubah.
+- Statistik backend: metrik tanpa sumber menjadi null; kegagalan pembacaan tidak dilaporkan sebagai data kosong/nol.
+- Panel: login GIS asli dengan penanganan captcha kedaluwarsa, logout saat 401, simpan maintenance satu request; halaman Backend/Server memakai pemeriksaan RPC nyata. Purge belum tersedia menghasilkan 501.
+- Admin: hapus fallback statistik dummy; tampilkan kegagalan API dan perbarui statistik setiap 15 detik setelah tersedia token.
+- Dashboard: hapus grafik, tren, latensi, dan status kesehatan statis yang menyerupai hasil pengukuran.
+- Maintenance: kontrol dikunci sebelum status dimuat; edit sebagai draft, simpan dalam satu batch, lalu verifikasi baca ulang. Kegagalan meminta muat ulang sebelum mencoba lagi.
+- Logs: kegagalan HTTP ditampilkan sebagai galat, bukan daftar kosong yang tampak sukses.
+
+### Added
+- `cloudflare npm run test:runtime`: uji bundle pada runtime SQLite lokal, mencakup transaksi, konflik konkurensi, audit, health, dan pembatasan akses.
+- Endpoint admin health read-only untuk Worker/AuthStore/Hub; status engine dinyatakan belum tersedia.
+- Panduan konfigurasi dan rollout di `admin/README.md`; total 28 tes backend admin baru dan 3 tes API panel tambahan.
+- Dua belas tes regresi API admin memakai Node test runner dan TypeScript yang sudah tersedia.
+
 ## [6.8.5] - 2026-09-13
 
 > Build 59. Semua tombol admin nyata — ban/role/revoke/kick/terminate/purge/logs Hibernation+storage, gada dummy.

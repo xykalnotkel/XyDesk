@@ -14,14 +14,14 @@ export interface AdminSession {
 
 export interface Stats {
   totalUsers: number
-  mau: number
+  mau: number | null
   guest: number
   onlineDevices: number
-  totalDevices: number
-  activeSessions: number
-  todaySessions: number
-  revenue: number
-  revenueSubs: number
+  totalDevices: number | null
+  activeSessions: number | null
+  todaySessions: number | null
+  revenue: number | null
+  revenueSubs: number | null
 }
 
 export interface UserRow {
@@ -39,9 +39,9 @@ export interface DeviceRow {
   version: string
   arch: string
   user: string
-  capture: 'WGC' | 'DXGI' | 'GDI'
+  capture: 'WGC' | 'DXGI' | 'GDI' | 'unknown'
   status: 'online' | 'idle' | 'offline' | 'error'
-  latency?: number
+  latency?: number | null
 }
 
 // Simpan token admin (JWT dari Worker /issue)
@@ -71,6 +71,7 @@ export async function loginAdmin(googleIdToken: string, turnstileToken: string):
 
 export function logoutAdmin() {
   setAdminToken(null)
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('xydesk-admin-logout'))
 }
 
 // helper fetch dengan token
@@ -87,24 +88,11 @@ async function adminFetch(path: string, init?: RequestInit) {
   return r
 }
 
-// Stats nyata — fallback ke mock kalau Worker belum deploy endpoint admin
+// Kegagalan API harus terlihat, bukan diganti angka contoh.
 export async function fetchStats(): Promise<Stats> {
-  try {
-    const r = await adminFetch('/admin/stats')
-    if (r.ok) return (await r.json()) as Stats
-  } catch {}
-  // mock sinkron dengan web/apk supaya tetap demo
-  return {
-    totalUsers: 2483,
-    mau: 1204,
-    guest: 312,
-    onlineDevices: 184,
-    totalDevices: 847,
-    activeSessions: 23,
-    todaySessions: 1421,
-    revenue: 8400000,
-    revenueSubs: 42,
-  }
+  const r = await adminFetch('/admin/stats')
+  if (!r.ok) throw new Error(`Statistik gagal dimuat (HTTP ${r.status})`)
+  return (await r.json()) as Stats
 }
 
 export async function fetchUsers(q?: string): Promise<UserRow[]> {
@@ -151,7 +139,7 @@ export async function purgeHosting() {
 }
 export async function fetchLogs(): Promise<{key:string, action:string, email?:string, id?:string, at:number, by:string}[]> {
   const r = await adminFetch('/admin/logs')
-  if (!r.ok) return []
+  if (!r.ok) throw new Error(`Log gagal dimuat (HTTP ${r.status})`)
   const j = await r.json()
   return (j.logs || []) as any
 }
@@ -165,11 +153,33 @@ export async function setMaintenance(service: 'web'|'desktop'|'android'|'signal'
   return true
 }
 
-export async function fetchMaintenance() {
+export type MaintenanceService = 'web' | 'desktop' | 'android' | 'signal'
+export type MaintenanceState = Record<MaintenanceService, boolean> & { message: string; revision?: number }
+
+export async function fetchMaintenance(): Promise<MaintenanceState> {
   const r = await adminFetch('/admin/maintenance')
-  if (!r.ok) return { web:false, desktop:false, android:false, signal:false, message:'' }
+  if (!r.ok) throw new Error(`Maintenance gagal dimuat (HTTP ${r.status})`)
   return await r.json()
 }
 
 // Turnstile sitekey — ganti dengan sitekey Cloudflare kamu (dashboard > Turnstile)
-export const TURNSTILE_SITEKEY = (import.meta as any).env?.VITE_TURNSTILE_SITEKEY || '1x00000000000000000000AA'
+export const TURNSTILE_SITEKEY = (import.meta as any).env?.VITE_TURNSTILE_SITEKEY || ''
+
+export async function saveMaintenance(state: MaintenanceState, message: string) {
+  const {web,desktop,android,signal,revision}=state
+  const r=await adminFetch('/admin/maintenance',{method:'POST',body:JSON.stringify({services:{web,desktop,android,signal},message,revision})})
+  if(!r.ok) throw new Error(r.status===409 ? 'Status telah diubah admin lain. Muat ulang.' : `Maintenance gagal disimpan (HTTP ${r.status})`)
+  return await r.json()
+}
+export interface Health {
+  checkedAt:number
+  worker:{status:string}
+  authStore:{status:string;latencyMs:number}
+  hub:{status:string;latencyMs:number}
+  engine:{status:string;reason:string}
+}
+export async function fetchHealth(): Promise<Health> {
+  const r=await adminFetch('/admin/health')
+  if(!r.ok) throw new Error(`Pemeriksaan gagal (HTTP ${r.status})`)
+  return await r.json()
+}

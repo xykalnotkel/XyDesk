@@ -1,7 +1,7 @@
 # XyDesk — Cloudflare Worker (signaling + auth)
 # Tanpa VM/VPS. Deploy: `npx wrangler deploy` (gratis, tanpa kartu kredit).
 name = "xydesk-signaling"
-main = "src/worker.js"
+main = "src/entry.js"
 compatibility_date = "2026-08-17"
 
 # Domain signaling. Yang lama (`signal.xystudio.my.id`) dilepas: rilis 6.5.4

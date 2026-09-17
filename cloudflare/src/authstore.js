@@ -1,3 +1,4 @@
+import { validMaintenancePatch, emptyMaintenance } from './maintenance.js';
 // XyDesk AuthStore — Durable Object yang menyimpan user & OTP (KV storage)
 // dan menjalankan alur auth (request-otp, verify-otp, google, me).
 //
@@ -128,15 +129,29 @@ export class AuthStore {
       }
       return json({ totalUsers, guest }, 200);
     }
+    if (path === '/admin/health' && request.headers.get('x-internal-admin') === '1' && request.method === 'GET') {
+      await this.ctx.storage.get('admin:maintenance');
+      return json({ ok:true });
+    }
     if (path === '/admin/maintenance' && request.headers.get('x-internal-admin') === '1') {
       if (request.method === 'GET') {
         const stored = await this.ctx.storage.get('admin:maintenance');
-        return json(stored || { web:false, desktop:false, android:false, signal:false, message:'' }, 200);
+        return json({ ...emptyMaintenance(), ...stored });
       }
       if (request.method === 'POST') {
-        let body; try { body = await request.json(); } catch { return json({ error: 'bad-json' }, 400); }
-        await this.ctx.storage.put('admin:maintenance', body);
-        return json({ ok: true }, 200);
+        let body; try { body = await request.json(); } catch { return json({error:'bad-json'},400); }
+        if (!validMaintenancePatch(body)) return json({error:'bad-maintenance'},400);
+        const result = await this.ctx.storage.transaction(async txn => {
+          const current = { ...emptyMaintenance(), ...await txn.get('admin:maintenance') };
+          if (body.revision !== undefined && body.revision !== current.revision) return null;
+          const next = { ...current, ...(body.services || {[body.service]:body.enabled}),
+            message:body.message ?? current.message, revision:current.revision+1, at:Date.now(), by:body.by };
+          await txn.put('admin:maintenance',next);
+          await txn.put(`admin:log:${next.at}:maintenance:${next.revision}`,{action:'maintenance',at:next.at,by:body.by});
+          return next;
+        });
+        if (!result) return json({error:'maintenance-conflict'},409);
+        return json({ok:true,state:result});
       }
     }
     if (path === '/admin/ban' && request.headers.get('x-internal-admin') === '1' && request.method === 'POST') {
