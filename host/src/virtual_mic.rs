@@ -227,7 +227,7 @@ pub fn ensure_virtual_mic() {
     if status.needed {
         eprintln!(
             "[xydesk-host] BUTUH virtual audio driver biar mic client kebaca sebagai input (denyut di Control Panel).\n\
-             Saat ini render_target={} — ini speaker, bukan mic virtual, jadi tidak denyut di Recording.\n\
+             Render mic client dinonaktifkan: target {} bukan input virtual untuk aplikasi.\n\
              Install VB-CABLE dari https://vb-audio.com/Cable/ lalu pilih mic = CABLE Output di aplikasi.",
             status.render_target
         );

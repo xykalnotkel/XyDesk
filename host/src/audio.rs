@@ -4,15 +4,14 @@
 //! WASAPI loopback (`AUDCLNT_STREAMFLAGS_LOOPBACK`) merekam semua bunyi yang
 //! keluar dari perangkat output default Windows — persis yang didengar
 //! pengguna di depan PC — tanpa perangkat virtual apa pun. Format yang
-//! diminta eksplisit: PCM 16-bit, 48 kHz, stereo (audio engine Windows
-//! mengonversi bila perlu). Setiap 20 ms (960 sampel) di-encode menjadi satu
-//! paket Opus lalu dikirim lewat channel. Latency pipeline ±30-60 ms.
+//! mengikuti mix device, lalu streaming resampler menghasilkan tepat 960
+//! frame PCM16 48 kHz per paket Opus. Latency nyata perlu pengukuran.
 //!
 //! ## Alur mic (client → host)
 //! Paket Opus yang diterima dari client didecode menjadi PCM dan dirender
-//! ke perangkat output default via `IAudioRenderClient` — suara mic client
-//! terdengar di speaker PC host. (Istilah "mic passthrough": suara dari
-//! aplikasi client diteruskan ke host.)
+//! ke virtual audio cable via `IAudioRenderClient`. Aplikasi Windows harus
+//! memilih recording endpoint kabel itu. Tanpa kabel, gagal dengan jelas;
+//! tidak fallback ke speaker dan tidak memasang driver otomatis.
 //!
 //! ## Alur mic (host → client)
 //! Mikrofon PC host direkam via WASAPI `eCapture` (perangkat komunikasi
@@ -50,6 +49,19 @@ pub fn capture_available() -> bool {
             return false;
         }
         windows::has_default_output()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        false
+    }
+}
+
+/// Endpoint virtual terdeteksi; aplikasi Windows tetap perlu memilih recording
+/// endpoint-nya. Bukan janji driver sehat atau pilihan input aplikasi otomatis.
+pub fn mic_input_available() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        crate::virtual_mic::get_render_device_id().is_some()
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -168,7 +180,7 @@ pub fn spawn_audio_source() -> mpsc::Receiver<Vec<u8>> {
 pub fn spawn_audio_sink() -> mpsc::SyncSender<Vec<u8>> {
     #[cfg(target_os = "windows")]
     {
-        let (tx, rx) = mpsc::sync_channel::<Vec<u8>>(8);
+        let (tx, rx) = mpsc::sync_channel::<Vec<u8>>(4);
         std::thread::spawn(move || {
             if let Err(e) = windows::render_loop(rx) {
                 eprintln!("[xydesk-host] audio render gagal: {e}");
@@ -178,7 +190,7 @@ pub fn spawn_audio_sink() -> mpsc::SyncSender<Vec<u8>> {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        let (tx, _rx) = mpsc::sync_channel::<Vec<u8>>(8);
+        let (tx, _rx) = mpsc::sync_channel::<Vec<u8>>(4);
         tx
     }
 }
@@ -223,8 +235,6 @@ mod windows {
     const SAMPLE_RATE: u32 = 48_000;
     const CHANNELS: u16 = 2;
     const MIC_CHANNELS: u16 = 1;
-    const FRAME_MS: usize = 20;
-    const SAMPLES_PER_PACKET: usize = (SAMPLE_RATE as usize) * FRAME_MS / 1000;
     /// `AUDCLNT_BUFFERFLAGS_SILENT` — buffer capture berisi hening (mis. mic
     /// dimute) dan boleh diisi nol tanpa membaca memori perangkat.
     const BUFFERFLAGS_SILENT: u32 = 0x2;
@@ -505,366 +515,222 @@ mod windows {
 
     /// Format mix perangkat + representasi sampelnya.
     ///
-    /// Di mode SHARED, WASAPI hanya menerima format mix engine — memaksa
-    /// PCM16 48 kHz ke device yang mix-nya float32 atau 44,1 kHz menghasilkan
-    /// `AUDCLNT_E_UNSUPPORTED_FORMAT` (0x88890008), kesalahan audio yang
-    /// selama ini tidak pernah sembuh karena yang salah inisialisasinya,
-    /// bukan perangkatnya. Pointer yang dikembalikan wajib dibebaskan dengan
-    /// `CoTaskMemFree` SESETELAH Initialize (WASAPI menyalin isinya di sana).
-    fn mix_format(
-        client: &IAudioClient,
-    ) -> anyhow::Result<(
-        windows::Win32::Media::Audio::WAVEFORMATEX,
-        Sumber,
-        *mut windows::Win32::Media::Audio::WAVEFORMATEX,
-    )> {
+    /// Own the complete CoTaskMem allocation, including WAVEFORMATEXTENSIBLE.
+    /// Passing a copied WAVEFORMATEX header loses the required extension.
+    struct MixFormat {
+        ptr: *mut windows::Win32::Media::Audio::WAVEFORMATEX,
+        src: Sumber,
+    }
+    impl Drop for MixFormat {
+        fn drop(&mut self) {
+            unsafe { CoTaskMemFree(Some(self.ptr.cast())) };
+        }
+    }
+    fn mix_format(client: &IAudioClient) -> anyhow::Result<MixFormat> {
         use windows::Win32::Media::Audio::WAVEFORMATEXTENSIBLE;
         unsafe {
-            let ptr = client
-                .GetMixFormat()
-                .map_err(|e| anyhow::anyhow!("GetMixFormat: {e:?}"))?;
-            let fmt = *ptr;
-            let sampel = if fmt.wFormatTag == 0xFFFE {
-                // WAVE_FORMAT_EXTENSIBLE: tipe aslinya ada di SubFormat.
-                let ext = &*(ptr as *const WAVEFORMATEXTENSIBLE);
-                match ext.SubFormat.data1 {
-                    3 => Sampel::F32, // KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
-                    1 => match fmt.wBitsPerSample {
-                        16 => Sampel::I16,
-                        24 => Sampel::I24,
-                        _ => Sampel::I32,
-                    },
-                    _ => Sampel::F32,
-                }
-            } else if fmt.wFormatTag == 3 {
-                Sampel::F32 // WAVE_FORMAT_IEEE_FLOAT
-            } else {
-                match fmt.wBitsPerSample {
-                    16 => Sampel::I16,
-                    24 => Sampel::I24,
-                    _ => Sampel::I32,
-                }
+            let ptr = client.GetMixFormat()?;
+            anyhow::ensure!(!ptr.is_null(), "GetMixFormat returned null");
+            // Establish ownership before any validation can fail.
+            let mut mix = MixFormat {
+                ptr,
+                src: Sumber {
+                    channels: 0,
+                    rate: 0,
+                    sampel: Sampel::I16,
+                },
             };
-            let src = Sumber {
+            let fmt = *ptr;
+            let tag = if fmt.wFormatTag == 0xfffe {
+                anyhow::ensure!(fmt.cbSize >= 22, "truncated WAVEFORMATEXTENSIBLE");
+                let sub = (*(ptr as *const WAVEFORMATEXTENSIBLE)).SubFormat;
+                if sub == windows::core::GUID::from_u128(0x00000003_0000_0010_8000_00aa00389b71) {
+                    3
+                } else if sub
+                    == windows::core::GUID::from_u128(0x00000001_0000_0010_8000_00aa00389b71)
+                {
+                    1
+                } else {
+                    anyhow::bail!("unsupported WASAPI subformat");
+                }
+            } else {
+                fmt.wFormatTag
+            };
+            let sampel = match (tag, fmt.wBitsPerSample) {
+                (3, 32) => Sampel::F32,
+                (1, 16) => Sampel::I16,
+                (1, 24) => Sampel::I24,
+                (1, 32) => Sampel::I32,
+                _ => anyhow::bail!("unsupported WASAPI sample format"),
+            };
+            anyhow::ensure!(
+                fmt.nChannels > 0
+                    && fmt.nSamplesPerSec > 0
+                    && usize::from(fmt.nBlockAlign)
+                        == usize::from(fmt.nChannels) * sampel.byte_per_sampel(),
+                "invalid WASAPI frame layout"
+            );
+            mix.src = Sumber {
                 channels: usize::from(fmt.nChannels),
                 rate: fmt.nSamplesPerSec,
                 sampel,
             };
-            Ok((fmt, src, ptr))
+            Ok(mix)
         }
     }
 
-    /// Loop penangkap: WASAPI loopback → encode Opus → `tx`.
     pub fn capture_loop(tx: SyncSender<Vec<u8>>) -> anyhow::Result<()> {
-        init_com()?;
-        let device = device()?;
-        let client = client(&device)?;
-        let (format, src_mix, mix_ptr) = mix_format(&client)?;
-        unsafe {
-            client
-                .Initialize(
-                    AUDCLNT_SHAREMODE_SHARED,
-                    AUDCLNT_STREAMFLAGS_LOOPBACK,
-                    0, // durasi buffer default
-                    0,
-                    &format,
-                    None,
-                )
-                .map_err(|e| anyhow::anyhow!("IAudioClient::Initialize: {e:?}"))?;
-        }
-        unsafe { CoTaskMemFree(Some(mix_ptr as *const _ as *const std::ffi::c_void)) };
-        let capture: IAudioCaptureClient = unsafe {
-            client
-                .GetService::<IAudioCaptureClient>()
-                .map_err(|e| anyhow::anyhow!("GetService IAudioCaptureClient: {e:?}"))?
-        };
-
-        let mut encoder = crate::opus_ffi::Encoder::new(SAMPLE_RATE, usize::from(CHANNELS))
-            .map_err(|e| anyhow::anyhow!("opus encoder: {e}"))?;
-
-        // Mulai stream.
-        unsafe {
-            client
-                .Start()
-                .map_err(|e| anyhow::anyhow!("IAudioClient::Start: {e:?}"))?;
-        }
-
-        let block = usize::from(format.nBlockAlign);
-        let mut pending = Vec::<u8>::with_capacity(block * SAMPLES_PER_PACKET * 4);
-
-        loop {
-            let packet_len = unsafe {
-                let len = capture.GetNextPacketSize()?;
-                if len == 0 {
-                    std::thread::sleep(std::time::Duration::from_millis(2));
-                    continue;
-                }
-                len
-            };
-            // Konsumsi semua paket yang tersedia sekarang.
-            for _ in 0..packet_len {
-                let mut data: *mut u8 = std::ptr::null_mut();
-                let mut frames: u32 = 0;
-                let mut flags: u32 = 0;
-                unsafe {
-                    capture
-                        .GetBuffer(&mut data, &mut frames, &mut flags, None, None)
-                        .map_err(|e| anyhow::anyhow!("GetBuffer: {e:?}"))?;
-                    if frames > 0 && !data.is_null() {
-                        let bytes = std::slice::from_raw_parts(data, frames as usize * block);
-                        pending.extend_from_slice(bytes);
-                    }
-                    capture
-                        .ReleaseBuffer(frames)
-                        .map_err(|e| anyhow::anyhow!("ReleaseBuffer: {e:?}"))?;
-                }
-            }
-            // Encode per 20 ms (960 sampel stereo = 3840 byte PCM16).
-            let packet_bytes = SAMPLES_PER_PACKET * block;
-            while pending.len() >= packet_bytes {
-                let chunk: Vec<u8> = pending.drain(..packet_bytes).collect();
-                // Chunk masih berbentuk format mix device; normalkan ke
-                // kebutuhan Opus (48 kHz stereo PCM16) sebelum encode.
-                let pcm16 = crate::pcmconv::konversi(
-                    &chunk,
-                    &src_mix,
-                    usize::from(CHANNELS),
-                    SAMPLE_RATE,
-                    Sampel::I16,
-                );
-                let samples: Vec<i16> = pcm16
-                    .as_chunks::<2>()
-                    .0
-                    .iter()
-                    .map(|b| i16::from_le_bytes(*b))
-                    .collect();
-                let mut out = vec![0u8; 4000];
-                match encoder.encode(&samples, &mut out) {
-                    Ok(n) => {
-                        if tx.send(out[..n].to_vec()).is_err() {
-                            return Ok(()); // receiver di-drop → sesi selesai
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("[xydesk-host] opus encode: {e}");
-                    }
-                }
-            }
-        }
+        capture(tx, false)
     }
-
-    /// Loop penangkap mikrofon: WASAPI eCapture → encode Opus (mono) → `tx`.
-    /// Mirip `capture_loop`, tetapi membaca perangkat capture (bukan
-    /// loopback) dan menangani `AUDCLNT_BUFFERFLAGS_SILENT` (mic dimute).
     pub fn mic_capture_loop(tx: SyncSender<Vec<u8>>) -> anyhow::Result<()> {
+        capture(tx, true)
+    }
+    fn capture(tx: SyncSender<Vec<u8>>, microphone: bool) -> anyhow::Result<()> {
         init_com()?;
-        let device = capture_device()?;
-        let client = client(&device)?;
-        let (format, src_mix, mix_ptr) = mix_format(&client)?;
-        unsafe {
-            client
-                .Initialize(
-                    AUDCLNT_SHAREMODE_SHARED,
-                    windows::Win32::Media::Audio::AUDCLNT_STREAMFLAGS_NOPERSIST,
-                    0, // durasi buffer default (engine menentukan)
-                    0,
-                    &format,
-                    None,
-                )
-                .map_err(|e| anyhow::anyhow!("mic Initialize: {e:?}"))?;
-        }
-        unsafe { CoTaskMemFree(Some(mix_ptr as *const _ as *const std::ffi::c_void)) };
-        let capture: IAudioCaptureClient = unsafe {
-            client
-                .GetService::<IAudioCaptureClient>()
-                .map_err(|e| anyhow::anyhow!("mic GetService IAudioCaptureClient: {e:?}"))?
+        let device = if microphone {
+            capture_device()?
+        } else {
+            device()?
         };
-
-        let mut encoder = crate::opus_ffi::Encoder::new(SAMPLE_RATE, usize::from(MIC_CHANNELS))
-            .map_err(|e| anyhow::anyhow!("opus encoder (mic): {e}"))?;
-
+        let client = client(&device)?;
+        let mix = mix_format(&client)?;
+        let block = unsafe { usize::from((*mix.ptr).nBlockAlign) };
+        let channels = if microphone { MIC_CHANNELS } else { CHANNELS };
         unsafe {
-            client
-                .Start()
-                .map_err(|e| anyhow::anyhow!("mic Start: {e:?}"))?;
+            client.Initialize(
+                AUDCLNT_SHAREMODE_SHARED,
+                if microphone {
+                    windows::Win32::Media::Audio::AUDCLNT_STREAMFLAGS_NOPERSIST
+                } else {
+                    AUDCLNT_STREAMFLAGS_LOOPBACK
+                },
+                0,
+                0,
+                mix.ptr,
+                None,
+            )?;
         }
-
-        let block = usize::from(format.nBlockAlign);
-        let mut pending = Vec::<u8>::with_capacity(block * SAMPLES_PER_PACKET * 4);
-
+        let mut packetizer = crate::pcmconv::OpusPcm::new(mix.src, usize::from(channels));
+        drop(mix);
+        let capture: IAudioCaptureClient = unsafe { client.GetService()? };
+        let mut encoder = crate::opus_ffi::Encoder::new(SAMPLE_RATE, usize::from(channels))
+            .map_err(|e| anyhow::anyhow!("opus encoder: {e}"))?;
+        unsafe { client.Start()? };
         loop {
-            let packet_len = unsafe {
-                let len = capture.GetNextPacketSize()?;
-                if len == 0 {
-                    std::thread::sleep(std::time::Duration::from_millis(2));
-                    continue;
-                }
-                len
-            };
-            for _ in 0..packet_len {
-                let mut data: *mut u8 = std::ptr::null_mut();
-                let mut frames: u32 = 0;
-                let mut flags: u32 = 0;
-                unsafe {
-                    capture
-                        .GetBuffer(&mut data, &mut frames, &mut flags, None, None)
-                        .map_err(|e| anyhow::anyhow!("mic GetBuffer: {e:?}"))?;
-                    if frames > 0 {
-                        if flags & BUFFERFLAGS_SILENT != 0 || data.is_null() {
-                            // Mic senyap/dimute — isi hening yang sah, tanpa
-                            // membaca memori perangkat.
-                            pending.resize(pending.len() + frames as usize * block, 0);
-                        } else {
-                            let bytes = std::slice::from_raw_parts(data, frames as usize * block);
-                            pending.extend_from_slice(bytes);
-                        }
-                    }
-                    capture
-                        .ReleaseBuffer(frames)
-                        .map_err(|e| anyhow::anyhow!("mic ReleaseBuffer: {e:?}"))?;
-                }
-            }
-            // Encode per 20 ms (960 sampel mono = 1920 byte PCM16).
-            let packet_bytes = SAMPLES_PER_PACKET * block;
-            while pending.len() >= packet_bytes {
-                let chunk: Vec<u8> = pending.drain(..packet_bytes).collect();
-                // Mix device mic bisa stereo/float walau Opus minta mono
-                // PCM16 — konversi menyerahkan channel dan laju yang benar.
-                let pcm16 = crate::pcmconv::konversi(
-                    &chunk,
-                    &src_mix,
-                    usize::from(MIC_CHANNELS),
-                    SAMPLE_RATE,
-                    Sampel::I16,
-                );
-                let samples: Vec<i16> = pcm16
-                    .as_chunks::<2>()
-                    .0
-                    .iter()
-                    .map(|b| i16::from_le_bytes(*b))
-                    .collect();
-                let mut out = vec![0u8; 4000];
-                match encoder.encode(&samples, &mut out) {
-                    Ok(n) => {
-                        if tx.send(out[..n].to_vec()).is_err() {
-                            return Ok(()); // receiver di-drop → sesi selesai
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("[xydesk-host] opus encode (mic): {e}");
+            // The return value is FRAMES in the next packet, not packet count.
+            while unsafe { capture.GetNextPacketSize()? } != 0 {
+                let mut data = std::ptr::null_mut();
+                let mut frames = 0;
+                let mut flags = 0;
+                unsafe { capture.GetBuffer(&mut data, &mut frames, &mut flags, None, None)? };
+                let bytes = if flags & BUFFERFLAGS_SILENT != 0 || data.is_null() {
+                    vec![0; frames as usize * block]
+                } else {
+                    unsafe { std::slice::from_raw_parts(data, frames as usize * block).to_vec() }
+                };
+                // Release WASAPI before conversion, encoding, or channel work.
+                unsafe { capture.ReleaseBuffer(frames)? };
+                for samples in packetizer.push(&bytes) {
+                    let mut out = vec![0; 4000];
+                    let n = encoder
+                        .encode(&samples, &mut out)
+                        .map_err(|e| anyhow::anyhow!("opus encode: {e}"))?;
+                    out.truncate(n);
+                    if tx.send(out).is_err() {
+                        return Ok(());
                     }
                 }
             }
+            std::thread::sleep(std::time::Duration::from_millis(2));
         }
     }
 
     /// Loop render: decode Opus → tulis ke IAudioRenderClient.
-    /// v6.7.2+: coba pakai virtual mic driver (VB-CABLE Input) biar denyut di
-    /// Control Panel → Recording → CABLE Output, seperti AnyDesk. Kalau tidak ada,
-    /// fallback ke default output (speaker) seperti dulu.
+    /// Virtual cable input → recording endpoint untuk aplikasi Windows.
     pub fn render_loop(rx: Receiver<Vec<u8>>) -> anyhow::Result<()> {
         init_com()?;
         crate::virtual_mic::ensure_virtual_mic();
         // Prioritas: virtual cable input (biar jadi mic input di Windows)
-        let device = if let Some(id) = crate::virtual_mic::get_render_device_id() {
-            match device_by_id(&id) {
-                Ok(d) => {
-                    eprintln!("[xydesk-host] mic client → virtual mic: render ke device {id} (biar denyut di Recording)");
-                    d
-                }
-                Err(_) => {
-                    eprintln!("[xydesk-host] virtual mic device {id} gagal dibuka, fallback ke default speaker");
-                    device()?
-                }
-            }
-        } else {
-            eprintln!("[xydesk-host] mic client → speaker (default) — tidak akan denyut di Recording, install VB-CABLE biar jadi mic virtual");
-            device()?
-        };
+        // Speaker playback is NOT an input to Discord/Zoom/game. Fail clearly
+        // instead of leaking the phone microphone through host speakers.
+        let id = crate::virtual_mic::get_render_device_id()
+            .ok_or_else(|| anyhow::anyhow!("mic input unavailable: install/select a virtual audio cable explicitly; no driver was installed"))?;
+        let device = device_by_id(&id)?;
         let client = client(&device)?;
-        let (format, src_mix, mix_ptr) = mix_format(&client)?;
-        // Buffer 100 ms (10.000.000 satuan 100 ns) — jitter kecil, latency rendah.
+        let mix = mix_format(&client)?;
+        let src_mix = mix.src;
+        let block = unsafe { usize::from((*mix.ptr).nBlockAlign) };
         unsafe {
-            client
-                .Initialize(
-                    AUDCLNT_SHAREMODE_SHARED,
-                    windows::Win32::Media::Audio::AUDCLNT_STREAMFLAGS_NOPERSIST,
-                    10_000_000,
-                    0,
-                    &format,
-                    None,
-                )
-                .map_err(|e| anyhow::anyhow!("render Initialize: {e:?}"))?;
+            // 100 ms = 1,000,000 units of 100 ns (not 10,000,000 = 1 s).
+            client.Initialize(
+                AUDCLNT_SHAREMODE_SHARED,
+                windows::Win32::Media::Audio::AUDCLNT_STREAMFLAGS_NOPERSIST,
+                1_000_000,
+                0,
+                mix.ptr,
+                None,
+            )?;
         }
-        unsafe { CoTaskMemFree(Some(mix_ptr as *const _ as *const std::ffi::c_void)) };
+        drop(mix);
         let render: IAudioRenderClient = unsafe {
             client
                 .GetService::<IAudioRenderClient>()
                 .map_err(|e| anyhow::anyhow!("GetService IAudioRenderClient: {e:?}"))?
         };
         let buffer_frames = unsafe { client.GetBufferSize()? } as usize;
-        let block = usize::from(format.nBlockAlign);
 
         let mut decoder = crate::opus_ffi::Decoder::new(SAMPLE_RATE, usize::from(CHANNELS))
             .map_err(|e| anyhow::anyhow!("opus decoder: {e}"))?;
-        let mut pcm_queue: Vec<i16> = Vec::with_capacity(SAMPLE_RATE as usize);
-
-        unsafe {
-            client
-                .Start()
-                .map_err(|e| anyhow::anyhow!("render Start: {e:?}"))?;
-        }
-
-        // Terima non-blok; bila kosong, isi senyap agar buffer tidak underrun.
+        // Queue DEVICE-format frames, never confuse 48 kHz frames with the
+        // render endpoint's rate or divide WASAPI frame counts by channels.
+        let mut pcm_queue = Vec::<u8>::new();
+        let max_bytes = (src_mix.rate as usize / 10) * block; // ≤100 ms PCM
+        unsafe { client.Start()? };
         loop {
-            while let Ok(pkt) = rx.try_recv() {
-                let mut pcm = vec![0i16; SAMPLES_PER_PACKET * usize::from(CHANNELS) * 4];
+            // Bound each drain pass: sustained traffic must not starve render.
+            for _ in 0..4 {
+                let pkt = match rx.try_recv() {
+                    Ok(pkt) => pkt,
+                    Err(std::sync::mpsc::TryRecvError::Empty) => break,
+                    Err(std::sync::mpsc::TryRecvError::Disconnected) => return Ok(()),
+                };
+                // Opus permits packets up to 120 ms, not just 20 ms.
+                let mut pcm = vec![0i16; 5_760 * usize::from(CHANNELS)];
                 match decoder.decode(&pkt, &mut pcm) {
                     Ok(n) => {
-                        pcm_queue.extend_from_slice(&pcm[..n * usize::from(CHANNELS)]);
+                        let bytes: Vec<u8> = pcm[..n * usize::from(CHANNELS)]
+                            .iter()
+                            .flat_map(|s| s.to_le_bytes())
+                            .collect();
+                        pcm_queue.extend(crate::pcmconv::konversi(
+                            &bytes,
+                            &Sumber {
+                                channels: usize::from(CHANNELS),
+                                rate: SAMPLE_RATE,
+                                sampel: Sampel::I16,
+                            },
+                            src_mix.channels,
+                            src_mix.rate,
+                            src_mix.sampel,
+                        ));
+                        if pcm_queue.len() > max_bytes {
+                            pcm_queue.drain(..pcm_queue.len() - max_bytes);
+                        }
                     }
                     Err(e) => eprintln!("[xydesk-host] opus decode: {e}"),
                 }
             }
-            // Tulis bertahap sesuai ruang kosong di buffer render.
-            while pcm_queue.len() >= usize::from(CHANNELS) {
-                let padding = unsafe { client.GetCurrentPadding()? } as usize;
-                let avail = buffer_frames.saturating_sub(padding);
-                if avail < usize::from(CHANNELS) {
-                    std::thread::sleep(std::time::Duration::from_millis(2));
-                    continue;
-                }
-                let want =
-                    (avail / usize::from(CHANNELS)).min(pcm_queue.len() / usize::from(CHANNELS));
-                let take = want * usize::from(CHANNELS);
-                let chunk: Vec<i16> = pcm_queue.drain(..take).collect();
+            let padding = unsafe { client.GetCurrentPadding()? } as usize;
+            let want = buffer_frames
+                .saturating_sub(padding)
+                .min(pcm_queue.len() / block);
+            if want > 0 {
                 unsafe {
-                    // windows 0.61: GetBuffer mengembalikan pointer langsung.
-                    let data = render
-                        .GetBuffer(want as u32)
-                        .map_err(|e| anyhow::anyhow!("render GetBuffer: {e:?}"))?;
-                    // Buffer render berbentuk format mix device — belum tentu
-                    // PCM16 seperti kiriman client. Konversi dulu, lalu salin
-                    // sebagai byte mentah sepanjang `want` frame.
-                    let masuk: Vec<u8> = chunk.iter().flat_map(|s| s.to_le_bytes()).collect();
-                    let mut bytes = crate::pcmconv::konversi(
-                        &masuk,
-                        &Sumber {
-                            channels: usize::from(CHANNELS),
-                            rate: SAMPLE_RATE,
-                            sampel: Sampel::I16,
-                        },
-                        src_mix.channels,
-                        src_mix.rate,
-                        src_mix.sampel,
-                    );
-                    bytes.resize(want * block, 0);
-                    let dst = std::slice::from_raw_parts_mut(data as *mut u8, want * block);
-                    dst.copy_from_slice(&bytes);
-                    render
-                        .ReleaseBuffer(want as u32, 0)
-                        .map_err(|e| anyhow::anyhow!("render ReleaseBuffer: {e:?}"))?;
+                    let data = render.GetBuffer(want as u32)?;
+                    std::ptr::copy_nonoverlapping(pcm_queue.as_ptr(), data, want * block);
+                    render.ReleaseBuffer(want as u32, 0)?;
                 }
+                pcm_queue.drain(..want * block);
             }
             std::thread::sleep(std::time::Duration::from_millis(2));
         }

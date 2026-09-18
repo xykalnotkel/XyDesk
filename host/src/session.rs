@@ -323,31 +323,46 @@ impl Session {
 
     /// Menerima track audio mic dari client dan mengirim paket Opus yang
     /// diterima ke `sink` (diputar oleh modul `audio`). Berakhir saat track
-    /// selesai atau sink tertutup.
-    pub async fn receive_mic(
-        &self,
-        sink: tokio::sync::mpsc::UnboundedSender<Vec<u8>>,
-    ) -> Result<()> {
-        let remote: Arc<TrackRemote> = {
-            let mut waited = 0usize;
-            loop {
-                if waited > 60 {
-                    anyhow::bail!("track mic client tidak kunjung tiba");
-                }
-                if let Some(t) = self.remote_audio.lock().await.as_ref() {
-                    break t.clone();
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                waited += 1;
+    /// berakhir atau sink tertutup; tidak memiliki batas waktu aktivasi mic.
+    pub async fn receive_mic(&self, sink: std::sync::mpsc::SyncSender<Vec<u8>>) -> Result<()> {
+        let mut tick = tokio::time::interval(std::time::Duration::from_millis(100));
+        loop {
+            if matches!(
+                self.pc.connection_state(),
+                RTCPeerConnectionState::Closed | RTCPeerConnectionState::Failed
+            ) {
+                return Ok(());
             }
-        };
-
-        while let Ok((rtp, _)) = remote.read_rtp().await {
-            if sink.send(rtp.payload.to_vec()).is_err() {
-                break; // sink render sudah berhenti
+            let remote = self.remote_audio.lock().await.clone();
+            let Some(remote) = remote else {
+                // No 30-second expiry: users may enable the phone mic later.
+                tick.tick().await;
+                continue;
+            };
+            let read = remote.read_rtp();
+            tokio::pin!(read);
+            loop {
+                tokio::select! {
+                    result = &mut read => {
+                        match result {
+                            Ok((rtp, _)) => match sink.try_send(rtp.payload.to_vec()) {
+                                Ok(()) | Err(std::sync::mpsc::TrySendError::Full(_)) => {},
+                                Err(std::sync::mpsc::TrySendError::Disconnected(_)) => return Ok(()),
+                            },
+                            Err(_) => {
+                                let mut slot = self.remote_audio.lock().await;
+                                if slot.as_ref().is_some_and(|current| Arc::ptr_eq(current, &remote)) { *slot = None; }
+                            }
+                        }
+                        break;
+                    }
+                    _ = tick.tick() => {
+                        if matches!(self.pc.connection_state(), RTCPeerConnectionState::Closed | RTCPeerConnectionState::Failed) { return Ok(()); }
+                        if !self.remote_audio.lock().await.as_ref().is_some_and(|current| Arc::ptr_eq(current, &remote)) { break; }
+                    }
+                }
             }
         }
-        Ok(())
     }
 
     /// Menambah kandidat ICE dari client (via signaling).

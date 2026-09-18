@@ -322,6 +322,8 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
+- [ ] (Operator - XyDesk Team, 2026-09-18) — **AUDIO-REPAIR belum dikemas/dideploy**. Source Linux156/web76 + local web build + Windows WASAPI ABI check PASS, bukan native Windows runtime proof. Tunggu pekerjaan input/16:9 sesuai instruksi pengguna implement/test sebelum packaging, lalu izin Build/NSIS/web rollout tersendiri. Existing37c5eea installer dan live740345c3 tidak mengandung patch ini. Pertahankan OAuth/bindings/version. `docs/qa/audio-repair-2026-09-18.md`.
+
 - [x] (Operator - XyDesk Team, 2026-09-18) — CONTROL-REFINE web-only disetujui lewat deploy_web dan live: source87427ae, Worker740345c3-356f-4f25-bc63-634c2ebe1401. Web70/build/hash/OAuth/binding/browser2viewport pairing-inline PASS. Backend55cdda7c dan installer37c5eea tidak diubah. Bukti `docs/qa/control-refine-production-2026-09-18.json`. User memakai Windows App/RD Client di HP (Android/iOS belum spesifik); setting resolusi RDP1920×1080 belum diterapkan. Perlu pilihan yang tersedia/screenshot Display dan stats video untuk diagnosis delay. Tidak menjanjikan tanpa pita di viewport non16:9 atau zero-lag.
 
 - [x] (Operator - XyDesk Team, 2026-09-18) — **LETTERBOX produksi selesai sesudah user gas menyetujui deploy backend+web.** Source37c5eea/checkoutd0b3d03; backend55cdda7c-a007-4bf4-9507-f8d6dee627b4 dan web8f093d6d-cf6b-45b8-800b-1240d7dcc21a.184backend+66web/SQLite/assets/auth/browser PASS; OAuth vars/bindings unchanged, secrets tidak diputar. Bukti `docs/qa/letterbox-production-2026-09-18.json`. Catatan belum-deploy pada paket/checkpoint sebelumnya adalah status historis. Tidak mengubah RDP/host pengguna, tidak login/menulis riwayat akun nyata, dan tidak membuktikan zero-lag/precision perangkat pengguna.
@@ -816,6 +818,8 @@ _(kosong)_
   NEWS_STYLE yang sudah dikoreksi).
 
 ## Untuk: Host Engine
+
+- [ ] (Operator - XyDesk Team, 2026-09-18) — **AUDIO-REPAIR follow-up**: source WASAPI/packetizer/render/late mic diperbaiki, Linux156 + ABI Windows checker PASS, belum physical Windows/RDP. Lanjut host input overflow/backlog dan pengukuran encode/decode/network, source auto16:9 supported-mode + verified applied state, forward-audio freshness/idle-cancel, COM balancing/hotplug. Bukan janji zero-lag. `docs/qa/audio-repair-2026-09-18.md` memuat acceptance gate dan keterbatasan. Jangan ubah driver/RDP/scaling/restart diam-diam.
 
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **Permintaan "siapkan driver
   mic/audio/display/GPU" dijawab: tidak ada driver yang perlu/pantas dikirim.**

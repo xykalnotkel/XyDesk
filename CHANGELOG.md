@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- **Audio repair (kode; belum build Windows/deploy):** format WASAPI lengkap + packetizer streaming tepat 960 frame, perbaikan drain/silence dan frame render, mic tanpa expiry 30 detik + queue bounded, web replaceTrack/cancel cleanup, virtual-input requirement tanpa speaker fallback/driver install. Linux **156**, web **76**, format/build web dan Windows ABI checker PASS. Bukti/batas: `docs/qa/audio-repair-2026-09-18.md`. Keluhan input lambat dan otomatis 16:9 belum selesai.
+
 ### CONTROL-REFINE — web sudah live
 - Mapping transparan border+label, custom picker/search tanpa select browser, tombol tambahan dan shortcut; tap kiri/tahan500ms kanan di dua mode; HUD rounded kiri/kanan/scroll/Windows/switch.
 - Riwayat baris wallpaper+nama+chevron, reconnect pairing inline mempertahankan perangkat dan route/history tanpa menyimpan password. Gerak absolut belum terkirim digabung saat antrean penuh; tombol/release tetap berurutan.

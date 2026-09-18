@@ -224,6 +224,7 @@ export interface HostMeta {
   displays: HostDisplay[];
   wanted: number;
   audio: { available: boolean; pipeline: string };
+  micInput?: { available: boolean; route: string };
 }
 
 /// Statistik sesi yang dibaca langsung dari koneksi (getStats).
@@ -285,6 +286,15 @@ export class RtcSession {
   private recovering = false;
   private audioTransceiver?: RTCRtpTransceiver;
   private micStream?: MediaStream;
+  private micGeneration = 0;
+  private micPending?: Promise<string | null>;
+  private micUpdates: Promise<void> = Promise.resolve();
+
+  private updateMicSender(sender: RTCRtpSender, track: MediaStreamTrack | null) {
+    const update = this.micUpdates.catch(() => {}).then(() => sender.replaceTrack(track));
+    this.micUpdates = update;
+    return update;
+  }
   private watchdog?: ReturnType<typeof setTimeout>;
   private noFrameWatchdog?: ReturnType<typeof setTimeout>;
   public noFrameWarning = false;
@@ -533,7 +543,7 @@ export class RtcSession {
     // adalah irisan antara penawaran klien dan keinginan host: kalau klien
     // menawar recvonly, host menjawab sendonly — artinya host tidak pernah
     // menerima, dan track mic hasil getUserMedia terkirim ke mana-mana
-    // kecuali ke host. Dengan sendrecv, addTrack(track mic) cukup menempel
+    // kecuali ke host. Dengan sendrecv, sender.replaceTrack(track mic) cukup menempel
     // ke transceiver yang sudah ada: tidak ada offer kedua, tidak ada
     // sesi yang dirombak (host membangun Session baru untuk setiap offer).
     this.audioTransceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
@@ -815,32 +825,59 @@ export class RtcSession {
   }
 
   /// Aktifkan mic browser → host. Gagal → kembalikan pesan error.
-  async enableMic(): Promise<string | null> {
-    if (this.micEnabled) return null;
+  enableMic(): Promise<string | null> {
+    if (this.meta?.micInput?.available === false) return Promise.resolve('Input mic virtual belum tersedia di PC. Pasang virtual audio cable dengan izin kamu, lalu pilih recording endpoint-nya di aplikasi PC.');
+    if (this.micEnabled) return Promise.resolve(null);
+    if (this.micPending) return this.micPending;
+    const pending = this.startMic(++this.micGeneration);
+    this.micPending = pending;
+    void pending.finally(() => { if (this.micPending === pending) this.micPending = undefined; });
+    return pending;
+  }
+
+  private async startMic(generation: number): Promise<string | null> {
+    const pc = this.pc;
+    const sender = this.audioTransceiver?.sender;
+    if (this.stopped || !pc || !sender) return 'Sesi audio belum siap.';
+    let stream: MediaStream | undefined;
+    const current = () => !this.stopped && this.pc === pc && this.micGeneration === generation;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true },
-        video: false,
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true }, video: false,
       });
       const track = stream.getAudioTracks()[0];
       if (!track) throw new Error('track mic tidak ada');
-      // addTrack menempel ke transceiver audio sendrecv yang sudah ada
-      // (dibuat saat negotiate()), jadi TIDAK perlu offer baru. RTP mic
-      // langsung mengalir di m-line yang sudah disepakati sejak awal.
-      this.pc?.addTrack(track, stream);
+      if (!current()) {
+        stream.getTracks().forEach(t => t.stop());
+        return 'Aktivasi mikrofon dibatalkan.';
+      }
       this.micStream = stream;
+      // Reuse the already-negotiated sendrecv sender. addTrack can allocate
+      // another m-line after disable/re-enable and would need renegotiation.
+      await this.updateMicSender(sender, track);
+      if (!current()) {
+        stream.getTracks().forEach(t => t.stop());
+        return 'Aktivasi mikrofon dibatalkan.';
+      }
       this.micEnabled = true;
       return null;
     } catch {
-      return 'Izin mikrofon ditolak atau mic tidak tersedia.';
+      stream?.getTracks().forEach(t => t.stop());
+      if (this.micStream === stream) this.micStream = undefined;
+      return 'Izin mikrofon ditolak, mic tidak tersedia, atau pengiriman mic gagal.';
     }
   }
 
   async disableMic() {
-    if (!this.micEnabled) return;
+    ++this.micGeneration; // Also cancel a pending getUserMedia permission prompt.
+    this.micPending = undefined;
     this.micEnabled = false;
     for (const t of this.micStream?.getTracks() ?? []) t.stop();
     this.micStream = undefined;
+    const sender = this.audioTransceiver?.sender;
+    if (sender?.replaceTrack) {
+      try { await this.updateMicSender(sender, null); } catch { /* transport closed */ }
+    }
   }
 
   private closeTransport() {

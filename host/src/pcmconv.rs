@@ -151,6 +151,59 @@ pub fn konversi(
     encode(&buf, dst)
 }
 
+/// Streaming PCM → exact 960-frame Opus packets. Fractional resampling phase
+/// survives WASAPI packet boundaries (including 44.1 kHz and odd rates).
+pub struct OpusPcm {
+    src: Sumber,
+    channels: usize,
+    pending: Vec<f32>,
+    phase: u64,
+    output: Vec<i16>,
+}
+
+impl OpusPcm {
+    pub fn new(src: Sumber, channels: usize) -> Self {
+        assert!(src.rate > 0 && src.channels > 0 && channels > 0);
+        Self {
+            src,
+            channels,
+            pending: Vec::new(),
+            phase: 0,
+            output: Vec::new(),
+        }
+    }
+
+    pub fn push(&mut self, bytes: &[u8]) -> Vec<Vec<i16>> {
+        let decoded = decode(bytes, self.src.sampel);
+        let frames = decoded.len() / self.src.channels;
+        self.pending
+            .extend(remix(&decoded, self.src.channels, self.channels, frames));
+        let frames = self.pending.len() / self.channels;
+        let mut packets = Vec::new();
+        loop {
+            let i = (self.phase / 48_000) as usize;
+            let frac = self.phase % 48_000;
+            if i >= frames || (frac != 0 && i + 1 >= frames) {
+                break;
+            }
+            for c in 0..self.channels {
+                let a = self.pending[i * self.channels + c];
+                let b = self.pending[(i + usize::from(frac != 0)) * self.channels + c];
+                let v = a + (b - a) * (frac as f32 / 48_000.0);
+                self.output.push((v.clamp(-1.0, 1.0) * 32_767.0) as i16);
+            }
+            self.phase += u64::from(self.src.rate);
+            if self.output.len() == 960 * self.channels {
+                packets.push(std::mem::take(&mut self.output));
+            }
+        }
+        let consumed = ((self.phase / 48_000) as usize).min(frames);
+        self.pending.drain(..consumed * self.channels);
+        self.phase -= consumed as u64 * 48_000;
+        packets
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -236,5 +289,72 @@ mod tests {
         assert_eq!(out.len(), 480 * 2 * 2);
         let s = i16::from_le_bytes([out[0], out[1]]);
         assert!((s - 16_383).abs() <= 2, "nilai i16: {s}");
+    }
+}
+
+#[cfg(test)]
+mod streaming_tests {
+    use super::*;
+
+    #[test]
+    fn packetization_is_exact_and_independent_of_wasapi_boundaries() {
+        for rate in [8_000, 11_025, 22_050, 44_100, 48_000, 96_000] {
+            for channels in [1, 2, 6] {
+                let src = Sumber {
+                    channels,
+                    rate,
+                    sampel: Sampel::F32,
+                };
+                let input: Vec<u8> = (0..rate + 2)
+                    .flat_map(|frame| {
+                        (0..channels).flat_map(move |c| {
+                            ((frame % 100) as f32 / 100.0 + c as f32 / 100.0).to_le_bytes()
+                        })
+                    })
+                    .collect();
+                for target_channels in [1, 2] {
+                    let expected = OpusPcm::new(src, target_channels).push(&input);
+                    assert_eq!(expected.len(), 50, "rate={rate}");
+                    assert!(expected.iter().all(|p| p.len() == 960 * target_channels));
+                    let mut streaming = OpusPcm::new(src, target_channels);
+                    let actual: Vec<_> = input
+                        .chunks(137 * channels * 4)
+                        .flat_map(|chunk| streaming.push(chunk))
+                        .collect();
+                    assert_eq!(actual, expected, "rate={rate} channels={channels}");
+                    assert!(streaming.pending.len() <= channels * 2);
+                    assert!(streaming.output.len() < 960 * target_channels);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn silent_capture_produces_valid_exact_opus_frames() {
+        for rate in [44_100, 48_000, 96_000] {
+            let src = Sumber {
+                channels: 2,
+                rate,
+                sampel: Sampel::I16,
+            };
+            let packets = OpusPcm::new(src, 2).push(&vec![0; (rate as usize + 1) * 4]);
+            assert_eq!(packets.len(), 50);
+            assert!(packets.iter().flatten().all(|s| *s == 0));
+        }
+    }
+
+    #[test]
+    fn render_conversion_counts_device_frames_not_channels() {
+        for rate in [44_100, 48_000, 96_000] {
+            for channels in [1, 2, 6] {
+                let src = Sumber {
+                    channels: 2,
+                    rate: 48_000,
+                    sampel: Sampel::I16,
+                };
+                let pcm = konversi(&vec![0; 960 * 4], &src, channels, rate, Sampel::F32);
+                assert_eq!(pcm.len() / (channels * 4), rate as usize / 50);
+            }
+        }
     }
 }

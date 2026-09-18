@@ -108,6 +108,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260918-OPERATOR-AUDIO-REPAIR | Operator - XyDesk Team | Host + Web audio | SELESAI (patch audio); lanjutan di HANDOFF | WASAPI/PCM/render + late mic/replaceTrack/virtual-input guards. Linux156/web76 + fmt/build web/Windows ABI checker PASS; bukan device proof. Input lambat/auto16:9 belum selesai. Tidak build installer/deploy/RDP/driver. Bukti: docs/qa/audio-repair-2026-09-18.md. | 2026-09-18 |
 | SESI-20260918-OPERATOR-CONTROL-DEPLOY | Operator - XyDesk Team | Web produksi | SELESAI | User deploy_web; source87427ae → web740345c3.70tes/build/assets/OAuth/bindings/auth401/Chromium2viewport inline reconnect PASS. Backend55cdda7c tetap, tidak mengubah host/RDP. | 2026-09-18 |
 | SESI-20260918-OPERATOR-CONTROL-REFINE | Operator - XyDesk Team | Web / kontrol / riwayat | SELESAI source; belum deploy | Web70/build/Chromium2viewport PASS. Border-only/custom picker/F1, gesture kanan, HUD, reconnect inline, bounded unsent movement. Detail resolusi RDP & diagnosis delay masih diperlukan. | 2026-09-18 |
 | SESI-20260918-OPERATOR-LETTERBOX-DEPLOY | Operator - XyDesk Team | Web + Backend produksi | SELESAI | User gas menyetujui deploy. Backend55cdda7c/web8f093d6d live;184+66tes, SQLite, hashes, auth401, OAuth/bindings dan Chromium portrait/landscape PASS. Tanpa host/RDP/version change. Bukti letterbox-production-2026-09-18.json. | 2026-09-18 |

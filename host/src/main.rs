@@ -211,6 +211,7 @@ fn meta_json() -> serde_json::Value {
             "available": xydesk_host::audio::capture_available(),
             "pipeline": xydesk_host::audio::capture_status(),
         },
+        "micInput": { "available": xydesk_host::audio::mic_input_available(), "route": "virtual-cable" },
         "mic": {
             "available": xydesk_host::audio::mic_capture_available(),
             "pipeline": xydesk_host::audio::mic_capture_status(),
@@ -1076,25 +1077,14 @@ async fn main() -> Result<()> {
                         });
                     }
 
-                    // Mic passthrough (client → host): paket Opus dari track audio
-                    // client dirender ke perangkat output default. Task berakhir
-                    // sendiri bila client tidak mengirim track (timeout 30 dtk).
+                    // Phone mic → virtual cable recording endpoint. One bounded
+                    // queue; wait until session close, including late activation.
                     {
                         let session = session.clone();
                         tokio::spawn(async move {
                             let sink = xydesk_host::audio::spawn_audio_sink();
-                            let (mtx, mut mrx) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
-                            tokio::spawn(async move {
-                                if let Err(e) = session.receive_mic(mtx).await {
-                                    if e.to_string() != "track mic client tidak kunjung tiba" {
-                                        eprintln!("[xydesk-host] mic passthrough berakhir: {e:#}");
-                                    }
-                                }
-                            });
-                            // Teruskan ke sink render. `try_send` — paket lama
-                            // dibuang bila render tertinggal (latency menang).
-                            while let Some(pkt) = mrx.recv().await {
-                                let _ = sink.try_send(pkt);
+                            if let Err(e) = session.receive_mic(sink).await {
+                                eprintln!("[xydesk-host] mic passthrough berakhir: {e:#}");
                             }
                         });
                     }

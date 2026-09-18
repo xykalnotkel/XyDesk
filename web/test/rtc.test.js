@@ -30,7 +30,7 @@ function setup(overrides = {}) {
   vm.runInNewContext(source, {
     exports, api: { signalToken: async () => 'local-token', WS_URL: 'ws://local/ws', turnIce: async () => [], ...overrides },
     WebSocket: Socket, crypto: webcrypto, setTimeout, clearTimeout,
-    TextEncoder, TextDecoder, Uint8Array, ArrayBuffer, performance,
+    TextEncoder, TextDecoder, Uint8Array, ArrayBuffer, performance, navigator: overrides.navigator,
   });
   return { session: new exports.RtcSession(), sockets };
 }
@@ -229,4 +229,73 @@ test('congested absolute movement is bounded/latest-only and flushed before clic
  session.sendInput(new Uint8Array([3,0,0]));assert.deepEqual(sent.at(-1),[3,0,0]);
  session.sendInput(new Uint8Array([2,42,0]));session.input.bufferedAmount=0;session.flushAbsoluteMove();assert.deepEqual(sent.at(-1),[2,42,0]);assert.equal(session.pendingAbsoluteMove,undefined);
  session.input.bufferedAmount=2048;session.sendInput(new Uint8Array([2,43,0]));session.meta={inputGeometry:null};session.input.bufferedAmount=0;session.flushAbsoluteMove();assert.equal(session.pendingAbsoluteMove,undefined);assert.deepEqual(sent.at(-1),[2,42,0]);
+});
+
+function microphoneFixture(getUserMedia) {
+  const {session} = setup({navigator:{mediaDevices:{getUserMedia}}});
+  const replacements=[];
+  session.pc={close(){}};
+  session.audioTransceiver={sender:{replaceTrack:async track=>{replacements.push(track);}}};
+  return {session,replacements};
+}
+function microphoneStream() {
+  const track={stopped:0,stop(){this.stopped++;}};
+  return {track,getAudioTracks:()=>[track],getTracks:()=>[track]};
+}
+
+test('mic reuses negotiated sender on every enable/disable; no addTrack',async()=>{
+  const streams=[];
+  const {session,replacements}=microphoneFixture(async()=>{const s=microphoneStream();streams.push(s);return s;});
+  assert.equal(await session.enableMic(),null);
+  await session.disableMic();
+  assert.equal(streams[0].track.stopped,1);
+  assert.equal(await session.enableMic(),null);
+  assert.deepEqual(replacements,[streams[0].track,null,streams[1].track]);
+  await session.disableMic();
+});
+
+test('closing session while permission is pending stops the late track',async()=>{
+  let resolve;
+  const {session,replacements}=microphoneFixture(()=>new Promise(r=>resolve=r));
+  const pending=session.enableMic();session.stop();
+  const stream=microphoneStream();resolve(stream);
+  assert.match(await pending,/dibatalkan/);
+  assert.equal(stream.track.stopped,1);
+  assert.equal(session.micEnabled,false);
+  assert.ok(replacements.every(t=>t===null));
+});
+
+test('rapid double enable requests only one permission prompt',async()=>{
+  let resolve,calls=0;
+  const {session}=microphoneFixture(()=>{calls++;return new Promise(r=>resolve=r);});
+  const a=session.enableMic(),b=session.enableMic();
+  assert.equal(a,b);assert.equal(calls,1);resolve(microphoneStream());
+  assert.equal(await a,null);await session.disableMic();
+});
+
+test('rejected replaceTrack cleans up microphone capture',async()=>{
+  const stream=microphoneStream();const {session}=microphoneFixture(async()=>stream);
+  session.audioTransceiver.sender.replaceTrack=async()=>{throw Error('closed');};
+  assert.match(await session.enableMic(),/gagal/);
+  assert.equal(stream.track.stopped,1);assert.equal(session.micEnabled,false);
+  assert.equal(session.micStream,undefined);
+});
+
+test('missing virtual input is visible before requesting phone permission; old hosts compatible',async()=>{
+  let calls=0;const {session}=microphoneFixture(async()=>{calls++;return microphoneStream();});
+  session.meta={micInput:{available:false,route:'virtual-cable'}};
+  assert.match(await session.enableMic(),/virtual audio cable/);assert.equal(calls,0);
+  session.meta=null;assert.equal(await session.enableMic(),null);assert.equal(calls,1);
+  await session.disableMic();
+});
+
+test('disable during replaceTrack is serialized after attachment',async()=>{
+  const stream=microphoneStream();const {session}=microphoneFixture(async()=>stream);
+  const changes=[];let resolve;
+  session.audioTransceiver.sender.replaceTrack=track=>{changes.push(track);return track ? new Promise(r=>resolve=r) : Promise.resolve();};
+  const enabled=session.enableMic();await new Promise(r=>setTimeout(r,0));
+  const disabled=session.disableMic();resolve();
+  assert.match(await enabled,/dibatalkan/);await disabled;
+  assert.deepEqual(changes,[stream.track,null]);assert.equal(session.micEnabled,false);
+  assert.ok(stream.track.stopped>=1);
 });
