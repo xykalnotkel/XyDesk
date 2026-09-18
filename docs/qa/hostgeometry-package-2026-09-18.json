@@ -1,0 +1,53 @@
+{
+  "sourceSha": "4a3e75a78ec0ac75883a734686ad80327347c20a",
+  "windowsRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35379414158",
+  "nsisRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35380172479",
+  "installerFile": "XyDesk-Host-Test-Geometry-HD-4a3e75a-Setup-x64.exe",
+  "installerSha256": "ec8db622f6339af2d1788535476cba945d02a99369ab137ef0e52bcc4c5418aa",
+  "installerBytes": 4539749,
+  "engine": {
+    "sourceSha": "4a3e75a78ec0ac75883a734686ad80327347c20a",
+    "version": "6.8.5",
+    "target": "x86_64-pc-windows-msvc",
+    "sha256": "34d6707a8b8f885dc8d081a85bacfb6a8dab60f29bb29d8c974b0136c74927cf",
+    "builtAt": "2026-09-18T18:25:19.8246754Z",
+    "validation": [
+      "Linux Rust regression tests",
+      "Windows MSVC compile/link",
+      "Windows library regression tests",
+      "Windows executable --help",
+      "PowerShell parser and package integrity"
+    ],
+    "hardwareTested": false
+  },
+  "nsisValidation": {
+    "result": "PASS",
+    "sourceSha": "4a3e75a78ec0ac75883a734686ad80327347c20a",
+    "testedAt": "2026-09-18T18:27:11.3052613Z",
+    "installer": "XyDesk-Host-Test-Setup-x64.exe",
+    "sha256": "ec8db622f6339af2d1788535476cba945d02a99369ab137ef0e52bcc4c5418aa",
+    "bytes": 4539749,
+    "engineSha256": "34d6707a8b8f885dc8d081a85bacfb6a8dab60f29bb29d8c974b0136c74927cf",
+    "checks": [
+      "non-empty unrelated directory rejected without changes",
+      "silent install to path with spaces; installed MSVC engine hash and --help verified",
+      "Apps registration, desktop/Start Menu shortcuts and actual PowerShell shortcut command verified",
+      "reinstall preserves extra files; different install location cannot hijack registration",
+      "silent uninstall removes engine/registration/shortcuts but preserves identity and extra files",
+      "default per-user install and uninstall verified separately from explicit /D"
+    ],
+    "remoteDesktopHardwareTested": false,
+    "productionDeployed": false
+  },
+  "localTests": {
+    "linuxHost": 148,
+    "linuxReleaseLibrary": 139,
+    "windowsReleaseLibrary": 137,
+    "web": 64,
+    "backend": 184,
+    "nsisBuilder": 7
+  },
+  "productionDeployed": false,
+  "rdpTested": false,
+  "signed": false
+}

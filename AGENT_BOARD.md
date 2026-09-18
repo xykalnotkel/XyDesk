@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260918-OPERATOR-HOSTGEOMETRY | Operator - XyDesk Team | Host + Web + Backend/NSIS | LAGI KERJA | Kode selesai lokal: geometri/cursor, HD SDP+RTP/decoder, wallpaper HD terbatas, landscape; menyiapkan build Windows lalu NSIS sesuai arahan terakhir. | 2026-09-18 |
 
 ## Antrean izin push
 
@@ -109,6 +108,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260918-OPERATOR-HOSTGEOMETRY | Operator - XyDesk Team | Host + Web + Backend/NSIS | SELESAI paket; belum deploy | Source4a3e75a; geometri/cursor, HD, wallpaper dan landscape. Windows137tes+NSIS install/reinstall/uninstall lulus. [Engine](https://github.com/xykalnotkel/XyDesk/actions/runs/35379414158) · [NSIS](https://github.com/xykalnotkel/XyDesk/actions/runs/35380172479). Belum VM/Android nyata; tidak menyentuh RDP. | 2026-09-18 |
 | SESI-20260918-OPERATOR-CONTROLREPAIR | Operator - XyDesk Team | Web + history + audit host | SELESAI TAHAP WEB | Source7779b55; Web55/backend183/build+4runtime+Chromium2viewport PASS. Deploy web d2328824/backend ff4d95d4; exact bytes/OAuth/auth PASS. HD/pointer Windows belum selesai. GitHub CI tidak didispatch. | 2026-09-18 |
 | SESI-20260918-OPERATOR-BOUNDSESSION | Operator - XyDesk Team | Backend / sesi aktif | SELESAI TAHAP BACKEND | Source db1c0a4;181 unit+4 runtime PASS; real idle alarm ~15s. Deploy a446be11, live guest bound WS welcome/pong PASS. Legacy/Windows media limits di HANDOFF. CI GitHub tidak didispatch. | 2026-09-18 |
 | SESI-20260918-OPERATOR-COREGUARD | Operator - XyDesk Team | Backend / auth | SELESAI TAHAP GERBANG AKUN | Source697b14d; 171 tes+3 runtime PASS; deploy8b4f5429 health/guest/auth/config PASS, web hashes unchanged. CI GitHub tidak didispatch. Ticket lama dan sesi P2P aktif belum ikut revoke; bukti docs/qa/coreguard-production-2026-09-18.json. | 2026-09-18 |

@@ -1997,6 +1997,10 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   Bukti docs/qa/control-repair-production-2026-09-18.json. Tahap web ditutup;
   presisi input Windows dan HD masih membutuhkan paket host serta bukti nyata.
 
-## HOSTGEOMETRY — checkpoint 2026-09-18 (Operator)
+## HOSTGEOMETRY — paket selesai 2026-09-18 (Operator)
 
-Kode dan gerbang lokal sudah selesai; board SESI-20260918-OPERATOR-HOSTGEOMETRY aktif untuk build Windows lalu NSIS. Arahan terakhir mengizinkan build setelah seluruh perbaikan kode siap, bukan deploy produksi. Baca `docs/qa/hostgeometry-checkpoint-2026-09-18.md` sebelum meneruskan. Tidak boleh mengemas ulang installer engine lama sebagai perbaikan ini.
+- Engine source **4a3e75a78ec0ac75883a734686ad80327347c20a**, Windows run **35379414158** lulus (137 library tests, compile/link/help/integrity). NSIS run **35380172479** lulus install/shortcut/reinstall/uninstall. Installer SHA256 **ec8db622f6339af2d1788535476cba945d02a99369ab137ef0e52bcc4c5418aa**, 4539749bytes, unsigned test package6.8.5 tanpa bump.
+- Host148tes Linux, release139library; web64; Worker184+runtime SQLite HDchunk; NSIS builder7. Chromium nyata mendecode1080p/native2336×1080/720p dari Session/SoftwareEncoder host viaRTP sintetis.
+- Bukti `docs/qa/hostgeometry-package-2026-09-18.json`, batas di `hostgeometry-checkpoint-2026-09-18.md`. Run Windows pertama gagal tes platform/profile lalu diperbaiki dan diulang; NSIS tidak memakai run gagal. Output target checker yang sempat ter-stage sudah dihapus dari indeks dan di-ignore, tanpa rewrite history.
+- Web/backend **belum di-deploy untuk paket ini**. Untuk membuat HD/wallpaper/landscape tersedia di situs live, perlu persetujuan rollout tersendiri, backend dahulu lalu web dengan OAuth/bindings produksi dipertahankan. Installer saja tidak memperbarui situs. Produksi terakhir yang diverifikasi adalah CONTROLREPAIR.
+- RDP/Chrome Android pengguna belum diuji. Tidak mengubah VM, DPI Windows/scaling/resolusi, driver, identitas host, OAuth atau secret. Tidak boleh mengklaim presisi runtime dari tes sintetik. Resize/pindah monitor belum punya epoch decoded-frame ACK; lihatbatas polling/transport pada QA.

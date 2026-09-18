@@ -1,4 +1,4 @@
-# HOSTGEOMETRY — gerbang lokal selesai; build Windows berikutnya
+# HOSTGEOMETRY — paket tervalidasi, belum deploy
 
 Base 244c52250e43a25b5d8a7c47832181e90df350c5. Operator - XyDesk Team.
 Arahan terakhir: **lanjut kerjakan semua sampai selesai dulu baru build**.
@@ -41,3 +41,11 @@ Run35377698474 pada44c0bb9: full MSVC compile/link lulus, tetapi library tests r
 Output target pemeriksa kecil sempat ikut commit44c0bb9. Commit koreksi menghapusnya dari indeks dan menambahkan ignore global target/, tanpa force-push/rewrite history. Tidak ada kredensial di output itu; installer tidak menggunakan target checker tersebut.
 
 Sesudah koreksi: Linux debug148tes dan release139library tests lulus; formatter lulus. Cache CI memakai restore prefix agar dependensi yang tidak berubah tidak dibangun ulang tanpa perlu.
+
+## Penutupan build
+
+- Source **4a3e75a78ec0ac75883a734686ad80327347c20a**.
+- Windows: https://github.com/xykalnotkel/XyDesk/actions/runs/35379414158 — SUCCESS,137release library tests lulus, compile/link/help/paket lolos.
+- NSIS: https://github.com/xykalnotkel/XyDesk/actions/runs/35380172479 — SUCCESS, install/shortcuts/reinstall/uninstall lolos.
+- Installer4.539.749bytes, SHA256 `ec8db622f6339af2d1788535476cba945d02a99369ab137ef0e52bcc4c5418aa`; engine SHA256 `34d6707a8b8f885dc8d081a85bacfb6a8dab60f29bb29d8c974b0136c74927cf`.
+- Bukti lengkap `hostgeometry-package-2026-09-18.json`. Tidak ada deploy paket ini. Tidak ada uji RDP/Android nyata. Installer unsigned, versi tetap6.8.5 untuk paket uji.
