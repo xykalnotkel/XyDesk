@@ -24,10 +24,10 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
-### LETTERBOX-LATENCY — source tervalidasi; Windows/NSIS dan deploy belum
+### LETTERBOX-LATENCY — paket uji tervalidasi; belum deploy
 - Menggantikan interpretasi HD/preview sebelumnya: kanvas tepat1280×720/1920×1080 dengan desktop utuh + pita hitam, pemetaan input padding, cursor Windows di video GDI/DXGI/WGC tanpa panah web pengganti, wallpaper otomatis sekali saat koneksi dengan opt-out/cancellation.
 - Gap frame H264 memerlukan IDR baru, antrean lama dibuang, RTP mengikuti timestamp capture; telemetry host encode/queue/write dan web RTT/jitter/buffer/decode/loss dipisah. Wallpaper background dibatasi buffering/pacing/deadline.
-- Linux152, web66, narrow Windows cross-check dan Chromium real decode3mode/UI2viewport+privacy PASS. Bukan bukti runtime RDP/Android atau bebas lag. Tidak ada versi/deploy/installer baru; lihat `docs/qa/letterbox-checkpoint-2026-09-18.md`.
+- Linux152, web66, Windows release141, NSIS builder7/install-reinstall-uninstall, narrow Windows cross-check dan Chromium real decode3mode/UI2viewport+privacy PASS. Installer baru source37c5eea, Windows35391667677/NSIS35392306102. Bukan bukti runtime RDP/Android atau bebas lag. Versi tetap; belum deploy. Bukti `docs/qa/letterbox-package-2026-09-18.json`.
 
 ### Perbaikan dalam validasi — HOSTGEOMETRY
 - Host: konteks DPI proses/thread, koordinat fisik monitor capture untuk pointer absolut, pemilihan WGC melalui nama perangkat (bukan indeks nol ke API indeks satu), origin fallback GDI, dan deteksi perubahan geometri GDI/RDP setiap 500 ms.

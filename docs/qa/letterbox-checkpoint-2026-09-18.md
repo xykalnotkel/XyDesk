@@ -2,7 +2,8 @@
 
 Session: SESI-20260918-OPERATOR-LETTERBOX-LATENCY. Operator - XyDesk Team.
 Base: 6817fb803f019674b6daf97bb708d9d129849b52. Version remains 6.8.5.
-**Source validated locally; new Windows binary/NSIS not built, production not deployed.**
+**Update: dedicated Windows and NSIS builds approved and passed for source37c5eea. Production not deployed.**
+Windows run35391667677: Linux152 and Windows release library141 PASS. NSIS run35392306102: builder7 + install/reinstall/uninstall PASS. Exact artifact hashes and delivery metadata: `letterbox-package-2026-09-18.json`. The source-stage statements below are retained as the checkpoint history.
 The previous installer 4a3e75a does not contain this revision.
 
 ## Implemented

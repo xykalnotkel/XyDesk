@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260918-OPERATOR-LETTERBOX-LATENCY | Operator - XyDesk Team | Host + Web | LAGI KERJA | Source+uji lokal selesai: Linux152/web66/Win cross-check/Chromium PASS. Menunggu izin dedicated Windows/NSIS; belum deploy. | 2026-09-18 |
 
 ## Antrean izin push
 
@@ -109,6 +108,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260918-OPERATOR-LETTERBOX-LATENCY | Operator - XyDesk Team | Host + Web + NSIS | SELESAI paket; belum deploy | Source37c5eea; Linux152/web66/Windows141 + NSIS7/install-reinstall-uninstall PASS. Windows35391667677, NSIS35392306102. Exact HD letterbox/native cursor/auto wallpaper/timing. Belum runtime RDP/Android. | 2026-09-18 |
 | SESI-20260918-OPERATOR-HOSTGEOMETRY | Operator - XyDesk Team | Host + Web + Backend/NSIS | SELESAI paket; belum deploy | Source4a3e75a; geometri/cursor, HD, wallpaper dan landscape. Windows137tes+NSIS install/reinstall/uninstall lulus. [Engine](https://github.com/xykalnotkel/XyDesk/actions/runs/35379414158) · [NSIS](https://github.com/xykalnotkel/XyDesk/actions/runs/35380172479). Belum VM/Android nyata; tidak menyentuh RDP. | 2026-09-18 |
 | SESI-20260918-OPERATOR-CONTROLREPAIR | Operator - XyDesk Team | Web + history + audit host | SELESAI TAHAP WEB | Source7779b55; Web55/backend183/build+4runtime+Chromium2viewport PASS. Deploy web d2328824/backend ff4d95d4; exact bytes/OAuth/auth PASS. HD/pointer Windows belum selesai. GitHub CI tidak didispatch. | 2026-09-18 |
 | SESI-20260918-OPERATOR-BOUNDSESSION | Operator - XyDesk Team | Backend / sesi aktif | SELESAI TAHAP BACKEND | Source db1c0a4;181 unit+4 runtime PASS; real idle alarm ~15s. Deploy a446be11, live guest bound WS welcome/pong PASS. Legacy/Windows media limits di HANDOFF. CI GitHub tidak didispatch. | 2026-09-18 |
