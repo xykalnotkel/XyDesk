@@ -33,3 +33,11 @@ Tidak ada deploy, bump versi, restart RDP/VM, perubahan scaling/resolusi Windows
 - Installer baru saja tidak memperbarui web/backend live. Produksi tetap paket CONTROLREPAIR sampai ada persetujuan deploy tersendiri.
 
 Mode executable tool/check_backend_live.py berasal dari pekerjaan sebelumnya dan tidak termasuk commit ini.
+
+## Koreksi gerbang Windows pertama
+
+Run35377698474 pada44c0bb9: full MSVC compile/link lulus, tetapi library tests release137 menghasilkan133pass/4fail. Dua tes pola memanggil capture desktop Windows (timeout), lock test ketiga ikut poisoned; satu tes bergantung debug_assert sedangkan gate release. Diperbaiki dengan sumber pola eksplisit lintas platform dan pemeriksaan dimensi genap pada semua profil (bukan menonaktifkan tes). Gerbang akan diulang; tidak dibuat NSIS dari run gagal.
+
+Output target pemeriksa kecil sempat ikut commit44c0bb9. Commit koreksi menghapusnya dari indeks dan menambahkan ignore global target/, tanpa force-push/rewrite history. Tidak ada kredensial di output itu; installer tidak menggunakan target checker tersebut.
+
+Sesudah koreksi: Linux debug148tes dan release139library tests lulus; formatter lulus. Cache CI memakai restore prefix agar dependensi yang tidak berubah tidak dibangun ulang tanpa perlu.

@@ -590,60 +590,66 @@ pub fn spawn_frame_source() -> FrameSource {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        let (tx, rx) = mpsc::sync_channel::<EncodedFrame>(2);
-        let alive = Arc::new(AtomicBool::new(true));
-        let alive_thr = alive.clone();
-        std::thread::spawn(move || {
-            let mut enc = match TestPatternEncoder::new() {
-                Ok(e) => e,
-                Err(e) => {
-                    eprintln!("[xydesk-host] encoder gagal: {e}");
-                    return;
-                }
-            };
-            loop {
-                // Konsumen berhenti — sesi selesai; keluar bersih.
-                if !alive_thr.load(Ordering::Relaxed) {
-                    break;
-                }
-                // Keyframe diminta (mis. koneksi baru Connected): bangun
-                // encoder baru supaya frame berikutnya IDR + SPS/PPS.
-                if take_keyframe_request() {
-                    println!("[xydesk-host] pola uji: encoder di-reset untuk keyframe");
-                    match TestPatternEncoder::new() {
-                        Ok(e) => enc = e,
-                        Err(e) => {
-                            eprintln!("[xydesk-host] encoder gagal di-reset: {e}");
-                            break;
-                        }
-                    }
-                }
-                let t0 = std::time::Instant::now();
-                match enc.encode_next(TEST_WIDTH, TEST_HEIGHT) {
-                    Ok(data) => {
-                        let frame = EncodedFrame {
-                            data,
-                            captured_at: t0,
-                            encode_us: t0.elapsed().as_micros() as u64,
-                        };
-                        if tx.send(frame).is_err() {
-                            break;
-                        }
-                    }
+        spawn_test_pattern_source()
+    }
+}
+
+/// Synthetic source for platform-independent regression tests, not desktop capture.
+#[cfg(any(test, not(target_os = "windows")))]
+pub fn spawn_test_pattern_source() -> FrameSource {
+    let (tx, rx) = mpsc::sync_channel::<EncodedFrame>(2);
+    let alive = Arc::new(AtomicBool::new(true));
+    let alive_thr = alive.clone();
+    std::thread::spawn(move || {
+        let mut enc = match TestPatternEncoder::new() {
+            Ok(e) => e,
+            Err(e) => {
+                eprintln!("[xydesk-host] encoder gagal: {e}");
+                return;
+            }
+        };
+        loop {
+            // Konsumen berhenti — sesi selesai; keluar bersih.
+            if !alive_thr.load(Ordering::Relaxed) {
+                break;
+            }
+            // Keyframe diminta (mis. koneksi baru Connected): bangun
+            // encoder baru supaya frame berikutnya IDR + SPS/PPS.
+            if take_keyframe_request() {
+                println!("[xydesk-host] pola uji: encoder di-reset untuk keyframe");
+                match TestPatternEncoder::new() {
+                    Ok(e) => enc = e,
                     Err(e) => {
-                        eprintln!("[xydesk-host] encode gagal: {e}");
+                        eprintln!("[xydesk-host] encoder gagal di-reset: {e}");
                         break;
                     }
                 }
-                // Pacing ke NOMINAL_FPS: tunggu sisa jatah frame ini.
-                let elapsed = t0.elapsed();
-                if elapsed < frame_duration() {
-                    std::thread::sleep(frame_duration() - elapsed);
+            }
+            let t0 = std::time::Instant::now();
+            match enc.encode_next(TEST_WIDTH, TEST_HEIGHT) {
+                Ok(data) => {
+                    let frame = EncodedFrame {
+                        data,
+                        captured_at: t0,
+                        encode_us: t0.elapsed().as_micros() as u64,
+                    };
+                    if tx.send(frame).is_err() {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[xydesk-host] encode gagal: {e}");
+                    break;
                 }
             }
-        });
-        FrameSource { rx, alive }
-    }
+            // Pacing ke NOMINAL_FPS: tunggu sisa jatah frame ini.
+            let elapsed = t0.elapsed();
+            if elapsed < frame_duration() {
+                std::thread::sleep(frame_duration() - elapsed);
+            }
+        }
+    });
+    FrameSource { rx, alive }
 }
 
 /// Status implementasi sumber video pada platform ini.
@@ -1667,8 +1673,9 @@ mod tests {
 
     #[test]
     fn sumber_frame_membawa_timestamp_monoton_dan_payload() {
-        // Jalur non-Windows (pola uji) — ikut dijalankan CI Linux.
-        let rx = spawn_frame_source();
+        // Pola uji eksplisit pada semua platform; tidak membuka desktop runner.
+        let _g = test_support::KEYFRAME_LOCK.lock().unwrap();
+        let rx = spawn_test_pattern_source();
         let mut last: Option<std::time::Instant> = None;
         for _ in 0..3 {
             let f = rx
@@ -1755,7 +1762,7 @@ mod tests {
         // menghasilkan IDR, host menyimpannya. Tanpa ini, penyelamatan layar
         // hitam tidak punya bahan pada sesi pertama.
         let _g = test_support::KEYFRAME_LOCK.lock().unwrap();
-        let rx = spawn_frame_source();
+        let rx = spawn_test_pattern_source();
         let mut idr: Option<Vec<u8>> = None;
         for _ in 0..300 {
             let f = rx

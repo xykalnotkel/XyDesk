@@ -27,10 +27,9 @@
 /// # Kontrak
 /// `width` dan `height` **wajib genap**. Pemanggil (`screen.rs`) menjaminnya:
 /// NVENC baru dipilih bila resolusi genap. Dimensi ganjil ditolak
-/// `debug_assert!` di build debug; di build release, memanggil dengan
-/// dimensi ganjil menulis melewati batas plane — jangan lakukan.
+/// sebelum konversi pada debug maupun release agar tidak melewati batas plane.
 pub fn rgba_to_nv12(rgba: &[u8], width: usize, height: usize, out: &mut Vec<u8>) {
-    debug_assert!(
+    assert!(
         width.is_multiple_of(2) && height.is_multiple_of(2),
         "rgba_to_nv12 butuh dimensi genap, dapat {width}x{height}"
     );
@@ -262,7 +261,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "dimensi genap")]
-    fn dimensi_ganjil_ditolak_di_build_debug() {
+    fn dimensi_ganjil_ditolak_di_semua_build() {
         // Kontrak terdokumentasi: dimensi ganjil bukan input yang sah.
         let src = frame_solid(3, 2, [0, 0, 0]);
         let mut out = Vec::new();

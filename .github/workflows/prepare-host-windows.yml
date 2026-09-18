@@ -26,6 +26,7 @@ jobs:
             ~/.cargo/git
             host/target
           key: manual-host-linux-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: manual-host-linux-
       - name: Format dan tes Rust terkunci
         working-directory: host
         run: cargo fmt --check && cargo test --locked -j 2
@@ -55,6 +56,7 @@ jobs:
             ~/.cargo/git
             host/target
           key: manual-host-windows-x64-${{ hashFiles('host/Cargo.lock') }}
+          restore-keys: manual-host-windows-x64-
       - name: Kompilasi dan link engine Windows
         working-directory: host
         run: cargo build --locked --release --target x86_64-pc-windows-msvc --bin xydesk-host

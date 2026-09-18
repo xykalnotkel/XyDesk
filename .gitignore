@@ -83,3 +83,6 @@ ios/Runner/GoogleService-Info.plist
 admin/dist
 admin/node_modules
 admin/package-lock.json
+
+# Rust build outputs, including small cross-target validation crates.
+target/
