@@ -1,0 +1,32 @@
+{
+  "boundary": "Real Chromium SDP/RTP/decode with production Rust Session/SoftwareEncoder and synthetic pixels; no Windows or Android runtime.",
+  "results": [
+    {
+      "mode": 1,
+      "receiverLevel": "33",
+      "answerLevel": 51,
+      "width": 1920,
+      "height": 1080,
+      "framesDecoded": 3,
+      "codec": "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e033"
+    },
+    {
+      "mode": 2,
+      "receiverLevel": "33",
+      "answerLevel": 51,
+      "width": 2336,
+      "height": 1080,
+      "framesDecoded": 3,
+      "codec": "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e033"
+    },
+    {
+      "mode": 0,
+      "receiverLevel": "33",
+      "answerLevel": 51,
+      "width": 1280,
+      "height": 720,
+      "framesDecoded": 3,
+      "codec": "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e033"
+    }
+  ]
+}

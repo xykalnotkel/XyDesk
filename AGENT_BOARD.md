@@ -80,6 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260918-OPERATOR-HOSTGEOMETRY | Operator - XyDesk Team | Host + Web + Backend/NSIS | LAGI KERJA | Kode selesai lokal: geometri/cursor, HD SDP+RTP/decoder, wallpaper HD terbatas, landscape; menyiapkan build Windows lalu NSIS sesuai arahan terakhir. | 2026-09-18 |
 
 ## Antrean izin push
 

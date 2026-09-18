@@ -56,3 +56,5 @@ test('physical, virtual and mapping owners share modifiers without early key-up'
  assert.deepEqual(events,[[162,true]]);keys.set(162,false,'physical');assert.deepEqual(events,[[162,true],[162,false]]);
  keys.set(65,true,'physical');keys.set(65,true,'physical',true);keys.reset();keys.reset();assert.equal(events.length,5);
 });
+
+test('host cursor feedback does not inject movement or change active drag anchor',()=>{const {p,events}=setup();p.applyHostPosition(.2,.3);assert.deepEqual(plain(p.cursor),{x:.2,y:.3});assert.equal(events.length,0);p.down(1,100,150,0,true,0);p.applyHostPosition(.9,.9);assert.deepEqual(plain(p.cursor),{x:.2,y:.3});p.reset();p.applyHostPosition(.9,.9);assert.deepEqual(plain(p.cursor),{x:.9,y:.9});});

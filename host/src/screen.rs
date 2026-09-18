@@ -180,11 +180,7 @@ pub const NOMINAL_FPS: u32 = 60;
 /// Durasi target sampel RTP dan pacing pola uji. Software 30 fps tidak
 /// boleh diberi timestamp seolah-olah mengalir pada 60 fps.
 pub fn frame_duration() -> std::time::Duration {
-    let fps = if nvenc_active() {
-        NOMINAL_FPS
-    } else {
-        crate::software_video::MAX_FPS
-    };
+    let fps = crate::video_policy::fps();
     std::time::Duration::from_micros(1_000_000 / u64::from(fps))
 }
 
@@ -239,14 +235,21 @@ pub const IDR_INTERVAL_FRAMES: u32 = 120;
 /// target <10 ms @1080p60 (di 640x360 saja sudah ~30 ms). Hardware encode
 /// (NVENC/AMF/QuickSync) adalah prasyarat target itu — bukan opsi.
 pub fn prod_encoder_config() -> EncoderConfig {
+    prod_encoder_config_for(crate::video_policy::level(), crate::video_policy::fps())
+}
+pub fn prod_encoder_config_for(level: u8, fps: u32) -> EncoderConfig {
     EncoderConfig::new()
         .usage_type(UsageType::ScreenContentRealTime)
         .rate_control_mode(RateControlMode::Bitrate)
         .bitrate(BitRate::from_bps(
             target_bitrate_bps().min(crate::software_video::MAX_BITRATE),
         ))
-        .max_frame_rate(FrameRate::from_hz(crate::software_video::MAX_FPS as f32))
-        .level(Level::Level_3_1)
+        .max_frame_rate(FrameRate::from_hz(fps as f32))
+        .level(match level {
+            51 => Level::Level_5_1,
+            40 => Level::Level_4_0,
+            _ => Level::Level_3_1,
+        })
         .skip_frames(true)
         .profile(Profile::Baseline)
         .complexity(Complexity::Low)
@@ -360,6 +363,7 @@ pub fn spawn_frame_source() -> FrameSource {
         let alive_thr = alive.clone();
         let alive_watch = alive.clone();
         std::thread::spawn(move || {
+            crate::desktop_geometry::init_thread_dpi();
             let mut current = wanted_display();
             let rdp = is_rdp_session();
             BACKEND.store(backend_awal_sesi(rdp), Ordering::Relaxed);
@@ -429,6 +433,8 @@ pub fn spawn_frame_source() -> FrameSource {
                     }
                     _ => windows::start_monitor(tx.clone(), current),
                 };
+                crate::desktop_geometry::publish(None);
+                crate::video_policy::record(None);
                 let gagal = hasil.err();
                 if let Some(e) = &gagal {
                     eprintln!(
@@ -766,6 +772,8 @@ pub fn arm_capture() {
 
 /// Hentikan capture karena tidak ada penonton lagi.
 pub fn disarm_capture() {
+    crate::video_policy::record(None);
+    crate::desktop_geometry::publish(None);
     ARMED.store(false, std::sync::atomic::Ordering::Release);
 }
 
@@ -912,7 +920,11 @@ mod windows {
             let out = match self {
                 EncoderKind::Nvenc(enc) => {
                     crate::pixfmt::rgba_to_nv12(rgba_tight, width, height, nv12);
-                    enc.encode(nv12)
+                    let result = enc.encode(nv12);
+                    if result.is_ok() {
+                        crate::video_policy::record(Some((width, height)));
+                    }
+                    result
                 }
                 EncoderKind::Soft(enc) => enc.encode(rgba_tight, width, height),
             };
@@ -955,10 +967,17 @@ mod windows {
         /// Jumlah frame saat log terakhir dicetak — untuk fps per interval.
         frame_log_terakhir: u64,
         last_software_frame: Option<std::time::Instant>,
+        capture_rect: crate::desktop_geometry::CaptureRect,
+        device_name: String,
+        geometry_checked: std::time::Instant,
     }
 
     impl GraphicsCaptureApiHandler for ScreenCapturer {
-        type Flags = mpsc::SyncSender<super::EncodedFrame>;
+        type Flags = (
+            mpsc::SyncSender<super::EncodedFrame>,
+            String,
+            crate::desktop_geometry::CaptureRect,
+        );
         type Error = Box<dyn std::error::Error + Send + Sync>;
 
         fn new(ctx: Context<Self::Flags>) -> Result<Self, Self::Error> {
@@ -968,7 +987,10 @@ mod windows {
             let encoder = SoftwareEncoder::new()?;
             Ok(Self {
                 encoder: EncoderKind::Soft(Box::new(encoder)),
-                sender: ctx.flags,
+                sender: ctx.flags.0,
+                device_name: ctx.flags.1,
+                capture_rect: ctx.flags.2,
+                geometry_checked: std::time::Instant::now(),
                 packed: Vec::new(),
                 nv12: Vec::new(),
                 frames: 0,
@@ -1009,6 +1031,24 @@ mod windows {
             let width = frame.width() as usize;
             let height = frame.height() as usize;
 
+            if width != self.capture_rect.width as usize
+                || height != self.capture_rect.height as usize
+            {
+                crate::desktop_geometry::publish(None);
+                capture_control.stop();
+                return Ok(());
+            }
+            if self.geometry_checked.elapsed() >= std::time::Duration::from_millis(500) {
+                crate::desktop_geometry::init_thread_dpi();
+                self.geometry_checked = std::time::Instant::now();
+                if crate::desktop_geometry::monitor_rect(&self.device_name)
+                    != Some(self.capture_rect)
+                {
+                    crate::desktop_geometry::publish(None);
+                    capture_control.stop();
+                    return Ok(());
+                }
+            }
             let mut buffer = frame.buffer()?; // FrameBuffer (RGBA, ColorFormat::Rgba8)
             let row_pitch = buffer.row_pitch() as usize;
             let has_padding = buffer.has_padding();
@@ -1064,9 +1104,9 @@ mod windows {
                 }
             }
 
-            if matches!(self.encoder, EncoderKind::Soft(_)) {
+            {
                 let interval =
-                    std::time::Duration::from_secs_f64(1.0 / crate::software_video::MAX_FPS as f64);
+                    std::time::Duration::from_secs_f64(1.0 / crate::video_policy::fps() as f64);
                 if self
                     .last_software_frame
                     .is_some_and(|last| captured_at.duration_since(last) < interval)
@@ -1132,7 +1172,8 @@ mod windows {
                     return Ok(());
                 }
                 // Channel penuh — buang frame usang (latency > kelengkapan).
-                Ok(()) | Err(mpsc::TrySendError::Full(_)) => {}
+                Ok(()) => crate::desktop_geometry::publish(Some(self.capture_rect)),
+                Err(mpsc::TrySendError::Full(_)) => {}
             }
             Ok(())
         }
@@ -1162,7 +1203,7 @@ mod windows {
         /// Target fps backend ini. BitBlt + GetDIBits di 1080p butuh beberapa
         /// ms dan encode software bisa lebih dari 20 ms; 30 fps target yang
         /// realistis tanpa menghabiskan CPU. Fps nyata dilapor watchdog.
-        const TARGET_FPS: u64 = 30;
+        let target_fps = crate::video_policy::fps() as u64;
 
         let displays = super::list_displays();
         // VM headless / RDP: list_displays bisa kosong. Jangan gagal keras —
@@ -1189,10 +1230,12 @@ mod windows {
             // width/height 0 akan trigger fallback GetSystemMetrics di gdi.rs
             (String::new(), 0, 0)
         };
+        crate::desktop_geometry::publish(None);
         let mut cap = crate::gdi::GdiCapture::baru(&name, w, h)?;
+        let capture_rect = cap.capture_rect();
         // Kalau fallback, width/height aktual dibaca dari handle (virtual screen)
-        let w = if w == 0 { cap.width() } else { w };
-        let h = if h == 0 { cap.height() } else { h };
+        let w = cap.width();
+        let h = cap.height();
 
         // Resolusi sudah diketahui di depan (beda dari WGC yang baru tahu di
         // frame pertama), jadi NVENC bisa dicoba sekali di sini.
@@ -1215,7 +1258,7 @@ mod windows {
         }
 
         let mut nv12: Vec<u8> = Vec::new();
-        let interval = std::time::Duration::from_millis(1000 / TARGET_FPS);
+        let interval = std::time::Duration::from_millis(1000 / target_fps);
         let mut detik_terakhir = std::time::Instant::now();
         let mut frame_detik = 0u64;
         let mut enc_sum: u128 = 0;
@@ -1223,7 +1266,7 @@ mod windows {
         let mut enc_n: u64 = 0;
 
         println!(
-            "[xydesk-host] capture gdi-bitblt mulai {w}x{h} (monitor {monitor}, target {TARGET_FPS} fps)"
+            "[xydesk-host] capture gdi-bitblt mulai {w}x{h} (monitor {monitor}, target {target_fps} fps)"
         );
         loop {
             // Awal pipeline latensi — sebelum piksel diambil, sama seperti WGC.
@@ -1266,7 +1309,8 @@ mod windows {
                 // Konsumen berhenti — sesi selesai.
                 Err(mpsc::TrySendError::Disconnected(_)) => break,
                 // Channel penuh: buang frame usang (latency > kelengkapan).
-                Ok(()) | Err(mpsc::TrySendError::Full(_)) => {}
+                Ok(()) => crate::desktop_geometry::publish(Some(capture_rect)),
+                Err(mpsc::TrySendError::Full(_)) => {}
             }
 
             if detik_terakhir.elapsed() >= std::time::Duration::from_secs(1) {
@@ -1308,7 +1352,7 @@ mod windows {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         /// Desktop Duplication memberi notifikasi perubahan, jadi 60 fps
         /// realistis tanpa polling buta — beda dari GDI yang di-pace 30.
-        const TARGET_FPS: u64 = 60;
+        let target_fps = crate::video_policy::fps() as u64;
 
         let displays = super::list_displays();
         // VM tanpa monitor: fallback ke nama kosong — DxgiCapture akan coba
@@ -1330,7 +1374,9 @@ mod windows {
         };
         // Resolusi dibaca dari sesi duplikasi, bukan dari DEVMODE: yang akan
         // benar-benar datang adalah piksel sebesar mode output DXGI.
+        crate::desktop_geometry::publish(None);
         let mut cap = crate::dxgi::DxgiCapture::baru(&name)?;
+        let capture_rect = cap.capture_rect();
         let w = cap.width();
         let h = cap.height();
 
@@ -1355,12 +1401,12 @@ mod windows {
         let mut nv12: Vec<u8> = Vec::new();
         let interval = std::time::Duration::from_secs_f64(
             1.0 / if matches!(encoder, EncoderKind::Soft(_)) {
-                crate::software_video::MAX_FPS as f64
+                crate::video_policy::fps() as f64
             } else {
-                TARGET_FPS as f64
+                target_fps as f64
             },
         );
-        let tunggu_ms = (1000 / TARGET_FPS) as u32;
+        let tunggu_ms = (1000 / target_fps) as u32;
         let mut detik_terakhir = std::time::Instant::now();
         let mut frame_detik = 0u64;
         let mut enc_sum: u128 = 0;
@@ -1368,7 +1414,7 @@ mod windows {
         let mut enc_n: u64 = 0;
 
         println!(
-            "[xydesk-host] capture dxgi-duplication mulai {w}x{h} (monitor {monitor}, target {TARGET_FPS} fps)"
+            "[xydesk-host] capture dxgi-duplication mulai {w}x{h} (monitor {monitor}, target {target_fps} fps)"
         );
         loop {
             // Awal pipeline latensi — sebelum piksel diambil, sama seperti
@@ -1409,7 +1455,8 @@ mod windows {
                 encode_us: encode_us as u64,
             }) {
                 Err(mpsc::TrySendError::Disconnected(_)) => break,
-                Ok(()) | Err(mpsc::TrySendError::Full(_)) => {}
+                Ok(()) => crate::desktop_geometry::publish(Some(capture_rect)),
+                Err(mpsc::TrySendError::Full(_)) => {}
             }
 
             if detik_terakhir.elapsed() >= std::time::Duration::from_secs(1) {
@@ -1441,7 +1488,19 @@ mod windows {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // `from_index` gagal bila indeks di luar jangkauan — fallback ke
         // monitor primer agar sesi tidak mati hanya karena pemilihan layar.
-        let monitor = Monitor::from_index(index).or_else(|_| Monitor::primary())?;
+        crate::desktop_geometry::publish(None);
+        let displays = super::list_displays();
+        let name = displays.get(index).map(|d| d.name.as_str());
+        // windows-capture from_index bersifat ONE-based; pilih nama yang sama
+        // dengan daftar client agar backend tidak menggeser pilihan satu layar.
+        let monitor = Monitor::enumerate()?
+            .into_iter()
+            .find(|m| m.device_name().ok().as_deref() == name)
+            .map(Ok)
+            .unwrap_or_else(Monitor::primary)?;
+        let device_name = monitor.device_name()?;
+        let rect = crate::desktop_geometry::monitor_rect(&device_name)
+            .ok_or("geometri monitor WGC tidak tersedia")?;
         let settings = Settings::new(
             monitor,
             CursorCaptureSettings::WithCursor,
@@ -1450,7 +1509,7 @@ mod windows {
             MinimumUpdateIntervalSettings::Default,
             DirtyRegionSettings::Default,
             ColorFormat::Rgba8,
-            sender,
+            (sender, device_name, rect),
         );
         ScreenCapturer::start(settings)?;
         Ok(())
@@ -1734,4 +1793,9 @@ mod tests {
         assert!(take_keyframe_request(), "take harus melihat permintaan");
         assert!(!peek_keyframe_request(), "take harus membersihkan bendera");
     }
+}
+
+/// WGC captures the native cursor in the image; other paths need an overlay.
+pub fn cursor_embedded() -> bool {
+    BACKEND.load(std::sync::atomic::Ordering::Relaxed) == BACKEND_WGC
 }

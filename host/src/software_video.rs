@@ -95,17 +95,30 @@ pub struct SoftwareEncoder {
     resized: Vec<u8>,
     resize_plan: ResizePlan,
     logged_size: Option<(usize, usize)>,
+    mode: u8,
+    level: u8,
 }
 impl SoftwareEncoder {
     pub fn new() -> Result<Self, openh264::Error> {
+        Self::with_policy(
+            crate::video_policy::requested(),
+            crate::video_policy::level(),
+        )
+    }
+    pub fn with_policy(mode: u8, level: u8) -> Result<Self, openh264::Error> {
         Ok(Self {
             encoder: Encoder::with_api_config(
                 openh264::OpenH264API::from_source(),
-                crate::screen::prod_encoder_config(),
+                crate::screen::prod_encoder_config_for(
+                    level,
+                    if mode == 2 && level >= 51 { 15 } else { 30 },
+                ),
             )?,
             resized: Vec::new(),
             resize_plan: ResizePlan::default(),
             logged_size: None,
+            mode,
+            level,
         })
     }
     pub fn encode(&mut self, rgba: &[u8], width: usize, height: usize) -> Result<Vec<u8>, String> {
@@ -116,7 +129,11 @@ impl SoftwareEncoder {
         if rgba.len() != len {
             return Err("panjang RGBA tidak cocok dengan dimensi capture".into());
         }
-        let (w, h) = output_size(width, height)?;
+        let (w, h) = if self.level == 31 {
+            output_size(width, height)?
+        } else {
+            crate::video_policy::output_size(width, height, self.mode, self.level)?
+        };
         let pixels = if (w, h) == (width, height) {
             rgba
         } else {
@@ -132,10 +149,16 @@ impl SoftwareEncoder {
             .to_vec();
         if self.logged_size != Some((width, height)) {
             if let Some([profile, constraints, level]) = sps_profile_level(&data) {
-                println!("[xydesk-host] video software: capture {width}x{height} -> kirim {w}x{h}, filter bilinear, maks {MAX_FPS} fps, bitrate {} bps, SPS {profile:02x}{constraints:02x}{level:02x}", crate::screen::target_bitrate_bps().min(MAX_BITRATE));
+                let fps = if self.mode == 2 && self.level >= 51 {
+                    15
+                } else {
+                    30
+                };
+                println!("[xydesk-host] video software: capture {width}x{height} -> kirim {w}x{h}, filter bilinear, maks {fps} fps, bitrate {} bps, SPS {profile:02x}{constraints:02x}{level:02x}", crate::screen::target_bitrate_bps().min(MAX_BITRATE));
                 self.logged_size = Some((width, height));
             }
         }
+        crate::video_policy::record(Some((w, h)));
         Ok(data)
     }
 }
@@ -175,6 +198,21 @@ mod tests {
         let mut decoder = openh264::decoder::Decoder::new().unwrap();
         let decoded = decoder.decode(&data).unwrap().expect("IDR harus terdecode");
         assert_eq!(decoded.dimensions(), output_size(w, h).unwrap());
+    }
+    #[test]
+    fn negotiated_hd_and_native_are_real_decodable_pixels() {
+        for (mode, level, w, h, expected) in [
+            (1, 40, 1920, 1080, (1920, 1080)),
+            (2, 51, 2336, 1080, (2336, 1080)),
+            (0, 51, 1920, 1080, (1280, 720)),
+        ] {
+            let mut encoder = SoftwareEncoder::with_policy(mode, level).unwrap();
+            let bytes = encoder.encode(&vec![100; w * h * 4], w, h).unwrap();
+            assert_eq!(sps_profile_level(&bytes).unwrap()[2], level);
+            let mut decoder = openh264::decoder::Decoder::new().unwrap();
+            let decoded = decoder.decode(&bytes).unwrap().unwrap();
+            assert_eq!(decoded.dimensions(), expected);
+        }
     }
     #[test]
     fn bilinear_mencampur_detail_bukan_memilih_satu_pixel() {

@@ -1,14 +1,14 @@
 XyDesk Host Test — installer NSIS Windows x64
 
 Paket engine uji 6.8.5; bukan installer aplikasi desktop lengkap.
-Engine MSVC 1f8948f memakai filter bilinear dan mempertahankan posisi
-mouse sebelum klik/drag saat antrean input menumpuk. H264 software Level 3.1:
-maksimal 1280x720 proporsional, 30fps, 14Mbps. Sumber 2336x1080 dikirim
-sebagai 1280x592. Desktop/RDP tidak diubah ukurannya.
-Pemulihan RTCP dan pemilihan GDI RDP tetap disertakan.
-Perbaikan penantian capture dari 9887131 tetap disertakan.
-Versi kompatibilitas sebelumnya sudah tampil di Chrome Android pengguna.
-Ketajaman dan kontrol pada paket baru ini tetap perlu diuji manual.
+Paket uji HOSTGEOMETRY: capture/input memakai koordinat monitor fisik,
+DPI proses/thread, H264 720p/1080p/asli sesuai negosiasi browser, dan preview
+wallpaper Windows HD manual (bukan frame aplikasi). Source SHA engine dan
+checksum ada di manifest.json; installer-source.json mengikat paket ini
+ke engine yang diuji. Bukan rilis produksi dan belum diuji pada RDP pengguna.
+Web/backend harus mendukung protokol baru untuk HD/wallpaper. Installer saja
+tidak memperbarui aplikasi web atau server. Tidak ada perubahan resolusi/
+scaling Windows, restart RDP, autostart, atau layanan otomatis.
 
 PASANG DAN MULAI
 Jika versi uji sebelumnya masih berjalan, putuskan sesi web lalu tekan Ctrl+C
@@ -41,36 +41,26 @@ Installer tidak memasang service, driver, autostart, firewall rule, atau RDP.
 Saat host dijalankan manual, mekanisme capture/driver produk yang sudah ada
 tetap berlaku. Jangan mengganti driver atau memakai tscon secara spekulatif.
 
-BILA LAYAR MASIH HITAM
-Cari log baru seperti:
-  video software: capture 2336x1080 -> kirim 1280x592, filter bilinear, maks 30 fps,
-  bitrate 8000000 bps, SPS 42c01f
-Baris "capture gdi-bitblt 2336x1080" tetap wajar: itu ukuran sumber,
-bukan ukuran gambar yang dikirim. Jangan simpulkan resize gagal dari baris itu.
+MEMERIKSA GAMBAR DAN INPUT
+Di panel web, pilih 720p/1080p/Asli. Periksa Ukuran gambar dari getStats;
+label pilihan adalah batas, bukan jaminan ukuran 16:9 untuk sumber ultrawide.
+Sumber2336x1080 akan menjadi1920x888 pada1080p, atau tetap2336x1080 padaAsli
+jika browser menyetujui Level5.1. Browser lama dapat dibatasi1280x592.
+Jangan mengubah resolusi atau scaling RDP untuk mengikuti pengujian ini.
 
-Di web lihat Pemutar video, Ukuran pemutar, Frame pemutar(total),
-serta Frame diterima/decode. Kirim hanya angka dan baris video software;
-jangan sertakan ID/password/token atau konsol lengkap.
-Preset web adalah target bitrate; fps aktual dapat lebih rendah dari 30fps.
-Batas lebih tinggi dan NVENC belum diselaraskan pada patch software ini.
-Tidak perlu mengulang probe capture atau memasang driver untuk menguji patch.
+Bandingkan pointer/klik di tengah dan keempat sudut pada direct dan trackpad.
+Uji keyboard dan pelepasan tombol saat putus. Feedback posisi berasal dari
+Windows; aplikasi secure desktop/UAC atau privilege lebih tinggi dapat menolak
+injeksi. Resize/pergantian monitor punya jeda polling dan jaringan.
 
-KONTROL HP (WEB TERBARU)
-Muat ulang app.xydesk.my.id sebelum konek setelah pembaruan web.
-- Trackpad aktif otomatis pada layar sentuh: geser satu jari = gerak panah.
-- Ketuk singkat = klik kiri. Ketuk dua kali = klik dua kali.
-- Geser dua jari = scroll; bukan klik atau perpindahan panah.
-- Tahan tombol mouse kiri dengan satu jari, geser gambar dengan jari lain
-  untuk drag. Lepas tombol untuk menjatuhkan objek.
-- Tombol mouse kanan = klik kanan. Kontrol > Sensitivitas mengatur gerak.
-- Mode Langsung: sentuh titik di gambar; pita hitam bukan bagian desktop.
-Panah menunjukkan posisi perintah lokal, bukan telemetry kursor Windows;
-mouse yang digerakkan dari aplikasi RDP lain tidak otomatis diikuti panah.
-Capture WGC yang menyertakan cursor bisa memperlihatkan dua panah sementara.
+Preview wallpaper HD diambil manual setelah memberi consent. Hanya wallpaper
+Windows lokal; tidak menangkap aplikasi, ikon atau taskbar. Jika sumber tidak
+tersedia/terlalu besar, preview lama tidak diganti. Tidak ada auto-minimize.
 
-Gambar tetap diperkecil menjadi 1280x592 untuk sumber2336x1080. Bilinear
-mengurangi gerigi, bukan mengembalikan seluruh detail desktop asli. Ada biaya
-CPU tambahan; kelancaran aktual mengikuti VM, bukan janji selalu30fps.
+Bila hitam, periksa log capture -> kirim, SPS, getStats framesDecoded dan ukuran
+video. Angka capture adalah sumber; angka kirim/decoder adalah transport.
+Kelancaran aktual mengikuti CPU/GPU dan jaringan VM. Tidak dijanjikan selalu
+30fps; mode asli maksimal15fps untuk mengutamakan detail.
 
 BATAS DAN LISENSI
 Installer dan engine uji belum ditandatangani Authenticode. Periksa checksum

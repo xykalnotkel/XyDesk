@@ -58,6 +58,9 @@ jobs:
       - name: Kompilasi dan link engine Windows
         working-directory: host
         run: cargo build --locked --release --target x86_64-pc-windows-msvc --bin xydesk-host
+      - name: Regresi pustaka host Windows (tanpa sesi RDP)
+        working-directory: host
+        run: cargo test --locked --release --target x86_64-pc-windows-msvc --lib -j 2
       - name: Paket, smoke executable, parser launcher, dan checksum
         shell: pwsh
         run: |
@@ -89,7 +92,7 @@ jobs:
             target = 'x86_64-pc-windows-msvc'
             sha256 = (Get-FileHash "$dir/xydesk-host.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
             builtAt = [DateTime]::UtcNow.ToString('o')
-            validation = @('Linux Rust regression tests', 'Windows MSVC compile/link', 'Windows executable --help', 'PowerShell parser and package integrity')
+            validation = @('Linux Rust regression tests', 'Windows MSVC compile/link', 'Windows library regression tests', 'Windows executable --help', 'PowerShell parser and package integrity')
             hardwareTested = $false
           }
           $manifest | ConvertTo-Json -Depth 4 | Set-Content "$dir/manifest.json" -Encoding utf8

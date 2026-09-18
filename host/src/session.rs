@@ -86,6 +86,7 @@ pub struct IceCandidate {
 
 pub struct Session {
     pc: Arc<RTCPeerConnection>,
+    video_level: u8,
     incoming_rx: tokio::sync::Mutex<mpsc::UnboundedReceiver<Arc<RTCDataChannel>>>,
     /// Track audio jarak jauh dari client (mic passthrough), bila ada.
     remote_audio: Arc<tokio::sync::Mutex<Option<Arc<TrackRemote>>>>,
@@ -111,7 +112,29 @@ pub struct MediaTracks {
 impl Session {
     /// Membuat peer connection (answerer) dengan server STUN/TURN opsional.
     pub async fn new(stun: Vec<String>, turn: Vec<RTCIceServer>) -> Result<Self> {
+        Self::new_with_video_level(stun, turn, 31).await
+    }
+    pub async fn new_with_video_level(
+        stun: Vec<String>,
+        turn: Vec<RTCIceServer>,
+        video_level: u8,
+    ) -> Result<Self> {
+        let video_level = if video_level >= 51 {
+            51
+        } else if video_level >= 40 {
+            40
+        } else {
+            31
+        };
         let mut media = MediaEngine::default();
+        if video_level > 31 {
+            media.register_codec(webrtc::rtp_transceiver::rtp_codec::RTCRtpCodecParameters {
+                capability: RTCRtpCodecCapability { mime_type:"video/H264".into(),clock_rate:90000,
+                    sdp_fmtp_line:format!("level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e0{video_level:02x}"),
+                    rtcp_feedback:vec![webrtc::rtp_transceiver::RTCPFeedback{typ:"nack".into(),parameter:String::new()},webrtc::rtp_transceiver::RTCPFeedback{typ:"nack".into(),parameter:"pli".into()}],..Default::default()},
+                payload_type:125,..Default::default()
+            },RTPCodecType::Video)?;
+        }
         media
             .register_default_codecs()
             .context("gagal daftar codec")?;
@@ -172,6 +195,7 @@ impl Session {
 
         Ok(Session {
             pc,
+            video_level,
             incoming_rx: tokio::sync::Mutex::new(rx),
             remote_audio,
         })
@@ -347,9 +371,10 @@ impl Session {
                 mime_type: "video/H264".to_owned(),
                 clock_rate: 90000,
                 channels: 0,
-                sdp_fmtp_line:
-                    "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"
-                        .to_owned(),
+                sdp_fmtp_line: format!(
+                    "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e0{:02x}",
+                    self.video_level
+                ),
                 rtcp_feedback: vec![],
             },
             "video".to_owned(),

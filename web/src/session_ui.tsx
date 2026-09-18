@@ -362,6 +362,7 @@ export type SessionPrefs = {
   cursorInVideo: boolean;
   tapClick: boolean;
   reverseScroll: boolean;
+  resolution: '720p'|'1080p'|'native';
   quality: StreamQuality;
   bitrateMbps: BitrateMbps;
 };
@@ -388,6 +389,7 @@ export const DEFAULT_PREFS: SessionPrefs = {
   cursorInVideo: false,
   tapClick: true,
   reverseScroll: false,
+  resolution: '1080p',
   quality: 'auto',
   bitrateMbps: 0,
 };
@@ -483,6 +485,7 @@ export function SessionPanel({
   trackpad,
   onTrackpadMode,
   onQuality,
+  onResolution,
   onBitrate,
 }: {
   onCapturePreview?:()=>void;
@@ -503,6 +506,7 @@ export function SessionPanel({
   trackpad: boolean;
   onTrackpadMode: (on: boolean) => void;
   onQuality?: (q: StreamQuality) => void;
+  onResolution?: (resolution: SessionPrefs['resolution']) => void;
   onBitrate?: (mbps: BitrateMbps) => void;
 }) {
   const [tab, setTab] = useState<PanelTab>('gambar');
@@ -566,6 +570,9 @@ export function SessionPanel({
           </div>
           <p className="spanel-note">{QUALITY_META[prefs.quality].desc}</p>
 
+          <p className="spanel-section">Resolusi maksimal</p>
+          <div className="display-chips">{(['720p','1080p','native'] as const).map(resolution=><button key={resolution} type="button" className={(prefs.resolution||'1080p')===resolution?'active':''} onClick={()=>{onChange({...prefs,resolution});onResolution?.(resolution);}}>{resolution==='native'?'Asli (maks. 4K)':resolution}</button>)}</div>
+          <p className="spanel-note">Seluruh desktop dipertahankan tanpa zoom/crop. Layar ultrawide tetap ultrawide; angka di bawah adalah ukuran yang benar-benar diterima, bukan upscale.</p>
           <p className="spanel-section">Bitrate</p>
           <div className="display-chips bitrate-chips">
             {BITRATE_OPTIONS.map((opt) => (
@@ -585,7 +592,7 @@ export function SessionPanel({
               </button>
             ))}
           </div>
-          <p className="spanel-note">Bitrate adalah target, bukan pemakaian tetap. Resolusi, fps, dan bitrate efektif mengikuti batas encoder host; software kompatibel maksimal 1280×720, 30 fps, 14 Mbps.</p>
+          <p className="spanel-note">Bitrate adalah target, bukan pemakaian tetap. Resolusi, fps, dan bitrate efektif mengikuti batas encoder host; software mengikuti negosiasi H264: 720p, 1080p atau asli hingga 4096×2160. Mode asli maksimum 15 fps untuk mengutamakan detail; browser lama dapat dibatasi 720p.</p>
 
           <p className="spanel-section">Yang sedang berjalan</p>
           <div className="spanel-card">
@@ -715,8 +722,8 @@ export function SessionPanel({
       {tab === 'sesi' && (
         <>
           <p className="spanel-section">Riwayat</p>
-          <ToggleRow label="Izinkan ambil/ganti preview manual" hint="Tampilkan desktop utama sendiri dahulu. Tamu: lokal; akun: server. Preview lama tetap dipakai sampai diganti atau dihapus." on={!!previewConsent} onToggle={()=>onPreviewConsent?.(!previewConsent)}/>
-          <button type="button" className="btn ghost" disabled={!previewConsent} onClick={onCapturePreview}>Ambil / ganti preview desktop</button>
+          <ToggleRow label="Izinkan simpan/ganti wallpaper HD" hint="Wallpaper Windows saja, tanpa aplikasi terbuka, ikon, atau taskbar. Tidak ada jendela yang diminimalkan. Tamu: lokal; akun: server." on={!!previewConsent} onToggle={()=>onPreviewConsent?.(!previewConsent)}/>
+          <button type="button" className="btn ghost" disabled={!previewConsent} onClick={onCapturePreview}>Ambil / ganti wallpaper HD</button>
           <p className="spanel-section">Sesi</p>
           <div className="spanel-card">
             <StatRow label="Terhubung ke" value={hostId} />

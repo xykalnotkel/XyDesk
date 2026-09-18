@@ -1996,3 +1996,7 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   write riwayat akun produksi atau pairing VM untuk tes ini.
   Bukti docs/qa/control-repair-production-2026-09-18.json. Tahap web ditutup;
   presisi input Windows dan HD masih membutuhkan paket host serta bukti nyata.
+
+## HOSTGEOMETRY — checkpoint 2026-09-18 (Operator)
+
+Kode dan gerbang lokal sudah selesai; board SESI-20260918-OPERATOR-HOSTGEOMETRY aktif untuk build Windows lalu NSIS. Arahan terakhir mengizinkan build setelah seluruh perbaikan kode siap, bukan deploy produksi. Baca `docs/qa/hostgeometry-checkpoint-2026-09-18.md` sebelum meneruskan. Tidak boleh mengemas ulang installer engine lama sebagai perbaikan ini.

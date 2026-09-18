@@ -84,3 +84,9 @@ pub mod nvenc_config;
     clippy::upper_case_acronyms
 )]
 pub mod nvenc_types;
+
+pub mod desktop_geometry;
+
+pub mod wallpaper;
+
+pub mod video_policy;

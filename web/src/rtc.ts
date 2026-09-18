@@ -1,3 +1,5 @@
+import { receiverH264Level, offerWithH264Level } from './video_negotiation';
+import { WallpaperTransfer } from './wallpaper_transfer';
 // Sesi WebRTC client browser — cermin dari lib/webrtc/rtc_service.dart.
 // Protokol signaling identik (hello/pair/offer/answer/ice/bye) dan protokol
 // input biner identik dengan host/src/input.rs (little-endian, 8 byte).
@@ -215,7 +217,10 @@ export interface HostDisplay {
 }
 
 export interface HostMeta {
+  cursorEmbedded?: boolean;
+  inputGeometry?: {left:number;top:number;width:number;height:number}|null;
   hardware?: Record<string, unknown>;
+  video?: {level:number;requested:number;applied:[number,number]|null;fpsLimit:number};
   displays: HostDisplay[];
   wanted: number;
   audio: { available: boolean; pipeline: string };
@@ -251,6 +256,13 @@ export interface SessionStats {
 }
 
 export class RtcSession {
+  private receiverLevel = '1f';
+  setResolution(mode:'720p'|'1080p'|'native'){this.sendInput(new Uint8Array([0x0c,mode==='720p'?0:mode==='native'?2:1]));}
+  private wallpaperTransfer = new WallpaperTransfer();
+  requestWallpaper():Promise<string>{
+    if(this.input?.readyState!=='open')return Promise.reject(Error('Saluran kontrol belum siap.'));
+    return this.wallpaperTransfer.request(bytes=>this.sendInput(bytes));
+  }
   private ws?: WebSocket;
   private pc?: RTCPeerConnection;
   private input?: RTCDataChannel;
@@ -276,6 +288,7 @@ export class RtcSession {
   onPhase: (phase: RtcPhase) => void = () => {};
   onTrack: (stream: MediaStream) => void = () => {};
   onAudioTrack: (stream: MediaStream) => void = () => {};
+  onCursor:(cursor:{x:number;y:number;visible:boolean})=>void=()=>{};
   onMeta: (meta: HostMeta) => void = () => {};
   /// Isi papan klip PC — balasan dari `requestClipboard()`.
   onClipboard: (text: string) => void = () => {};
@@ -525,6 +538,8 @@ export class RtcSession {
       if (typeof ev.data === 'string') {
         try {
           const data = JSON.parse(ev.data);
+          this.wallpaperTransfer.receive(data);
+          if(data.type==='cursor' && Number.isFinite(data.x) && Number.isFinite(data.y) && data.x>=0 && data.x<=1 && data.y>=0 && data.y<=1 && typeof data.visible==='boolean')this.onCursor(data);
           if (data.type === 'meta') {
             this.meta = data as HostMeta;
             this.onMeta(this.meta);
@@ -567,8 +582,11 @@ export class RtcSession {
       }
     };
 
+    this.receiverLevel=await receiverH264Level();
+    if(this.stopped)return;
     const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
+    try{await pc.setLocalDescription({...offer,sdp:offerWithH264Level(offer.sdp||'',this.receiverLevel)});}
+    catch{this.receiverLevel='1f';await pc.setLocalDescription(offer);}
     this.send({
       type: 'offer',
       to: this.hostId,
@@ -597,7 +615,7 @@ export class RtcSession {
       }
       pc.restartIce();
       const offer = await pc.createOffer({ iceRestart: true });
-      await pc.setLocalDescription(offer);
+      await pc.setLocalDescription({...offer,sdp:offerWithH264Level(offer.sdp||'',this.receiverLevel)});
       this.send({
         type: 'offer',
         to: this.hostId,
@@ -611,6 +629,8 @@ export class RtcSession {
   }
 
   sendInput(event: Uint8Array) {
+    // Fail closed while a new host has no capture geometry; releases still pass.
+    if(this.meta?.inputGeometry===null && (event[0]===1||event[0]===2||event[0]===4||(event[0]===3&&event[2]===1)))return;
     if (this.input?.readyState === 'open') this.input.send(event.buffer as ArrayBuffer);
   }
 
@@ -787,6 +807,7 @@ export class RtcSession {
   }
 
   stop() {
+    this.wallpaperTransfer.cancel();
     if (this.stopped) return;
     this.setPhase('ended');
   }

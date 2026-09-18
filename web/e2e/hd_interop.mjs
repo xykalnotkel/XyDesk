@@ -1,0 +1,19 @@
+// Real Chromium receiver <-> production Rust Session/SoftwareEncoder over RTP.
+// No Windows desktop, external server, user login, or VM is exercised.
+import {createServer} from 'vite';import {chromium} from 'playwright';import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';import {writeFileSync} from 'node:fs';import assert from 'node:assert/strict';
+const root=new URL('../',import.meta.url).pathname;
+const server=await createServer({root,configFile:false,server:{host:'127.0.0.1',port:4178},plugins:[{name:'hd-fixture',configureServer(s){s.middlewares.use('/hd-fixture',(_q,r)=>{r.setHeader('content-type','text/html');r.end('<body style="margin:0;background:#111;color:white"><p>Interop HD sintetis — bukan desktop Windows</p><video autoplay muted playsinline style="width:100%"></video></body>');});}}]});await server.listen();
+const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-features=WebRtcHideLocalIpsWithMdns']});const results=[];
+try{for(const mode of [1,2,0]){
+ const page=await browser.newPage({viewport:{width:1280,height:800}});await page.goto('http://127.0.0.1:4178/hd-fixture');
+ const offer=await page.evaluate(async()=>{const {receiverH264Level,offerWithH264Level}=await import('/src/video_negotiation.ts');const level=await receiverH264Level();const pc=window.__pc=new RTCPeerConnection({iceServers:[]});pc.addTransceiver('video',{direction:'recvonly'});pc.ontrack=e=>{document.querySelector('video').srcObject=new MediaStream([e.track]);};const offer=await pc.createOffer();await pc.setLocalDescription({...offer,sdp:offerWithH264Level(offer.sdp,level)});await new Promise(resolve=>{if(pc.iceGatheringState==='complete')resolve();else pc.onicegatheringstatechange=()=>{if(pc.iceGatheringState==='complete')resolve();};});return {sdp:pc.localDescription.sdp,level};});
+ const child=spawn(new URL('../../host/target/debug/examples/hd_browser',import.meta.url).pathname,[],{stdio:['pipe','pipe','pipe']});let stderr='';child.stderr.on('data',s=>stderr+=s);
+ const answer=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{child.kill();reject(Error('answer timeout '+stderr));},15000);const lines=createInterface({input:child.stdout});lines.on('line',s=>{if(s.startsWith('XYDESK_ANSWER:')){clearTimeout(timer);resolve(JSON.parse(s.slice(14)));}});child.on('error',reject);child.on('exit',code=>{if(code)reject(Error('host failed '+stderr));});child.stdin.end(JSON.stringify({sdp:offer.sdp,mode})+'\n');});
+ await page.evaluate(sdp=>window.__pc.setRemoteDescription({type:'answer',sdp}),answer.sdp);
+ const actual=await page.evaluate(async()=>{const deadline=Date.now()+20000;while(Date.now()<deadline){const stats=await window.__pc.getStats();const r=[...stats.values()].find(x=>x.type==='inbound-rtp'&&x.kind==='video');const v=document.querySelector('video');if(r?.framesDecoded>=3&&v.videoWidth)return {width:v.videoWidth,height:v.videoHeight,framesDecoded:r.framesDecoded,codec:stats.get(r.codecId)?.sdpFmtpLine};await new Promise(r=>setTimeout(r,50));}throw Error('decode timeout '+window.__pc.connectionState+' '+JSON.stringify([...((await window.__pc.getStats()).values())]));});
+ const expected=mode===2?[2336,1080]:mode===0?[1280,720]:[1920,1080];assert.deepEqual([actual.width,actual.height],expected);results.push({mode,receiverLevel:offer.level,answerLevel:answer.level,...actual});
+ if(mode===1)await page.screenshot({path:new URL('../../docs/qa/hd-chromium-2026-09-18.png',import.meta.url).pathname});
+ await page.evaluate(()=>window.__pc.close());child.kill();await page.close();
+}
+writeFileSync(new URL('../../docs/qa/hd-chromium-2026-09-18.json',import.meta.url),JSON.stringify({boundary:'Real Chromium SDP/RTP/decode with production Rust Session/SoftwareEncoder and synthetic pixels; no Windows or Android runtime.',results},null,2)+'\n');console.log(JSON.stringify(results));
+}finally{await browser.close();await server.close();}

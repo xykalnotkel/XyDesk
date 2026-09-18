@@ -202,6 +202,15 @@ unsafe impl Send for NvEnc {}
 impl NvEnc {
     /// Buat encoder H264 hardware [width]x[height] (harus genap).
     pub fn new(width: u32, height: u32, bitrate_bps: u32) -> Result<Self, String> {
+        if crate::video_policy::output_size(
+            width as usize,
+            height as usize,
+            crate::video_policy::requested(),
+            crate::video_policy::level(),
+        )? != (width as usize, height as usize)
+        {
+            return Err("resolusi butuh resize sesuai negosiasi; gunakan software".into());
+        }
         let fns = load_api()?;
         if !width.is_multiple_of(2) || !height.is_multiple_of(2) {
             return Err(format!("dimensi NVENC harus genap: {width}x{height}"));
@@ -240,7 +249,11 @@ impl NvEnc {
             // (GOP, frameIntervalP, VBV, bitfield, full-range) dirakit &
             // dikunci uji di nvenc_config.rs — di sini tinggal memakai.
             let mut cfg = build_config(width, height, bitrate_bps);
+            cfg.encodeCodecConfig.h264Config.level = u32::from(crate::video_policy::level());
+            cfg.rcParams.vbvBufferSize = bitrate_bps / crate::video_policy::fps();
+            cfg.rcParams.vbvInitialDelay = cfg.rcParams.vbvBufferSize;
             let mut init = build_init(width, height, &mut cfg);
+            init.frameRateNum = crate::video_policy::fps();
 
             ok((fns.initialize)(encoder, &mut init))
                 .map_err(|e| format!("NvEncInitializeEncoder: {e}"))?;
@@ -369,7 +382,7 @@ impl NvEnc {
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_nanos() as u64)
                 .unwrap_or(0);
-            pp.inputDuration = 16_666_667; // 60 fps (ns)
+            pp.inputDuration = 1_000_000_000 / u64::from(crate::video_policy::fps());
             pp.inputBuffer = self.mapped_resource;
             pp.outputBitstream = self.bitstream_buffer;
             pp.bufferFmt = NV_ENC_BUFFER_FORMAT_NV12;

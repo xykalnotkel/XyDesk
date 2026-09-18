@@ -46,6 +46,7 @@ pub struct DxgiCapture {
     buf: Vec<u8>,
     width: usize,
     height: usize,
+    rect: crate::desktop_geometry::CaptureRect,
 }
 
 #[cfg(target_os = "windows")]
@@ -81,8 +82,18 @@ impl DxgiCapture {
                 CreateDXGIFactory1().map_err(|e| format!("dxgi factory: {e}"))?;
 
             // Simpan kandidat fallback (output pertama) untuk VM headless
-            let mut fallback: Option<(IDXGIOutputDuplication, usize, usize)> = None;
-            let mut exact: Option<(IDXGIOutputDuplication, usize, usize)> = None;
+            let mut fallback: Option<(
+                IDXGIOutputDuplication,
+                usize,
+                usize,
+                crate::desktop_geometry::CaptureRect,
+            )> = None;
+            let mut exact: Option<(
+                IDXGIOutputDuplication,
+                usize,
+                usize,
+                crate::desktop_geometry::CaptureRect,
+            )> = None;
 
             let mut ai = 0u32;
             while let Ok(adapter) = factory.EnumAdapters1(ai) {
@@ -102,17 +113,32 @@ impl DxgiCapture {
                         Err(_) => continue,
                     };
                     let ddesc = dupl.GetDesc();
+                    if ddesc.Rotation
+                        != windows::Win32::Graphics::Dxgi::Common::DXGI_MODE_ROTATION_IDENTITY
+                    {
+                        if nama == nama_perangkat {
+                            return Err("output DXGI berotasi; gunakan WGC/GDI".into());
+                        }
+                        continue;
+                    }
                     let width = ddesc.ModeDesc.Width as usize;
                     let height = ddesc.ModeDesc.Height as usize;
                     if width == 0 || height == 0 {
                         continue;
                     }
+                    let r = desc.DesktopCoordinates;
+                    let rect = crate::desktop_geometry::CaptureRect {
+                        left: r.left,
+                        top: r.top,
+                        width: width as u32,
+                        height: height as u32,
+                    };
                     if nama == nama_perangkat {
-                        exact = Some((dupl, width, height));
+                        exact = Some((dupl, width, height, rect));
                         break;
                     }
                     if fallback.is_none() {
-                        fallback = Some((dupl, width, height));
+                        fallback = Some((dupl, width, height, rect));
                     }
                 }
                 if exact.is_some() {
@@ -121,7 +147,7 @@ impl DxgiCapture {
                 ai += 1;
             }
 
-            let (dupl, width, height) = if let Some(e) = exact {
+            let (dupl, width, height, rect) = if let Some(e) = exact {
                 e
             } else if let Some(f) = fallback {
                 eprintln!(
@@ -163,8 +189,13 @@ impl DxgiCapture {
                 buf: vec![0u8; width * height * 4],
                 width,
                 height,
+                rect,
             })
         }
+    }
+
+    pub fn capture_rect(&self) -> crate::desktop_geometry::CaptureRect {
+        self.rect
     }
 
     pub fn width(&self) -> usize {

@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';import {transformWithOxc} from 'vite';
 const src=readFileSync(new URL('../src/session_history.tsx',import.meta.url),'utf8').split('const status:')[0].replace(/^import .*$/gm,'').replace(/^export /gm,'')+'\nexports.api={loadGuestHistory,saveSessionHistory,deviceCards};';const {code}=await transformWithOxc(src,'history.ts');
-function setup(){const values=new Map();const requests=[];const exports={};vm.runInNewContext(code,{exports,API_BASE:'https://fixture',localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},fetch:async(url,options)=>{requests.push({url,options});return {ok:true,json:async()=>({ok:true})}}});return {...exports.api,values,requests};}
+function setup(){const values=new Map();const requests=[];const exports={};vm.runInNewContext(code,{exports,MAX_PREVIEW_URL:350000,API_BASE:'https://fixture',localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},fetch:async(url,options)=>{requests.push({url,options});return {ok:true,json:async()=>({ok:true})}}});return {...exports.api,values,requests};}
 const item=n=>({id:String(n),deviceId:'123456789',name:'PC',state:'ended',startedAt:1,endedAt:2,specs:{},preview:null});
 test('tamu tetap lokal, retensi20 dan hasil akhir dideduplikasi',async()=>{const s=setup();for(let i=0;i<25;i++)await s.saveSessionHistory(item(i),null);await s.saveSessionHistory({...item(24),name:'last'},null);assert.equal(s.requests.length,0);const rows=s.loadGuestHistory();assert.equal(rows.length,20);assert.equal(rows[0].name,'last');});
 test('akun dikirim ke endpoint privat, bukan storage tamu',async()=>{const s=setup();await s.saveSessionHistory(item(0),'account-token');assert.equal(s.values.size,0);assert.equal(s.requests.length,1);assert.equal(s.requests[0].options.headers.Authorization,'Bearer account-token');assert.equal(s.requests[0].options.keepalive,true);});
@@ -13,3 +13,5 @@ test('same device keeps manual preview across connections and renders one card',
  const replacement='data:image/jpeg;base64,/9j/AAAA/9k=';await s.saveSessionHistory({...item(3),endedAt:4,preview:replacement},null);
  assert.equal(s.deviceCards(s.loadGuestHistory())[0].preview,replacement);
 });
+
+test('HD preview uses normal fetch instead of exceeding keepalive budget',async()=>{const s=setup();await s.saveSessionHistory({...item(40),preview:'data:image/jpeg;base64,'+'A'.repeat(100000)},'account-token');assert.equal(s.requests[0].options.keepalive,false);});

@@ -114,3 +114,19 @@ client                server                 host
   password pairing, sehingga menyambung ulang tidak lagi mematikan engine.
   Kredensial ini juga satu-satunya bukti "ini perangkat yang sama" saat
   password pairing diganti (lihat `/host-token` di bawah).
+
+
+## HOSTGEOMETRY: video, cursor dan preview wallpaper
+
+Tambahan kompatibel pada data channel input yang sudah diotorisasi sesi:
+- Biner `0x0C mode:u8` (tepat 2 byte): 0=720p, 1=1080p, 2=native maksimal 4096×2160. Ini batas gambar kirim proporsional, bukan perubahan resolusi/scaling Windows. Host membatasi lagi sesuai SDP constrained-baseline packetization-mode=1: Level3.1 → 1280×720; Level4.0 → 1920×1080; Level5.1 → native hingga4096×2160. Tidak upscale/crop/stretch. Mode native Level5.1 dibatasi15fps; lainnya30fps. Software maksimum14Mbps. Ukuran video yang diterima tetap sumber kebenaran client.
+- Web memeriksa MediaCapabilities `webrtc` sebelum menaikkan level SDP. Jika API/level/offer ditolak, kembali ke offer asli Level3.1. Host lama tetap kompatibel tetapi tidak menerima fitur baru ini.
+- `meta.video`: level negosiasi, requested (0/1/2), applied `[width,height]` hasil encode atau null, fpsLimit. `meta.inputGeometry`: rect monitor fisik aktif atau null, bukan angka logical DPI. `meta.cursorEmbedded` menandai cursor WGC di dalam frame.
+- Pesan teks `cursor` dengan x/y ternormalisasi0..1 dan visible, diambil dari GetCursorInfo Windows maksimal20Hz. Overlay hanya digunakan jika cursor tidak sudah tertanam. Feedback tidak menghasilkan event injeksi baru. Tidak aktif saat geometri belum tersedia.
+- Biner `0x0D requestId:u32le` (tepat5byte): permintaan wallpaper manual. Hanya file Windows-configured wallpaper lokal pada fixed drive, menolak UNC/device/relative/ADS/reparse points. Tidak menerima path client, tidak screenshot aplikasi, tidak minimize jendela. Sumber≤16MiB, decoder≤64MiB/alokasi dan≤16384 tiap dimensi; outputJPEG≤1920×1080 tanpa upscale, kualitas90/85/80/75 sampai≤256KiB. Jika gagal, preview lama dipertahankan.
+- Balasan teks `{type:"wallpaper",id,index,total,data}`: base64 JPEG berurutan, potongan≤16384 karakter,≤22 potongan, dataURL≤350000 karakter. Kegagalan `{type:"wallpaper-error",id}`. Client timeout15detik dan membatalkan saat disconnect. Host membatasi satu pekerjaan perchannel dan satu permintaan per10detik.
+- Penyimpanan riwayat memerlukan consent; JPEG header dibatasi1920×1080. Body≤384KiB dan preview dibagi≤4chunk @96000 karakter agar nilai DurableObject tidak melampaui128KiB. Chunk ikut transaksi akun, retensi20 dan penghapusan/revokasi akun yang sama. Fetch besar tidak memakai keepalive.
+- Tamu menyimpan satu preview perID dan membuang preview lebih lama bila kuota habis; preview baru tidak diam-diam dibuang dengan status sukses. Akun disimpan di server, tidak dialihkan ke penyimpanan tamu saat permintaan gagal.
+- Input down yang sukses dicatat dan dilepas saat data channel tutup. Antrean dibatasi. Tidak menjamin injeksi ke secure desktop/UAC atau aplikasi dengan privilege lebih tinggi.
+
+Batas bukti: uji SDP/RTP/decoder sintetis bukan bukti Windows/RDP atau Chrome Android nyata. Pergantian monitor/resizing masih memiliki jeda polling500ms dan transport; tidak ada jaminan sinkron per-frame lintas video dan data channel.

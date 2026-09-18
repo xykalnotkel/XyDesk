@@ -36,6 +36,7 @@ try{
   await page.locator('input').nth(0).fill('123456789');await page.locator('input').nth(1).fill('fixture');
   await page.getByRole('button',{name:'Konek sekarang',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('video')?.videoWidth===1280);
+  await page.waitForFunction(()=>document.fullscreenElement?.className==='video-surface');
   console.log('video loaded');await page.locator('.remote-control-cursor').waitFor({state:'visible'});
   assert.equal(await page.getByRole('button',{name:'Mode trackpad',exact:true}).getAttribute('aria-pressed'),'true');
   const cdp=await context.newCDPSession(page);
@@ -71,15 +72,16 @@ try{
   inputs=await page.evaluate(()=>window.__inputs);assert.equal(inputs[0][0],2);
   assert.deepEqual(inputs.filter(b=>b[0]===3).map(b=>b.slice(0,3)),[[3,0,1],[3,0,0]]);
   assert.ok(Math.abs((inputs[0][1]+inputs[0][2]*256)/65535-.30)<.005);
+  await page.getByRole('button',{name:'Keluar layar penuh',exact:true}).click();
   await page.getByRole('button',{name:'Layar penuh',exact:true}).click();
   await page.waitForFunction(()=>document.fullscreenElement?.className==='video-surface');
   assert.equal(await page.locator('.remote-control-cursor').isVisible(),true);
   await page.getByRole('button',{name:'Keluar layar penuh',exact:true}).click();
   assert.deepEqual(errors,[]);
-  checks.push({viewport,defaultTrackpad:true,arrowVisible:true,swipe:true,tap:true,cancelNoClick:true,holdAndDrag:true,twoFingerScroll:true,directPositionBeforeClick:true,nativeFullscreenCursor:true,pageErrors:errors});
-  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/control-web-2026-09-17.png',import.meta.url).pathname});
+  checks.push({viewport,defaultTrackpad:true,arrowVisible:true,swipe:true,tap:true,cancelNoClick:true,holdAndDrag:true,twoFingerScroll:true,directPositionBeforeClick:true,connectFullscreen:true,nativeFullscreenCursor:true,pageErrors:errors});
+  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/geometry-web-2026-09-18.png',import.meta.url).pathname});
   await context.close();
  }
- writeFileSync(new URL('../../docs/qa/control-web-2026-09-17.json',import.meta.url),JSON.stringify({result:'PASS',boundary:'Real React handlers, Chromium CDP touch events, local canvas stream; stubbed RtcSession transport, not Windows/Android injection',checks},null,2)+'\n');
+ writeFileSync(new URL('../../docs/qa/geometry-web-2026-09-18.json',import.meta.url),JSON.stringify({result:'PASS',boundary:'Real React handlers, Chromium CDP touch events, local canvas stream; stubbed RtcSession transport, not Windows/Android injection',checks},null,2)+'\n');
  console.log(JSON.stringify(checks));
 }finally{await browser.close();await server.close();}

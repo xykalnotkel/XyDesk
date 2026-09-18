@@ -3,13 +3,12 @@ import argparse
 import hashlib
 import json
 import math
+import re
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
 import zipfile
 
-EXPECTED_ZIP_SHA = '6df81bd38fc2a2717d48a4ac0b574cc0b3a965cc7ad27b1bd60760850f7519b0'
-EXPECTED_ENGINE_SHA = 'fef550b39d4a6ad8d556334bf2fa34d6cb5d8528ca944845d4bcae825dbd46d0'
 HERE = Path(__file__).resolve().parent
 
 
@@ -24,9 +23,9 @@ def quote(value):
     return str(value).replace('$', '$$').replace('"', '$\\"')
 
 
-def prepare(archive, work, source_sha):
+def prepare(archive, work, source_sha, expected_zip_sha=None):
     data = archive.read_bytes()
-    if hashlib.sha256(data).hexdigest() != EXPECTED_ZIP_SHA:
+    if not expected_zip_sha or hashlib.sha256(data).hexdigest() != expected_zip_sha:
         raise ValueError('SHA-256 payload ZIP tidak cocok')
     payload = work / 'payload'
     generated = work / 'generated'
@@ -47,14 +46,17 @@ def prepare(archive, work, source_sha):
     manifest = json.loads((payload / 'manifest.json').read_text(encoding='utf-8-sig'))
     if manifest['version'] != '6.8.5' or manifest['target'] != 'x86_64-pc-windows-msvc':
         raise ValueError('Versi/arsitektur payload tidak cocok')
-    if hashlib.sha256((payload / 'xydesk-host.exe').read_bytes()).hexdigest() != EXPECTED_ENGINE_SHA:
+    if not re.fullmatch(r'[0-9a-f]{40}', source_sha) or manifest.get('sourceSha') != source_sha:
+        raise ValueError('Engine bukan dari source SHA yang sedang dikemas')
+    expected_engine_sha=manifest.get('sha256','')
+    if not re.fullmatch(r'[0-9a-f]{64}', expected_engine_sha) or hashlib.sha256((payload / 'xydesk-host.exe').read_bytes()).hexdigest() != expected_engine_sha:
         raise ValueError('Engine berubah')
     shutil.copy2(HERE.parent / 'manual-host' / 'Start-TestHost.ps1', payload / 'Start-TestHost.ps1')
     shutil.copy2(HERE.parent / 'windows' / 'xydesk.ico', payload / 'xydesk.ico')
     shutil.copy2(HERE / 'README-INSTALLER.txt', payload / 'README-INSTALLER.txt')
     (payload / 'installer-source.json').write_text(json.dumps({
         'installerSourceSha': source_sha, 'engineSourceSha': manifest['sourceSha'],
-        'payloadZipSha256': EXPECTED_ZIP_SHA, 'engineSha256': EXPECTED_ENGINE_SHA,
+        'payloadZipSha256': expected_zip_sha, 'engineSha256': expected_engine_sha,
     }, indent=2) + '\n', encoding='utf-8')
     files = sorted(p.relative_to(payload) for p in payload.rglob('*') if p.is_file())
     total = sum((payload / p).stat().st_size for p in files)
@@ -84,8 +86,9 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--makensis', default='makensis')
     parser.add_argument('--source-sha', required=True)
+    parser.add_argument('--expected-zip-sha', required=True)
     args = parser.parse_args()
-    payload, generated = prepare(args.archive.resolve(), args.work.resolve(), args.source_sha)
+    payload, generated = prepare(args.archive.resolve(), args.work.resolve(), args.source_sha, args.expected_zip_sha)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     prefix = '/' if __import__('os').name == 'nt' else '-'
     subprocess.run([
@@ -97,7 +100,7 @@ def main():
     digest = hashlib.sha256(args.output.read_bytes()).hexdigest()
     args.output.with_suffix('.exe.sha256').write_text(digest + '  ' + args.output.name + '\n')
     print(json.dumps({'installer': args.output.name, 'sha256': digest,
-                      'bytes': args.output.stat().st_size, 'engineSha256': EXPECTED_ENGINE_SHA}))
+                      'bytes': args.output.stat().st_size, 'engineSha256': json.loads((payload/'manifest.json').read_text(encoding='utf-8-sig'))['sha256']}))
 
 
 if __name__ == '__main__':

@@ -24,6 +24,14 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### Perbaikan dalam validasi — HOSTGEOMETRY
+- Host: konteks DPI proses/thread, koordinat fisik monitor capture untuk pointer absolut, pemilihan WGC melalui nama perangkat (bukan indeks nol ke API indeks satu), origin fallback GDI, dan deteksi perubahan geometri GDI/RDP setiap 500 ms.
+- Web: klik Konek meminta fullscreen dari gesture lalu mencoba landscape; browser yang menolak mendapat petunjuk manual. Retry otomatis tidak meminta fullscreen.
+- H264 menerima batas decoder ternegosiasi Level3.1/4.0/5.1, pilihan720p/1080p/asli dengan aspek utuh tanpa upscale, native maksimal4096×2160/15fps. Chromium nyata sudah mendecode1920×1080 dan2336×1080 dari encoder host melalui RTP sintetis.
+- Feedback cursor Windows20Hz, overlay tidak diduplikasi pada WGC; input down yang sukses dilepas saat channel tutup, antrean input dibatasi, tombol Pause tidak salah menjadi Ctrl.
+- Preview manual kini wallpaper Windows lokal HD≤1920×1080/256KiB, bukan frame aplikasi; path dan decoder dibatasi. Transfer chunk, validasi JPEG, penyimpanan akun bertransaksi/chunk dan kuota browser diselaraskan tanpa mengubah auth/OAuth.
+- NSIS hanya menerima artifact run engine sukses dari SHA yang sama, dengan checksum ZIP/engine; tidak lagi memakai engine lama. Belum dirilis/deploy; build Windows+NSIS dan uji RDP pengguna adalah gerbang berikutnya. Bukti: `docs/qa/hostgeometry-checkpoint-2026-09-18.md`.
+
 - Kontrol web: preview diambil/ganti manual dan dipakai ulang per ID, riwayat satu kartu per perangkat; keyboard memiliki tombol tutup atas dan melepas modifier. Mapping menambah shortcut kombinasi, F1–F24/numpad/navigasi/tanda baca, mouse samping dan scroll horizontal; ownership keyboard fisik/virtual/mapping disatukan. Preset WASD digital tersedia. HD dan presisi input Windows belum dinyatakan selesai.
 
 - Backend sesi baru: ticket client terikat identitas/generasi akun; WS dan penerbitan TURN memeriksa pencabutan. Alarm Hub memeriksa client diam tiap ~15 detik dan mengirim bye ke host sesuai nonce koneksi. Ticket/koneksi legacy tetap kompatibel; belum ada pemutusan massal atau bukti media Windows.

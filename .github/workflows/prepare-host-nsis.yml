@@ -3,6 +3,11 @@ name: Prepare Host NSIS
 # Pengemasan installer saja; tidak membuka Test Lab, mengubah versi, atau deploy.
 on:
   workflow_dispatch:
+    inputs:
+      engine_run_id:
+        description: Successful Prepare Host Windows run for this exact commit
+        required: true
+        type: string
 permissions:
   contents: read
   actions: read
@@ -17,10 +22,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Pastikan run engine sukses dari commit ini
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENGINE_RUN_ID: ${{ inputs.engine_run_id }}
+        run: |
+          if ($env:ENGINE_RUN_ID -notmatch '^\d+$') { throw 'Run ID tidak valid' }
+          $run = gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:ENGINE_RUN_ID" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $run.conclusion -ne 'success' -or $run.head_sha -ne $env:GITHUB_SHA -or $run.path -ne '.github/workflows/prepare-host-windows.yml') { throw 'Run engine/source belum valid' }
       - uses: actions/download-artifact@v4
         with:
           name: XyDesk-Host-Manual-x64
-          run-id: 35283806642
+          run-id: ${{ inputs.engine_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: payload-download
       - name: Pasang compiler NSIS
@@ -35,12 +49,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Tes builder gagal' }
           $compiler = @('C:\Program Files (x86)\NSIS\makensis.exe', 'C:\Program Files\NSIS\makensis.exe') | Where-Object { Test-Path $_ } | Select-Object -First 1
           if (-not $compiler) { throw 'makensis.exe tidak ditemukan' }
-          python packaging/nsis/build_installer.py payload-download/XyDesk-Host-Test-x64-1f8948f.zip --work nsis-work --output installer-output/XyDesk-Host-Test-Setup-x64.exe --source-sha $env:GITHUB_SHA --makensis $compiler
+          $zip = @(Get-ChildItem payload-download -Filter 'XyDesk-Host-Test-x64-*.zip')
+          if ($zip.Count -ne 1) { throw 'Payload harus tepat satu ZIP' }
+          $expectedZip = ((Get-Content ($zip[0].FullName + '.sha256') -Raw).Trim() -split '\s+')[0]
+          python packaging/nsis/build_installer.py $zip[0].FullName --work nsis-work --output installer-output/XyDesk-Host-Test-Setup-x64.exe --source-sha $env:GITHUB_SHA --expected-zip-sha $expectedZip --makensis $compiler
           if ($LASTEXITCODE -ne 0) { throw 'Build installer gagal' }
       - name: Uji install, shortcut, reinstall, dan uninstall
         shell: pwsh
         run: |
-          ./packaging/nsis/test-installer.ps1 -Installer installer-output/XyDesk-Host-Test-Setup-x64.exe -Report installer-output/NSIS-VALIDATION.json
+          $engine = Get-Content nsis-work/payload/manifest.json -Raw | ConvertFrom-Json
+          ./packaging/nsis/test-installer.ps1 -ExpectedEngineSha $engine.sha256 -Installer installer-output/XyDesk-Host-Test-Setup-x64.exe -Report installer-output/NSIS-VALIDATION.json
       - uses: actions/upload-artifact@v4
         with:
           name: XyDesk-Host-NSIS-x64

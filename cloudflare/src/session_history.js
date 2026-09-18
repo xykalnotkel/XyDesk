@@ -1,9 +1,29 @@
+import {validPreviewJpeg} from './preview_jpeg.js';
 import { sameMember } from './member_session.js';
 const MAX_ITEMS = 20;
-const MAX_BODY = 48 * 1024;
+const MAX_BODY = 384 * 1024;
+const MAX_PREVIEW = 350000;
 const json = (data, status = 200) => new Response(JSON.stringify(data), {status, headers: {'content-type':'application/json','cache-control':'no-store'}});
 const clean = (v, n) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').slice(0,n) : '';
 const validId = id => typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id);
+
+// Durable Object values are capped at 128 KiB. Split large JPEG data URLs;
+// chunk keys remain in the same authenticated transaction as their record.
+async function readRecord(storage,key){
+  const row=await storage.get(key);if(!row)return row;
+  if(Number.isInteger(row.previewChunks)&&row.previewChunks>0&&row.previewChunks<=4){
+    const parts=await Promise.all(Array.from({length:row.previewChunks},(_,i)=>storage.get(`${key}:preview:${i}`)));
+    const {previewChunks,...record}=row;
+    return {...record,preview:parts.every(p=>typeof p==='string')?parts.join(''):null};
+  }
+  return row;
+}
+async function deleteRecord(storage,key){await storage.delete(key);for(let i=0;i<4;i++)await storage.delete(`${key}:preview:${i}`);}
+async function writeRecord(storage,key,row){
+  const preview=row.preview;const count=preview?Math.ceil(preview.length/96000):0;
+  await storage.put(key,{...row,preview:null,previewChunks:count});
+  for(let i=0;i<4;i++){if(i<count)await storage.put(`${key}:preview:${i}`,preview.slice(i*96000,(i+1)*96000));else await storage.delete(`${key}:preview:${i}`);}
+}
 
 export function normalizeHistory(value, now = Date.now()) {
   if (!value || !validId(value.id) || typeof value.deviceId !== 'string' || !/^\d{9}$/.test(value.deviceId)) throw Error('invalid-record');
@@ -16,9 +36,9 @@ export function normalizeHistory(value, now = Date.now()) {
   }
   let preview = null;
   if (value.preview) {
-    if (value.previewConsent !== true || typeof value.preview !== 'string' || value.preview.length > 32768 || !/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(value.preview)) throw Error('invalid-preview');
+    if (value.previewConsent !== true || typeof value.preview !== 'string' || value.preview.length > MAX_PREVIEW || !/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(value.preview)) throw Error('invalid-preview');
     const bytes = atob(value.preview.slice(23));
-    if (!bytes.startsWith('\xff\xd8') || !bytes.endsWith('\xff\xd9')) throw Error('invalid-preview');
+    if (!validPreviewJpeg(bytes)) throw Error('invalid-preview');
     preview = value.preview;
   }
   return {id:value.id, deviceId:value.deviceId, name:clean(value.name,80) || `PC ${value.deviceId}`, startedAt:start, endedAt:end, state:value.state, specs, preview, savedAt:now};
@@ -29,7 +49,7 @@ export async function historyEndpoint(request, storage, user) {
   const prefix = `history:${user.id}:`, indexKey = prefix+'index';
   if (request.method === 'GET') {
     const ids = await storage.get(indexKey) || [];
-    const items = await Promise.all(ids.map(id=>storage.get(prefix+id)));
+    const items = await Promise.all(ids.map(id=>readRecord(storage,prefix+id)));
     return json({items:items.filter(Boolean).sort((a,b)=>b.endedAt-a.endedAt), limit:MAX_ITEMS});
   }
   if (request.method !== 'POST') return json({error:'method-not-allowed'},405);
@@ -50,17 +70,17 @@ export async function historyEndpoint(request, storage, user) {
     if(!rate||now-rate.at>60000)rate={at:now,n:0};
     if(rate.n>=40)return {limited:true};rate.n++;await tx.put(rateKey,rate);
     let ids=await tx.get(indexKey)||[];
-    if(body.action==='clear'){for(const id of ids)await tx.delete(prefix+id);ids=[];}
-    else if(body.action==='delete'){await tx.delete(prefix+body.id);ids=ids.filter(id=>id!==body.id);}
+    if(body.action==='clear'){for(const id of ids)await deleteRecord(tx,prefix+id);ids=[];}
+    else if(body.action==='delete'){await deleteRecord(tx,prefix+body.id);ids=ids.filter(id=>id!==body.id);}
     else if(body.action==='delete-device'){
-      const kept=[];for(const id of ids){const row=await tx.get(prefix+id);if(row?.deviceId===body.deviceId)await tx.delete(prefix+id);else kept.push(id);}ids=kept;
+      const kept=[];for(const id of ids){const row=await readRecord(tx,prefix+id);if(row?.deviceId===body.deviceId)await deleteRecord(tx,prefix+id);else kept.push(id);}ids=kept;
     }
     else {
-      const previous=await tx.get(prefix+record.id);
+      const previous=await readRecord(tx,prefix+record.id);
       if(previous && previous.endedAt>record.endedAt)record={...previous,preview:record.preview||previous.preview};
-      if(!record.preview){for(const id of ids){const row=await tx.get(prefix+id);if(row?.deviceId===record.deviceId&&row.preview){record.preview=row.preview;break;}}}
-      await tx.put(prefix+record.id,record);ids=[record.id,...ids.filter(id=>id!==record.id)];
-      for(const id of ids.slice(MAX_ITEMS))await tx.delete(prefix+id);ids=ids.slice(0,MAX_ITEMS);
+      if(!record.preview){for(const id of ids){const row=await readRecord(tx,prefix+id);if(row?.deviceId===record.deviceId&&row.preview){record.preview=row.preview;break;}}}
+      await writeRecord(tx,prefix+record.id,record);ids=[record.id,...ids.filter(id=>id!==record.id)];
+      for(const id of ids.slice(MAX_ITEMS))await deleteRecord(tx,prefix+id);ids=ids.slice(0,MAX_ITEMS);
     }
     await tx.put(indexKey,ids);return {ok:true};
   });
@@ -69,5 +89,5 @@ export async function historyEndpoint(request, storage, user) {
 
 export async function deleteUserHistory(storage, userId, email, version = 0) {
   const prefix=`history:${userId}:`;
-  return storage.transaction(async tx=>{if(email){const current=await tx.get(`user:${email}`);if(!sameMember(current,{id:userId,email,token_version:version}))return false;}const ids=await tx.get(prefix+'index')||[];for(const id of ids)await tx.delete(prefix+id);await tx.delete(prefix+'index');await tx.delete(prefix+'rate');if(email){await tx.delete(`subject:${userId}`);await tx.delete(`user:${email}`);await tx.delete(`otp:${email}`);}return true;});
+  return storage.transaction(async tx=>{if(email){const current=await tx.get(`user:${email}`);if(!sameMember(current,{id:userId,email,token_version:version}))return false;}const ids=await tx.get(prefix+'index')||[];for(const id of ids)await deleteRecord(tx,prefix+id);await tx.delete(prefix+'index');await tx.delete(prefix+'rate');if(email){await tx.delete(`subject:${userId}`);await tx.delete(`user:${email}`);await tx.delete(`otp:${email}`);}return true;});
 }

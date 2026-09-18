@@ -204,6 +204,9 @@ fn meta_json() -> serde_json::Value {
         "type": "meta",
         "displays": xydesk_host::screen::list_displays(),
         "wanted": xydesk_host::screen::wanted_display(),
+        "cursorEmbedded": xydesk_host::screen::cursor_embedded(),
+        "video": xydesk_host::video_policy::telemetry(),
+        "inputGeometry": xydesk_host::desktop_geometry::active(),
         "audio": {
             "available": xydesk_host::audio::capture_available(),
             "pipeline": xydesk_host::audio::capture_status(),
@@ -222,6 +225,7 @@ fn meta_json() -> serde_json::Value {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    xydesk_host::desktop_geometry::init_process_dpi();
     let args = Args::parse();
     if args.capture_test {
         jalankan_capture_test();
@@ -589,7 +593,11 @@ async fn main() -> Result<()> {
                     let sdp = msg.sdp.clone().context("offer tanpa SDP")?;
                     println!("[xydesk-host] menerima offer dari {client}");
 
-                    let session = Arc::new(Session::new(vec![stun.clone()], vec![]).await?);
+                    let video_level = xydesk_host::video_policy::offer_level(&sdp.sdp);
+                    let session = Arc::new(
+                        Session::new_with_video_level(vec![stun.clone()], vec![], video_level)
+                            .await?,
+                    );
                     // Track WAJIB didaftarkan sebelum answer (dilakukan di dalam
                     // `answer_media`): kalau tidak, SDP jawaban tidak berisi m-line
                     // dan client tidak pernah mendapat gambar. Lihat session.rs.
@@ -599,6 +607,7 @@ async fn main() -> Result<()> {
                     // tidak ada toggle (standar remote desktop).
                     let mic_on = xydesk_host::audio::mic_capture_available();
                     let media = session.answer_media(&sdp.sdp, audio_on, mic_on).await?;
+                    xydesk_host::video_policy::configure(video_level);
                     let video_track = media.video;
                     let audio_track = media.audio;
                     let mic_track = media.mic;
@@ -682,28 +691,167 @@ async fn main() -> Result<()> {
                                     // audio host. Client memakai ini untuk
                                     // pemilihan monitor dan label audio jujur.
                                     let _ = dc.send_text(meta_json().to_string()).await;
-                                    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-                                    dc.on_message(Box::new(move |m| {
-                                        if !m.is_string {
-                                            let _ = tx.send(m.data.to_vec());
+                                    let feedback_dc = dc.clone();
+                                    let base_meta = meta_json();
+                                    tokio::spawn(async move {
+                                        let mut tick = tokio::time::interval(
+                                            std::time::Duration::from_millis(50),
+                                        );
+                                        tick.set_missed_tick_behavior(
+                                            tokio::time::MissedTickBehavior::Skip,
+                                        );
+                                        let mut ticks = 0u32;
+                                        loop {
+                                            tick.tick().await;
+                                            if feedback_dc.ready_state()!=webrtc::data_channel::data_channel_state::RTCDataChannelState::Open {break;}
+                                            let cursor=xydesk_host::desktop_geometry::cursor_feedback().unwrap_or_else(||serde_json::json!({"type":"cursor","x":0.5,"y":0.5,"visible":false}));
+                                            if feedback_dc.buffered_amount().await < 32768
+                                                && feedback_dc
+                                                    .send_text(cursor.to_string())
+                                                    .await
+                                                    .is_err()
+                                            {
+                                                break;
+                                            }
+                                            ticks += 1;
+                                            if ticks % 20 == 0 {
+                                                let mut meta = base_meta.clone();
+                                                meta["video"] =
+                                                    xydesk_host::video_policy::telemetry();
+                                                meta["inputGeometry"] = serde_json::json!(
+                                                    xydesk_host::desktop_geometry::active()
+                                                );
+                                                meta["cursorEmbedded"] = serde_json::json!(
+                                                    xydesk_host::screen::cursor_embedded()
+                                                );
+                                                meta["wanted"] = serde_json::json!(
+                                                    xydesk_host::screen::wanted_display()
+                                                );
+                                                meta["displays"] = serde_json::json!(
+                                                    xydesk_host::screen::list_displays()
+                                                );
+                                                if feedback_dc
+                                                    .send_text(meta.to_string())
+                                                    .await
+                                                    .is_err()
+                                                {
+                                                    break;
+                                                }
+                                            }
                                         }
+                                    });
+                                    let wallpaper_busy =
+                                        Arc::new(std::sync::atomic::AtomicBool::new(false));
+                                    let (tx, mut rx) = tokio::sync::mpsc::channel(128);
+                                    let (closed_tx, mut closed_rx) =
+                                        tokio::sync::watch::channel(false);
+                                    dc.on_close(Box::new(move || {
+                                        let _ = closed_tx.send(true);
                                         Box::pin(async {})
+                                    }));
+                                    dc.on_message(Box::new(move |m| {
+                                        let tx = tx.clone();
+                                        Box::pin(async move {
+                                            if !m.is_string && m.data.len() <= 65536 {
+                                                let _ = tx.send(m.data.to_vec()).await;
+                                            }
+                                        })
                                     }));
                                     // Injeksi di thread blocking terpisah: SendInput
                                     // adalah syscall sinkron — jangan blokir runtime
                                     // async yang juga melayani video/ICE.
-                                    let (inj_tx, inj_rx) = std::sync::mpsc::channel::<
-                                        xydesk_host::input::InputEvent,
-                                    >();
+                                    let (inj_tx, inj_rx) =
+                                        std::sync::mpsc::sync_channel::<
+                                            xydesk_host::input::InputEvent,
+                                        >(256);
                                     std::thread::spawn(move || {
                                         let injector = xydesk_host::input::Injector::new();
+                                        let mut lease = xydesk_host::input::InputLease::default();
                                         while let Ok(ev) = inj_rx.recv() {
-                                            if !injector.inject(&ev) {
-                                                eprintln!("[xydesk-host] inject gagal: {ev:?}");
+                                            if injector.inject(&ev) {
+                                                lease.applied(&ev);
+                                            } else {
+                                                eprintln!("[xydesk-host] injeksi input ditolak");
+                                            }
+                                        }
+                                        for event in lease.releases() {
+                                            if !injector.inject(&event) {
+                                                eprintln!(
+                                                    "[xydesk-host] pelepasan input ditolak Windows"
+                                                );
                                             }
                                         }
                                     });
-                                    while let Some(data) = rx.recv().await {
+                                    let mut last_wallpaper = std::time::Instant::now()
+                                        .checked_sub(std::time::Duration::from_secs(15))
+                                        .unwrap();
+                                    while let Some(data) = tokio::select! {biased; _=closed_rx.changed()=>None, data=rx.recv()=>data}
+                                    {
+                                        if data.len() == 2 && data[0] == 0x0c {
+                                            if xydesk_host::video_policy::request(data[1]) {
+                                                xydesk_host::screen::set_target_bitrate_bps(
+                                                    xydesk_host::screen::target_bitrate_bps(),
+                                                );
+                                                let _ = dc.send_text(meta_json().to_string()).await;
+                                            }
+                                            continue;
+                                        }
+                                        if data.len() == 5 && data[0] == 0x0d {
+                                            let id =
+                                                u32::from_le_bytes(data[1..5].try_into().unwrap());
+                                            if last_wallpaper.elapsed()
+                                                < std::time::Duration::from_secs(10)
+                                                || wallpaper_busy
+                                                    .swap(true, std::sync::atomic::Ordering::AcqRel)
+                                            {
+                                                let _ = dc.send_text(serde_json::json!({"type":"wallpaper-error","id":id}).to_string()).await;
+                                                continue;
+                                            }
+                                            last_wallpaper = std::time::Instant::now();
+                                            let reply = dc.clone();
+                                            let busy = wallpaper_busy.clone();
+                                            tokio::spawn(async move {
+                                                use base64::Engine;
+                                                match tokio::task::spawn_blocking(
+                                                    xydesk_host::wallpaper::configured_preview,
+                                                )
+                                                .await
+                                                {
+                                                    Ok(Ok(bytes)) => {
+                                                        let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+                                                        let chunks: Vec<_> = encoded
+                                                            .as_bytes()
+                                                            .chunks(16384)
+                                                            .collect();
+                                                        for (index, chunk) in
+                                                            chunks.iter().enumerate()
+                                                        {
+                                                            let message = serde_json::json!({"type":"wallpaper","id":id,"index":index,"total":chunks.len(),"data":std::str::from_utf8(chunk).unwrap()}).to_string();
+                                                            if !matches!(
+                                                                tokio::time::timeout(
+                                                                    std::time::Duration::from_secs(
+                                                                        3
+                                                                    ),
+                                                                    reply.send_text(message)
+                                                                )
+                                                                .await,
+                                                                Ok(Ok(_))
+                                                            ) {
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
+                                                    _ => {
+                                                        let _ = reply.send_text(serde_json::json!({"type":"wallpaper-error","id":id}).to_string()).await;
+                                                    }
+                                                }
+                                                busy.store(
+                                                    false,
+                                                    std::sync::atomic::Ordering::Release,
+                                                );
+                                            });
+                                            continue;
+                                        }
                                         // Pesan rusak dibuang diam-diam (decode → None):
                                         // input korup tidak boleh mematikan sesi.
                                         if let Some(ev) = xydesk_host::input::decode(&data) {
@@ -804,7 +952,9 @@ async fn main() -> Result<()> {
                                                 }
                                                 _ => {}
                                             }
-                                            let _ = inj_tx.send(ev);
+                                            if inj_tx.try_send(ev).is_err() {
+                                                break;
+                                            }
                                         }
                                     }
                                 }

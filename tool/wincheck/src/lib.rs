@@ -40,3 +40,8 @@ pub mod gdi;
 pub fn primary_bit_ok(info: &windows::Win32::Graphics::Gdi::MONITORINFOEXW) -> bool {
     (info.monitorInfo.dwFlags & 0x1) != 0
 }
+
+#[path = "../../../host/src/desktop_geometry.rs"]
+pub mod desktop_geometry;
+#[path = "../../../host/src/input.rs"]
+pub mod input;

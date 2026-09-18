@@ -47,6 +47,8 @@ pub struct GdiCapture {
     height: usize,
     /// Buffer RGBA yang dipakai ulang antar frame (satu alokasi per sesi).
     rgba: Vec<u8>,
+    source_name: Option<String>,
+    geometry_checked: std::time::Instant,
 }
 
 #[cfg(target_os = "windows")]
@@ -58,6 +60,7 @@ impl GdiCapture {
     /// karangan dan mengembalikan DC null. Untuk VM headless / RDP tanpa
     /// monitor, fallback GetDC(0) otomatis dicoba.
     pub fn baru(nama_perangkat: &str, width: usize, height: usize) -> Result<Self, String> {
+        crate::desktop_geometry::init_thread_dpi();
         // Kalau caller kasih 0 karena list_displays kosong (VM tanpa monitor),
         // biarin — Handle::baru akan pakai GetSystemMetrics untuk tentukan ukuran.
         let (w, h) = if width == 0 || height == 0 {
@@ -66,16 +69,21 @@ impl GdiCapture {
         } else {
             (width, height)
         };
+        let dalam = Handle::baru(nama_perangkat, w, h)?;
+        let width = dalam.width as usize;
+        let height = dalam.height as usize;
         Ok(Self {
-            dalam: Handle::baru(nama_perangkat, w, h)?,
-            width: if w == 0 { 0 } else { w },
-            height: if h == 0 { 0 } else { h },
-            rgba: Vec::with_capacity(if w == 0 || h == 0 {
-                1920 * 1080 * 4
-            } else {
-                w * h * 4
-            }),
+            dalam,
+            width,
+            height,
+            rgba: Vec::with_capacity(width * height * 4),
+            source_name: crate::desktop_geometry::monitor_rect(nama_perangkat)
+                .map(|_| nama_perangkat.to_owned()),
+            geometry_checked: std::time::Instant::now(),
         })
+    }
+    pub fn capture_rect(&self) -> crate::desktop_geometry::CaptureRect {
+        self.dalam.rect
     }
 
     /// Lebar frame dalam piksel — setelah fallback bisa berubah dari yang diminta.
@@ -102,6 +110,16 @@ impl GdiCapture {
     /// berikutnya — cukup untuk satu kali encode, dan menghindari salinan
     /// tambahan per frame.
     pub fn grab(&mut self) -> Result<(&[u8], usize, usize), String> {
+        if self.geometry_checked.elapsed() >= std::time::Duration::from_millis(500) {
+            self.geometry_checked = std::time::Instant::now();
+            let current = match &self.source_name {
+                Some(name) => crate::desktop_geometry::monitor_rect(name),
+                None => crate::desktop_geometry::virtual_rect(),
+            };
+            if current != Some(self.dalam.rect) {
+                return Err("geometri desktop berubah; buka ulang capture".into());
+            }
+        }
         let bgra = self.dalam.ambil()?;
         crate::pixfmt::bgra_to_rgba(bgra, &mut self.rgba);
         // Sampel pojok bukan bukti seluruh desktop hitam atau sesi terkunci.
@@ -142,6 +160,7 @@ struct Handle {
     height: u32,
     width: u32,
     is_fallback: bool,
+    rect: crate::desktop_geometry::CaptureRect,
 }
 
 #[cfg(target_os = "windows")]
@@ -154,22 +173,25 @@ impl Handle {
                 eprintln!(
                     "[xydesk-host] GDI CreateDCW {nama_perangkat} gagal: {e} — fallback GetDC(0) virtual screen"
                 );
-                Self::baru_fallback(width, height)
+                Self::baru_fallback(nama_perangkat, width, height)
             }
         }
     }
 
-    fn baru_display(nama_perangkat: &str, width: usize, height: usize) -> Result<Self, String> {
+    fn baru_display(nama_perangkat: &str, _width: usize, _height: usize) -> Result<Self, String> {
         use windows::core::PCWSTR;
         use windows::Win32::Graphics::Gdi::{
             CreateCompatibleBitmap, CreateCompatibleDC, CreateDCW, BITMAPINFO, BITMAPINFOHEADER,
         };
 
         // Kalau width/height 0 (list_displays kosong), fallback langsung
-        if width == 0 || height == 0 {
-            return Self::baru_fallback(0, 0);
+        if nama_perangkat.is_empty() {
+            return Self::baru_fallback(nama_perangkat, 0, 0);
         }
 
+        let rect = crate::desktop_geometry::monitor_rect(nama_perangkat)
+            .ok_or("monitor GDI tidak ditemukan")?;
+        let (width, height) = (rect.width as usize, rect.height as usize);
         let dev: Vec<u16> = nama_perangkat
             .encode_utf16()
             .chain(std::iter::once(0))
@@ -197,6 +219,7 @@ impl Handle {
                     height: 0,
                     width: 0,
                     is_fallback: false,
+                    rect,
                 };
                 drop(lepas);
                 return Err("CreateCompatibleDC gagal".to_string());
@@ -212,6 +235,7 @@ impl Handle {
                     height: 0,
                     width: 0,
                     is_fallback: false,
+                    rect,
                 };
                 drop(lepas);
                 return Err(format!("CreateCompatibleBitmap {width}x{height} gagal"));
@@ -235,35 +259,22 @@ impl Handle {
                 height: height as u32,
                 width: width as u32,
                 is_fallback: false,
+                rect,
             })
         }
     }
 
-    fn baru_fallback(width: usize, height: usize) -> Result<Self, String> {
+    fn baru_fallback(nama_perangkat: &str, _width: usize, _height: usize) -> Result<Self, String> {
         use windows::Win32::Foundation::HWND;
         use windows::Win32::Graphics::Gdi::{
             CreateCompatibleBitmap, CreateCompatibleDC, GetDC, BITMAPINFO, BITMAPINFOHEADER,
         };
-        use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SYSTEM_METRICS_INDEX};
 
         unsafe {
-            let (w, h) = if width > 0 && height > 0 {
-                (width, height)
-            } else {
-                let vs_w = GetSystemMetrics(SYSTEM_METRICS_INDEX(78)); // SM_CXVIRTUALSCREEN
-                let vs_h = GetSystemMetrics(SYSTEM_METRICS_INDEX(79)); // SM_CYVIRTUALSCREEN
-                let s_w = GetSystemMetrics(SYSTEM_METRICS_INDEX(0)); // SM_CXSCREEN
-                let s_h = GetSystemMetrics(SYSTEM_METRICS_INDEX(1)); // SM_CYSCREEN
-                let fw = if vs_w > 0 { vs_w } else { s_w };
-                let fh = if vs_h > 0 { vs_h } else { s_h };
-                if fw <= 0 || fh <= 0 {
-                    return Err(
-                        "fallback: tidak bisa baca ukuran layar virtual (GetSystemMetrics 0)"
-                            .to_string(),
-                    );
-                }
-                (fw as usize, fh as usize)
-            };
+            let rect = crate::desktop_geometry::monitor_rect(nama_perangkat)
+                .or_else(crate::desktop_geometry::virtual_rect)
+                .ok_or("geometri desktop tidak tersedia")?;
+            let (w, h) = (rect.width as usize, rect.height as usize);
 
             let screen = GetDC(Some(HWND::default()));
             if screen.is_invalid() {
@@ -300,6 +311,7 @@ impl Handle {
                 height: h as u32,
                 width: w as u32,
                 is_fallback: true,
+                rect,
             })
         }
     }
@@ -316,8 +328,8 @@ impl Handle {
                 self.bmi.bmiHeader.biWidth,
                 self.height as i32,
                 Some(self.screen),
-                0,
-                0,
+                if self.is_fallback { self.rect.left } else { 0 },
+                if self.is_fallback { self.rect.top } else { 0 },
                 SRCCOPY,
             ) {
                 return Err(format!(

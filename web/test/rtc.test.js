@@ -9,8 +9,10 @@ import { transformWithOxc } from 'vite';
 // Hanya binding modul yang dialihkan ke fixture; logika RtcSession tetap asli.
 const input = readFileSync(new URL('../src/rtc.ts', import.meta.url), 'utf8')
   .replace(/^import \{([^}]+)\} from '\.\/api';/m, 'const {$1} = api;')
+  .replace(/^import .*$/gm, '')
   .replace(/^export /gm, '');
-const { code } = await transformWithOxc(input + '\nexports.RtcSession = RtcSession;', 'rtc.ts');
+const dependencies=['preview_jpeg.ts','wallpaper_transfer.ts','video_negotiation.ts'].map(name=>readFileSync(new URL('../src/'+name,import.meta.url),'utf8').replace(/^import .*$/gm,'').replace(/^export /gm,'')).join('\n');
+const { code } = await transformWithOxc(dependencies+'\n'+input + '\nexports.RtcSession = RtcSession;', 'rtc.ts');
 const source = code;
 
 function setup(overrides = {}) {
@@ -205,3 +207,5 @@ test('statistik audio terpisah dari video dan energi tak tersedia tidak dikarang
  ]);session.pc={connectionState:'connected',getStats:async()=>report};let s=await session.readStats();assert.equal(s.audioBytesReceived,150);assert.equal(s.audioEnergy,.5);assert.equal(s.bytesReceived,900);
  report.delete('a');s=await session.readStats();assert.equal(s.audioEnergy,undefined);
 });
+
+test('geometry-less capture blocks pointer downs but never blocks release',()=>{const {session}=setup();const sent=[];session.input={readyState:'open',send:b=>sent.push([...new Uint8Array(b)])};session.meta={inputGeometry:null};for(const b of [[2,0,0,0,0],[3,0,1],[3,0,0],[5,17,0,0]])session.sendInput(new Uint8Array(b));assert.deepEqual(sent,[[3,0,0],[5,17,0,0]]);session.meta={inputGeometry:{left:0,top:0,width:1920,height:1080}};session.sendInput(new Uint8Array([3,0,1]));assert.equal(sent.length,3);});

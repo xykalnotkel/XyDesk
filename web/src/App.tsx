@@ -1,9 +1,10 @@
-import { SessionHistoryPage, saveSessionHistory, desktopPreview, accountHistoryToken } from './session_history';
+import { flushSync } from 'react-dom';
+import { SessionHistoryPage, saveSessionHistory, accountHistoryToken } from './session_history';
 import type { HistoryItem, HistoryState } from './session_history';
 import { CustomControlMapping } from './control_mapping';
 import { cursorLayout, playRemoteAudio, newSessionFragment, isSessionFragment, SESSION_UI_REVISION } from './session_runtime';
 import { imageRect, RemotePointer, KeyOwnership } from './remote_pointer';
-import { enterSessionFullscreen, leaveSessionFullscreen } from './session_fullscreen';
+import { enterSessionFullscreen, leaveSessionFullscreen, enterSessionLandscape } from './session_fullscreen';
 import { videoOnlyStream, playRemoteVideo } from './video_playback';
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent, ReactElement } from 'react';
@@ -2111,6 +2112,7 @@ function ConnectScreen({
     const video = videoRef.current, surface = surfaceRef.current;
     return video && surface ? imageRect(video.getBoundingClientRect(), video.videoWidth, video.videoHeight) : null;
   };
+  const hostCursorRef=useRef<{x:number;y:number;visible:boolean}|null>(null);
   const cursorRaf = useRef(0);
   const paintCursor = () => {
     if (cursorRaf.current) return;
@@ -2119,8 +2121,9 @@ function ConnectScreen({
       const el = cursorRef.current, surface = surfaceRef.current;
       if (!el || !surface) return;
       const box = surface.getBoundingClientRect();
-      const layout = cursorLayout(box, getImageRect(), pointerRef.current!.cursor, prefsRef.current.cursorSize);
+      const layout = cursorLayout(box, getImageRect(), hostCursorRef.current||pointerRef.current!.cursor, prefsRef.current.cursorSize);
       el.style.transform = `translate3d(${layout.left}px, ${layout.top}px, 0)`;
+      el.style.visibility=hostCursorRef.current?.visible===false?'hidden':'visible';
       el.dataset.ready = layout.ready ? 'image' : 'waiting-video';
       const svg = el.querySelector('svg');
       if (svg) svg.style.transform = `scale(${layout.flipX ? -1 : 1}, ${layout.flipY ? -1 : 1})`;
@@ -2199,12 +2202,16 @@ function ConnectScreen({
     attempt.item.previewConsent = !!attempt.item.preview;
     void saveSessionHistory(attempt.item, attempt.token).then(()=>setHudToast('Riwayat sesi tersimpan.')).catch(()=>setHudToast('Riwayat belum tersimpan di server. Periksa koneksi akun.'));
   };
-  const capturePreview = () => {
+  const capturePreview = async () => {
     const attempt=historyAttempt.current;
     if(!connected || !previewConsentRef.current || !attempt || attempt.done) return;
     if(attempt.token!==accountHistoryToken()){setHudToast('Akun berubah. Sambungkan ulang sebelum menyimpan preview.');return;}
-    const preview=desktopPreview(videoRef.current);
-    if(!preview){setHudToast('Gambar desktop belum siap. Coba lagi setelah video tampil.');return;}
+    const session=sessionRef.current;
+    if(!session)return;
+    setHudToast('Mengambil wallpaper HD dari host, tanpa menangkap aplikasi terbuka…');
+    let preview:string;
+    try{preview=await session.requestWallpaper();}catch(e){if(sessionRef.current===session && historyAttempt.current===attempt && !attempt.done)setHudToast(e instanceof Error?e.message:'Wallpaper belum tersedia.');return;}
+    if(sessionRef.current!==session || historyAttempt.current!==attempt || attempt.done || !previewConsentRef.current || attempt.token!==accountHistoryToken())return;
     attempt.item.preview=preview;attempt.item.previewConsent=true;
     void saveSessionHistory({...attempt.item,endedAt:Date.now(),state:'interrupted'},attempt.token)
       .then(()=>setHudToast('Preview disimpan untuk ID ini. Tidak diambil ulang otomatis.'))
@@ -2212,9 +2219,17 @@ function ConnectScreen({
   };
 
   const connect = async (isRetry = false) => {
-    setSessionOpen(true);
+    flushSync(()=>setSessionOpen(true));
     historyAttempt.current={item:{id:crypto.randomUUID(),deviceId:hostId.replace(/[\s-]/g,''),name:`PC ${hostId}`,startedAt:Date.now(),endedAt:Date.now(),state:'failed',specs:{},preview:null},token:accountHistoryToken(),done:false};
     const attemptId = historyAttempt.current.item.id;
+    if(!isRetry && surfaceRef.current){
+      const current=()=>historyAttempt.current?.item.id===attemptId && !historyAttempt.current.done;
+      void enterSessionLandscape(surfaceRef.current,current).then(result=>{
+        if(!current())return;
+        if(result==='unavailable')setHudToast('Browser menolak fullscreen otomatis. Gunakan tombol layar penuh dan putar HP ke landscape.');
+        else if(result==='fullscreen')setHudToast('Fullscreen aktif. Kunci landscape tidak tersedia; putar HP secara manual.');
+      });
+    }
     localStorage.setItem(LAST_HOST_KEY, hostId);
     setPhase('pairing');
     setFasePesan(null);
@@ -2223,8 +2238,7 @@ function ConnectScreen({
       retryRef.current.wasConnected = false;
       setRetryInfo('');
     }
-    // Pairing dan negosiasi ditampilkan di surface sesi. Fullscreen native
-    // dan rotasi tetap hanya diminta melalui gesture pengguna.
+    // Klik Konek adalah gesture untuk fullscreen; retry otomatis tidak memaksanya.
     try {
       const jwt = await ensureToken();
       if(historyAttempt.current?.item.id!==attemptId || historyAttempt.current.done) return;
@@ -2233,6 +2247,13 @@ function ConnectScreen({
       // tidak kosongkan supaya rtc.ts memakai tebakan browser + OS.
       session.selfName = accountName;
       sessionRef.current = session;
+      hostCursorRef.current=null;
+      session.onCursor=cursor=>{
+        if(sessionRef.current!==session)return;
+        hostCursorRef.current=cursor;
+        if(cursor.visible)pointerRef.current?.applyHostPosition(cursor.x,cursor.y);
+        paintCursor();
+      };
       session.onPhase = (next) => {
         if(sessionRef.current!==session) return;
         setPhase(next);
@@ -2247,7 +2268,7 @@ function ConnectScreen({
           setRecents(loadRecents());
           if (!sessionFragmentRef.current) sessionFragmentRef.current = newSessionFragment();
           window.history.replaceState({}, '', '/connect' + sessionFragmentRef.current);
-          setHudToast('Sesi memenuhi layar. Ketuk ikon layar penuh untuk menyembunyikan bilah browser.');
+          setHudToast(document.fullscreenElement===surfaceRef.current?'Sesi layar penuh aktif. Jika masih tegak, putar HP ke landscape.':'Sesi aktif. Gunakan tombol layar penuh jika browser menolak permintaan otomatis.');
         }
         // Reconnect otomatis HANYA bila sesi pernah live lalu putus
         // (jaringan goyah) — bukan untuk pairing gagal/password salah.
@@ -2296,6 +2317,7 @@ function ConnectScreen({
         // preferensi sebelum channel siap atau mengirim ulang tiap ganti monitor.
         if (!initialPrefsSent) {
           initialPrefsSent = true;
+          session.setResolution(prefsRef.current.resolution||'1080p');
           session.setQuality(QUALITY_META[prefsRef.current.quality]?.num ?? 0);
           session.setBitrate(prefsRef.current.bitrateMbps);
         }
@@ -2588,7 +2610,7 @@ function ConnectScreen({
             </p>
           )}
           {retryInfo && <p className="status-text">{retryInfo}</p>}
-          <label className="history-consent"><input type="checkbox" checked={previewConsent} onChange={e=>setPreviewConsent(e.target.checked)}/> {accountHistoryToken()?'Izinkan ambil/ganti preview manual pada akun di server':'Izinkan ambil/ganti preview manual di browser ini'} (bisa berisi data pribadi).</label>
+          <label className="history-consent"><input type="checkbox" checked={previewConsent} onChange={e=>setPreviewConsent(e.target.checked)}/> {accountHistoryToken()?'Izinkan simpan/ganti wallpaper HD manual pada akun di server':'Izinkan simpan/ganti wallpaper HD manual di browser ini'} (bisa berisi data pribadi).</label>
           <a className="text-action" href="/history">Buka halaman riwayat</a>
           <button className="connect-cta" disabled={!canConnect} onClick={() => void connect()}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
           <p className="microcopy">Sesi tamu berlaku dua jam. Riwayat tamu disimpan lokal di browser ini.</p>
@@ -2616,7 +2638,7 @@ function ConnectScreen({
           <button className="btn ghost" onClick={disconnect}>Kembali / batalkan</button>
         </div>}
         <div className="remote-input-area" aria-hidden="true" hidden={!connected} />
-        <div ref={cursorRef} className="remote-control-cursor" hidden={!connected || prefs.cursorInVideo} style={{width:prefs.cursorSize,height:prefs.cursorSize*4/3}} aria-hidden="true" data-revision={SESSION_UI_REVISION}>
+        <div ref={cursorRef} className="remote-control-cursor" hidden={!connected || prefs.cursorInVideo || hostMeta?.cursorEmbedded===true} style={{width:prefs.cursorSize,height:prefs.cursorSize*4/3}} aria-hidden="true" data-revision={SESSION_UI_REVISION}>
           <svg viewBox="0 0 24 32">
             <path d="M2 2 L2 25 L8 20 L13 30 L18 27 L13 18 L22 17 Z" fill="white" stroke="#111" strokeWidth="2" strokeLinejoin="round" />
           </svg>
@@ -2752,6 +2774,7 @@ function ConnectScreen({
             onTrackpadMode={(on) => {
               if (on !== trackpad) toggleTrackpad();
             }}
+            onResolution={resolution=>sessionRef.current?.setResolution(resolution)}
             onQuality={(q: StreamQuality) => {
               const num = QUALITY_META[q].num;
               sessionRef.current?.setQuality(num);

@@ -1,0 +1,10 @@
+/home/user/XyDesk/tool/geometry-check/target/x86_64-pc-windows-msvc/debug/deps/windows_future-59cb220c16dce315.d: /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/lib.rs /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/bindings.rs /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/bindings_impl.rs /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/get.rs /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/waiter.rs /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/../readme.md
+
+/home/user/XyDesk/tool/geometry-check/target/x86_64-pc-windows-msvc/debug/deps/libwindows_future-59cb220c16dce315.rmeta: /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/lib.rs /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/bindings.rs /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/bindings_impl.rs /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/get.rs /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/waiter.rs /home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/../readme.md
+
+/home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/lib.rs:
+/home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/bindings.rs:
+/home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/bindings_impl.rs:
+/home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/get.rs:
+/home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/waiter.rs:
+/home/user/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/windows-future-0.2.1/src/../readme.md:

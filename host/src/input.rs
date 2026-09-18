@@ -40,7 +40,7 @@
 pub enum InputEvent {
     /// Gerak relatif (dx, dy) piksel — mode trackpad/FPS.
     MouseMoveRel { dx: i16, dy: i16 },
-    /// Posisi absolut ternormalisasi 0..=65535 pada layar primer.
+    /// Posisi absolut ternormalisasi 0..=65535 pada area capture aktif.
     MouseMoveAbs { x: u16, y: u16 },
     /// Tombol mouse. `button`: 0 kiri, 1 kanan, 2 tengah, 3 x1, 4 x2.
     MouseButton { button: u8, down: bool },
@@ -200,6 +200,7 @@ pub struct Injector;
 
 impl Injector {
     pub fn new() -> Self {
+        crate::desktop_geometry::init_thread_dpi();
         Self
     }
 
@@ -231,8 +232,8 @@ mod windows_inject {
     use super::InputEvent;
     use windows::Win32::UI::Input::KeyboardAndMouse::{
         MapVirtualKeyW, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, INPUT_MOUSE, KEYBDINPUT,
-        KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE, MAPVK_VK_TO_VSC,
-        MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
+        KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, KEYEVENTF_SCANCODE, KEYEVENTF_UNICODE,
+        MAPVK_VK_TO_VSC_EX, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
         MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN,
         MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT,
         MOUSE_EVENT_FLAGS, VIRTUAL_KEY,
@@ -317,13 +318,17 @@ mod windows_inject {
             InputEvent::MouseMoveRel { dx, dy } => {
                 send(&[mouse(MOUSEEVENTF_MOVE, dx as i32, dy as i32, 0)])
             }
-            InputEvent::MouseMoveAbs { x, y } => send(&[mouse(
-                MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE,
-                x as i32,
-                y as i32,
-                0,
-            )]),
+            InputEvent::MouseMoveAbs { x, y } => {
+                let Some((px, py)) = crate::desktop_geometry::active().and_then(|r| r.point(x, y))
+                else {
+                    return false;
+                };
+                unsafe { windows::Win32::UI::WindowsAndMessaging::SetCursorPos(px, py).is_ok() }
+            }
             InputEvent::MouseButton { button, down } => {
+                if down && crate::desktop_geometry::active().is_none() {
+                    return false;
+                }
                 let (flags, data) = match (button, down) {
                     (0, true) => (MOUSEEVENTF_LEFTDOWN, 0),
                     (0, false) => (MOUSEEVENTF_LEFTUP, 0),
@@ -352,8 +357,17 @@ mod windows_inject {
             InputEvent::Key { vk, down } => {
                 // Sertakan scancode — banyak game membaca scancode (raw
                 // input), bukan virtual key.
-                let scan = unsafe { MapVirtualKeyW(vk as u32, MAPVK_VK_TO_VSC) } as u16;
-                let mut flags = KEYEVENTF_SCANCODE;
+                let scan = unsafe { MapVirtualKeyW(vk as u32, MAPVK_VK_TO_VSC_EX) } as u16;
+                // Pause uses E1, not the ordinary E0 prefix; do not turn it into Ctrl.
+                let mut flags = if vk == 0x13 || scan == 0 {
+                    windows::Win32::UI::Input::KeyboardAndMouse::KEYBD_EVENT_FLAGS(0)
+                } else {
+                    KEYEVENTF_SCANCODE
+                };
+                if scan & 0xff00 == 0xe000 {
+                    flags |= windows::Win32::UI::Input::KeyboardAndMouse::KEYEVENTF_EXTENDEDKEY;
+                }
+                let scan = if vk == 0x13 { 0 } else { scan & 0xff };
                 if !down {
                     flags |= KEYEVENTF_KEYUP;
                 }
@@ -663,5 +677,78 @@ mod tests {
         use super::InputEvent::*;
         let satu = vec![MouseMoveAbs { x: 7, y: 7 }];
         assert_eq!(super::buang_abs_basi(satu.clone()), satu);
+    }
+}
+
+/// Track only successfully injected downs so disconnect cannot leave held keys.
+#[derive(Default)]
+pub struct InputLease {
+    keys: std::collections::BTreeSet<u16>,
+    buttons: std::collections::BTreeSet<u8>,
+}
+impl InputLease {
+    pub fn applied(&mut self, event: &InputEvent) {
+        match *event {
+            InputEvent::Key { vk, down } => {
+                if down {
+                    self.keys.insert(vk);
+                } else {
+                    self.keys.remove(&vk);
+                }
+            }
+            InputEvent::MouseButton { button, down } => {
+                if down {
+                    self.buttons.insert(button);
+                } else {
+                    self.buttons.remove(&button);
+                }
+            }
+            _ => {}
+        }
+    }
+    pub fn releases(&mut self) -> Vec<InputEvent> {
+        std::mem::take(&mut self.keys)
+            .into_iter()
+            .map(|vk| InputEvent::Key { vk, down: false })
+            .chain(std::mem::take(&mut self.buttons).into_iter().map(|button| {
+                InputEvent::MouseButton {
+                    button,
+                    down: false,
+                }
+            }))
+            .collect()
+    }
+}
+#[cfg(test)]
+mod lease_tests {
+    use super::*;
+    #[test]
+    fn teardown_releases_only_remaining_successful_holds_once() {
+        let mut lease = InputLease::default();
+        lease.applied(&InputEvent::Key { vk: 17, down: true });
+        lease.applied(&InputEvent::Key { vk: 17, down: true });
+        lease.applied(&InputEvent::Key { vk: 65, down: true });
+        lease.applied(&InputEvent::Key {
+            vk: 65,
+            down: false,
+        });
+        lease.applied(&InputEvent::MouseButton {
+            button: 0,
+            down: true,
+        });
+        assert_eq!(
+            lease.releases(),
+            vec![
+                InputEvent::Key {
+                    vk: 17,
+                    down: false
+                },
+                InputEvent::MouseButton {
+                    button: 0,
+                    down: false
+                }
+            ]
+        );
+        assert!(lease.releases().is_empty());
     }
 }
