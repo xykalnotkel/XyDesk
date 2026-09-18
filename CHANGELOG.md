@@ -24,7 +24,7 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
-- **Host finish (gerbang Windows/kemasan berjalan):** permintaan otomatis mode desktop16:9 pada sesi terotorisasi, hanya mode terdaftar + CDS_TEST, baca ukuran kembali dan status penolakan/override. Tidak registry/driver/restart RDP; opt-out launcher -KeepDesktopResolution. Web menampilkan requested/observed, bukan label HD palsu. Tambah Windows real-Opus roundtrip44.1/48/96kHz. Menyertakan patch audio bd75757 dan input ec0f047.
+- **Host finish (petunjuk installer disinkronkan; pengemasan ulang):** permintaan otomatis mode desktop16:9 pada sesi terotorisasi, hanya mode terdaftar + CDS_TEST, baca ukuran kembali dan status penolakan/override. Tidak registry/driver/restart RDP; opt-out launcher -KeepDesktopResolution. Web menampilkan requested/observed, bukan label HD palsu. Tambah Windows real-Opus roundtrip44.1/48/96kHz. Menyertakan patch audio bd75757 dan input ec0f047.
 
 - **Input queue (kode, belum installer):** full queue tidak mematikan input; backpressure async + batal saat disconnect, coalesce posisi absolut berurutan tanpa melewati klik/key-up. Host Linux **161 tests PASS**, format PASS; belum pembuktian latency Windows/RDP. `docs/qa/input-queue-2026-09-18.md`.
 

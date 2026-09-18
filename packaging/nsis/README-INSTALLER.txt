@@ -1,72 +1,80 @@
 XyDesk Host Test — installer NSIS Windows x64
 
-Paket engine uji 6.8.5; bukan installer aplikasi desktop lengkap.
-Paket uji HOSTGEOMETRY: capture/input memakai koordinat monitor fisik,
-DPI proses/thread, H264 720p/1080p/asli sesuai negosiasi browser, dan preview
-wallpaper Windows HD manual (bukan frame aplikasi). Source SHA engine dan
-checksum ada di manifest.json; installer-source.json mengikat paket ini
-ke engine yang diuji. Bukan rilis produksi dan belum diuji pada RDP pengguna.
-Web/backend harus mendukung protokol baru untuk HD/wallpaper. Installer saja
-tidak memperbarui aplikasi web atau server. Tidak ada perubahan resolusi/
-scaling Windows, restart RDP, autostart, atau layanan otomatis.
+Engine uji 6.8.5 dengan perbaikan audio, antrean keyboard/mouse, serta
+permintaan otomatis desktop16:9. Bukan aplikasi desktop lengkap atau rilis
+bertanda tangan. Source SHA dan checksum ada di manifest.json;
+installer-source.json mengikat installer ke engine yang dibangun/diuji.
 
 PASANG DAN MULAI
-Jika versi uji sebelumnya masih berjalan, putuskan sesi web lalu tekan Ctrl+C
-di konsol XyDesk Host Test milik Anda. Jangan tutup/disconnect aplikasi RDP.
-Pasang ulang ke lokasi yang sama; identitas uji dipertahankan.
-1. Jalankan installer .exe. Pilih folder kosong; default terpisah dari XyDesk lama.
-2. Setelah selesai, klik shortcut "XyDesk Host Test" di Desktop atau Start Menu.
-3. Setelah host siap, beralih ke Chrome HP tanpa mengakhiri sesi RDP.
-   Tidak perlu mempertahankan aplikasi RDP di depan.
-4. Masukkan ID/password yang ditampilkan host ke client web/APK.
-5. Uji tampilan Notepad, gerakan pointer, klik, ketikan, dan pairing ulang.
+Jika host uji sebelumnya masih berjalan, putuskan sesi web lalu tekan Ctrl+C
+di konsol XyDesk Host Test milik Anda. Jangan putuskan RDP untuk langkah ini.
+1. Jalankan installer. Untuk instalasi baru pilih folder kosong; untuk versi
+   uji sebelumnya gunakan lokasi yang sama. Identitas uji dipertahankan.
+2. Buka shortcut "XyDesk Host Test" di Desktop atau Start Menu.
+3. Gunakan https://app.xydesk.my.id dan ID/password dari konsol host.
+   Jangan membagikan password, token, file identitas, atau screenshot konsol.
+4. Uji suara PC, keyboard, pointer/klik di tengah dan empat sudut, serta
+   pelepasan tombol ketika sesi ditutup. Jaga sesi Windows tetap aktif.
 
-Shortcut membuka konsol host melalui PowerShell. Jendela konsol memang
-merupakan antarmuka paket engine uji ini, bukan kegagalan installer.
-Launcher memakai RemoteSigned hanya pada proses PowerShell tersebut;
-tidak mengubah execution policy mesin dan tetap tunduk pada Group Policy.
-Host tidak dijalankan otomatis oleh installer. Ctrl+C menghentikan host uji.
+Shortcut membuka konsol PowerShell; ini memang antarmuka engine uji.
+RemoteSigned berlaku hanya pada proses launcher dan tunduk pada Group Policy.
+Installer tidak menjalankan host otomatis atau mengubah execution policy mesin.
+Ctrl+C menghentikan host. Launcher memakai identitas uji terpisah di
+%LOCALAPPDATA%\XyDesk-RemoteCore-Test, bukan identitas instalasi produk lama.
 
-IDENTITAS DAN UNINSTALL
-Identitas uji ada di %LOCALAPPDATA%\XyDesk-RemoteCore-Test.
-Tidak membaca/mengubah identitas instalasi lama. Jangan bagikan password,
-token, berkas identitas, atau screenshot konsol lengkap.
+DESKTOP16:9 — PERUBAHAN PERILAKU
+Saat sesi yang terotorisasi dimulai, host meminta1920x1080 atau1280x720 sesuai
+kemampuan H264 yang dinegosiasikan. Hanya mode terdaftar yang lolos CDS_TEST
+Windows yang digunakan. Posisi monitor/scaling tidak diubah. Hasil dibaca
+kembali; Windows/RDP dapat menolak atau kemudian menerapkan ulang resolusinya.
+Tidak ada restart/reconnect RDP, instalasi driver, atau penyimpanan mode ke
+registry. Host tidak otomatis mengembalikan resolusi sebelumnya saat berhenti.
 
-Uninstall tersedia di Settings > Apps dan Start Menu > XyDesk Host Test.
-Tutup host uji sendiri dahulu. Uninstaller tidak membunuh proses, tidak
-menghapus identitas uji, dan tidak menghapus file pribadi tambahan di folder
-instalasi. Karena itu folder yang masih berisi file tambahan dapat tetap ada.
+Untuk TIDAK meminta perubahan resolusi, buka PowerShell di folder instalasi:
+  .\Start-TestHost.ps1 -KeepDesktopResolution
+Engine langsung menyediakan flag --keep-desktop-resolution.
 
-Installer tidak memasang service, driver, autostart, firewall rule, atau RDP.
-Saat host dijalankan manual, mekanisme capture/driver produk yang sudah ada
-tetap berlaku. Jangan mengganti driver atau memakai tscon secara spekulatif.
+Panel Gambar web menampilkan desktop diminta, ukuran terbaca, serta hasil
+permintaan. Ukuran gambar hasil decode dilaporkan terpisah. Jika perubahan
+ditolak, sumber tetap mengikuti Windows/RDP; konten dijaga proporsional dalam
+canvas720p/1080p. Desktop16:9 tidak bisa memenuhi seluruh viewport HP bukan16:9
+sekaligus mempertahankan seluruh gambar tanpa crop atau distorsi.
 
-MEMERIKSA GAMBAR DAN INPUT
-Di panel web, pilih 720p/1080p/Asli. Periksa Ukuran gambar dari getStats;
-label pilihan adalah batas, bukan jaminan ukuran 16:9 untuk sumber ultrawide.
-Sumber2336x1080 akan menjadi1920x888 pada1080p, atau tetap2336x1080 padaAsli
-jika browser menyetujui Level5.1. Browser lama dapat dibatasi1280x592.
-Jangan mengubah resolusi atau scaling RDP untuk mengikuti pengujian ini.
+SUARA PC DAN MIC HP
+Suara PC direkam dari output default Windows melalui WASAPI loopback.
+Di web, aktifkan Suara PC dan izinkan pemutaran bila browser menahannya.
+Format perangkat44.1/48/96kHz dinormalisasi ke Opus48kHz dengan paket20ms.
 
-Bandingkan pointer/klik di tengah dan keempat sudut pada direct dan trackpad.
-Uji keyboard dan pelepasan tombol saat putus. Feedback posisi berasal dari
-Windows; aplikasi secure desktop/UAC atau privilege lebih tinggi dapat menolak
-injeksi. Resize/pergantian monitor punya jeda polling dan jaringan.
+Mic HP -> aplikasi Windows memerlukan virtual audio cable yang dipasang dan
+disetujui sendiri oleh pengguna. Contoh: https://vb-audio.com/Cable/
+Pilih recording endpoint-nya (misalnya CABLE Output) di Discord/Zoom/game.
+Host merender mic ke pasangan render endpoint (misalnya CABLE Input).
+Tanpa endpoint virtual, web menjelaskan input mic belum tersedia; tidak
+memainkan mic HP melalui speaker sebagai pengganti. Tidak ada driver dibundel
+atau dipasang otomatis. Izin mic browser tetap diperlukan.
 
-Preview wallpaper HD diambil manual setelah memberi consent. Hanya wallpaper
-Windows lokal; tidak menangkap aplikasi, ikon atau taskbar. Jika sumber tidak
-tersedia/terlalu besar, preview lama tidak diganti. Tidak ada auto-minimize.
+KINERJA, KONTROL, DAN PREVIEW
+Antrean injeksi penuh tidak lagi menghentikan penerimaan input. Posisi absolut
+berurutan digabung, tetapi urutan tombol/klik/lepas dan delta relatif dijaga.
+Ini bukan janji zero-lag. CPU/GPU, encode, jaringan, buffer dan decode tetap
+menentukan kecepatan. Panel web memisahkan RTT, decode/frame, buffer video,
+serta antrean input lokal. Aplikasi elevated/UAC dapat menolak injeksi.
 
-Bila hitam, periksa log capture -> kirim, SPS, getStats framesDecoded dan ukuran
-video. Angka capture adalah sumber; angka kirim/decoder adalah transport.
-Kelancaran aktual mengikuti CPU/GPU dan jaringan VM. Tidak dijanjikan selalu
-30fps; mode asli maksimal15fps untuk mengutamakan detail.
+Preview wallpaper HD otomatis saat diizinkan dan dapat dinonaktifkan. Hanya
+wallpaper lokal, bukan aplikasi, ikon, atau taskbar. Tidak ada auto-minimize.
+Jika sumber tidak tersedia, host tidak menggantinya dengan screenshot desktop.
 
-BATAS DAN LISENSI
-Installer dan engine uji belum ditandatangani Authenticode. Periksa checksum
-serta sumber unduhan; jangan menonaktifkan perlindungan mesin secara global.
-Installer tidak men-deploy Worker/web atau memperbarui APK.
-Build/smoke installer tidak membuktikan capture/input/audio di RDP Anda.
+UNINSTALL DAN BATAS
+Gunakan Settings > Apps atau Start Menu > XyDesk Host Test > Uninstall.
+Hentikan host sendiri dahulu. Uninstaller tidak membunuh proses dan menjaga
+identitas uji serta file pribadi tambahan dalam folder instalasi.
+Tidak ada service, autostart, firewall rule, atau konfigurasi RDP yang dipasang.
+Installer tidak memperbarui APK/web/server; web diperbarui terpisah.
 
-Lisensi XyDesk: LICENSE-XyDesk.txt. Komponen: THIRD-PARTY-LICENSES.md
-serta folder licenses. Informasi sumber: manifest.json dan installer-source.json.
+Installer/engine belum ditandatangani Authenticode. Verifikasi SHA-256 dan asal
+paket; jangan menonaktifkan keamanan Windows secara global. Bila diblokir oleh
+kebijakan mesin, gunakan proses persetujuan administrator yang berlaku.
+Build, tes unit, roundtrip codec, dan uji installer bukan bukti suara, injeksi,
+resolusi atau latensi pada RDP fisik Anda. Paket ini belum diuji pada PC Anda.
+
+Lisensi: LICENSE-XyDesk.txt, THIRD-PARTY-LICENSES.md, dan folder licenses.
