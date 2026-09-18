@@ -353,6 +353,8 @@ export type BitrateMbps = 0 | 8 | 15 | 25 | 50;
 export type SessionPrefs = {
   volume: number;
   sens: number;
+  cursorSize: number;
+  cursorInVideo: boolean;
   tapClick: boolean;
   reverseScroll: boolean;
   quality: StreamQuality;
@@ -377,6 +379,8 @@ export const BITRATE_OPTIONS: { value: BitrateMbps; label: string; hint: string 
 export const DEFAULT_PREFS: SessionPrefs = {
   volume: 0.8,
   sens: 1.7,
+  cursorSize: 36,
+  cursorInVideo: false,
   tapClick: true,
   reverseScroll: false,
   quality: 'auto',
@@ -456,6 +460,8 @@ export function fmtDurasi(totalDetik: number): string {
 }
 
 export function SessionPanel({
+  previewConsent,
+  onPreviewConsent,
   prefs,
   onChange,
   onClose,
@@ -473,6 +479,8 @@ export function SessionPanel({
   onQuality,
   onBitrate,
 }: {
+  previewConsent?: boolean;
+  onPreviewConsent?: (on:boolean)=>void;
   prefs: SessionPrefs;
   onChange: (next: SessionPrefs) => void;
   onClose: () => void;
@@ -646,6 +654,9 @@ export function SessionPanel({
 
       {tab === 'kontrol' && (
         <>
+          <p className="spanel-section">Penunjuk mouse</p>
+          <label className="spanel-note">Ukuran panah lokal: {prefs.cursorSize}px<input aria-label="Ukuran panah" type="range" min="24" max="96" value={prefs.cursorSize} onChange={e=>onChange({...prefs,cursorSize:Number(e.target.value)})}/></label>
+          <ToggleRow label="Gunakan panah dalam video" hint="Aktifkan hanya jika panah Windows sudah terlihat dalam video. Host GDI bisa tidak menyertakannya. Tombol Temukan panah memulihkan panah lokal." on={prefs.cursorInVideo} onToggle={()=>onChange({...prefs,cursorInVideo:!prefs.cursorInVideo})}/>
           <p className="spanel-section">Gerak kursor</p>
           <div className="spanel-seg">
             <button
@@ -674,8 +685,8 @@ export function SessionPanel({
           </div>
           <input
             type="range"
-            min={8}
-            max={30}
+            min={2}
+            max={40}
             value={Math.round(prefs.sens * 10)}
             onChange={(e) => onChange({ ...prefs, sens: Number(e.target.value) / 10 })}
           />
@@ -696,6 +707,8 @@ export function SessionPanel({
 
       {tab === 'sesi' && (
         <>
+          <p className="spanel-section">Riwayat</p>
+          <ToggleRow label="Simpan preview desktop" hint="Opsional untuk sesi ini. Tamu: lokal; akun: server. Bisa berisi data pribadi." on={!!previewConsent} onToggle={()=>onPreviewConsent?.(!previewConsent)}/>
           <p className="spanel-section">Sesi</p>
           <div className="spanel-card">
             <StatRow label="Terhubung ke" value={hostId} />

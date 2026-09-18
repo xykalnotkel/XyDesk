@@ -22,12 +22,16 @@ export class RemotePointer {
   cursor: Position = { x: 0.5, y: 0.5 };
   private contacts = new Map<number, Contact>();
   private buttons = new Set<number>();
+  private buttonOwners = new Map<number, Set<string>>();
   private multi = false;
   constructor(private rect: () => Rect | null, private emit: (event: PointerOutput) => void) {}
-  button(button: number, down: boolean) {
-    if (down === this.buttons.has(button)) return;
-    if (down) this.buttons.add(button); else this.buttons.delete(button);
-    this.emit({ type: 'button', button, down });
+  button(button: number, down: boolean, owner = 'pointer') {
+    const owners = this.buttonOwners.get(button) ?? new Set<string>();
+    const wasDown = owners.size > 0;
+    if (down) owners.add(owner); else owners.delete(owner);
+    if (owners.size) { this.buttonOwners.set(button, owners); this.buttons.add(button); }
+    else { this.buttonOwners.delete(button); this.buttons.delete(button); }
+    if (wasDown !== (owners.size > 0)) this.emit({ type: 'button', button, down: owners.size > 0 });
   }
   private position(x: number, y: number) {
     this.cursor = { x: clamp(x), y: clamp(y) };
@@ -79,7 +83,8 @@ export class RemotePointer {
     if (this.contacts.size === 0) this.multi = false;
   }
   reset() {
-    for (const b of [...this.buttons]) this.button(b, false);
+    for (const b of this.buttons) this.emit({type:'button',button:b,down:false});
+    this.buttons.clear(); this.buttonOwners.clear();
     this.contacts.clear(); this.multi = false;
   }
 }

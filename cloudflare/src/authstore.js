@@ -1,3 +1,4 @@
+import { historyEndpoint, deleteUserHistory } from './session_history.js';
 import { AdminSecurity } from './admin_security.js';
 import { validMaintenancePatch, emptyMaintenance } from './maintenance.js';
 // XyDesk AuthStore — Durable Object yang menyimpan user & OTP (KV storage)
@@ -103,6 +104,7 @@ export class AuthStore {
     if (path === '/auth/rebind-device' && request.method === 'POST') {
       return this.rebindDevice(request);
     }
+    if (path === '/auth/session-history') return historyEndpoint(request, this.ctx.storage, await this.userFromRequest(request));
     if (path === '/auth/me' && request.method === 'GET') {
       return this.me(request);
     }
@@ -712,8 +714,7 @@ export class AuthStore {
   async deleteAccount(request) {
     const user = await this.userFromRequest(request);
     if (!user) return json({ error: 'unauthorized' }, 401);
-    await this.ctx.storage.delete(`user:${user.email}`);
-    await this.ctx.storage.delete(`otp:${user.email}`);
+    if (!await deleteUserHistory(this.ctx.storage, user.id, user.email)) return json({error:'unauthorized'},401);
     return json({ ok: true }, 200);
   }
 

@@ -4,13 +4,15 @@ export const SESSION_UI_REVISION = 'pointer-v2';
 
 // Balik panah di tepi supaya seluruh bentuknya tidak jatuh di luar surface.
 // Hotspot tetap pada posisi perintah, bukan digeser menjauh dari tepi gambar.
-export function cursorLayout(box: Rect, image: Rect | null, pos: Position) {
+export function cursorLayout(box: Rect, image: Rect | null, pos: Position, size = 36) {
   const r = image ?? box;
   const x = r.left - box.left + pos.x * r.width;
   const y = r.top - box.top + pos.y * r.height;
-  const flipX = x > box.width - 36;
-  const flipY = y > box.height - 48;
-  return { left: x - (flipX ? 33 : 3), top: y - (flipY ? 45 : 3), flipX, flipY, ready: !!image };
+  const width = Math.max(24, Math.min(96, size)), height=width*4/3;
+  const tip=width/12;
+  const flipX = x > box.width - width;
+  const flipY = y > box.height - height;
+  return { left: x - (flipX ? width-tip : tip), top: y - (flipY ? height-tip : tip), flipX, flipY, ready: !!image };
 }
 
 export async function playRemoteAudio(audio: HTMLAudioElement, stream?: MediaStream) {

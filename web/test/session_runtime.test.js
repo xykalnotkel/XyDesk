@@ -26,3 +26,4 @@ test('URL session acak 256 bit tidak membawa kredensial dan parser ketat',()=>{
  const random={getRandomValues:a=>{for(let i=0;i<a.length;i++)a[i]=i;return a;}};
  const h=newSessionFragment(random);assert.equal(h.length,73);assert.ok(isSessionFragment(h));assert.ok(isSessionFragment('#session'));assert.equal(isSessionFragment(h+'/x'),false);assert.equal(isSessionFragment('#session/password'),false);
 });
+test('ukuran96px mempertahankan hotspot saat panah dibalik di sudut',()=>{const box={left:0,top:0,width:844,height:390};const p=cursorLayout(box,box,{x:1,y:1},96);assert.equal(p.left+88,844);assert.equal(p.top+120,390);assert.ok(p.flipX&&p.flipY);});

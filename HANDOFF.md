@@ -1836,3 +1836,26 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   berikutnya resume token contract end-to-end, capability/120fps + settings
   ACK, Windows audio field test. Tidak ada proses implementasi lanjutan
   yang berjalan sendiri setelah penyerahan ini.
+
+### SESSIONUX — implementasi dan verifikasi sebelum deploy
+
+- Permintaan user: resolusi selectable720/1080/Asli; guest history lokal,
+  akun server; mapping desktop+gaming bebas posisi/ukuran/landscape. Preview
+  ditetapkan opt-in aman (belum ada izin automatic screenshot).
+- Web: loading dalam session+cancel-safe; cursor24–96px/sens0,2–4x/opsi
+  panah yang sudah ada dalam video; mapping bebas dengan penyimpanan per
+  orientasi; /history dengan nama/spec dari hardware meta, status sesi,
+  preview opt-in dan delete. Native cursor bukan capture GDI baru.
+- Backend: AuthStore /auth/session-history private (JWT+record user), quota/
+  validation/allowlist,20record,JPEG32KiB/body48KiB,40write/min, transactions,
+  atomic account deletion cleanup. Guest data tidak auto-upload saat login;
+  account save gagal tidak ditulis diam-diam sebagai guest.
+- Web51/Worker155 PASS. Workerd auth regression + SQLite history concurrency
+ 21writes/retention20/account-delete-race zero orphan PASS. Chromium portrait/
+  landscape actual React + stub transport guest preview/history/mapping/loading/
+  cursor-size PASS. Batas bukti di docs/qa/session-ux-scope-2026-09-17.md.
+- **Sisa penting:** HD selection belum tersedia karena H264Level3.1 frame-size
+  limit; bukan persoalan menurunkan FPS saja.120fps/resume tetap belum.
+  Audit tambahan: receive_mic host menunggu track hanya~30s, sehingga enable
+  mic terlambat perlu perbaikan host+installer dan tes. Tidak boleh mengklaim
+  semua audio/mic Windows berfungsi hanya dari tes frontend.

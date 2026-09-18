@@ -1,0 +1,20 @@
+{
+  "result": "PASS",
+  "webTests": 51,
+  "workerTests": 155,
+  "typescriptAndVite": true,
+  "workerdAuthRegression": true,
+  "sqliteHistoryConcurrency": {
+    "writes": 21,
+    "retained": 20,
+    "accountDeleteRaceOrphanKeys": 0
+  },
+  "screenshotConsent": "default off, guest local, account server, reset when account changes",
+  "notProven": [
+    "HD/native resolution",
+    "120fps",
+    "refresh-resume",
+    "Windows mic/audio end-to-end",
+    "actual Android pointer/control field test"
+  ]
+}

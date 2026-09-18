@@ -2845,3 +2845,45 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
 .hud-mouse button { touch-action: none; user-select: none; }
 
 .remote-input-area { position: absolute; inset: 0; z-index: 1; touch-action: none; cursor: none; }
+
+/* Sesi: proses pairing dan negosiasi berada di surface yang sama dengan video. */
+.session-connecting { position:absolute; inset:0; z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:32px; text-align:center; color:#fff; background:radial-gradient(ellipse at 50% 20%,#271b43,#101015 70%); }
+.session-connecting h2 { max-width:620px; font-size:clamp(22px,4vw,34px); }
+.session-connecting p { color:#b7b5c1; }
+.session-spinner { width:30px;height:30px;border:3px solid #ffffff26;border-top-color:#b58cff;border-radius:50%;animation:session-spin 1s linear infinite; }
+@keyframes session-spin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce){.session-spinner{animation:none}}
+.history-consent { display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--text-mid);margin:12px 0; }
+.history-consent input { width:auto!important;margin-top:3px; }
+.remote-control-cursor[hidden],.remote-input-area[hidden]{display:none!important}
+.mapping-tools { position:absolute;left:12px;top:60px;z-index:12;display:flex;flex-direction:column;gap:5px;max-width:200px;color:white;font-size:12px; }
+.mapping-tools button,.mapping-editor button { background:#6d28d9;color:white;border-radius:8px;padding:9px 12px; }
+.mapping-button { position:absolute;z-index:9;transform:translate(-50%,-50%);border-radius:16px;background:#211833b8;border:1px solid #b68cff8c;color:#fff;font-weight:700;touch-action:none;user-select:none;overflow:hidden;font-size:12px; }
+.mapping-button:active { background:#7540c8; }
+.mapping-button.editing { border:2px dashed #bea0ff;cursor:move; }
+.mapping-button.selected { box-shadow:0 0 0 3px #8b5cf660; }
+.mapping-editor { position:absolute;left:12px;top:108px;z-index:13;width:min(280px,calc(100% - 110px));max-height:calc(100% - 120px);overflow:auto;background:#f8f7fc;color:#222;padding:16px;border-radius:12px;box-shadow:0 12px 50px #0008;touch-action:pan-y; }
+.mapping-editor p { font-size:11px;line-height:1.5;margin:8px 0; }
+.mapping-editor label { display:flex;flex-direction:column;gap:5px;font-size:12px;margin:10px 0; }
+.mapping-editor input,.mapping-editor select { width:100%;min-height:34px;padding:5px;border:1px solid #d9d3e5;border-radius:6px; }
+.mapping-editor input[type=range] { padding:0; }
+.history-page { max-width:1200px;margin:40px auto;padding:24px; }
+.history-heading { display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:28px; }
+.history-heading h1 { font-size:clamp(28px,5vw,44px);letter-spacing:-1.5px;margin:6px 0 12px; }
+.history-heading p,.history-content p { color:var(--text-mid);font-size:13px;line-height:1.6; }
+.history-actions { display:flex;gap:10px;margin-bottom:24px; }
+.history-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:22px; }
+.history-card { background:var(--surface,#fff);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px #271a4510; }
+.history-banner { height:185px;position:relative;background:linear-gradient(120deg,#251938,#645078); }
+.history-banner img { width:100%;height:100%;object-fit:contain;background:#111; }
+.history-banner>div { height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;color:#dfd3ee; }
+.history-banner>div>span { font-size:45px; }
+.history-status { position:absolute;left:12px;bottom:12px;color:#fff;background:#1a152dcc;border-radius:20px;padding:6px 10px;font-size:11px; }
+.history-content { padding:20px; }
+.history-content h2 { margin:0;font-size:20px;overflow-wrap:anywhere; }
+.history-content dl>div { display:grid;grid-template-columns:85px 1fr;gap:12px;font-size:12px;margin:12px 0; }
+.history-content dd { margin:0;overflow-wrap:anywhere; }
+.history-content footer { display:flex;justify-content:space-between;align-items:center;margin-top:20px; }
+.history-content summary { cursor:pointer;font-weight:600;margin-top:16px;font-size:13px; }
+.history-empty { padding:48px 24px;text-align:center;border-radius:16px;background:#efeaf5; }
+@media(max-width:600px){.history-heading{align-items:flex-start;flex-direction:column}.history-page{margin-top:12px;padding:18px}}

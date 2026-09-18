@@ -1,3 +1,6 @@
+import { SessionHistoryPage, saveSessionHistory, desktopPreview, accountHistoryToken } from './session_history';
+import type { HistoryItem, HistoryState } from './session_history';
+import { CustomControlMapping } from './control_mapping';
 import { cursorLayout, playRemoteAudio, newSessionFragment, isSessionFragment, SESSION_UI_REVISION } from './session_runtime';
 import { imageRect, RemotePointer } from './remote_pointer';
 import { enterSessionFullscreen, leaveSessionFullscreen } from './session_fullscreen';
@@ -67,12 +70,12 @@ import {
 } from './version';
 import { vkFromCode } from './vk';
 import BillingPage from './Billing';
-import { VirtualKeyboard, GamingPad, SessionPanel, SessionRail, DEFAULT_PREFS, QUALITY_META, fmtDurasi, useElapsedSec } from './session_ui';
+import { VirtualKeyboard,  SessionPanel, SessionRail, DEFAULT_PREFS, QUALITY_META, fmtDurasi, useElapsedSec } from './session_ui';
 import type { SessionPrefs, StreamQuality, BitrateMbps } from './session_ui';
 import { QrScanModal, ConnectGuide, SupportLinks } from './connect_extras';
 import { WhatsAppIcon, TelegramIcon, XIcon, FacebookIcon } from './brand-icons';
 
-type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news' | '/billing';
+type StaticRoute = '/' | '/connect' | '/download' | '/legal' | '/news' | '/billing' | '/history';
 type Route = StaticRoute | NewsDetailRoute;
 interface NewsDetailRoute {
   page: 'news-detail';
@@ -144,6 +147,8 @@ function currentRoute(): Route {
   switch (raw) {
     case '/connect':
       return '/connect';
+    case '/history':
+      return '/history';
     case '/download':
       return '/download';
     case '/legal':
@@ -191,7 +196,8 @@ export default function App() {
   }
 
   let page: React.ReactNode;
-  if (route === '/download') page = <DownloadPage />;
+  if (route === '/history') page = <SessionHistoryPage />;
+  else if (route === '/download') page = <DownloadPage />;
   else if (route === '/legal') page = <LegalPage />;
   else if (route === '/billing') page = <BillingPage />;
   else if (route === '/news') page = <NewsPage navigate={navigate} />;
@@ -256,6 +262,7 @@ function SiteHeader({
       </button>
       {!bare && (
         <nav className="top-nav">
+          <button className={current === '/history' ? 'active' : ''} onClick={() => navigate('/history')}>Riwayat</button>
           <button className={current === '/' ? 'active' : ''} onClick={() => navigate('/')}>
             Beranda
           </button>
@@ -314,6 +321,7 @@ function SiteHeader({
         <>
           <div className="nav-backdrop" onClick={() => setMenuOpen(false)} aria-hidden="true" />
           <nav id="mobile-nav" className="mobile-nav">
+            <button className={current === '/history' ? 'active' : ''} onClick={() => go('/history')}>Riwayat</button>
             <button className={current === '/' ? 'active' : ''} onClick={() => go('/')}>
               Beranda
             </button>
@@ -1995,6 +2003,11 @@ function ConnectScreen({
   const [pin, setPin] = useState('');
   const [phase, setPhase] = useState<RtcPhase | ''>('');
   const sessionFragmentRef = useRef('');
+  const [sessionOpen, setSessionOpen] = useState(false);
+  const [previewConsent, setPreviewConsent] = useState(false);
+  const previewConsentRef = useRef(false); previewConsentRef.current = previewConsent;
+  useEffect(()=>setPreviewConsent(false),[accountName]);
+  const historyAttempt = useRef<{item:HistoryItem;token:string|null;done:boolean}|null>(null);
   const [recents, setRecents] = useState<RecentEntry[]>(loadRecents);
   const [recentsOpen, setRecentsOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -2033,7 +2046,7 @@ function ConnectScreen({
   const [prefs, setPrefs] = useState<SessionPrefs>(() => {
     try {
       const raw = JSON.parse(localStorage.getItem('xydesk.session.prefs') ?? '{}');
-      return { ...DEFAULT_PREFS, ...raw } as SessionPrefs;
+      return { ...DEFAULT_PREFS, ...raw, sens:Math.max(.2,Math.min(4,Number(raw.sens)||DEFAULT_PREFS.sens)), cursorSize:Math.max(24,Math.min(96,Number(raw.cursorSize)||36)), cursorInVideo:raw.cursorInVideo===true } as SessionPrefs;
     } catch {
       return DEFAULT_PREFS;
     }
@@ -2104,7 +2117,7 @@ function ConnectScreen({
       const el = cursorRef.current, surface = surfaceRef.current;
       if (!el || !surface) return;
       const box = surface.getBoundingClientRect();
-      const layout = cursorLayout(box, getImageRect(), pointerRef.current!.cursor);
+      const layout = cursorLayout(box, getImageRect(), pointerRef.current!.cursor, prefsRef.current.cursorSize);
       el.style.transform = `translate3d(${layout.left}px, ${layout.top}px, 0)`;
       el.dataset.ready = layout.ready ? 'image' : 'waiting-video';
       const svg = el.querySelector('svg');
@@ -2139,16 +2152,17 @@ function ConnectScreen({
     };
   }, [connected]);
 
+  useEffect(()=>{paintCursor();},[prefs.cursorSize,prefs.cursorInVideo]);
   const canConnect = hostId.replace(/[\s-]/g, '').length === 9 && pin.length >= 6 && !['pairing', 'negotiating'].includes(phase);
 
   // Layout sesi selalu memenuhi viewport; fullscreen browser hanya dari gesture.
   const [fullscreenOn, setFullscreenOn] = useState(false);
   useEffect(() => {
-    if (!connected) return;
+    if (!sessionOpen) return;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = overflow; };
-  }, [connected]);
+  }, [sessionOpen]);
   useEffect(() => {
     const onFsChange = () => setFullscreenOn(document.fullscreenElement === surfaceRef.current && !!surfaceRef.current);
     document.addEventListener('fullscreenchange', onFsChange);
@@ -2174,7 +2188,25 @@ function ConnectScreen({
     } catch { /* Rotasi mengikuti dukungan dan pengaturan perangkat. */ }
   }, []);
 
+  const finishHistory = (state:HistoryState) => {
+    const attempt = historyAttempt.current;
+    if(!attempt || attempt.done) return;
+    attempt.done = true;
+    attempt.item.endedAt = Date.now(); attempt.item.state = state;
+    attempt.item.preview = previewConsentRef.current ? (desktopPreview(videoRef.current) || attempt.item.preview) : null;
+    attempt.item.previewConsent = !!attempt.item.preview;
+    void saveSessionHistory(attempt.item, attempt.token).then(()=>setHudToast('Riwayat sesi tersimpan.')).catch(()=>setHudToast('Riwayat belum tersimpan di server. Periksa koneksi akun.'));
+  };
+  useEffect(()=>{
+    if(!connected || !previewConsent) { if(historyAttempt.current) historyAttempt.current.item.preview=null; return; }
+    const snap=()=>{if(historyAttempt.current&&!historyAttempt.current.done)historyAttempt.current.item.preview=desktopPreview(videoRef.current);};
+    const timer=setInterval(snap,5000);return()=>clearInterval(timer);
+  },[connected,previewConsent]);
+
   const connect = async (isRetry = false) => {
+    setSessionOpen(true);
+    historyAttempt.current={item:{id:crypto.randomUUID(),deviceId:hostId.replace(/[\s-]/g,''),name:`PC ${hostId}`,startedAt:Date.now(),endedAt:Date.now(),state:'failed',specs:{},preview:null},token:accountHistoryToken(),done:false};
+    const attemptId = historyAttempt.current.item.id;
     localStorage.setItem(LAST_HOST_KEY, hostId);
     setPhase('pairing');
     setFasePesan(null);
@@ -2183,17 +2215,20 @@ function ConnectScreen({
       retryRef.current.wasConnected = false;
       setRetryInfo('');
     }
-    // Pairing tetap di form. Layout viewport aktif setelah Connected;
-    // fullscreen native/rotasi hanya diminta dari tombol pengguna.
+    // Pairing dan negosiasi ditampilkan di surface sesi. Fullscreen native
+    // dan rotasi tetap hanya diminta melalui gesture pengguna.
     try {
       const jwt = await ensureToken();
+      if(historyAttempt.current?.item.id!==attemptId || historyAttempt.current.done) return;
       const session = new RtcSession();
       // Label perangkat untuk pesan `pair`: nama akun bila login, kalau
       // tidak kosongkan supaya rtc.ts memakai tebakan browser + OS.
       session.selfName = accountName;
       sessionRef.current = session;
       session.onPhase = (next) => {
+        if(sessionRef.current!==session) return;
         setPhase(next);
+        if(['ended','error','rejected','peer-offline','host-busy'].includes(next)) finishHistory(next==='ended'||retryRef.current.wasConnected?'interrupted':'failed');
         setFasePesan(next === 'error' ? session.lastError : null);
         if (next === 'connected') {
           retryRef.current.tries = 0;
@@ -2243,6 +2278,12 @@ function ConnectScreen({
       session.onMeta = (meta) => {
         if (sessionRef.current !== session) return;
         setHostMeta(meta);
+        const attempt=historyAttempt.current;
+        if(attempt && !attempt.done && meta.hardware) {
+          const specs:Record<string,string>={};
+          for(const key of ['hostname','os','cpu','gpu','ram','storage','motherboard']) {const value=meta.hardware[key];if(typeof value==='string')specs[key]=value.slice(0,180);}
+          attempt.item.specs=specs; attempt.item.name=specs.hostname||attempt.item.name;
+        }
         // Meta tiba lewat channel input yang sudah terbuka. Jangan kirim
         // preferensi sebelum channel siap atau mengirim ulang tiap ganti monitor.
         if (!initialPrefsSent) {
@@ -2267,16 +2308,20 @@ function ConnectScreen({
       // Sebelumnya ini jatuh ke `ended` ("Sesi berakhir") — terdengar seperti
       // akhir normal, padahal tidak ada sesi yang pernah dimulai, dan tombol
       // Konek tidak memberi tahu apa yang harus diperbaiki.
+      if(historyAttempt.current?.item.id!==attemptId || historyAttempt.current.done) return;
       setPhase('error');
       setFasePesan(
         'Tidak dapat menghubungi server XyDesk. Periksa koneksi internet, ' +
           'lalu coba lagi.',
       );
+      finishHistory('failed');
       console.warn('[xydesk] connect gagal:', err);
     }
   };
 
   const disconnect = useCallback(() => {
+    finishHistory(historyAttempt.current && retryRef.current.wasConnected ? 'ended' : 'cancelled');
+    setSessionOpen(false); setPreviewConsent(false);
     if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
     retryRef.current.tries = 3; // blok retry setelah putus manual
     pointerRef.current?.reset();
@@ -2370,39 +2415,34 @@ function ConnectScreen({
     setHudToast('Meminta isi papan klip PC…');
   };
 
-  // Keyboard fisik -> host. Aktif hanya saat sesi live; preventDefault agar
-  // shortcut browser (Ctrl+W dsb.) tidak membajak sesi.
+  // Tombol fisik yang sudah turun harus dilepas walau fokus pindah ke editor.
   useEffect(() => {
     if (!connected) return;
-    const down = (e: KeyboardEvent) => {
-      const vk = vkFromCode(e.code);
-      if (vk === null) return;
-      e.preventDefault();
-      send(InputCodec.key(vk, true));
+    const keys = new Set<number>();
+    const release = () => { for(const vk of keys) send(InputCodec.key(vk,false)); keys.clear(); };
+    const down = (e:KeyboardEvent) => {
+      if(document.querySelector('.mapping-tools[data-editing="true"]') || (e.target instanceof HTMLElement && e.target.closest('input,textarea,select,[contenteditable="true"]'))) return;
+      const vk=vkFromCode(e.code); if(vk===null) return;
+      keys.add(vk); e.preventDefault(); send(InputCodec.key(vk,true));
     };
-    const up = (e: KeyboardEvent) => {
-      const vk = vkFromCode(e.code);
-      if (vk === null) return;
-      e.preventDefault();
-      send(InputCodec.key(vk, false));
+    const up = (e:KeyboardEvent) => {
+      const vk=vkFromCode(e.code); if(vk===null || !keys.delete(vk)) return;
+      e.preventDefault(); send(InputCodec.key(vk,false));
     };
-    window.addEventListener('keydown', down);
-    window.addEventListener('keyup', up);
-    return () => {
-      window.removeEventListener('keydown', down);
-      window.removeEventListener('keyup', up);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connected]);
+    const visibility=()=>{if(document.hidden)release();};
+    window.addEventListener('keydown',down);window.addEventListener('keyup',up);window.addEventListener('blur',release);document.addEventListener('visibilitychange',visibility);
+    return()=>{release();window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',release);document.removeEventListener('visibilitychange',visibility);};
+  },[connected]);
 
   const isImageTarget = (e: { target: EventTarget }) => e.target === videoRef.current || e.target === surfaceRef.current || (e.target instanceof HTMLElement && e.target.classList.contains('remote-input-area'));
   const pointerMode = (e: React.PointerEvent) => trackpad && e.pointerType !== 'mouse';
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isImageTarget(e)) return;
+    if (!connected || !isImageTarget(e)) return;
     const accepted = pointerRef.current!.down(e.pointerId, e.clientX, e.clientY, e.button === 2 ? 1 : e.button === 1 ? 2 : 0, pointerMode(e), performance.now());
     if (accepted) { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); }
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!connected) return;
     if (!isImageTarget(e) && !e.currentTarget.hasPointerCapture(e.pointerId)) return;
     pointerRef.current!.move(e.pointerId, e.clientX, e.clientY, pointerMode(e), prefs.sens, prefs.reverseScroll);
   };
@@ -2412,7 +2452,7 @@ function ConnectScreen({
   const mouseHold = (e: React.PointerEvent<HTMLButtonElement>, button: number, down: boolean) => {
     e.stopPropagation(); e.preventDefault();
     if (down) { e.currentTarget.setPointerCapture(e.pointerId); pointerRef.current!.sync(); }
-    pointerRef.current!.button(button, down);
+    pointerRef.current!.button(button, down, 'hud');
   };
 
   const labels: Record<string, string> = {
@@ -2433,8 +2473,8 @@ function ConnectScreen({
 
   return (
     <>
-    <section className={connected ? 'remote-session' : 'connect-card surface-card'}>
-      {!connected && (
+    <section className={sessionOpen ? 'remote-session' : 'connect-card surface-card'}>
+      {!sessionOpen && (
         <div className="connect-form">
           <h1>Kendalikan PC dari browser.</h1>
           <p className="muted">Tidak perlu akun. Ambil ID dan password dari XyDesk Host di PC.</p>
@@ -2536,14 +2576,16 @@ function ConnectScreen({
             </p>
           )}
           {retryInfo && <p className="status-text">{retryInfo}</p>}
+          <label className="history-consent"><input type="checkbox" checked={previewConsent} onChange={e=>setPreviewConsent(e.target.checked)}/> {accountHistoryToken()?'Simpan preview desktop sesi ini pada akun di server':'Simpan preview desktop sesi ini hanya di browser ini'} (bisa berisi data pribadi).</label>
+          <a className="text-action" href="/history">Buka halaman riwayat</a>
           <button className="connect-cta" disabled={!canConnect} onClick={() => void connect()}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
-          <p className="microcopy">Sesi tamu berlaku dua jam dan tidak menyimpan identitas.</p>
+          <p className="microcopy">Sesi tamu berlaku dua jam. Riwayat tamu disimpan lokal di browser ini.</p>
         </div>
       )}
       <div
         ref={surfaceRef}
         className="video-surface"
-        hidden={!connected}
+        hidden={!sessionOpen}
         onPointerMove={onPointerMove}
         onPointerDown={onPointerDown}
         onPointerUp={(e) => onPointerEnd(e, false)}
@@ -2553,8 +2595,16 @@ function ConnectScreen({
         onContextMenu={(e) => e.preventDefault()}
       >
         <video ref={videoRef} autoPlay playsInline muted onLoadedMetadata={paintCursor} onResize={paintCursor} />
-        <div className="remote-input-area" aria-hidden="true" />
-        <div ref={cursorRef} className="remote-control-cursor" aria-hidden="true" data-revision={SESSION_UI_REVISION}>
+        {sessionOpen && !connected && <div className="session-connecting" role="status">
+          <img src="/logo.png" alt="XyDesk" width="64" height="64"/>
+          {['pairing','negotiating'].includes(phase)&&<span className="session-spinner" aria-hidden="true"/>}
+          <h2>{(phase==='error'&&fasePesan)||labels[phase]||'Menyiapkan sesi…'}</h2>
+          <p>{hostId} · {phase==='pairing'?'Memverifikasi pairing dengan PC.':phase==='negotiating'?'Menyiapkan video, audio, dan kontrol.':'Koneksi belum aktif.'}</p>
+          {!['pairing','negotiating'].includes(phase)&&<button className="btn primary" onClick={()=>void connect()}>Coba lagi</button>}
+          <button className="btn ghost" onClick={disconnect}>Kembali / batalkan</button>
+        </div>}
+        <div className="remote-input-area" aria-hidden="true" hidden={!connected} />
+        <div ref={cursorRef} className="remote-control-cursor" hidden={!connected || prefs.cursorInVideo} style={{width:prefs.cursorSize,height:prefs.cursorSize*4/3}} aria-hidden="true" data-revision={SESSION_UI_REVISION}>
           <svg viewBox="0 0 24 32">
             <path d="M2 2 L2 25 L8 20 L13 30 L18 27 L13 18 L22 17 Z" fill="white" stroke="#111" strokeWidth="2" strokeLinejoin="round" />
           </svg>
@@ -2599,6 +2649,7 @@ function ConnectScreen({
             )}
           </div>
         )}
+        {connected && <>
         <SessionRail
           collapsed={railHidden}
           onToggleCollapsed={() => setRailHidden((v) => !v)}
@@ -2641,6 +2692,7 @@ function ConnectScreen({
         />
         <div className="hud-mouse" aria-hidden="false">
           <button className="hud-icon-btn" type="button" title="Temukan panah" aria-label="Temukan panah" onClick={() => {
+            setPrefs(p=>({...p,cursorInVideo:false}));
             pointerRef.current!.reset(); pointerRef.current!.cursor = {x: 0.5, y: 0.5}; pointerRef.current!.sync(); paintCursor();
             setHudToast('Panah dikembalikan ke tengah gambar. Geser satu jari untuk bergerak.');
           }}>⌖</button>
@@ -2671,6 +2723,8 @@ function ConnectScreen({
           <SessionPanel
             prefs={prefs}
             onChange={setPrefs}
+            previewConsent={previewConsent}
+            onPreviewConsent={setPreviewConsent}
             onClose={() => setPanelOpen(false)}
             hostId={hostId}
             onDisconnect={disconnect}
@@ -2694,8 +2748,12 @@ function ConnectScreen({
             }}
           />
         )}
-        {padOpen && <GamingPad send={send} />}
+        {padOpen && <CustomControlMapping send={bytes=>{
+          if(bytes[0]===3){if(bytes[2])pointerRef.current!.sync();pointerRef.current!.button(bytes[1],bytes[2]===1,'mapping');}
+          else send(bytes);
+        }} />}
         {kbOpen && <VirtualKeyboard send={send} />}
+        </>}
       </div>
     </section>
     {qrOpen && (
@@ -2708,8 +2766,9 @@ function ConnectScreen({
         }}
       />
     )}
-    {!connected && (
+    {!sessionOpen && (
       <>
+        {hudToast && <p role="status">{hudToast}</p>}
         <SupportLinks />
         <ConnectGuide />
       </>

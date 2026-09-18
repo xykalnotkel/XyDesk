@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- Sesi web: loading di dalam viewport, ukuran panah/sensitivitas, editor mapping keyboard/mouse dengan posisi/ukuran bebas, riwayat tamu lokal dan akun di server dengan preview opt-in. Pemilihan HD dan resume belum tersedia.
+
 - Web sesi: panah lebih besar/tidak terpotong di tepi, tombol Temukan panah, pemulihan layout; audio play/retry dan mute lokal, diagnostik audio, preferensi terkirim setelah channel siap. URL memakai ID acak (belum resume saat refresh).
 
 - Host software: filter bilinear menggantikan nearest-neighbor tanpa mengubah batas H.264 Level3.1. Antrean mouse mempertahankan posisi sebelum klik/drag.

@@ -47,3 +47,5 @@ test('clamp tepi gambar, cancel direct melepaskan tombol, reset menghapus gestur
  assert.deepEqual(plain(p.cursor),{x:1,y:0});assert.deepEqual(events.at(-1),{type:'button',button:1,down:false});
  p.down(2,0,0,0,true,100);p.reset();events.length=0;p.up(2,false,true,110);assert.equal(events.length,0);
 });
+test('HUD dan mapping yang menahan tombol sama tidak saling melepas',()=>{const {p,events}=setup();p.button(0,true,'hud');p.button(0,true,'mapping');p.button(0,false,'hud');assert.deepEqual(events,[{type:'button',button:0,down:true}]);p.button(0,false,'mapping');assert.deepEqual(events.at(-1),{type:'button',button:0,down:false});p.button(0,true,'mapping');p.reset();assert.deepEqual(events.at(-1),{type:'button',button:0,down:false});});
+test('sensitivitas trackpad mengubah delta sesuai pilihan pengguna',()=>{const slow=setup(),fast=setup();for(const t of [slow,fast])t.p.down(1,100,150,0,true,0);slow.p.move(1,110,150,true,.2,false);fast.p.move(1,110,150,true,4,false);assert.ok(Math.abs(slow.p.cursor.x-.505)<1e-9);assert.ok(Math.abs(fast.p.cursor.x-.6)<1e-9);});

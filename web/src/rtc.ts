@@ -215,6 +215,7 @@ export interface HostDisplay {
 }
 
 export interface HostMeta {
+  hardware?: Record<string, unknown>;
   displays: HostDisplay[];
   wanted: number;
   audio: { available: boolean; pipeline: string };
