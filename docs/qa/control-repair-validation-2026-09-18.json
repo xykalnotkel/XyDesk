@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-18",
+  "webTests": 55,
+  "backendTests": 183,
+  "typescriptVite": "PASS (local build, not production OAuth build)",
+  "runtime": [
+    "admin auth + SQLite PASS",
+    "member concurrency PASS",
+    "history concurrency/retention/delete PASS",
+    "bound WS idle alarm PASS ~15s"
+  ],
+  "chromium": "PASS 390x844 and844x390; local canvas + stub RTC",
+  "productionDeployed": false,
+  "hostChanged": false,
+  "limitations": [
+    "Windows pointer precision not proven fixed",
+    "HD/native negotiation not implemented",
+    "Mapping Windows extended keys need host validation",
+    "History stores20 sessions grouped into one card/device; not an unlimited device catalogue",
+    "No analog joystick/gamepad"
+  ]
+}

@@ -2,7 +2,7 @@ import { SessionHistoryPage, saveSessionHistory, desktopPreview, accountHistoryT
 import type { HistoryItem, HistoryState } from './session_history';
 import { CustomControlMapping } from './control_mapping';
 import { cursorLayout, playRemoteAudio, newSessionFragment, isSessionFragment, SESSION_UI_REVISION } from './session_runtime';
-import { imageRect, RemotePointer } from './remote_pointer';
+import { imageRect, RemotePointer, KeyOwnership } from './remote_pointer';
 import { enterSessionFullscreen, leaveSessionFullscreen } from './session_fullscreen';
 import { videoOnlyStream, playRemoteVideo } from './video_playback';
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
@@ -2105,9 +2105,11 @@ function ConnectScreen({
   const connected = phase === 'connected';
   const cursorRef = useRef<HTMLDivElement | null>(null);
   const pointerRef = useRef<RemotePointer | null>(null);
+  const keyOwners=useRef<KeyOwnership|null>(null);
+  if(!keyOwners.current)keyOwners.current=new KeyOwnership((vk,down)=>sessionRef.current?.sendInput(InputCodec.key(vk,down)));
   const getImageRect = () => {
     const video = videoRef.current, surface = surfaceRef.current;
-    return video && surface ? imageRect(surface.getBoundingClientRect(), video.videoWidth, video.videoHeight) : null;
+    return video && surface ? imageRect(video.getBoundingClientRect(), video.videoWidth, video.videoHeight) : null;
   };
   const cursorRaf = useRef(0);
   const paintCursor = () => {
@@ -2133,7 +2135,7 @@ function ConnectScreen({
     } else sessionRef.current?.sendInput(InputCodec.scroll(0, event.dy));
   });
   useEffect(() => {
-    const reset = () => pointerRef.current?.reset();
+    const reset = () => {pointerRef.current?.reset();keyOwners.current?.reset();};
     const visibility = () => { if (document.hidden) reset(); };
     window.addEventListener('blur', reset);
     document.addEventListener('visibilitychange', visibility);
@@ -2193,15 +2195,21 @@ function ConnectScreen({
     if(!attempt || attempt.done) return;
     attempt.done = true;
     attempt.item.endedAt = Date.now(); attempt.item.state = state;
-    attempt.item.preview = previewConsentRef.current ? (desktopPreview(videoRef.current) || attempt.item.preview) : null;
+    // Gambar hanya berubah melalui tombol ambil/ganti, bukan saat sesi berakhir.
     attempt.item.previewConsent = !!attempt.item.preview;
     void saveSessionHistory(attempt.item, attempt.token).then(()=>setHudToast('Riwayat sesi tersimpan.')).catch(()=>setHudToast('Riwayat belum tersimpan di server. Periksa koneksi akun.'));
   };
-  useEffect(()=>{
-    if(!connected || !previewConsent) { if(historyAttempt.current) historyAttempt.current.item.preview=null; return; }
-    const snap=()=>{if(historyAttempt.current&&!historyAttempt.current.done)historyAttempt.current.item.preview=desktopPreview(videoRef.current);};
-    const timer=setInterval(snap,5000);return()=>clearInterval(timer);
-  },[connected,previewConsent]);
+  const capturePreview = () => {
+    const attempt=historyAttempt.current;
+    if(!connected || !previewConsentRef.current || !attempt || attempt.done) return;
+    if(attempt.token!==accountHistoryToken()){setHudToast('Akun berubah. Sambungkan ulang sebelum menyimpan preview.');return;}
+    const preview=desktopPreview(videoRef.current);
+    if(!preview){setHudToast('Gambar desktop belum siap. Coba lagi setelah video tampil.');return;}
+    attempt.item.preview=preview;attempt.item.previewConsent=true;
+    void saveSessionHistory({...attempt.item,endedAt:Date.now(),state:'interrupted'},attempt.token)
+      .then(()=>setHudToast('Preview disimpan untuk ID ini. Tidak diambil ulang otomatis.'))
+      .catch(()=>setHudToast('Preview belum tersimpan. Periksa koneksi atau penyimpanan.'));
+  };
 
   const connect = async (isRetry = false) => {
     setSessionOpen(true);
@@ -2320,6 +2328,7 @@ function ConnectScreen({
   };
 
   const disconnect = useCallback(() => {
+    keyOwners.current?.reset();
     finishHistory(historyAttempt.current && retryRef.current.wasConnected ? 'ended' : 'cancelled');
     setSessionOpen(false); setPreviewConsent(false);
     if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
@@ -2348,7 +2357,10 @@ function ConnectScreen({
   }, []);
   useEffect(() => disconnect, [disconnect]);
 
-  const send = (bytes: Uint8Array) => sessionRef.current?.sendInput(bytes);
+  const send = (bytes:Uint8Array,owner='virtual',repeat=false) => {
+    if(bytes[0]===5&&bytes.length>=4)keyOwners.current!.set(bytes[1]|bytes[2]<<8,bytes[3]===1,owner,repeat);
+    else sessionRef.current?.sendInput(bytes);
+  };
 
   // Statistik live (tab Gambar di panel): baca getStats tiap detik hanya
   // saat panel terbuka supaya tidak bikin rame saat main.
@@ -2419,15 +2431,15 @@ function ConnectScreen({
   useEffect(() => {
     if (!connected) return;
     const keys = new Set<number>();
-    const release = () => { for(const vk of keys) send(InputCodec.key(vk,false)); keys.clear(); };
+    const release = () => { for(const vk of keys) send(InputCodec.key(vk,false),'physical'); keys.clear(); };
     const down = (e:KeyboardEvent) => {
       if(document.querySelector('.mapping-tools[data-editing="true"]') || (e.target instanceof HTMLElement && e.target.closest('input,textarea,select,[contenteditable="true"]'))) return;
       const vk=vkFromCode(e.code); if(vk===null) return;
-      keys.add(vk); e.preventDefault(); send(InputCodec.key(vk,true));
+      keys.add(vk); e.preventDefault(); send(InputCodec.key(vk,true),'physical',e.repeat);
     };
     const up = (e:KeyboardEvent) => {
       const vk=vkFromCode(e.code); if(vk===null || !keys.delete(vk)) return;
-      e.preventDefault(); send(InputCodec.key(vk,false));
+      e.preventDefault(); send(InputCodec.key(vk,false),'physical');
     };
     const visibility=()=>{if(document.hidden)release();};
     window.addEventListener('keydown',down);window.addEventListener('keyup',up);window.addEventListener('blur',release);document.addEventListener('visibilitychange',visibility);
@@ -2576,7 +2588,7 @@ function ConnectScreen({
             </p>
           )}
           {retryInfo && <p className="status-text">{retryInfo}</p>}
-          <label className="history-consent"><input type="checkbox" checked={previewConsent} onChange={e=>setPreviewConsent(e.target.checked)}/> {accountHistoryToken()?'Simpan preview desktop sesi ini pada akun di server':'Simpan preview desktop sesi ini hanya di browser ini'} (bisa berisi data pribadi).</label>
+          <label className="history-consent"><input type="checkbox" checked={previewConsent} onChange={e=>setPreviewConsent(e.target.checked)}/> {accountHistoryToken()?'Izinkan ambil/ganti preview manual pada akun di server':'Izinkan ambil/ganti preview manual di browser ini'} (bisa berisi data pribadi).</label>
           <a className="text-action" href="/history">Buka halaman riwayat</a>
           <button className="connect-cta" disabled={!canConnect} onClick={() => void connect()}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
           <p className="microcopy">Sesi tamu berlaku dua jam. Riwayat tamu disimpan lokal di browser ini.</p>
@@ -2725,6 +2737,7 @@ function ConnectScreen({
             onChange={setPrefs}
             previewConsent={previewConsent}
             onPreviewConsent={setPreviewConsent}
+            onCapturePreview={capturePreview}
             onClose={() => setPanelOpen(false)}
             hostId={hostId}
             onDisconnect={disconnect}
@@ -2750,9 +2763,9 @@ function ConnectScreen({
         )}
         {padOpen && <CustomControlMapping send={bytes=>{
           if(bytes[0]===3){if(bytes[2])pointerRef.current!.sync();pointerRef.current!.button(bytes[1],bytes[2]===1,'mapping');}
-          else send(bytes);
+          else send(bytes,'mapping');
         }} />}
-        {kbOpen && <VirtualKeyboard send={send} />}
+        {kbOpen && <VirtualKeyboard send={send} onClose={()=>setKbOpen(false)} />}
         </>}
       </div>
     </section>

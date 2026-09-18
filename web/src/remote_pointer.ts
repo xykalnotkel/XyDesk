@@ -88,3 +88,20 @@ export class RemotePointer {
     this.contacts.clear(); this.multi = false;
   }
 }
+
+// Satu key-up dari keyboard virtual tidak boleh melepas tombol milik mapping
+// atau keyboard fisik yang masih ditahan.
+export function canonicalKey(vk:number){return vk===16?160:vk===17?162:vk===18?164:vk;}
+export class KeyOwnership {
+ private owners=new Map<number,Set<string>>();
+ constructor(private emit:(vk:number,down:boolean)=>void){}
+ set(vk:number,down:boolean,owner:string,repeat=false){
+  vk=canonicalKey(vk);
+  const sources=this.owners.get(vk)||new Set<string>(),was=sources.size>0;
+  const own=sources.has(owner);
+  if(down)sources.add(owner);else sources.delete(owner);
+  if(sources.size)this.owners.set(vk,sources);else this.owners.delete(vk);
+  if(was!==(sources.size>0)||(repeat&&down&&own))this.emit(vk,sources.size>0);
+ }
+ reset(){for(const vk of this.owners.keys())this.emit(vk,false);this.owners.clear();}
+}

@@ -60,6 +60,20 @@ try{
   assert.equal(await page.locator('.connect-form').count(),0);
   await page.waitForFunction(()=>document.querySelector('video')?.videoWidth===1280);
   console.log('video loaded');
+  await page.waitForTimeout(5500);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('xydesk.guest.history.v1')),null);
+  await page.getByRole('button',{name:'Pengaturan sesi',exact:true}).click();
+  await page.getByRole('tab',{name:'Sesi',exact:true}).click();
+  await page.getByRole('button',{name:'Ambil / ganti preview desktop',exact:true}).click();
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('xydesk.guest.history.v1')||'[]')[0]?.preview);
+  await page.locator('.spanel-close').click();
+  await page.getByRole('button',{name:'Keyboard',exact:true}).click();
+  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/keyboard-close-2026-09-18.png',import.meta.url).pathname});
+  await page.locator('.vkb').getByRole('button',{name:'Ctrl',exact:true}).click();
+  await page.getByRole('button',{name:'Tutup keyboard',exact:true}).click();
+  assert.equal(await page.locator('.vkb').count(),0);
+  assert.deepEqual(await page.evaluate(()=>window.__inputs.filter(b=>b[0]===5).slice(-2).map(b=>[b[1],b[3]])),[[162,1],[162,0]]);
+
   assert.match(new URL(page.url()).hash,/^#session\/[0-9a-f]{64}$/);
   let initial=await page.evaluate(()=>window.__inputs);
   assert.equal(initial.filter(b=>b[0]===10).length,1);assert.equal(initial.filter(b=>b[0]===11).length,1);
@@ -133,19 +147,33 @@ await page.locator('.remote-control-cursor').waitFor({state:'visible'});
   await page.getByRole('button',{name:'Simpan layout',exact:true}).click();
   assert.equal(Math.round((await mapped.boundingBox()).width),84);
   assert.ok(await page.evaluate(()=>localStorage.getItem('xydesk.mapping.v1')));
+  await page.getByRole('button',{name:'Atur tombol',exact:true}).click();
+  await mapped.click();
+  await page.getByRole('button',{name:'Properti tombol',exact:true}).click();
+  await page.locator('.mapping-editor select').first().selectOption('chord');
+  await page.locator('.mapping-editor select[multiple]').selectOption(['17','67']);
+  await page.getByLabel('Nama',{exact:true}).fill('Ctrl+C');
+  await page.getByRole('button',{name:'Simpan layout',exact:true}).click();
+  await page.evaluate(()=>window.__inputs=[]);
+  await page.keyboard.down('ControlLeft');
+  await page.getByRole('button',{name:'Mapping Ctrl+C',exact:true}).click();
+  await page.keyboard.up('ControlLeft');
+  assert.deepEqual(await page.evaluate(()=>window.__inputs.filter(b=>b[0]===5).map(b=>[b[1],b[3]])),[[162,1],[67,1],[67,0],[162,0]]);
+
   await page.getByRole('button',{name:'Panel gaming',exact:true}).click();
   assert.deepEqual(errors,[]);
-  checks.push({viewport,defaultTrackpad:true,arrowVisible:true,swipe:true,tap:true,cancelNoClick:true,holdAndDrag:true,twoFingerScroll:true,directPositionBeforeClick:true,nativeFullscreenCursor:true,metadataRecovery:true,centerButton:true,audioPlayRetry:true,audioMute:true,savedPrefsSentOnce:true,randomUrl:true,loadingInsideSession:true,cancelDoesNotResurrect:true,guestHistoryPreviewAndPage:true,cursorSize:true,mappingMoveResizeSave:true,pageErrors:errors});
-  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/session-ux-2026-09-17.png',import.meta.url).pathname});
+  checks.push({viewport,defaultTrackpad:true,arrowVisible:true,swipe:true,tap:true,cancelNoClick:true,holdAndDrag:true,twoFingerScroll:true,directPositionBeforeClick:true,nativeFullscreenCursor:true,metadataRecovery:true,centerButton:true,audioPlayRetry:true,audioMute:true,savedPrefsSentOnce:true,randomUrl:true,loadingInsideSession:true,cancelDoesNotResurrect:true,guestHistoryPreviewAndPage:true,manualPreviewOnly:true,keyboardDismissReleasesModifier:true,cursorSize:true,mappingMoveResizeSave:true,chordWithPhysicalModifier:true,oneCardPerDevice:true,pageErrors:errors});
+  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/control-repair-2026-09-18.png',import.meta.url).pathname});
   await page.getByRole('button',{name:'Putuskan',exact:true}).click();
   const rows=await page.evaluate(()=>JSON.parse(localStorage.getItem('xydesk.guest.history.v1')));
   assert.equal(rows.length,1);assert.equal(rows[0].state,'ended');assert.equal(rows[0].name,'PC uji sintetis');assert.ok(rows[0].preview?.startsWith('data:image/jpeg;base64,'));
+  await page.evaluate(()=>{const key='xydesk.guest.history.v1',rows=JSON.parse(localStorage.getItem(key));rows.push({...rows[0],id:crypto.randomUUID(),endedAt:rows[0].endedAt-1});localStorage.setItem(key,JSON.stringify(rows));});
   await page.getByRole('link',{name:'Buka halaman riwayat',exact:true}).click();
   await page.getByRole('heading',{name:'Riwayat koneksi',exact:true}).waitFor();
   assert.equal(await page.getByRole('heading',{name:'PC uji sintetis',exact:true}).count(),1);
-  if(viewport.width===844)await page.screenshot({fullPage:true,path:new URL('../../docs/qa/session-history-2026-09-17.png',import.meta.url).pathname});
+  if(viewport.width===844)await page.screenshot({fullPage:true,path:new URL('../../docs/qa/control-history-2026-09-18.png',import.meta.url).pathname});
   await context.close();
  }
- writeFileSync(new URL('../../docs/qa/session-ux-2026-09-17.json',import.meta.url),JSON.stringify({result:'PASS',boundary:'Real React handlers, Chromium CDP touch events, local canvas stream; stubbed RtcSession transport, not Windows/Android injection',checks},null,2)+'\n');
+ writeFileSync(new URL('../../docs/qa/control-repair-2026-09-18.json',import.meta.url),JSON.stringify({result:'PASS',boundary:'Real React handlers, Chromium CDP touch events, local canvas stream; stubbed RtcSession transport, not Windows/Android injection',checks},null,2)+'\n');
  console.log(JSON.stringify(checks));
 }finally{await browser.close();await server.close();}

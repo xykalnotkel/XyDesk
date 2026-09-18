@@ -4,7 +4,7 @@
 // session_page.dart (rail kanan + sembunyikan kontrol) dan
 // session_panels.dart (empat tab panel) di aplikasi — protokol inputnya
 // sama persis (host/src/input.rs), hanya medianya yang beda.
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { InputCodec } from './rtc';
 import type { SessionStats } from './rtc';
 
@@ -231,8 +231,12 @@ const VKB_ROWS: KeySpec[][] = [
   ],
 ];
 
-export function VirtualKeyboard({ send }: { send: Send }) {
-  const [held, setHeld] = useState<ReadonlySet<number>>(new Set());
+export function VirtualKeyboard({ send, onClose }: { send: Send; onClose?:()=>void }) {
+  const [held, updateHeld] = useState<ReadonlySet<number>>(new Set());
+  const heldRef=useRef<ReadonlySet<number>>(new Set());const sendRef=useRef(send);sendRef.current=send;
+  const setHeld=(value:ReadonlySet<number>)=>{heldRef.current=value;updateHeld(value);};
+  const release=()=>{for(const vk of heldRef.current)sendRef.current(InputCodec.key(vk,false));heldRef.current=new Set();};
+  useEffect(()=>{const clear=()=>{release();updateHeld(new Set());};const hidden=()=>{if(document.hidden)clear();};window.addEventListener('blur',clear);document.addEventListener('visibilitychange',hidden);return()=>{release();window.removeEventListener('blur',clear);document.removeEventListener('visibilitychange',hidden);};},[]);
 
   const tap = (vk: number, modifier: boolean) => {
     if (modifier) {
@@ -257,6 +261,7 @@ export function VirtualKeyboard({ send }: { send: Send }) {
 
   return (
     <div className="vkb" onPointerDown={(e) => e.stopPropagation()}>
+      <button type="button" className="vkb-dismiss" aria-label="Tutup keyboard" onClick={()=>{release();setHeld(new Set());onClose?.();}}>⌄ <span>Tutup keyboard</span></button>
       {VKB_ROWS.map((row, i) => (
         <div className="vkb-row" key={i}>
           {row.map(([label, vk, flex = 1, modifier = false], j) => (
@@ -462,6 +467,7 @@ export function fmtDurasi(totalDetik: number): string {
 export function SessionPanel({
   previewConsent,
   onPreviewConsent,
+  onCapturePreview,
   prefs,
   onChange,
   onClose,
@@ -479,6 +485,7 @@ export function SessionPanel({
   onQuality,
   onBitrate,
 }: {
+  onCapturePreview?:()=>void;
   previewConsent?: boolean;
   onPreviewConsent?: (on:boolean)=>void;
   prefs: SessionPrefs;
@@ -708,7 +715,8 @@ export function SessionPanel({
       {tab === 'sesi' && (
         <>
           <p className="spanel-section">Riwayat</p>
-          <ToggleRow label="Simpan preview desktop" hint="Opsional untuk sesi ini. Tamu: lokal; akun: server. Bisa berisi data pribadi." on={!!previewConsent} onToggle={()=>onPreviewConsent?.(!previewConsent)}/>
+          <ToggleRow label="Izinkan ambil/ganti preview manual" hint="Tampilkan desktop utama sendiri dahulu. Tamu: lokal; akun: server. Preview lama tetap dipakai sampai diganti atau dihapus." on={!!previewConsent} onToggle={()=>onPreviewConsent?.(!previewConsent)}/>
+          <button type="button" className="btn ghost" disabled={!previewConsent} onClick={onCapturePreview}>Ambil / ganti preview desktop</button>
           <p className="spanel-section">Sesi</p>
           <div className="spanel-card">
             <StatRow label="Terhubung ke" value={hostId} />

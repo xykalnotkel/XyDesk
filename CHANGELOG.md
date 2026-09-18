@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- Kontrol web: preview diambil/ganti manual dan dipakai ulang per ID, riwayat satu kartu per perangkat; keyboard memiliki tombol tutup atas dan melepas modifier. Mapping menambah shortcut kombinasi, F1–F24/numpad/navigasi/tanda baca, mouse samping dan scroll horizontal; ownership keyboard fisik/virtual/mapping disatukan. Preset WASD digital tersedia. HD dan presisi input Windows belum dinyatakan selesai.
+
 - Backend sesi baru: ticket client terikat identitas/generasi akun; WS dan penerbitan TURN memeriksa pencabutan. Alarm Hub memeriksa client diam tiap ~15 detik dan mengirim bye ke host sesuai nonce koneksi. Ticket/koneksi legacy tetap kompatibel; belum ada pemutusan massal atau bukti media Windows.
 
 - Backend: validasi identitas/ban/generasi JWT akun pada profil, riwayat, mutasi akun dan penerbitan token signaling; token legacy sehat tetap berlaku. Login dan perubahan akun transaksional, OTP sekali pakai saat konkurensi; respons auth tidak boleh dicache. Tidak mencabut ticket signaling yang sudah terbit atau otomatis memutus sesi P2P aktif.

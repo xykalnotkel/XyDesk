@@ -2887,3 +2887,7 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
 .history-content summary { cursor:pointer;font-weight:600;margin-top:16px;font-size:13px; }
 .history-empty { padding:48px 24px;text-align:center;border-radius:16px;background:#efeaf5; }
 @media(max-width:600px){.history-heading{align-items:flex-start;flex-direction:column}.history-page{margin-top:12px;padding:18px}}
+
+.vkb-dismiss{align-self:center;display:flex;align-items:center;gap:8px;padding:8px 20px;border:0;border-radius:8px;background:#ffffff24;color:white;min-height:40px;cursor:pointer}.vkb-dismiss:focus-visible{outline:2px solid white}
+
+.remote-session .vkb{z-index:10}

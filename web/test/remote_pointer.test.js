@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {transformWithOxc} from 'vite';
-const {code} = await transformWithOxc(readFileSync(new URL('../src/remote_pointer.ts', import.meta.url), 'utf8').replace(/^export /gm, '') + '\nexports.api={imageRect,RemotePointer};', 'remote_pointer.ts');
+const {code} = await transformWithOxc(readFileSync(new URL('../src/remote_pointer.ts', import.meta.url), 'utf8').replace(/^export /gm, '') + '\nexports.api={imageRect,RemotePointer,KeyOwnership};', 'remote_pointer.ts');
 const exports={}; vm.runInNewContext(code,{exports});
-const {imageRect,RemotePointer}=exports.api;
+const {imageRect,RemotePointer,KeyOwnership}=exports.api;
 const plain = x => JSON.parse(JSON.stringify(x));
 function setup(){const events=[]; const r={left:0,top:100,width:400,height:200}; const p=new RemotePointer(()=>r,e=>events.push(plain(e)));return {p,events,r};}
 test('contain letterbox portrait/landscape dan dimensi belum tersedia',()=>{
@@ -49,3 +49,10 @@ test('clamp tepi gambar, cancel direct melepaskan tombol, reset menghapus gestur
 });
 test('HUD dan mapping yang menahan tombol sama tidak saling melepas',()=>{const {p,events}=setup();p.button(0,true,'hud');p.button(0,true,'mapping');p.button(0,false,'hud');assert.deepEqual(events,[{type:'button',button:0,down:true}]);p.button(0,false,'mapping');assert.deepEqual(events.at(-1),{type:'button',button:0,down:false});p.button(0,true,'mapping');p.reset();assert.deepEqual(events.at(-1),{type:'button',button:0,down:false});});
 test('sensitivitas trackpad mengubah delta sesuai pilihan pengguna',()=>{const slow=setup(),fast=setup();for(const t of [slow,fast])t.p.down(1,100,150,0,true,0);slow.p.move(1,110,150,true,.2,false);fast.p.move(1,110,150,true,4,false);assert.ok(Math.abs(slow.p.cursor.x-.505)<1e-9);assert.ok(Math.abs(fast.p.cursor.x-.6)<1e-9);});
+
+test('physical, virtual and mapping owners share modifiers without early key-up',()=>{
+ const events=[];const keys=new KeyOwnership((vk,down)=>events.push([vk,down]));
+ keys.set(17,true,'mapping');keys.set(162,true,'physical');keys.set(162,true,'virtual');keys.set(162,false,'virtual');keys.set(17,false,'mapping');
+ assert.deepEqual(events,[[162,true]]);keys.set(162,false,'physical');assert.deepEqual(events,[[162,true],[162,false]]);
+ keys.set(65,true,'physical');keys.set(65,true,'physical',true);keys.reset();keys.reset();assert.equal(events.length,5);
+});

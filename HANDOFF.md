@@ -1939,3 +1939,48 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   Catatan tersimpan di docs/qa/bound-session-production-2026-09-18.json.
   Tidak ada pencabutan/ban akun produksi demi tes. Tahap backend ditutup;
   bukti pemutusan media Windows dan pekerjaan kemampuan/ACK host belum.
+
+### CONTROLREPAIR — preview manual dan kontrol web (2026-09-18)
+
+- User melaporkan pointer kedua mode meleset, stream kurang HD, preview
+  berulang, meminta tutup keyboard di atas dan mapping lengkap. Pilihan
+  eksplisit: preview desktop MANUAL per ID; mapping desktop+game.
+- Penyebab preview: interval5s dan capture saat finish. Keduanya dihapus.
+  Checkbox kini izin ambil/ganti; tombol menu Sesi mengambil seluruh frame
+  video sekali saat user sudah menampilkan desktop utama. Tidak menutup atau
+  meminimalkan aplikasi otomatis. Snapshot disimpan segera; final sesi tidak
+  mengambil snapshot baru. Preview tersimpan dipakai ulang per ID/account.
+- Riwayat tetap menyimpan20 sesi; tampilan mengelompokkan satu kartu per ID,
+  bukan menghapus log lama/migrasi massal. Delete perangkat memakai endpoint
+  action delete-device berotorisasi dan transaksional; late preview write
+  tidak boleh menimpa status akhir sesi yang lebih baru.
+- Keyboard: tombol panah bawah+Tutup keyboard di baris atas, modifier dilepas
+  saat tutup/unmount/blur/hidden; overlay suara tidak lagi menghalangi keyboard.
+- Mapping: kombinasi hingga6 tombol (modifier dahulu, release terbalik),
+  pilihan navigasi/numpad/punctuation/F1–F24,5 tombol mouse, scroll dua sumbu,
+  preset WASD digital. Ownership key fisik/virtual/mapping disatukan termasuk
+  alias Ctrl17/LeftCtrl162 agar satu sumber tidak melepas milik sumber lain.
+  Tetap24 tombol/layout,36–120px,per-orientasi. Belum joystick analog/gamepad.
+- Pointer memakai kotak elemen video aktual sebagai acuan contain. Ini
+  perapian koordinat browser, BUKAN bukti perbaikan ketidakpresisian Windows.
+- Bukti: web55,backend183,TypeScript/Vite PASS; runtime admin/member/history/
+  bound alarm PASS. Chromium390x844 dan844x390: manual preview (tidak ada
+  auto-save setelah5.5s), keyboard close melepasCtrl, shortcut Ctrl+C sambil
+  Ctrl fisik ditahan, mapping move/size/save, group kartu perID, fullscreen,
+  pointer synthetic, audio dan cancel PASS. Artefak control-repair-2026-09-18
+  dan keyboard-close-2026-09-18. Transport stub, bukan Windows/Android nyata.
+- **Sisa host penting:** software masihmax720p proporsional/30fps/H2643.1,
+  sehingga desktop RDP HD bukan bukti stream HD. SendInput absolute memakai
+  layar primer, capture bisa memilih layar berbeda. Perlu transform koordinat
+  ke monitor aktif+telemetry, pengukuran VM aktual, dan installer baru.
+  Injeksi keyboard memakai SCANCODE tetapi belum menambahkan EXTENDEDKEY;
+  perlu uji navigasi/right-modifier/Win. Input release saat peer mati juga
+  perlu bukti host; web release saja tidak menjamin saat channel sudah putus.
+- Tidak mengubah host/APK/installer/secret/OAuth/versi. Bahan dampak pengguna:
+  thumbnail tidak berganti diam-diam, keyboard dapat ditutup tanpa modifier
+  tersangkut, shortcut multi-sumber tidak saling melepas. Screenshot nyata
+  Chromium fixture tersedia; bukan desktop Windows atau berita terbit.
+- Implementasi telah diuji lokal; rollout web+backend paket ini menunggu
+  persetujuan. Build lokal generik bukan build OAuth produksi; sebelum deploy
+  WAJIB ambil/preservasi public Google client ID dari bundle live, rebuild,
+  push source lalu deploy dan cocokkan bytes aset. Jangan deploy build kosong.

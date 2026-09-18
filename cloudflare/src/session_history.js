@@ -39,7 +39,8 @@ export async function historyEndpoint(request, storage, user) {
   while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>MAX_BODY){await reader.cancel();return json({error:'body-too-large'},413);}chunks.push(value);}
   let body;
   try {const bytes=new Uint8Array(size);let i=0;for(const c of chunks){bytes.set(c,i);i+=c.length;}body=JSON.parse(new TextDecoder().decode(bytes));}catch{return json({error:'bad-json'},400);}
-  if(!body || !['save','delete','clear'].includes(body.action))return json({error:'invalid-action'},400);
+  if(!body || !['save','delete','delete-device','clear'].includes(body.action))return json({error:'invalid-action'},400);
+  if(body.action==='delete-device' && (typeof body.deviceId!=='string'||!/^\d{9}$/.test(body.deviceId)))return json({error:'invalid-device'},400);
   let record;
   try {if(body.action==='save')record=normalizeHistory(body.record);if(body.action==='delete'&&!validId(body.id))throw Error('invalid-id');}catch(e){return json({error:e.message},400);}
   const result = await storage.transaction(async tx=>{
@@ -51,7 +52,13 @@ export async function historyEndpoint(request, storage, user) {
     let ids=await tx.get(indexKey)||[];
     if(body.action==='clear'){for(const id of ids)await tx.delete(prefix+id);ids=[];}
     else if(body.action==='delete'){await tx.delete(prefix+body.id);ids=ids.filter(id=>id!==body.id);}
+    else if(body.action==='delete-device'){
+      const kept=[];for(const id of ids){const row=await tx.get(prefix+id);if(row?.deviceId===body.deviceId)await tx.delete(prefix+id);else kept.push(id);}ids=kept;
+    }
     else {
+      const previous=await tx.get(prefix+record.id);
+      if(previous && previous.endedAt>record.endedAt)record={...previous,preview:record.preview||previous.preview};
+      if(!record.preview){for(const id of ids){const row=await tx.get(prefix+id);if(row?.deviceId===record.deviceId&&row.preview){record.preview=row.preview;break;}}}
       await tx.put(prefix+record.id,record);ids=[record.id,...ids.filter(id=>id!==record.id)];
       for(const id of ids.slice(MAX_ITEMS))await tx.delete(prefix+id);ids=ids.slice(0,MAX_ITEMS);
     }

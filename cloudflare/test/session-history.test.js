@@ -9,3 +9,21 @@ test('history butuh akun nyata dan terisolasi berdasarkan JWT bukan body',async(
 test('preview memerlukan opt-in dan JPEG terbatas; tidak menerima URL remote/SVG',async()=>{const {auth,token}=await setup();for(const preview of ['https://secret.test/x','data:image/svg+xml;base64,AAAA','data:image/jpeg;base64,AAAA','data:image/jpeg;base64,'+'A'.repeat(33000)]){assert.equal((await auth.fetch(req(token,{action:'save',record:{...record(),preview,previewConsent:true}}))).status,400);}assert.equal((await auth.fetch(req(token,{action:'save',record:{...record(),preview:'data:image/jpeg;base64,/9j/2Q=='}}))).status,400);assert.equal((await auth.fetch(req(token,{action:'save',record:{...record(),preview:'data:image/jpeg;base64,/9j/2Q==',previewConsent:true}}))).status,200);});
 test('retensi20, idempotent, delete/clear dan penghapusan akun ikut menghapus gambar',async()=>{const {auth,token,storage}=await setup();for(let n=0;n<21;n++)assert.equal((await auth.fetch(req(token,{action:'save',record:record(n)}))).status,200);let rows=(await(await auth.fetch(req(token))).json()).items;assert.equal(rows.length,20);assert.equal(storage.m.has('history:user-a:'+record(0).id),false);await auth.fetch(req(token,{action:'save',record:record(20)}));assert.equal((await(await auth.fetch(req(token))).json()).items.length,20);await auth.fetch(req(token,{action:'delete',id:record(20).id}));assert.equal((await(await auth.fetch(req(token))).json()).items.length,19);await auth.fetch(req(token,{action:'clear'}));assert.equal((await(await auth.fetch(req(token))).json()).items.length,0);await auth.fetch(req(token,{action:'save',record:record()}));assert.equal((await auth.fetch(req(token,{},'/auth/delete'))).status,200);assert.equal([...storage.m.keys()].some(k=>k.startsWith('history:user-a:')),false);assert.equal((await auth.fetch(req(token))).status,401);});
 test('akun diganti/ban dan body berlebih ditolak',async()=>{const {auth,token,storage}=await setup();const r=new Request('https://example.test/auth/session-history',{method:'POST',headers:{Authorization:'Bearer '+token},body:'x'.repeat(50000)});assert.equal((await auth.fetch(r)).status,413);await storage.put('user:'+user.email,{...user,banned:true});assert.equal((await auth.fetch(req(token))).status,401);await storage.put('user:'+user.email,{...user,id:'new-id'});assert.equal((await auth.fetch(req(token))).status,401);});
+
+test('manual preview is reused per device; delete-device removes only that device',async()=>{
+ const {auth,token,otherToken}=await setup(),preview='data:image/jpeg;base64,/9j/2Q==';
+ await auth.fetch(req(token,{action:'save',record:{...record(1),preview,previewConsent:true}}));
+ await auth.fetch(req(token,{action:'save',record:record(2)}));
+ await auth.fetch(req(token,{action:'save',record:{...record(3),deviceId:'987654321'}}));
+ let rows=(await(await auth.fetch(req(token))).json()).items;
+ assert.equal(rows.find(x=>x.id===record(2).id).preview,preview);assert.equal(rows.find(x=>x.deviceId==='987654321').preview,null);
+ await auth.fetch(req(otherToken,{action:'delete-device',deviceId:'123456789'}));assert.equal((await(await auth.fetch(req(token))).json()).items.length,3);
+ assert.equal((await auth.fetch(req(token,{action:'delete-device',deviceId:'123456789'}))).status,200);
+ rows=(await(await auth.fetch(req(token))).json()).items;assert.equal(rows.length,1);assert.equal(rows[0].deviceId,'987654321');
+});
+test('late manual preview write cannot revert final session state',async()=>{
+ const {auth,token}=await setup();const done={...record(4),state:'ended'};
+ await auth.fetch(req(token,{action:'save',record:done}));
+ await auth.fetch(req(token,{action:'save',record:{...done,state:'interrupted',endedAt:done.endedAt-100,preview:'data:image/jpeg;base64,/9j/2Q==',previewConsent:true}}));
+ const row=(await(await auth.fetch(req(token))).json()).items[0];assert.equal(row.state,'ended');assert.equal(row.endedAt,done.endedAt);assert.ok(row.preview);
+});
