@@ -1,0 +1,57 @@
+{
+  "source": "43fc35ccd849046dc210659ff540f29d11fd0c18",
+  "backendUnchanged": true,
+  "bindingsUnchanged": true,
+  "oauthPreserved": true,
+  "exactAssets": {
+    "/assets/index-D8L4bo0l.js": "e7fb9d1ec9bbfe4caa6fe9a00509c03174674bed7029c9175ac2df6e340396fd",
+    "/assets/jsQR-BZfqIBYG.js": "b018a387d6225f60553429286df8c7aed6c4c3d24a53782f2d866ca35ad2939e",
+    "/assets/LicenseInventory-Rrnp-dUh.js": "e2e03dd4b106183a10f71374c2b2573afbe72c600f5d6ae1d50e4502c2da20db",
+    "/assets/rolldown-runtime-CbXtAM7H.js": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+    "/assets/index-C5O_Zi8G.css": "c002a3ada35c1e28188d3a9b3494f12ec012ab15024d8206898e4cb27f22f777"
+  },
+  "htmlMatchExcludingExistingAnalytics": true,
+  "backendChecks": {
+    "/connect": 200,
+    "/history": 200,
+    "/healthz": 200,
+    "/auth/session-history": 401,
+    "/signal-token?id=host-finish-verify": 401
+  },
+  "productionWebVersion": "1d669576-3d69-4fb5-8019-ad7c41d80942",
+  "previousWebVersion": "740345c3-356f-4f25-bc63-634c2ebe1401",
+  "productionBrowser": {
+    "result": "PASS",
+    "boundary": "Real production React; isolated local guest fixture. No pairing or physical host.",
+    "checks": [
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "horizontalHistoryCard": true,
+        "inlineReconnect": true,
+        "correctDevice": true,
+        "emptyPassword": true,
+        "noApiWrites": true,
+        "pageErrors": []
+      },
+      {
+        "viewport": {
+          "width": 844,
+          "height": 390
+        },
+        "horizontalHistoryCard": true,
+        "inlineReconnect": true,
+        "correctDevice": true,
+        "emptyPassword": true,
+        "noApiWrites": true,
+        "pageErrors": []
+      }
+    ]
+  },
+  "webTests": 76,
+  "webBuild": "PASS",
+  "deployedBackend": false,
+  "versionBumped": false
+}

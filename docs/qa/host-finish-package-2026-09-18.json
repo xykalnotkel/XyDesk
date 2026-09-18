@@ -1,0 +1,101 @@
+{
+  "sourceSha": "56317a2339b43c3ecd0bd42d91757a10c79fa9f5",
+  "functionalSourceSha": "43fc35ccd849046dc210659ff540f29d11fd0c18",
+  "version": "6.8.5 unsigned source-identified test package",
+  "engineRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35403913522",
+  "nsisRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35404435326",
+  "tests": [
+    {
+      "name": "Gerbang regresi host (Linux)",
+      "id": 105789584656,
+      "conclusion": "success",
+      "counts": [
+        [
+          "154",
+          "0"
+        ],
+        [
+          "0",
+          "0"
+        ],
+        [
+          "5",
+          "0"
+        ],
+        [
+          "1",
+          "0"
+        ],
+        [
+          "1",
+          "0"
+        ],
+        [
+          "1",
+          "0"
+        ],
+        [
+          "1",
+          "0"
+        ],
+        [
+          "1",
+          "0"
+        ],
+        [
+          "0",
+          "0"
+        ]
+      ],
+      "passed": 164,
+      "realOpusRoundtripPassed": false
+    },
+    {
+      "name": "Engine Windows x64 (MSVC)",
+      "id": 105790060237,
+      "conclusion": "success",
+      "counts": [
+        [
+          "153",
+          "0"
+        ]
+      ],
+      "passed": 153,
+      "realOpusRoundtripPassed": true
+    }
+  ],
+  "installerName": "XyDesk-Host-Audio-Input-16x9-56317a2-Setup-x64.exe",
+  "installerBytes": 4556700,
+  "installerSha256": "704f2adda398d034042fa22648fd07e110359a333a757c30826405b01e5f91fd",
+  "engineSha256": "eaa7ce801f64437eeb43a9eb29c189c0d2b54f61dabf11713aeb1ee2ff8f5713",
+  "nsisValidation": {
+    "result": "PASS",
+    "sourceSha": "56317a2339b43c3ecd0bd42d91757a10c79fa9f5",
+    "testedAt": "2026-09-18T23:08:46.0694068Z",
+    "installer": "XyDesk-Host-Test-Setup-x64.exe",
+    "sha256": "704f2adda398d034042fa22648fd07e110359a333a757c30826405b01e5f91fd",
+    "bytes": 4556700,
+    "engineSha256": "eaa7ce801f64437eeb43a9eb29c189c0d2b54f61dabf11713aeb1ee2ff8f5713",
+    "checks": [
+      "non-empty unrelated directory rejected without changes",
+      "silent install to path with spaces; installed MSVC engine hash and --help verified",
+      "Apps registration, desktop/Start Menu shortcuts and actual PowerShell shortcut command verified",
+      "reinstall preserves extra files; different install location cannot hijack registration",
+      "silent uninstall removes engine/registration/shortcuts but preserves identity and extra files",
+      "default per-user install and uninstall verified separately from explicit /D"
+    ],
+    "remoteDesktopHardwareTested": false,
+    "productionDeployed": false
+  },
+  "downloadChecks": [
+    "artifact ZIP CRC",
+    "SHA-256 sidecars",
+    "manifest source SHA",
+    "engine SHA-256",
+    "PE x64",
+    "launcher opt-out present"
+  ],
+  "userRdpTested": false,
+  "productionWebVersion": "1d669576-3d69-4fb5-8019-ad7c41d80942",
+  "backendChanged": false
+}

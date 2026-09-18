@@ -24,7 +24,9 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
-- **Host finish (petunjuk installer disinkronkan; pengemasan ulang):** permintaan otomatis mode desktop16:9 pada sesi terotorisasi, hanya mode terdaftar + CDS_TEST, baca ukuran kembali dan status penolakan/override. Tidak registry/driver/restart RDP; opt-out launcher -KeepDesktopResolution. Web menampilkan requested/observed, bukan label HD palsu. Tambah Windows real-Opus roundtrip44.1/48/96kHz. Menyertakan patch audio bd75757 dan input ec0f047.
+- **HOST-FINISH closure:** final source56317a2 (runtime43fc35c), Windows run35403913522 **SUCCESS: Linux164/Windows153** termasuk real-Opus roundtrip; NSIS35404435326 **SUCCESS** install/reinstall/uninstall. Installer baru SHA256704f2adda398d034042fa22648fd07e110359a333a757c30826405b01e5f91fd. Web76/browser2viewport + live asset/OAuth/bindings PASS, versi1d669576; backend55cdda7c tetap. Petunjuk installer diperbaiki dan paket43fc35c disupersede. Tidak version bump/official release/driver/RDP access. Bukti `docs/qa/host-finish-{package,production}-2026-09-18.json`; batas field-test di `host-finish-2026-09-18.md`.
+
+- **Host finish — siap installer + web live:** permintaan otomatis mode desktop16:9 pada sesi terotorisasi, hanya mode terdaftar + CDS_TEST, baca ukuran kembali dan status penolakan/override. Tidak registry/driver/restart RDP; opt-out launcher -KeepDesktopResolution. Web menampilkan requested/observed, bukan label HD palsu. Tambah Windows real-Opus roundtrip44.1/48/96kHz. Menyertakan patch audio bd75757 dan input ec0f047.
 
 - **Input queue (kode, belum installer):** full queue tidak mematikan input; backpressure async + batal saat disconnect, coalesce posisi absolut berurutan tanpa melewati klik/key-up. Host Linux **161 tests PASS**, format PASS; belum pembuktian latency Windows/RDP. `docs/qa/input-queue-2026-09-18.md`.
 

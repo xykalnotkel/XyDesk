@@ -322,7 +322,9 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
-- [ ] (Operator - XyDesk Team, 2026-09-18) — **HOST-FINISH**: user memberi izin push/build/deploy pada chat terakhir. Source auto16:9 supported/readback + audio/input perlu gate Prepare Host Windows lalu NSIS dari SHA sama, dan rollout web menjaga OAuth/bindings. Tidak mengeksekusi mode/driver/RDP pada PC user dari workspace. Status/bukti final menyusul setelah run.
+- [x] (Operator - XyDesk Team, 2026-09-18) — **HOST-FINISH DELIVERED**: izin push/build/deploy dari user; final source56317a2 Windows35403913522 Linux164/Windows153 PASS + NSIS35404435326 PASS. Installer disiapkan di deliverables/host-finish-56317a2, source/checksum diverifikasi. Web runtime43fc35c live1d669576, unit76 + browser2viewport + asset/OAuth/bindings PASS; backend55cdda7c tetap. Instruksi NSIS lama ditemukan/disinkronkan sehingga paket43fc35c tidak diberikan sebagai paket final. Tidak version bump/tag/official release. `docs/qa/host-finish-2026-09-18.md`, package/production JSON.
+
+- [x] (Operator - XyDesk Team, 2026-09-18) — **HOST-FINISH**: user memberi izin push/build/deploy pada chat terakhir. Source auto16:9 supported/readback + audio/input perlu gate Prepare Host Windows lalu NSIS dari SHA sama, dan rollout web menjaga OAuth/bindings. Tidak mengeksekusi mode/driver/RDP pada PC user dari workspace. Selesai: Windows35403913522/NSIS35404435326, web1d669576. Bukti final di item HOST-FINISH DELIVERED.
 
 - [ ] (Operator - XyDesk Team, 2026-09-18) — **AUDIO-REPAIR belum dikemas/dideploy**. Source Linux156/web76 + local web build + Windows WASAPI ABI check PASS, bukan native Windows runtime proof. Tunggu pekerjaan input/16:9 sesuai instruksi pengguna implement/test sebelum packaging, lalu izin Build/NSIS/web rollout tersendiri. Existing37c5eea installer dan live740345c3 tidak mengandung patch ini. Pertahankan OAuth/bindings/version. `docs/qa/audio-repair-2026-09-18.md`.
 
@@ -820,6 +822,8 @@ _(kosong)_
   NEWS_STYLE yang sudah dikoreksi).
 
 ## Untuk: Host Engine
+
+- [ ] (Operator - XyDesk Team, 2026-09-18) — **Status terbaru setelah HOST-FINISH**: auto16:9 supported-mode/test/readback sudah diimplementasikan, audio/input sudah dikemas dan web live. Windows153 termasuk real Opus PASS. Bukan bukti userRDP: tetap perlu suara nyata/recording endpoint/Windows mode acceptance/physical controls/latency lapangan. Forward-audio idle cancellation/backpressure, COM balancing dan hotplug tetap follow-up; jangan mengklaim sudah diimplementasikan. Tidak perlu build ulang source yang sama kecuali ada perubahan. Bukti `docs/qa/host-finish-2026-09-18.md`.
 
 - [ ] (Operator - XyDesk Team, 2026-09-18) — **INPUT-LATENCY**: overflow yang menghentikan input sudah diperbaiki; bounded async backpressure + adjacent absolute coalescing, Linux161 PASS. Masih perlu native Windows/physical responsiveness, RTT/encode/decode measurement, otomatis16:9 supported/applied verification, audio field acceptance. Jangan klaim zero-lag atau seluruh keluhan selesai. Bukti `docs/qa/input-queue-2026-09-18.md`; belum packaging/deploy.
 
