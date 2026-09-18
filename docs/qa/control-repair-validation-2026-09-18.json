@@ -2,7 +2,7 @@
   "date": "2026-09-18",
   "webTests": 55,
   "backendTests": 183,
-  "typescriptVite": "PASS (local build, not production OAuth build)",
+  "typescriptVite": "PASS; production rebuild preserved existing public Google client ID",
   "runtime": [
     "admin auth + SQLite PASS",
     "member concurrency PASS",
@@ -10,7 +10,7 @@
     "bound WS idle alarm PASS ~15s"
   ],
   "chromium": "PASS 390x844 and844x390; local canvas + stub RTC",
-  "productionDeployed": false,
+  "productionDeployed": true,
   "hostChanged": false,
   "limitations": [
     "Windows pointer precision not proven fixed",

@@ -108,7 +108,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
-| SESI-20260918-OPERATOR-CONTROLREPAIR | Operator - XyDesk Team | Web + history + audit host | SIAP LOKAL / MENUNGGU DEPLOY | Web55/backend183/build+4runtime+Chromium2viewport PASS. Preview manual/group perID, keyboard tutup/release, mapping shortcuts. HD/pointer Windows belum selesai. GitHub CI tidak didispatch. Lihat HANDOFF/QA. | 2026-09-18 |
+| SESI-20260918-OPERATOR-CONTROLREPAIR | Operator - XyDesk Team | Web + history + audit host | SELESAI TAHAP WEB | Source7779b55; Web55/backend183/build+4runtime+Chromium2viewport PASS. Deploy web d2328824/backend ff4d95d4; exact bytes/OAuth/auth PASS. HD/pointer Windows belum selesai. GitHub CI tidak didispatch. | 2026-09-18 |
 | SESI-20260918-OPERATOR-BOUNDSESSION | Operator - XyDesk Team | Backend / sesi aktif | SELESAI TAHAP BACKEND | Source db1c0a4;181 unit+4 runtime PASS; real idle alarm ~15s. Deploy a446be11, live guest bound WS welcome/pong PASS. Legacy/Windows media limits di HANDOFF. CI GitHub tidak didispatch. | 2026-09-18 |
 | SESI-20260918-OPERATOR-COREGUARD | Operator - XyDesk Team | Backend / auth | SELESAI TAHAP GERBANG AKUN | Source697b14d; 171 tes+3 runtime PASS; deploy8b4f5429 health/guest/auth/config PASS, web hashes unchanged. CI GitHub tidak didispatch. Ticket lama dan sesi P2P aktif belum ikut revoke; bukti docs/qa/coreguard-production-2026-09-18.json. | 2026-09-18 |
 | SESI-20260917-OPERATOR-SESSIONUX | Operator - XyDesk Team | Web + Backend | SELESAI | Shipped 8a10709; web51/backend155, runtime dan produksi PASS. Bukti docs/qa/session-ux-production-2026-09-17.json; CI tidak didispatch. | 2026-09-17 |

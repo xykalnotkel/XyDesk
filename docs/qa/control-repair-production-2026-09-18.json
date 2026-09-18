@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-18",
+  "source": "7779b55d49de304c639b70310d5323fe97e6dff2",
+  "workerVersions": {
+    "backend": "ff4d95d4-746c-4183-ab17-629cd2dd2893",
+    "web": "d2328824-9ee3-407d-a255-b5e92b1d9a3d"
+  },
+  "checks": {
+    "/healthz": 200,
+    "/auth/session-history": 401,
+    "/signal-token?id=control-repair-check": 401,
+    "/admin/auth/config": 200,
+    "/connect": 200,
+    "/history": 200,
+    "anonymous delete-device": 401
+  },
+  "exactAssetHashes": {
+    "index-C6Tg_3gF.js": "6a69a2c04066c15b4148279d7d54227711496e6b11cb4ac5676b8f04fa33f0ca",
+    "jsQR-BZfqIBYG.js": "b018a387d6225f60553429286df8c7aed6c4c3d24a53782f2d866ca35ad2939e",
+    "LicenseInventory-D5a-x21Y.js": "821deca832cfd3402e7c4dbbe82649f46767a4c9433c1684708c2c4eeb81ae37",
+    "rolldown-runtime-CbXtAM7H.js": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+    "index-vDSKjZrW.css": "7376080a0169cf683eafee8d45b8f78ea0b61ff47f18b65854d432d2bcb7311a"
+  },
+  "oauthClientPreserved": true,
+  "bindingsUnchanged": true,
+  "realAccountHistoryWriteTested": false,
+  "hostChanged": false,
+  "limitations": [
+    "Pointer Windows precision and HD engine not fixed/proven",
+    "Production checks do not pair with a host or modify account history"
+  ],
+  "initialVerificationNote": "First immediate asset comparison failed during rollout; subsequent verification matched all JS/CSS and both HTML routes byte-for-byte."
+}

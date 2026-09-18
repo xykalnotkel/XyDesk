@@ -1984,3 +1984,15 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   persetujuan. Build lokal generik bukan build OAuth produksi; sebelum deploy
   WAJIB ambil/preservasi public Google client ID dari bundle live, rebuild,
   push source lalu deploy dan cocokkan bytes aset. Jangan deploy build kosong.
+
+- **Rollout CONTROLREPAIR disetujui:** user memilih "Ya, terapkan sekarang".
+  Source `7779b55`; backend `ff4d95d4-746c-4183-ab17-629cd2dd2893`, web
+  `d2328824-9ee3-407d-a255-b5e92b1d9a3d`. Production build mempertahankan
+  public OAuth client dari bundle live. Bindings backend/web identik.
+- Pascadeploy: kelima aset JS/CSS dan HTML /connect+/history byte-identical;
+  health200, private history401/no-store/CORS, anonymous delete-device401,
+  admin password tetap enabled. Pemeriksaan aset pertama segera sesudah
+  deploy belum cocok; pemeriksaan berikutnya seluruhnya cocok. Tidak ada
+  write riwayat akun produksi atau pairing VM untuk tes ini.
+  Bukti docs/qa/control-repair-production-2026-09-18.json. Tahap web ditutup;
+  presisi input Windows dan HD masih membutuhkan paket host serta bukti nyata.
