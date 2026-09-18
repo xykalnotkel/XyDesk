@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {transformWithOxc} from 'vite';
 const {code} = await transformWithOxc(readFileSync(new URL('../src/remote_pointer.ts', import.meta.url), 'utf8').replace(/^export /gm, '') + '\nexports.api={imageRect,desktopRect,desktopToCanvas,RemotePointer,KeyOwnership};', 'remote_pointer.ts');
-const exports={}; vm.runInNewContext(code,{exports});
+const exports={}; vm.runInNewContext(code,{exports,setTimeout,clearTimeout});
 const {imageRect,desktopRect,desktopToCanvas,RemotePointer,KeyOwnership}=exports.api;
 const plain = x => JSON.parse(JSON.stringify(x));
 function setup(){const events=[]; const r={left:0,top:100,width:400,height:200}; const p=new RemotePointer(()=>r,e=>events.push(plain(e)));return {p,events,r};}
@@ -69,4 +69,23 @@ test('internal letterbox maps content endpoints to encoded canvas and rejects ba
  p.down(1,960,540,0,false,1);assert.equal(events[0].x,.5);assert.equal(events[0].y,.5);
  assert.deepEqual(plain(desktopRect(box,1920,1080,{...video,contentRect:[0,-1,1920,1080]})),box);
  assert.deepEqual(plain(desktopToCanvas(.2,.4,1280,720,video)),{x:.2,y:.4});
+});
+
+for(const trackpad of [false,true])test(`touch tap and stationary long-press are exclusive (${trackpad?'trackpad':'direct'})`,()=>{
+ const {p,events}=setup();p.down(1,120,150,0,trackpad,0,true);
+ assert.equal(events.filter(e=>e.type==='button').length,0);
+ p.longPress(1);p.up(1,false,true,600);
+ assert.deepEqual(events.filter(e=>e.type==='button'),[{type:'button',button:1,down:true},{type:'button',button:1,down:false}]);
+ events.length=0;p.down(2,120,150,0,trackpad,1000,true);p.up(2,false,true,1100);
+ assert.deepEqual(events.filter(e=>e.type==='button'),[{type:'button',button:0,down:true},{type:'button',button:0,down:false}]);p.reset();
+});
+test('touch move, multitouch, cancel and blur cannot leak a delayed right click',()=>{
+ for(const action of ['move','second','cancel','reset']){
+  const {p,events}=setup();p.down(1,120,150,0,true,0,true);
+  if(action==='move')p.move(1,140,150,true,1,false);
+  if(action==='second')p.down(2,130,150,0,true,1,true);
+  if(action==='cancel')p.up(1,true,true,10);
+  if(action==='reset')p.reset();
+  p.longPress(1);assert.equal(events.filter(e=>e.type==='button').length,0);p.reset();
+ }
 });

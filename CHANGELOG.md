@@ -24,6 +24,11 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+### CONTROL-REFINE — source siap, belum deploy
+- Mapping transparan border+label, custom picker/search tanpa select browser, tombol tambahan dan shortcut; tap kiri/tahan500ms kanan di dua mode; HUD rounded kiri/kanan/scroll/Windows/switch.
+- Riwayat baris wallpaper+nama+chevron, reconnect pairing inline mempertahankan perangkat dan route/history tanpa menyimpan password. Gerak absolut belum terkirim digabung saat antrean penuh; tombol/release tetap berurutan.
+- Web70/build/Chromium2viewport+gesture+F1+reconnect/privacy PASS. Tidak mengubah host/RDP atau menyimpulkan sebab delay jaringan; mode desktop16:9 masih perlu detail RDP pengguna. Bukti `docs/qa/control-refine-2026-09-18.md`.
+
 ### LETTERBOX-LATENCY — paket uji tervalidasi; web/backend sudah deploy
 - Menggantikan interpretasi HD/preview sebelumnya: kanvas tepat1280×720/1920×1080 dengan desktop utuh + pita hitam, pemetaan input padding, cursor Windows di video GDI/DXGI/WGC tanpa panah web pengganti, wallpaper otomatis sekali saat koneksi dengan opt-out/cancellation.
 - Gap frame H264 memerlukan IDR baru, antrean lama dibuang, RTP mengikuti timestamp capture; telemetry host encode/queue/write dan web RTT/jitter/buffer/decode/loss dipisah. Wallpaper background dibatasi buffering/pacing/deadline.

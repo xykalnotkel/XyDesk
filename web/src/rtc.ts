@@ -235,6 +235,8 @@ export interface SessionStats {
   mbps: number;
   rttMs: number;
   lossPct: number;
+  inputBufferedBytes?:number;
+  coalescedMoves?:number;
   jitterMs?:number;
   jitterBufferMs?:number;
   decodeMs?:number;
@@ -273,6 +275,8 @@ export class RtcSession {
   private ws?: WebSocket;
   private pc?: RTCPeerConnection;
   private input?: RTCDataChannel;
+  private pendingAbsoluteMove?:Uint8Array;
+  private coalescedMoves=0;
   private deviceId = '';
   private token = '';
   private hostId = '';
@@ -535,6 +539,8 @@ export class RtcSession {
     this.audioTransceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
     this.input = pc.createDataChannel('input');
     this.input.binaryType = 'arraybuffer';
+    this.input.bufferedAmountLowThreshold=512;
+    this.input.onbufferedamountlow=()=>this.flushAbsoluteMove();
     this.input.onmessage = (ev) => {
       // Balasan biner: 0x08 CLIPBOARD_SET (isi papan klip PC).
       if (ev.data instanceof ArrayBuffer) {
@@ -549,6 +555,7 @@ export class RtcSession {
           this.wallpaperTransfer.receive(data);
           if(data.type==='cursor' && Number.isFinite(data.x) && Number.isFinite(data.y) && data.x>=0 && data.x<=1 && data.y>=0 && data.y<=1 && typeof data.visible==='boolean')this.onCursor(data);
           if (data.type === 'meta') {
+            if(JSON.stringify([data.inputGeometry,data.video?.applied,data.video?.contentRect])!==JSON.stringify([this.meta?.inputGeometry,this.meta?.video?.applied,this.meta?.video?.contentRect]))this.pendingAbsoluteMove=undefined;
             this.meta = data as HostMeta;
             this.onMeta(this.meta);
           }
@@ -640,10 +647,26 @@ export class RtcSession {
     }
   }
 
+  private flushAbsoluteMove(){
+    if(this.meta?.inputGeometry===null){this.pendingAbsoluteMove=undefined;return;}
+    if(this.pendingAbsoluteMove&&this.input?.readyState==='open'&&this.input.bufferedAmount<=1024){
+      this.input.send(this.pendingAbsoluteMove.slice().buffer);this.pendingAbsoluteMove=undefined;
+    }
+  }
   sendInput(event: Uint8Array) {
-    // Fail closed while a new host has no capture geometry; releases still pass.
-    if(this.meta?.inputGeometry===null && (event[0]===1||event[0]===2||event[0]===4||(event[0]===3&&event[2]===1)))return;
-    if (this.input?.readyState === 'open') this.input.send(event.buffer as ArrayBuffer);
+    if(this.meta?.inputGeometry===null)this.pendingAbsoluteMove=undefined;
+    if(this.meta?.inputGeometry===null && (event[0]===1||event[0]===2||event[0]===4||(event[0]===3&&event[2]===1))){this.pendingAbsoluteMove=undefined;return;}
+    const dc=this.input;if(dc?.readyState!=='open')return;
+    // Only replace absolute movement that has NOT entered SCTP. Buttons,
+    // releases, keys and relative deltas keep their reliable ordering.
+    if(event[0]===2){
+      if(dc.bufferedAmount>1024){if(this.pendingAbsoluteMove)this.coalescedMoves++;this.pendingAbsoluteMove=event.slice();return;}
+      if(this.pendingAbsoluteMove)this.coalescedMoves++;
+      this.pendingAbsoluteMove=undefined;
+    }else if(this.pendingAbsoluteMove&&(event[0]===1||event[0]===3||event[0]===4)){
+      dc.send(this.pendingAbsoluteMove.slice().buffer);this.pendingAbsoluteMove=undefined;
+    }
+    dc.send(event.slice().buffer);
   }
 
   /// Kirim isi papan klip browser ke PC (0x08 CLIPBOARD_SET).
@@ -767,6 +790,8 @@ export class RtcSession {
       }
       if (stats) {
         stats.rttMs = rttMs;
+        stats.inputBufferedBytes=this.input?.bufferedAmount;
+        stats.coalescedMoves=this.coalescedMoves;
         const audioReports = Array.from(report.values()).map(s => s as unknown as Record<string, unknown>).filter(x => x.type === 'inbound-rtp' && (x.kind === 'audio' || x.mediaType === 'audio'));
         stats.audioBytesReceived = audioReports.reduce((sum, x) => sum + Number(x.bytesReceived ?? 0), 0);
         const energy = audioReports.filter(x => typeof x.totalAudioEnergy === 'number');
@@ -828,6 +853,7 @@ export class RtcSession {
     if (this.ws?.readyState === WebSocket.OPEN && this.hostId) {
       try { this.send({ type: 'bye', to: this.hostId }); } catch { /* socket sudah putus */ }
     }
+    this.pendingAbsoluteMove=undefined;
     this.input?.close();
     this.pc?.close();
     this.ws?.close();

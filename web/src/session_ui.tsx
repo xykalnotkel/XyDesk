@@ -609,6 +609,8 @@ export function SessionPanel({
                 <StatRow label="Decode / frame (interval)" value={stats.decodeMs===undefined?'—':`${idNum(stats.decodeMs,1)} ms`}/>
                 <StatRow label="Paket hilang (interval)" value={stats.recentLossPct===undefined?'—':`${idNum(stats.recentLossPct,1)} %`}/>
                 <StatRow label="Freeze / frame dibuang (total)" value={`${stats.freezeCount??'—'} / ${stats.framesDropped??'—'}`}/>
+                <StatRow label="Antrean input lokal" value={stats.inputBufferedBytes===undefined?'—':`${stats.inputBufferedBytes} byte`}/>
+                <StatRow label="Gerak digabung (total)" value={String(stats.coalescedMoves??'—')}/>
                 <StatRow label="Codec" value={stats.codec || '—'} />
                 <StatRow label="Status video" value={stats.videoState || '—'} />
                 <StatRow label="Penunjuk kontrol" value={stats.cursorState || '—'} />
@@ -694,7 +696,7 @@ export function SessionPanel({
             </button>
           </div>
           <p className="spanel-note">
-            Trackpad: geser satu jari untuk menggerakkan panah, ketuk untuk klik, dua jari untuk scroll. Tahan tombol klik kiri sambil geser untuk drag. Langsung: sentuh tepat pada gambar. Kursor yang terlihat adalah kursor Windows dalam video, termasuk saat mouse digerakkan di PC.
+            Trackpad: geser satu jari untuk menggerakkan kursor, ketuk untuk klik kiri, tahan diam 0,5 detik untuk klik kanan, dua jari untuk scroll. Tahan tombol klik kiri sambil geser untuk drag. Langsung: sentuh tepat pada gambar. Kursor yang terlihat adalah kursor Windows dalam video, termasuk saat mouse digerakkan di PC.
           </p>
           <div className="spanel-row">
             <div className="spanel-copy">

@@ -30,7 +30,7 @@ export function desktopToCanvas(x:number,y:number,width:number,height:number,vid
  return{x:(r[0]+Math.max(0,Math.min(1,x))*(r[2]-1))/(width-1),y:(r[1]+Math.max(0,Math.min(1,y))*(r[3]-1))/(height-1)};
 }
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
-type Contact = Position & { startX: number; startY: number; at: number; moved: boolean; trackpad: boolean; button: number };
+type Contact = Position & { startX: number; startY: number; at: number; moved: boolean; trackpad: boolean; button: number; touch:boolean; longPressed:boolean; timer?:ReturnType<typeof setTimeout> };
 
 // Penunjuk lokal = posisi perintah terakhir, bukan telemetri kursor Windows.
 // Trackpad memakai delta jari untuk memindahkan posisi absolut yang sama
@@ -56,20 +56,32 @@ export class RemotePointer {
   }
   applyHostPosition(x:number,y:number){if(!this.contacts.size)this.cursor={x:clamp(x),y:clamp(y)};}
   sync() { this.position(this.cursor.x, this.cursor.y); }
-  down(id: number, x: number, y: number, button: number, trackpad: boolean, at: number): boolean {
+  down(id: number, x: number, y: number, button: number, trackpad: boolean, at: number, touch=false): boolean {
     const r = this.rect();
     if (!r || this.contacts.has(id)) return false;
+    if(touch && this.contacts.size){this.multi=true;for(const c of this.contacts.values())this.cancelTimer(c);}
     if (!trackpad && (this.contacts.size > 0 || x < r.left || y < r.top || x > r.left + r.width || y > r.top + r.height)) return false;
     if (this.contacts.size === 0) this.multi = false;
-    this.contacts.set(id, { x, y, startX: x, startY: y, at, moved: false, trackpad, button });
+    const contact:Contact={x,y,startX:x,startY:y,at,moved:false,trackpad,button,touch,longPressed:false};
+    this.contacts.set(id,contact);
     if (trackpad) {
       if (this.contacts.size > 1) this.multi = true;
       else this.position(this.cursor.x, this.cursor.y);
     } else {
       this.position((x - r.left) / r.width, (y - r.top) / r.height);
-      this.button(button, true);
+      if(!touch)this.button(button, true,'contact:'+id);
+    }
+    if(touch && !this.multi && this.buttons.size===0){
+      contact.timer=setTimeout(()=>this.longPress(id),500);
     }
     return true;
+  }
+  private cancelTimer(p:Contact){if(p.timer!==undefined){clearTimeout(p.timer);p.timer=undefined;}}
+  longPress(id:number){
+    const p=this.contacts.get(id);
+    if(!p||!p.touch||p.moved||p.longPressed||this.multi||this.buttons.size)return;
+    this.cancelTimer(p);p.longPressed=true;
+    this.sync();this.button(1,true,'long:'+id);this.button(1,false,'long:'+id);
   }
   move(id: number, x: number, y: number, trackpad: boolean, sens: number, reverseScroll: boolean) {
     const r = this.rect();
@@ -83,8 +95,11 @@ export class RemotePointer {
     }
     const dx = x - p.x, dy = y - p.y;
     p.x = x; p.y = y;
-    if (Math.hypot(x - p.startX, y - p.startY) > 6) p.moved = true;
-    if (!p.trackpad) this.position((x - r.left) / r.width, (y - r.top) / r.height);
+    if (Math.hypot(x - p.startX, y - p.startY) > 6){p.moved=true;this.cancelTimer(p);}
+    if (!p.trackpad){
+      this.position((x-r.left)/r.width,(y-r.top)/r.height);
+      if(p.touch&&p.moved&&!p.longPressed&&!this.multi&&this.buttons.size===0)this.button(p.button,true,'contact:'+id);
+    }
     else if (this.multi) {
       if (this.contacts.size === 2 && dy !== 0) this.emit({ type: 'scroll', dy: Math.round(dy * (reverseScroll ? -1 : 1)) });
     } else this.position(this.cursor.x + dx * sens / r.width, this.cursor.y + dy * sens / r.height);
@@ -92,15 +107,17 @@ export class RemotePointer {
   up(id: number, cancelled: boolean, tapClick: boolean, at: number) {
     const p = this.contacts.get(id);
     if (!p) return;
+    this.cancelTimer(p);
+    if(p.touch&&!cancelled&&!p.moved&&!this.multi&&at-p.at>=500)this.longPress(id);
     this.contacts.delete(id);
-    if (!p.trackpad) this.button(p.button, false);
-    else if (!cancelled && !this.multi && !p.moved && tapClick && at - p.at < 300 && this.buttons.size === 0) {
-      this.position(this.cursor.x, this.cursor.y);
-      this.button(0, true); this.button(0, false);
+    if(!p.trackpad)this.button(p.button,false,'contact:'+id);
+    if(!cancelled&&!this.multi&&!p.moved&&!p.longPressed&&tapClick&&this.buttons.size===0&&(p.touch||p.trackpad)&&at-p.at<(p.touch?500:300)){
+      this.sync();this.button(0,true,'tap:'+id);this.button(0,false,'tap:'+id);
     }
     if (this.contacts.size === 0) this.multi = false;
   }
   reset() {
+    for(const p of this.contacts.values())this.cancelTimer(p);
     for (const b of this.buttons) this.emit({type:'button',button:b,down:false});
     this.buttons.clear(); this.buttonOwners.clear();
     this.contacts.clear(); this.multi = false;

@@ -219,3 +219,14 @@ test('jitter seconds and interval buffer/decode/loss are separate from RTT',asyn
  const idle=await session.readStats();assert.equal(idle.decodeMs,undefined);assert.equal(idle.recentLossPct,undefined);
  x.id='new';x.framesDecoded=1;x.jitterBufferEmittedCount=1;const reset=await session.readStats();assert.equal(reset.decodeMs,undefined);assert.equal(reset.jitterBufferMs,undefined);
 });
+
+test('congested absolute movement is bounded/latest-only and flushed before click; key/release stays immediate',()=>{
+ const {session}=setup(),sent=[];session.input={readyState:'open',bufferedAmount:2048,send:b=>sent.push([...new Uint8Array(b)])};
+ for(let n=0;n<100;n++)session.sendInput(new Uint8Array([2,n,0]));
+ assert.equal(sent.length,0);assert.equal(session.coalescedMoves,99);assert.deepEqual([...session.pendingAbsoluteMove],[2,99,0]);
+ session.sendInput(new Uint8Array([5,65,0,1]));assert.deepEqual(sent,[[5,65,0,1]]);
+ session.sendInput(new Uint8Array([3,0,1]));assert.deepEqual(sent.slice(-2),[[2,99,0],[3,0,1]]);
+ session.sendInput(new Uint8Array([3,0,0]));assert.deepEqual(sent.at(-1),[3,0,0]);
+ session.sendInput(new Uint8Array([2,42,0]));session.input.bufferedAmount=0;session.flushAbsoluteMove();assert.deepEqual(sent.at(-1),[2,42,0]);assert.equal(session.pendingAbsoluteMove,undefined);
+ session.input.bufferedAmount=2048;session.sendInput(new Uint8Array([2,43,0]));session.meta={inputGeometry:null};session.input.bufferedAmount=0;session.flushAbsoluteMove();assert.equal(session.pendingAbsoluteMove,undefined);assert.deepEqual(sent.at(-1),[2,42,0]);
+});

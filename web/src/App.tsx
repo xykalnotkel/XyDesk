@@ -1,3 +1,4 @@
+import {MouseHud} from './mouse_hud';
 import { flushSync } from 'react-dom';
 import { SessionHistoryPage, saveSessionHistory, accountHistoryToken } from './session_history';
 import type { HistoryItem, HistoryState } from './session_history';
@@ -197,7 +198,7 @@ export default function App() {
   }
 
   let page: React.ReactNode;
-  if (route === '/history') page = <SessionHistoryPage />;
+  if (route === '/history') page = <SessionHistoryPage renderReconnect={item=><RemoteApp reconnectDevice={item}/>} />;
   else if (route === '/download') page = <DownloadPage />;
   else if (route === '/legal') page = <LegalPage />;
   else if (route === '/billing') page = <BillingPage />;
@@ -1613,7 +1614,7 @@ function NewsDetailPage({
     </main>
   );
 }
-function RemoteApp() {
+function RemoteApp({reconnectDevice}:{reconnectDevice?:{deviceId:string;name:string}}={}) {
   const [jwt, setJwt] = useState<string | null>(() =>
     localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(GUEST_TOKEN_KEY),
   );
@@ -1632,6 +1633,7 @@ function RemoteApp() {
       .then((r) => setProfile(r.user))
       .catch(() => {
         localStorage.removeItem(TOKEN_KEY);
+    window.dispatchEvent(new Event('xydesk-account-changed'));
         setJwt(null);
       });
   }, [jwt]);
@@ -1658,6 +1660,7 @@ function RemoteApp() {
   const finishAuth = (token: string, user?: UserProfile) => {
     sessionStorage.removeItem(GUEST_TOKEN_KEY);
     localStorage.setItem(TOKEN_KEY, token);
+    window.dispatchEvent(new Event('xydesk-account-changed'));
     setJwt(token);
     if (user) setProfile(user);
     setAuthStep('closed');
@@ -1712,6 +1715,7 @@ function RemoteApp() {
 
   const signOut = () => {
     localStorage.removeItem(TOKEN_KEY);
+    window.dispatchEvent(new Event('xydesk-account-changed'));
     sessionStorage.removeItem(GUEST_TOKEN_KEY);
     setJwt(null);
     setProfile(null);
@@ -1787,6 +1791,8 @@ function RemoteApp() {
         )}
       </div>
       <ConnectScreen
+        initialHostId={reconnectDevice?.deviceId}
+        returnPath={reconnectDevice?'/history':'/connect'}
         ensureToken={ensureToken}
         accountName={(profile?.name || profile?.email || '').trim()}
       />
@@ -1996,11 +2002,15 @@ function EyeOffIcon() {
 function ConnectScreen({
   ensureToken,
   accountName,
+  initialHostId,
+  returnPath='/connect',
 }: {
   ensureToken: () => Promise<string>;
   accountName: string;
+  initialHostId?:string;
+  returnPath?:'/connect'|'/history';
 }) {
-  const [hostId, setHostId] = useState(() => localStorage.getItem(LAST_HOST_KEY) ?? '');
+  const [hostId, setHostId] = useState(() => initialHostId ?? localStorage.getItem(LAST_HOST_KEY) ?? '');
   const [pin, setPin] = useState('');
   const [phase, setPhase] = useState<RtcPhase | ''>('');
   const sessionFragmentRef = useRef('');
@@ -2152,7 +2162,7 @@ function ConnectScreen({
     const refresh = connected ? window.setInterval(paintCursor, 1000) : 0;
     paintCursor();
     if (surfaceRef.current) observer.observe(surfaceRef.current);
-    if (connected) setHudToast('Geser = gerak panah • ketuk = klik. Tahan tombol kiri + geser untuk drag.');
+    if (connected) setHudToast('Ketuk = klik kiri • tahan diam = klik kanan • geser = gerak. Gunakan HUD kiri untuk drag.');
     return () => {
       reset(); observer.disconnect();
       clearInterval(refresh); cancelAnimationFrame(cursorRaf.current); cursorRaf.current = 0;
@@ -2280,7 +2290,7 @@ function ConnectScreen({
           saveRecent(hostId);
           setRecents(loadRecents());
           if (!sessionFragmentRef.current) sessionFragmentRef.current = newSessionFragment();
-          window.history.replaceState({}, '', '/connect' + sessionFragmentRef.current);
+          window.history.replaceState({}, '', returnPath + sessionFragmentRef.current);
           setHudToast(document.fullscreenElement===surfaceRef.current?'Sesi layar penuh aktif. Jika masih tegak, putar HP ke landscape.':'Sesi aktif. Gunakan tombol layar penuh jika browser menolak permintaan otomatis.');
         }
         // Reconnect otomatis HANYA bila sesi pernah live lalu putus
@@ -2386,7 +2396,7 @@ function ConnectScreen({
     setFasePesan(null);
     sessionFragmentRef.current = '';
     if (isSessionFragment(window.location.hash)) {
-      window.history.replaceState({}, '', '/connect');
+      window.history.replaceState({}, '', returnPath);
     }
     void leaveSessionFullscreen(surfaceRef.current);
   }, []);
@@ -2468,6 +2478,7 @@ function ConnectScreen({
     const keys = new Set<number>();
     const release = () => { for(const vk of keys) send(InputCodec.key(vk,false),'physical'); keys.clear(); };
     const down = (e:KeyboardEvent) => {
+      if((e.key==='Enter'||e.key===' ')&&e.target instanceof HTMLElement&&e.target.closest('button'))return;
       if(document.querySelector('.mapping-tools[data-editing="true"]') || (e.target instanceof HTMLElement && e.target.closest('input,textarea,select,[contenteditable="true"]'))) return;
       const vk=vkFromCode(e.code); if(vk===null) return;
       keys.add(vk); e.preventDefault(); send(InputCodec.key(vk,true),'physical',e.repeat);
@@ -2485,7 +2496,7 @@ function ConnectScreen({
   const pointerMode = (e: React.PointerEvent) => trackpad && e.pointerType !== 'mouse';
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!connected || !isImageTarget(e)) return;
-    const accepted = pointerRef.current!.down(e.pointerId, e.clientX, e.clientY, e.button === 2 ? 1 : e.button === 1 ? 2 : 0, pointerMode(e), performance.now());
+    const accepted = pointerRef.current!.down(e.pointerId, e.clientX, e.clientY, e.button === 2 ? 1 : e.button === 1 ? 2 : 0, pointerMode(e), performance.now(), e.pointerType === 'touch');
     if (accepted) { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); }
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -2499,7 +2510,7 @@ function ConnectScreen({
   const mouseHold = (e: React.PointerEvent<HTMLButtonElement>, button: number, down: boolean) => {
     e.stopPropagation(); e.preventDefault();
     if (down) { e.currentTarget.setPointerCapture(e.pointerId); pointerRef.current!.sync(); }
-    pointerRef.current!.button(button, down, 'hud');
+    pointerRef.current!.button(button, down, 'hud:'+e.pointerId);
   };
 
   const labels: Record<string, string> = {
@@ -2737,32 +2748,11 @@ function ConnectScreen({
           onPanel={() => setPanelOpen((v) => !v)}
           onDisconnect={disconnect}
         />
-        <div className="hud-mouse" aria-hidden="false">
-          <button className="hud-icon-btn" type="button" title="Temukan panah" aria-label="Temukan panah" onClick={() => {
-            pointerRef.current!.reset(); pointerRef.current!.cursor = {x: 0.5, y: 0.5}; pointerRef.current!.sync(); paintCursor();
-            setHudToast('Panah dikembalikan ke tengah gambar. Geser satu jari untuk bergerak.');
-          }}>⌖</button>
-          <button
-            className="hud-icon-btn"
-            title="Klik kiri (tahan untuk drag)"
-            onPointerDown={(e) => mouseHold(e, 0, true)}
-            onPointerUp={(e) => mouseHold(e, 0, false)}
-            onPointerCancel={(e) => mouseHold(e, 0, false)}
-            onLostPointerCapture={(e) => mouseHold(e, 0, false)}
-          >
-            <img src="/hud-mouse-left.png" alt="Klik kiri" />
-          </button>
-          <button
-            className="hud-icon-btn"
-            title="Klik kanan"
-            onPointerDown={(e) => mouseHold(e, 1, true)}
-            onPointerUp={(e) => mouseHold(e, 1, false)}
-            onPointerCancel={(e) => mouseHold(e, 1, false)}
-            onLostPointerCapture={(e) => mouseHold(e, 1, false)}
-          >
-            <img src="/hud-mouse-right.png" alt="Klik kanan" />
-          </button>
-        </div>
+        <MouseHud onMouse={mouseHold} trackpad={trackpad} onSwitch={toggleTrackpad}
+          onMouseClick={button=>{pointerRef.current!.sync();pointerRef.current!.button(button,true,'hud-keyboard');pointerRef.current!.button(button,false,'hud-keyboard');}}
+          onScroll={delta=>{pointerRef.current!.sync();send(InputCodec.scroll(0,delta));}}
+          onWindows={(id,down)=>send(InputCodec.key(91,down),'hud-windows:'+id)}
+          onCenter={()=>{pointerRef.current!.reset();pointerRef.current!.cursor={x:.5,y:.5};pointerRef.current!.sync();setHudToast('Kursor Windows dikembalikan ke tengah desktop.');}}/>
         {retryInfo && <p className="session-retry">{retryInfo}</p>}
         {hudToast && <p className="hud-toast" role="status">{hudToast}</p>}
         {panelOpen && (
