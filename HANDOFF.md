@@ -1928,3 +1928,14 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   field proof, lease enforcement host saat Hub tak terjangkau, capability/
   ACK efektif, HD dan mic late-enable tetap antrian. Perubahan nonvisual,
   tidak ada screenshot atau artikel berita yang diterbitkan.
+
+- **Produksi BOUNDSESSION:** source `db1c0a4`, Worker
+  `a446be11-ba3f-4dae-a4fb-33a31a9648cf`. Health/auth/CORS/guest v2 ticket,
+  penolakan salah role/id, admin password dan konfigurasi PASS. Guest v2
+  membuka WebSocket produksi sungguhan dan menerima welcome+pong tanpa
+  pairing host. Semua bindings dan hash aset web tetap sama.
+- Pemeriksaan pertama segera setelah deploy sempat melihat route baru404;
+  pemeriksaan berikutnya403 sesuai harapan, seluruh verifikasi lulus.
+  Catatan tersimpan di docs/qa/bound-session-production-2026-09-18.json.
+  Tidak ada pencabutan/ban akun produksi demi tes. Tahap backend ditutup;
+  bukti pemutusan media Windows dan pekerjaan kemampuan/ACK host belum.

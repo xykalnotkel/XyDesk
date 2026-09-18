@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-18",
+  "source": "db1c0a446c6513f93f7128a3b6b5acc651b64a8c",
+  "workerVersion": "a446be11-ba3f-4dae-a4fb-33a31a9648cf",
+  "checks": {
+    "health": 200,
+    "/auth/me": 401,
+    "/auth/session-history": 401,
+    "/signal-token?id=bound-live": 401,
+    "check-principal protected": 403,
+    "preflight": 204,
+    "guest login": 200,
+    "bound ticket": 200,
+    "role escalation denied": 401,
+    "device mismatch denied": 401,
+    "guest host denied": 403,
+    "admin password preserved": 200
+  },
+  "bindingsUnchanged": true,
+  "webAssetsUnchanged": {
+    "/assets/index-BPi3CJO7.js": "82533ef93712eb6c77b64b105d63e377ddcfc53201da636241d0679ca4778f80",
+    "/assets/index-D0yy38lb.css": "ce4dcd3f988f93327a65c5af50027c846fffab412ec874c0f06b02366792293a",
+    "/assets/rolldown-runtime-CbXtAM7H.js": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a"
+  },
+  "accountRevocationTestedInProduction": false,
+  "realHostPairingPerformed": false,
+  "limits": "Revocation/idle alarm tested locally with real Worker/SQLite/WebSockets and protocol host fixture, not production accounts or real Windows media.",
+  "liveGuestWebSocket": {
+    "boundTicket": true,
+    "welcome": true,
+    "pong": true,
+    "pairedWithHost": false
+  },
+  "initialVerificationNote": "First check immediately after deploy observed new internal route404; subsequent verification returned expected403 and all checks passed."
+}
