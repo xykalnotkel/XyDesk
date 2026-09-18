@@ -1,3 +1,4 @@
+import { signBoundTicket, readBoundTicket, checkPrincipal } from './bound_ticket.js';
 // XyDesk — Worker entry point (signaling + auth).
 //
 // Rute:
@@ -83,7 +84,13 @@ export default {
 
     // Role ikut ditandatangani. Token client dari /signal-token tidak bisa
     // dipakai ulang sebagai host untuk memanen password pairing.
-    if (!token || !(await verifyToken(token, purpose, role, env.XYDESK_SECRET))) {
+    let principal = null;
+    if (token.startsWith('v2.')) {
+      principal = await readBoundTicket(token,purpose,role,env.XYDESK_SECRET);
+      try {
+        if (!principal || !await checkPrincipal(env,principal)) return new Response('unauthorized',{status:401});
+      } catch { return new Response('authorization unavailable',{status:503}); }
+    } else if (!token || !(await verifyToken(token, purpose, role, env.XYDESK_SECRET))) {
       return new Response('unauthorized', { status: 401 });
     }
 
@@ -91,6 +98,8 @@ export default {
     const id = env.HUB.idFromName('global');
     const stub = env.HUB.get(id);
     const headers = new Headers(request.headers);
+    headers.delete('x-xydesk-principal');
+    if (principal) headers.set('x-xydesk-principal',JSON.stringify(principal));
     headers.set('x-xydesk-id', deviceId);
     headers.set('x-xydesk-role', role);
     headers.set('x-xydesk-name', name);
@@ -397,7 +406,8 @@ async function handleSignalToken(request, url, env) {
     }
   }
 
-  return new Response(await signSignalToken(id, role, env.XYDESK_SECRET), {
+  const ticket = role === 'client' ? await signBoundTicket(id,payload,env.XYDESK_SECRET) : await signSignalToken(id,role,env.XYDESK_SECRET);
+  return new Response(ticket, {
     status: 200,
     headers: { 'content-type': 'text/plain' },
   });
@@ -423,7 +433,11 @@ async function handleTurnIce(request, url, env) {
     const admin = request.headers.get('X-Admin') || '';
     if (env.ADMIN_SECRET && timingSafeEqual(admin, String(env.ADMIN_SECRET))) return true;
     const id = url.searchParams.get('id') || 'client';
-    const token = url.searchParams.get('token') || '';
+    const token = extractToken(request,url);
+    if (token.startsWith('v2.')) {
+      const principal = await readBoundTicket(token,id,'client',env.XYDESK_SECRET);
+      try { return principal && await checkPrincipal(env,principal); } catch { return false; }
+    }
     return token && (await verifyToken(token, id, 'client', env.XYDESK_SECRET));
   })();
   if (!authorized) {

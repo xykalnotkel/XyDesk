@@ -94,3 +94,18 @@ test('history write and delete recheck generation inside transaction',async()=>{
  assert.equal(await deleteUserHistory(x.storage,base.id,base.email,0),false);
  assert.equal((await x.storage.get('user:'+base.email)).token_version,1);
 });
+
+test('bound ticket follows account generation and subject index is deleted with account',async()=>{
+ const x=await setup();
+ const issue=()=>worker.fetch(x.req('/signal-token?id=bound-test'),x.env);
+ const ticket=await(await issue()).text();assert.ok(ticket.startsWith('v2.'));
+ assert.equal(await x.storage.get('subject:'+base.id),base.email);
+ const wsRequest=()=>new Request('https://signal.example/ws?id=bound-test',{headers:{Authorization:'Bearer '+ticket}});
+ await x.storage.put('user:'+base.email,{...base,token_version:1});
+ assert.equal((await worker.fetch(wsRequest(),x.env)).status,401);
+ // Restore fixture generation solely to exercise authorized account deletion.
+ await x.storage.put('user:'+base.email,base);
+ assert.equal((await x.store.deleteAccount(x.req('/auth/delete',{}))).status,200);
+ assert.equal(await x.storage.get('subject:'+base.id),undefined);
+ assert.equal((await worker.fetch(wsRequest(),x.env)).status,401);
+});

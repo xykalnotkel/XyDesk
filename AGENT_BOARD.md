@@ -80,6 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260918-OPERATOR-BOUNDSESSION | Operator - XyDesk Team | Backend / sesi aktif | LAGI KERJA | Ticket client terikat principal, pemeriksaan WS/TURN dan revocation aktif; kompatibilitas legacy tanpa pemutusan massal. | 2026-09-18 |
 
 ## Antrean izin push
 

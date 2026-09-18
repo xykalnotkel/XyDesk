@@ -1,3 +1,4 @@
+import { validPrincipal } from './bound_ticket.js';
 import { memberClaims, memberMatches, sameMember, guestClaims, accountClaims } from './member_session.js';
 import { historyEndpoint, deleteUserHistory } from './session_history.js';
 import { AdminSecurity } from './admin_security.js';
@@ -96,6 +97,7 @@ export class AuthStore {
     if (path === '/auth/guest' && request.method === 'POST') {
       return this.guest(request);
     }
+    if (path === '/auth/check-principal' && request.method === 'POST') return this.checkPrincipal(request);
     if (path === '/auth/authorize-session' && request.method === 'POST') return this.authorizeSession(request);
     if (path === '/auth/authorize-host' && request.method === 'POST') {
       return this.authorizeHost(request);
@@ -480,10 +482,26 @@ export class AuthStore {
     if (!this.env.XYDESK_SECRET || !timingSafeEqual(internal, this.env.XYDESK_SECRET)) return json({error:'forbidden'},403);
     const auth = request.headers.get('Authorization') || '';
     const payload = await verifyJwt(auth.startsWith('Bearer ') ? auth.slice(7) : '', this.secret());
-    if (guestClaims(payload)) return json({sub:payload.sub,guest:true});
+    if (guestClaims(payload)) return json({sub:payload.sub,guest:true,expiresAt:payload.exp});
     if (!memberClaims(payload)) return json({error:'unauthorized'},401);
-    const user = await this.ctx.storage.get(`user:${payload.email}`);
-    return memberMatches(payload,user) ? json({sub:user.id,guest:false}) : json({error:'unauthorized'},401);
+    return this.ctx.storage.transaction(async tx => {
+      const user = await tx.get(`user:${payload.email}`);
+      if (!memberMatches(payload,user)) return json({error:'unauthorized'},401);
+      // A ticket carries only the account UUID, not the email address in a URL.
+      await tx.put(`subject:${user.id}`,user.email);
+      return json({sub:user.id,guest:false,ver:user.token_version ?? 0,expiresAt:payload.exp});
+    });
+  }
+
+  async checkPrincipal(request) {
+    const key = request.headers.get('X-XyDesk-Internal') || '';
+    if (!this.env.XYDESK_SECRET || !timingSafeEqual(key,this.env.XYDESK_SECRET)) return json({error:'forbidden'},403);
+    let p; try { p = await request.json(); } catch { return json({error:'bad-json'},400); }
+    if (!validPrincipal(p)) return json({error:'unauthorized'},401);
+    if (p.guest) return json({ok:true});
+    const email = await this.ctx.storage.get(`subject:${p.sub}`);
+    const user = email ? await this.ctx.storage.get(`user:${email}`) : null;
+    return memberMatches({sub:p.sub,email,ver:p.ver},user) ? json({ok:true}) : json({error:'unauthorized'},401);
   }
 
   async authorizeHost(request) {

@@ -62,5 +62,5 @@ export async function historyEndpoint(request, storage, user) {
 
 export async function deleteUserHistory(storage, userId, email, version = 0) {
   const prefix=`history:${userId}:`;
-  return storage.transaction(async tx=>{if(email){const current=await tx.get(`user:${email}`);if(!sameMember(current,{id:userId,email,token_version:version}))return false;}const ids=await tx.get(prefix+'index')||[];for(const id of ids)await tx.delete(prefix+id);await tx.delete(prefix+'index');await tx.delete(prefix+'rate');if(email){await tx.delete(`user:${email}`);await tx.delete(`otp:${email}`);}return true;});
+  return storage.transaction(async tx=>{if(email){const current=await tx.get(`user:${email}`);if(!sameMember(current,{id:userId,email,token_version:version}))return false;}const ids=await tx.get(prefix+'index')||[];for(const id of ids)await tx.delete(prefix+id);await tx.delete(prefix+'index');await tx.delete(prefix+'rate');if(email){await tx.delete(`subject:${userId}`);await tx.delete(`user:${email}`);await tx.delete(`otp:${email}`);}return true;});
 }

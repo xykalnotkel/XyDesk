@@ -1895,3 +1895,36 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   Bukti `docs/qa/coreguard-production-2026-09-18.json`; tidak ada akun
   produksi diblokir/dicabut untuk pengujian, tidak ada pairing host nyata.
   Paket gerbang akun ditutup; backlog host/active revocation tetap terbuka.
+
+### BOUNDSESSION — ticket dan sesi client terikat akun (2026-09-18)
+
+- Operator meminta lanjut ("gas") setelah arah pengikatan identitas sesi
+  dijelaskan. Role Operator - XyDesk Team; sesi BOUNDSESSION.
+- Ticket client baru `v2.<JWT>` mengikat audience signaling, role client,
+  deviceId dan principal (UUID, guest, versi, expiry akun). Tidak membawa
+  email; index `subject:<UUID>` dibuat saat penerbitan dan dihapus bersama
+  akun. Tidak ada migrasi massal/secret rotation/OAuth/config/version change.
+- Worker memeriksa status principal untuk /ws dan /turn-ice. Header principal
+  kiriman caller selalu dibuang/ditimpa; hanya principal tervalidasi diteruskan.
+- Hub attachment bertahan hibernasi. Pemeriksaan tiap pesan dan alarm ~15s;
+  lookup per principal dideduplikasi hanya dalam satu alarm, concurrency16.
+  Akun yang gagal otorisasi/storage outage ditutup1008 dan host menerima bye
+  berdasarkan nonce, bukan ID saja. Host tidak direstart. Guest bertumpu pada
+  signed expiry karena tidak punya record akun yang dapat diblokir.
+- Bukti:181 unit PASS; runtime admin auth PASS; runtime member dan history
+  PASS; Worker+SQLite+WebSockets nyata: idle revoke mengirim host bye dan
+  client close1008 sekitar15s, guest expired ditutup, host dan guest sehat
+  tetap tersambung. Artefak docs/qa/bound-session-runtime-2026-09-18.json.
+- **Batas:** host dalam runtime adalah simulator protokol. Kode host saat ini
+  menangani bye dengan Session.close dan PairGuard.revoke, tetapi pemutusan
+  video/input Windows nyata belum diuji dalam sesi ini. Alarm adalah interval
+  target, bukan deadline keras (RPC/timeouts/scheduler/beban memengaruhi).
+- Ticket legacy diterima sampai masa berlaku habis; koneksi yang sudah ada
+  tanpa principal TIDAK diputus massal dan belum bisa di-account-revoke.
+  Operator /issue tetap bisa menerbitkan ticket legacy istimewa. Perlindungan
+  baru aktif setelah client mengambil ticket baru/menyambung ulang. Tidak
+  ada pencabutan kredensial TURN yang sudah diterbitkan; hanya issuance baru.
+- Tidak mengubah host/web/APK/installer atau menjalankan CI GitHub. Windows
+  field proof, lease enforcement host saat Hub tak terjangkau, capability/
+  ACK efektif, HD dan mic late-enable tetap antrian. Perubahan nonvisual,
+  tidak ada screenshot atau artikel berita yang diterbitkan.

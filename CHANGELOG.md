@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- Backend sesi baru: ticket client terikat identitas/generasi akun; WS dan penerbitan TURN memeriksa pencabutan. Alarm Hub memeriksa client diam tiap ~15 detik dan mengirim bye ke host sesuai nonce koneksi. Ticket/koneksi legacy tetap kompatibel; belum ada pemutusan massal atau bukti media Windows.
+
 - Backend: validasi identitas/ban/generasi JWT akun pada profil, riwayat, mutasi akun dan penerbitan token signaling; token legacy sehat tetap berlaku. Login dan perubahan akun transaksional, OTP sekali pakai saat konkurensi; respons auth tidak boleh dicache. Tidak mencabut ticket signaling yang sudah terbit atau otomatis memutus sesi P2P aktif.
 
 - Sesi web: loading di dalam viewport, ukuran panah/sensitivitas, editor mapping keyboard/mouse dengan posisi/ukuran bebas, riwayat tamu lokal dan akun di server dengan preview opt-in. Pemilihan HD dan resume belum tersedia.

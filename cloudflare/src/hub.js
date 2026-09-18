@@ -1,3 +1,4 @@
+import { checkPrincipal, validPrincipal, SESSION_CHECK_MS } from './bound_ticket.js';
 // XyDesk hub — Durable Object yang memegang registri perangkat & merelay
 // pesan signaling. Menggunakan WebSocket Hibernation API: saat tidak ada
 // pesan, DO "tidur" tanpa memakan CPU — murah & gratis.
@@ -121,10 +122,17 @@ export class Hub {
       }
       return new Response('not found', { status: 404 });
     }
+    const rawPrincipal = request.headers.get('x-xydesk-principal');
+    let principal = null;
+    if (rawPrincipal) {
+      try { principal = JSON.parse(rawPrincipal); } catch { return new Response('bad principal',{status:401}); }
+      if (!validPrincipal(principal) || request.headers.get('x-xydesk-role') !== 'client') return new Response('bad principal',{status:401});
+    }
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
 
     const meta = {
+      principal,
       connectionId: crypto.randomUUID(),
       id: request.headers.get('x-xydesk-id') || '',
       role: request.headers.get('x-xydesk-role') || 'client',
@@ -140,10 +148,49 @@ export class Hub {
     server.serializeAttachment(meta);
 
     this.ctx.acceptWebSocket(server);
+    if (principal) await this.scheduleSessionCheck();
     return new Response(null, { status: 101, webSocket: client });
   }
 
+  async scheduleSessionCheck() {
+    if (await this.ctx.storage.getAlarm() === null) await this.ctx.storage.setAlarm(Date.now()+SESSION_CHECK_MS);
+  }
+
+  async authorizeSocket(ws, checked) {
+    const meta = ws.deserializeAttachment();
+    if (meta?.revoked) return false;
+    if (!meta?.principal) return true; // legacy connection: no account identity to revoke
+    try { if (await (checked || checkPrincipal(this.env,meta.principal))) return !ws.deserializeAttachment()?.revoked; } catch {}
+    // Nonce-based detach targets only this connection, not a reused device ID.
+    meta.revoked = true;
+    ws.serializeAttachment(meta);
+    this.detachMedia(ws,'account-authorization-ended');
+    try { ws.close(1008,'account-authorization-ended'); } catch {}
+    return false;
+  }
+
+  async alarm() {
+    const sockets = this.sockets().filter(ws => {
+      const a = ws.deserializeAttachment(); return a?.principal && !a.revoked;
+    });
+    const checks = new Map();
+    // Several tabs using one account share one lookup in this alarm only.
+    // No cached approval survives into the next message or alarm.
+    for (let offset = 0; offset < sockets.length; offset += 16) {
+      await Promise.all(sockets.slice(offset,offset+16).map(ws => {
+        const principal = ws.deserializeAttachment().principal;
+        const key = JSON.stringify(principal);
+        if (!checks.has(key)) checks.set(key,checkPrincipal(this.env,principal));
+        return this.authorizeSocket(ws,checks.get(key));
+      }));
+    }
+    if (this.sockets().some(ws => { const a=ws.deserializeAttachment(); return a?.principal && !a.revoked; })) {
+      await this.ctx.storage.setAlarm(Date.now()+SESSION_CHECK_MS);
+    }
+  }
+
   async webSocketMessage(ws, message) {
+    if (!await this.authorizeSocket(ws)) return;
     let msg;
     try {
       msg = typeof message === 'string' ? JSON.parse(message) : JSON.parse(new TextDecoder().decode(message));
@@ -239,6 +286,8 @@ export class Hub {
         });
       }
     }
+
+    if (ws.deserializeAttachment()?.revoked || peer.deserializeAttachment()?.revoked) return;
 
     // Satu host melayani satu client. Ikatan dibuat dari answer host yang
     // terautentikasi, bukan dari offer yang dapat dikirim tanpa pairing.
