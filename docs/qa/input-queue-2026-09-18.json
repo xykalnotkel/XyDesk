@@ -1,0 +1,23 @@
+{
+  "session": "SESI-20260918-OPERATOR-INPUT-LATENCY",
+  "base": "bd75757bfb625974ca76fe89d503c434b40ff5a0",
+  "host_linux_passed": 161,
+  "new_queue_tests": 5,
+  "format": "pass",
+  "scope": "bounded injection queue, cancellation-aware backpressure, adjacent absolute motion coalescing",
+  "not_verified": [
+    "physical Windows injection",
+    "RDP/mobile responsiveness",
+    "glass-to-glass latency",
+    "native Windows build"
+  ],
+  "not_changed": [
+    "production",
+    "installer",
+    "RDP configuration",
+    "desktop resolution",
+    "relative motion deltas",
+    "OAuth",
+    "version"
+  ]
+}

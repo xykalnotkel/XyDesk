@@ -819,6 +819,8 @@ _(kosong)_
 
 ## Untuk: Host Engine
 
+- [ ] (Operator - XyDesk Team, 2026-09-18) — **INPUT-LATENCY**: overflow yang menghentikan input sudah diperbaiki; bounded async backpressure + adjacent absolute coalescing, Linux161 PASS. Masih perlu native Windows/physical responsiveness, RTT/encode/decode measurement, otomatis16:9 supported/applied verification, audio field acceptance. Jangan klaim zero-lag atau seluruh keluhan selesai. Bukti `docs/qa/input-queue-2026-09-18.md`; belum packaging/deploy.
+
 - [ ] (Operator - XyDesk Team, 2026-09-18) — **AUDIO-REPAIR follow-up**: source WASAPI/packetizer/render/late mic diperbaiki, Linux156 + ABI Windows checker PASS, belum physical Windows/RDP. Lanjut host input overflow/backlog dan pengukuran encode/decode/network, source auto16:9 supported-mode + verified applied state, forward-audio freshness/idle-cancel, COM balancing/hotplug. Bukan janji zero-lag. `docs/qa/audio-repair-2026-09-18.md` memuat acceptance gate dan keterbatasan. Jangan ubah driver/RDP/scaling/restart diam-diam.
 
 - [ ] (dari Galih - XySpace Team, 2026-09-03) — **Permintaan "siapkan driver

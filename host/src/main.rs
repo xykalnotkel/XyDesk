@@ -761,18 +761,28 @@ async fn main() -> Result<()> {
                                     // Injeksi di thread blocking terpisah: SendInput
                                     // adalah syscall sinkron — jangan blokir runtime
                                     // async yang juga melayani video/ICE.
-                                    let (inj_tx, inj_rx) =
-                                        std::sync::mpsc::sync_channel::<
-                                            xydesk_host::input::InputEvent,
-                                        >(256);
+                                    let (inj_tx, mut inj_rx) = xydesk_host::input_queue::channel();
+                                    let inject_closed = closed_rx.clone();
                                     std::thread::spawn(move || {
                                         let injector = xydesk_host::input::Injector::new();
                                         let mut lease = xydesk_host::input::InputLease::default();
-                                        while let Ok(ev) = inj_rx.recv() {
-                                            if injector.inject(&ev) {
-                                                lease.applied(&ev);
-                                            } else {
-                                                eprintln!("[xydesk-host] injeksi input ditolak");
+                                        'inject: while let Some(first) = inj_rx.blocking_recv() {
+                                            for ev in xydesk_host::input_queue::ready_batch(
+                                                &mut inj_rx,
+                                                first,
+                                            ) {
+                                                // Discard stale queued actions after disconnect;
+                                                // release only keys/buttons actually injected.
+                                                if *inject_closed.borrow() {
+                                                    break 'inject;
+                                                }
+                                                if injector.inject(&ev) {
+                                                    lease.applied(&ev);
+                                                } else {
+                                                    eprintln!(
+                                                        "[xydesk-host] injeksi input ditolak"
+                                                    );
+                                                }
                                             }
                                         }
                                         for event in lease.releases() {
@@ -964,7 +974,13 @@ async fn main() -> Result<()> {
                                                 }
                                                 _ => {}
                                             }
-                                            if inj_tx.try_send(ev).is_err() {
+                                            if !xydesk_host::input_queue::send(
+                                                &inj_tx,
+                                                &mut closed_rx,
+                                                ev,
+                                            )
+                                            .await
+                                            {
                                                 break;
                                             }
                                         }
