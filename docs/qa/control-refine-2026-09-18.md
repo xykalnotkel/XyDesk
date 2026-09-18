@@ -1,5 +1,7 @@
 # CONTROL-REFINE — 18 September 2026
 
+**Follow-up:** web-only deployment approved via deploy_web and completed at source87427ae / Worker740345c3. See `control-refine-production-2026-09-18.json`. Pending-deploy statements below describe the source checkpoint. User selected mobile Windows App/RD Client; no RDP settings changed.
+
 Operator - XyDesk Team; SESI-20260918-OPERATOR-CONTROL-REFINE.
 Base 0fd4c0f65f785ab1093d7fa720cea7d643c5648e. Web source revision; no host/backend change, version bump, production deploy or RDP setting change at this checkpoint.
 

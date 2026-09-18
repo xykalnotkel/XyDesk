@@ -1,0 +1,63 @@
+{
+  "date": "2026-09-18",
+  "source": "87427aee8f3bec8fe0ba72a6b5f2b5f57e8a0aba",
+  "authorization": "deploy_web selection: web-only",
+  "webTests": 70,
+  "productionVersions": {
+    "web": "740345c3-356f-4f25-bc63-634c2ebe1401",
+    "backend": "55cdda7c-a007-4bf4-9507-f8d6dee627b4"
+  },
+  "previousVersions": {
+    "web": "8f093d6d-cf6b-45b8-800b-1240d7dcc21a",
+    "backend": "55cdda7c-a007-4bf4-9507-f8d6dee627b4"
+  },
+  "checks": {
+    "/connect": "200; exact build HTML excluding pre-existing Cloudflare analytics injection",
+    "/history": "200; exact build HTML excluding pre-existing Cloudflare analytics injection",
+    "/healthz": 200,
+    "/auth/session-history": 401,
+    "/signal-token?id=control-refine-verify": 401
+  },
+  "assetHashes": {
+    "index-IK_WQHt2.js": "2a754fa1f6c9c7cb083663a8d37e99a10b0c562ffad5d1a61addc97b85eed2a4",
+    "jsQR-BZfqIBYG.js": "b018a387d6225f60553429286df8c7aed6c4c3d24a53782f2d866ca35ad2939e",
+    "LicenseInventory-CaTDf7H2.js": "841d83a424d66b43594e2e08ff3424ec48326d27278b7e2d67144ca43d394b9e",
+    "rolldown-runtime-CbXtAM7H.js": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+    "index-C5O_Zi8G.css": "c002a3ada35c1e28188d3a9b3494f12ec012ab15024d8206898e4cb27f22f777"
+  },
+  "oauthPreserved": true,
+  "bindingsUnchanged": true,
+  "backendDeployed": false,
+  "secretsChanged": false,
+  "rdpOrHostChanged": false,
+  "versionBumped": false,
+  "realHostPairingTested": false,
+  "userNetworkMeasured": false,
+  "productionBrowser": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "productionHistoryCardHorizontal": true,
+      "inlinePairingCorrectDevice": true,
+      "passwordEmpty": true,
+      "noPairingAttempt": true,
+      "noApiWrites": true,
+      "pageErrors": []
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "productionHistoryCardHorizontal": true,
+      "inlinePairingCorrectDevice": true,
+      "passwordEmpty": true,
+      "noPairingAttempt": true,
+      "noApiWrites": true,
+      "pageErrors": []
+    }
+  ],
+  "browserBoundary": "Real production page and isolated local guest-history fixture. No pairing/password submission or account writes."
+}

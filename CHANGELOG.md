@@ -24,10 +24,11 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
-### CONTROL-REFINE — source siap, belum deploy
+### CONTROL-REFINE — web sudah live
 - Mapping transparan border+label, custom picker/search tanpa select browser, tombol tambahan dan shortcut; tap kiri/tahan500ms kanan di dua mode; HUD rounded kiri/kanan/scroll/Windows/switch.
 - Riwayat baris wallpaper+nama+chevron, reconnect pairing inline mempertahankan perangkat dan route/history tanpa menyimpan password. Gerak absolut belum terkirim digabung saat antrean penuh; tombol/release tetap berurutan.
 - Web70/build/Chromium2viewport+gesture+F1+reconnect/privacy PASS. Tidak mengubah host/RDP atau menyimpulkan sebab delay jaringan; mode desktop16:9 masih perlu detail RDP pengguna. Bukti `docs/qa/control-refine-2026-09-18.md`.
+- Deploy web-only diizinkan user: source87427ae, versi Worker740345c3. Hash JS/CSS cocok, HTML cocok tanpa beacon Cloudflare, OAuth/bindings tetap; Chromium produksi portrait/landscape membuktikan kartu horizontal dan pairing inline tanpa mengirim password/pairing. Backend/installer tetap. Bukti `docs/qa/control-refine-production-2026-09-18.json`.
 
 ### LETTERBOX-LATENCY — paket uji tervalidasi; web/backend sudah deploy
 - Menggantikan interpretasi HD/preview sebelumnya: kanvas tepat1280×720/1920×1080 dengan desktop utuh + pita hitam, pemetaan input padding, cursor Windows di video GDI/DXGI/WGC tanpa panah web pengganti, wallpaper otomatis sekali saat koneksi dengan opt-out/cancellation.

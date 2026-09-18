@@ -108,6 +108,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260918-OPERATOR-CONTROL-DEPLOY | Operator - XyDesk Team | Web produksi | SELESAI | User deploy_web; source87427ae → web740345c3.70tes/build/assets/OAuth/bindings/auth401/Chromium2viewport inline reconnect PASS. Backend55cdda7c tetap, tidak mengubah host/RDP. | 2026-09-18 |
 | SESI-20260918-OPERATOR-CONTROL-REFINE | Operator - XyDesk Team | Web / kontrol / riwayat | SELESAI source; belum deploy | Web70/build/Chromium2viewport PASS. Border-only/custom picker/F1, gesture kanan, HUD, reconnect inline, bounded unsent movement. Detail resolusi RDP & diagnosis delay masih diperlukan. | 2026-09-18 |
 | SESI-20260918-OPERATOR-LETTERBOX-DEPLOY | Operator - XyDesk Team | Web + Backend produksi | SELESAI | User gas menyetujui deploy. Backend55cdda7c/web8f093d6d live;184+66tes, SQLite, hashes, auth401, OAuth/bindings dan Chromium portrait/landscape PASS. Tanpa host/RDP/version change. Bukti letterbox-production-2026-09-18.json. | 2026-09-18 |
 | SESI-20260918-OPERATOR-LETTERBOX-LATENCY | Operator - XyDesk Team | Host + Web + NSIS | SELESAI paket; belum deploy | Source37c5eea; Linux152/web66/Windows141 + NSIS7/install-reinstall-uninstall PASS. Windows35391667677, NSIS35392306102. Exact HD letterbox/native cursor/auto wallpaper/timing. Belum runtime RDP/Android. | 2026-09-18 |
