@@ -1887,3 +1887,11 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   720/1080/native dengan negosiasi nyata; mic late-enable (~30s timeout);
   reconnect/resume berotorisasi; pengukuran Windows/Chrome Android. Belum
   ada patch host, installer baru, atau klaim semua fungsi selesai.
+
+- **Pascadeploy COREGUARD:** source `697b14d`, backend Worker
+  `8b4f5429-fb8f-4778-8226-83ae094b496d`; health200, anonymous auth401,
+  internal authorization403, guest signin/client-ticket200, guest host403,
+  admin password enabled. Seluruh bindings sama, hash ketiga aset web sama.
+  Bukti `docs/qa/coreguard-production-2026-09-18.json`; tidak ada akun
+  produksi diblokir/dicabut untuk pengujian, tidak ada pairing host nyata.
+  Paket gerbang akun ditutup; backlog host/active revocation tetap terbuka.

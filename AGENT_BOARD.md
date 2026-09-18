@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260918-OPERATOR-COREGUARD | Operator - XyDesk Team | Backend / auth | LAGI KERJA | Identitas, ban, versi token, uji regresi dan deploy setelah lulus; izin khusus operator melalui pilihan uji/push/deploy. | 2026-09-18 |
 
 ## Antrean izin push
 
@@ -109,6 +108,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260918-OPERATOR-COREGUARD | Operator - XyDesk Team | Backend / auth | SELESAI TAHAP GERBANG AKUN | Source697b14d; 171 tes+3 runtime PASS; deploy8b4f5429 health/guest/auth/config PASS, web hashes unchanged. CI GitHub tidak didispatch. Ticket lama dan sesi P2P aktif belum ikut revoke; bukti docs/qa/coreguard-production-2026-09-18.json. | 2026-09-18 |
 | SESI-20260917-OPERATOR-SESSIONUX | Operator - XyDesk Team | Web + Backend | SELESAI | Shipped 8a10709; web51/backend155, runtime dan produksi PASS. Bukti docs/qa/session-ux-production-2026-09-17.json; CI tidak didispatch. | 2026-09-17 |
 | SESI-20260909-OPERATOR-UNIFY | Operator - XyDesk Team | Operator (semua area) | SELESAI | Unifikasi UI/UX: acuan=web (token Paper→web), radius web→8/12/16/20, hapus garis desktop+web, brand installer wizard | 2026-09-09 |
 | SESI-20260917-OPERATOR-SESSION | Operator - XyDesk Team | Web + audit Host/Backend | SELESAI TAHAP WEB | pointer-v2/audio playback+mute/prefs/random URL.42tes+Chromium PASS, live d929ff32 exact assets/OAuth. Android pending; resume/120fps/audio Windows dan ACK settings BELUM selesai, lihat HANDOFF/audit. | 2026-09-17 |

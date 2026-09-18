@@ -1,0 +1,27 @@
+{
+  "date": "2026-09-18",
+  "source": "697b14d27ea90bd94f2045ef251f028a22a96948",
+  "workerVersion": "8b4f5429-fb8f-4778-8226-83ae094b496d",
+  "checks": {
+    "health": 200,
+    "anonymous/auth/me": 401,
+    "anonymous/auth/session-history": 401,
+    "anonymous/signal-token?id=coreguard-check": 401,
+    "internal-gate": 403,
+    "preflight": 204,
+    "guest-login": 200,
+    "guest-client-ticket": 200,
+    "guest-host-denied": 403,
+    "guest-profile-denied": 401,
+    "admin-config": 200
+  },
+  "workerBindingsUnchanged": true,
+  "webAssetsUnchanged": {
+    "/assets/index-BPi3CJO7.js": "82533ef93712eb6c77b64b105d63e377ddcfc53201da636241d0679ca4778f80",
+    "/assets/index-D0yy38lb.css": "ce4dcd3f988f93327a65c5af50027c846fffab412ec874c0f06b02366792293a",
+    "/assets/rolldown-runtime-CbXtAM7H.js": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a"
+  },
+  "accountMutationsPerformed": false,
+  "realHostPairingPerformed": false,
+  "limits": "Live checks cover health, auth rejection, guest ticket and unchanged configuration. Ban/revoke/member login proved in isolated Worker+SQLite, not by mutating production accounts. Existing tickets and active P2P not revoked by this patch."
+}
