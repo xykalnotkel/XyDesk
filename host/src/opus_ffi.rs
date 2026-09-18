@@ -151,3 +151,34 @@ impl Drop for Decoder {
         unsafe { opus_decoder_destroy(self.st) };
     }
 }
+
+#[cfg(all(test, target_os = "windows"))]
+mod audio_roundtrip_tests {
+    #[test]
+    fn device_rates_encode_and_decode_real_opus() {
+        for rate in [44_100, 48_000, 96_000] {
+            let source = crate::pcmconv::Sumber {
+                rate,
+                channels: 2,
+                sampel: crate::pcmconv::Sampel::F32,
+            };
+            let bytes: Vec<u8> = (0..rate / 50 + 2)
+                .flat_map(|i| {
+                    let sample =
+                        (i as f32 * 2.0 * std::f32::consts::PI * 440.0 / rate as f32).sin() * 0.5;
+                    [sample, sample].into_iter().flat_map(|v| v.to_le_bytes())
+                })
+                .collect();
+            let packets = crate::pcmconv::OpusPcm::new(source, 2).push(&bytes);
+            assert_eq!(packets.len(), 1);
+            let mut encoder = super::Encoder::new(48_000, 2).unwrap();
+            let mut encoded = vec![0; 4000];
+            let size = encoder.encode(&packets[0], &mut encoded).unwrap();
+            assert!(size > 0);
+            let mut decoder = super::Decoder::new(48_000, 2).unwrap();
+            let mut pcm = vec![0; 1920];
+            assert_eq!(decoder.decode(&encoded[..size], &mut pcm).unwrap(), 960);
+            assert!(pcm.iter().any(|x| x.abs() > 100));
+        }
+    }
+}

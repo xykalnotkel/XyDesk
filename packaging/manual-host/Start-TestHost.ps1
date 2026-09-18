@@ -1,6 +1,6 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param([switch]$CheckOnly)
+param([switch]$CheckOnly, [switch]$KeepDesktopResolution)
 $ErrorActionPreference = 'Stop'
 $engine = Join-Path $PSScriptRoot 'xydesk-host.exe'
 $manifest = Get-Content (Join-Path $PSScriptRoot 'manifest.json') -Raw | ConvertFrom-Json
@@ -40,7 +40,10 @@ try {
     if ($token -notmatch '^\d+\.\d{9}\.[a-f0-9]{64}$') { throw 'Respons signaling bukan token host yang valid.' }
     Write-Host 'Host uji dimulai. Biarkan RDP terbuka dan desktop tidak terkunci selama uji pertama.'
     Write-Host 'Gunakan ID/password yang ditampilkan engine pada client. Ctrl+C untuk berhenti.'
-    & $engine --url 'wss://signal.xydesk.my.id/ws' --token $token
+    $extra = @()
+    if ($KeepDesktopResolution) { $extra += '--keep-desktop-resolution' }
+    Write-Host 'Saat tersambung, host meminta mode desktop 16:9 yang didukung. Gunakan -KeepDesktopResolution untuk menonaktifkan.'
+    & $engine --url 'wss://signal.xydesk.my.id/ws' --token $token @extra
     if ($LASTEXITCODE -ne 0) { throw 'Host uji berhenti dengan galat. Mulai ulang launcher secara manual bila ingin mencoba lagi.' }
 } finally {
     $token = $null

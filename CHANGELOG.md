@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- **Host finish (gerbang Windows/kemasan berjalan):** permintaan otomatis mode desktop16:9 pada sesi terotorisasi, hanya mode terdaftar + CDS_TEST, baca ukuran kembali dan status penolakan/override. Tidak registry/driver/restart RDP; opt-out launcher -KeepDesktopResolution. Web menampilkan requested/observed, bukan label HD palsu. Tambah Windows real-Opus roundtrip44.1/48/96kHz. Menyertakan patch audio bd75757 dan input ec0f047.
+
 - **Input queue (kode, belum installer):** full queue tidak mematikan input; backpressure async + batal saat disconnect, coalesce posisi absolut berurutan tanpa melewati klik/key-up. Host Linux **161 tests PASS**, format PASS; belum pembuktian latency Windows/RDP. `docs/qa/input-queue-2026-09-18.md`.
 
 - **Audio repair (kode; belum build Windows/deploy):** format WASAPI lengkap + packetizer streaming tepat 960 frame, perbaikan drain/silence dan frame render, mic tanpa expiry 30 detik + queue bounded, web replaceTrack/cancel cleanup, virtual-input requirement tanpa speaker fallback/driver install. Linux **156**, web **76**, format/build web dan Windows ABI checker PASS. Bukti/batas: `docs/qa/audio-repair-2026-09-18.md`. Keluhan input lambat dan otomatis 16:9 belum selesai.

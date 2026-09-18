@@ -6,7 +6,7 @@
 // sama persis (host/src/input.rs), hanya medianya yang beda.
 import { useEffect, useState, useRef } from 'react';
 import { InputCodec } from './rtc';
-import type { SessionStats } from './rtc';
+import type { SessionStats, HostMeta } from './rtc';
 
 type Send = (bytes: Uint8Array) => void;
 
@@ -479,6 +479,7 @@ export function SessionPanel({
   stats,
   displays,
   wantedDisplay,
+  desktopMode,
   onSelectDisplay,
   connectedAt,
   railCollapsed,
@@ -500,6 +501,7 @@ export function SessionPanel({
   stats: SessionStats | null;
   displays: { index: number; name?: string; width: number; height: number }[];
   wantedDisplay: number;
+  desktopMode?: HostMeta['desktopMode'];
   onSelectDisplay: (index: number) => void;
   connectedAt: number | null;
   railCollapsed: boolean;
@@ -627,6 +629,11 @@ export function SessionPanel({
               <p className="spanel-note">Angka kualitas muncul begitu koneksi mengalir.</p>
             )}
           </div>
+          {desktopMode && <p className="spanel-note" role="status">
+            Desktop diminta {desktopMode.requested.join('×')} · terbaca {desktopMode.observed?.join('×') || 'belum tersedia'}.
+            {' '}{({applied:'Mode 16:9 terverifikasi.',already:'Desktop sudah sesuai.',unsupported:'Mode tidak tersedia dari Windows/RDP.',rejected:'Windows/RDP menolak perubahan.',unverified:'Perubahan belum terverifikasi.',overridden:'Resolusi diubah kembali oleh Windows/RDP.',unavailable:'Mode desktop tidak dapat diperiksa.'} as Record<string,string>)[desktopMode.status] || 'Status belum diketahui.'}
+            {' '}Ruang kosong masih bisa muncul jika rasio layar HP berbeda.
+          </p>}
           {displays.length > 1 && (
             <>
               <p className="spanel-section">Layar PC</p>

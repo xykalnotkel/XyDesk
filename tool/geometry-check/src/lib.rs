@@ -13,3 +13,5 @@
 
 #[path="../../../host/src/video_layout.rs"] pub mod video_layout;
 #[path="../../../host/src/native_cursor.rs"] pub mod native_cursor;
+
+#[path="../../../host/src/desktop_mode.rs"] pub mod desktop_mode;

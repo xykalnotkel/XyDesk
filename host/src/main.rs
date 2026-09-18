@@ -151,6 +151,10 @@ async fn close_signaling_session(
 #[derive(Parser, Debug)]
 #[command(name = "xydesk-host", about = "XyDesk host — stream layar ke client")]
 struct Args {
+    /// Jangan meminta mode desktop 16:9 saat sesi terotorisasi dimulai.
+    #[arg(long)]
+    keep_desktop_resolution: bool,
+
     /// URL signaling server (mis. wss://signal.xydesk.my.id/ws)
     #[arg(long, default_value = "ws://localhost:8787/ws")]
     url: String,
@@ -204,6 +208,7 @@ fn meta_json() -> serde_json::Value {
         "type": "meta",
         "displays": xydesk_host::screen::list_displays(),
         "wanted": xydesk_host::screen::wanted_display(),
+        "desktopMode": xydesk_host::desktop_mode::telemetry(),
         "cursorEmbedded": xydesk_host::screen::cursor_embedded(),
         "video": xydesk_host::video_policy::telemetry(),
         "inputGeometry": xydesk_host::desktop_geometry::active(),
@@ -609,6 +614,23 @@ async fn main() -> Result<()> {
                     let mic_on = xydesk_host::audio::mic_capture_available();
                     let media = session.answer_media(&sdp.sdp, audio_on, mic_on).await?;
                     xydesk_host::video_policy::configure(video_level);
+                    if !args.keep_desktop_resolution {
+                        let wanted = xydesk_host::screen::wanted_display();
+                        if let Some(display) = xydesk_host::screen::list_displays()
+                            .into_iter()
+                            .find(|d| d.index == wanted)
+                        {
+                            match tokio::task::spawn_blocking(move || {
+                                xydesk_host::desktop_mode::request(display.name, video_level)
+                            })
+                            .await
+                            {
+                                Ok(report) => eprintln!("[xydesk-host] desktop 16:9: {report:?}"),
+                                Err(e) => eprintln!("[xydesk-host] permintaan desktop gagal: {e}"),
+                            }
+                        }
+                    }
+
                     let video_track = media.video;
                     let audio_track = media.audio;
                     let mic_track = media.mic;

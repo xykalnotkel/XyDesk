@@ -92,3 +92,20 @@ Lisensi XyDesk ada di `LICENSE-XyDesk.txt`; inventaris komponen di
 `THIRD-PARTY-LICENSES.md`. Direktori `licenses/` memuat notice/lisensi source
 crate yang tersedia pada build serta libopus yang di-vendor. Paket ini untuk
 uji manual pemilik, bukan publikasi rilis baru.
+
+## Resolusi desktop dan mic HP
+
+Saat sesi terotorisasi dimulai, host meminta 1920×1080 (atau 1280×720 untuk
+negosiasi H264 terbatas). Hanya mode yang didaftarkan driver dan lolos uji
+Windows yang diminta. Ukuran desktop dibaca kembali: penolakan RDP bukan
+keberhasilan dan tidak diatasi dengan restart, driver, atau putus sambungan.
+Tidak menulis mode ke registry; tidak otomatis mengembalikan mode sebelumnya.
+RDP dapat menerapkan ulang resolusinya sendiri.
+
+Untuk mempertahankan resolusi desktop: `.\Start-TestHost.ps1 -KeepDesktopResolution`.
+Desktop 16:9 tetap bisa memiliki ruang kosong pada viewport HP bukan16:9 jika
+seluruh gambar ditampilkan tanpa crop/distorsi.
+
+Mic HP → aplikasi PC membutuhkan virtual audio cable yang disetujui/dipasang
+oleh pengguna, lalu recording endpoint-nya dipilih di aplikasi. Paket ini
+tidak memasang driver dan tidak memutar mic HP ke speaker sebagai pengganti.

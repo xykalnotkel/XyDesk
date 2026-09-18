@@ -2768,6 +2768,7 @@ function ConnectScreen({
             stats={stats}
             displays={hostMeta?.displays ?? []}
             wantedDisplay={hostMeta?.wanted ?? 0}
+            desktopMode={hostMeta?.desktopMode}
             onSelectDisplay={(i) => sessionRef.current?.selectDisplay(i)}
             connectedAt={connectedAt}
             railCollapsed={railHidden}

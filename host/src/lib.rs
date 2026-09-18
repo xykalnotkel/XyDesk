@@ -95,3 +95,5 @@ pub mod native_cursor;
 pub mod video_layout;
 
 pub mod input_queue;
+
+pub mod desktop_mode;
