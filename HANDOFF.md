@@ -322,6 +322,8 @@ Format item: `- [ ] (dari <Identitas>, <tanggal>) — <apa> — <kenapa/konteks>
 - [x] (dari Cakra - XySpace Team, 2026-09-03) — **Rilis 6.4.0+27 TUNTAS.** Bump 4cbbc22 → Build `33728695280` 12/12 @ 4cbbc22 → Release `33729544852` 5/5 (tag v6.4.0, 8 aset, update.json build 27, OneSignal `e4f5574a`). Follow-up: Build `33730701921` (aset artikel) → deploy terjepit deploy manual Danu WEB8 (bundle tanpa aset) + cache CF menyimpan fallback SPA di path gambar → solusi cache-bust rename aset `8b1ebbd` → Build `33732158168` → deploy `33732896248` @ 8eb3ad5 → gambar 6.4.0 image/jpeg. Artikel **p-8f5aa26aa3bc** (id 73) live, top list, OG OK. Web live 6.4.0 terverifikasi (Sewa PC custom, Ingatkan saya, tombol lompat).
 ## Untuk: CI / Release
 
+- [ ] (Operator - XyDesk Team, 2026-09-18) — **LETTERBOX-LATENCY source siap gate Windows/NSIS, belum dispatch/deploy.** Exact720/1080 letterbox, native-video cursor, automatic wallpaper, queue/IDR/RTP timing + diagnostics. Linux152/web66/narrow Windows cross-check/real Chromium HD+UI PASS. `docs/qa/letterbox-checkpoint-2026-09-18.md` menjelaskan batas dan bukti. Minta izin dedicated prepare-host-windows lalu prepare-host-nsis untuk SHA revisi ini; bukan memakai executable4a3e75a. Build/Release umum, version bump dan production deploy tidak diizinkan. Native cursor/RDP/Android manual serta per-frame geometry ACK masih belum terbukti. Web/backend produksi perlu izin deploy terpisah dengan OAuth/binding lama terjaga.
+
 - [x] (dari Operator - XyDesk Team, 2026-09-06) — **Fix boot Android sudah
   sampai ke pengguna lewat rilis 6.6.0.** Operator memilih nomornya di chat
   ("Langsung rilis 6.6.0+33"), jadi aturan #1 terpenuhi — agent tidak memilih

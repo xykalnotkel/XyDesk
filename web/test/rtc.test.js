@@ -209,3 +209,13 @@ test('statistik audio terpisah dari video dan energi tak tersedia tidak dikarang
 });
 
 test('geometry-less capture blocks pointer downs but never blocks release',()=>{const {session}=setup();const sent=[];session.input={readyState:'open',send:b=>sent.push([...new Uint8Array(b)])};session.meta={inputGeometry:null};for(const b of [[2,0,0,0,0],[3,0,1],[3,0,0],[5,17,0,0]])session.sendInput(new Uint8Array(b));assert.deepEqual(sent,[[3,0,0],[5,17,0,0]]);session.meta={inputGeometry:{left:0,top:0,width:1920,height:1080}};session.sendInput(new Uint8Array([3,0,1]));assert.equal(sent.length,3);});
+
+test('jitter seconds and interval buffer/decode/loss are separate from RTT',async()=>{
+ const {session}=setup();const x={id:'v',type:'inbound-rtp',kind:'video',codecId:'h264',bytesReceived:1000,packetsReceived:100,packetsLost:1,framesDecoded:10,jitter:.012,jitterBufferDelay:.2,jitterBufferEmittedCount:10,totalDecodeTime:.03};
+ session.pc={connectionState:'connected',getStats:async()=>new Map([['v',x],['h264',{mimeType:'video/H264'}],['pair',{type:'candidate-pair',nominated:true,state:'succeeded',currentRoundTripTime:.08}]])};
+ const first=await session.readStats();assert.equal(first.jitterMs,12);assert.equal(first.rttMs,80);assert.equal(first.decodeMs,undefined);assert.equal(first.jitterBufferMs,undefined);
+ Object.assign(x,{packetsReceived:198,packetsLost:3,framesDecoded:20,jitterBufferDelay:.5,jitterBufferEmittedCount:20,totalDecodeTime:.08});
+ const next=await session.readStats();assert.ok(Math.abs(next.jitterBufferMs-30)<1e-8);assert.ok(Math.abs(next.decodeMs-5)<1e-8);assert.equal(next.recentLossPct,2);
+ const idle=await session.readStats();assert.equal(idle.decodeMs,undefined);assert.equal(idle.recentLossPct,undefined);
+ x.id='new';x.framesDecoded=1;x.jitterBufferEmittedCount=1;const reset=await session.readStats();assert.equal(reset.decodeMs,undefined);assert.equal(reset.jitterBufferMs,undefined);
+});

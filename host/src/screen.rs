@@ -194,6 +194,25 @@ pub struct EncodedFrame {
     pub captured_at: std::time::Instant,
     /// Durasi encode frame ini (mikrodetik) — porsi dominan pipeline.
     pub encode_us: u64,
+    pub sequence: u64,
+    pub encoded_at: std::time::Instant,
+}
+impl EncodedFrame {
+    pub fn new(data: Vec<u8>, captured_at: std::time::Instant, encode_us: u64) -> Self {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let sequence = if data.is_empty() {
+            0
+        } else {
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        };
+        Self {
+            data,
+            captured_at,
+            encode_us,
+            sequence,
+            encoded_at: std::time::Instant::now(),
+        }
+    }
 }
 
 /// Label encoder aktif, untuk control API (`video.encoder`). Dibaca tiap
@@ -628,11 +647,7 @@ pub fn spawn_test_pattern_source() -> FrameSource {
             let t0 = std::time::Instant::now();
             match enc.encode_next(TEST_WIDTH, TEST_HEIGHT) {
                 Ok(data) => {
-                    let frame = EncodedFrame {
-                        data,
-                        captured_at: t0,
-                        encode_us: t0.elapsed().as_micros() as u64,
-                    };
+                    let frame = EncodedFrame::new(data, t0, t0.elapsed().as_micros() as u64);
                     if tx.send(frame).is_err() {
                         break;
                     }
@@ -1164,11 +1179,11 @@ mod windows {
             // Hitung sebagai frame tertangkap HANYA bila encode berhasil —
             // angka ini yang dibaca watchdog untuk memutuskan backend mati.
             super::catat_frame();
-            match self.sender.try_send(super::EncodedFrame {
-                data: encoded,
+            match self.sender.try_send(super::EncodedFrame::new(
+                encoded,
                 captured_at,
-                encode_us: encode_us as u64,
-            }) {
+                encode_us as u64,
+            )) {
                 // Konsumen (loop video) sudah berhenti — sesi selesai.
                 // Hentikan capture SEKARANG: tanpa ini, capture+encode
                 // berjalan terus tanpa penonton setelah sesi tutup
@@ -1179,7 +1194,9 @@ mod windows {
                 }
                 // Channel penuh — buang frame usang (latency > kelengkapan).
                 Ok(()) => crate::desktop_geometry::publish(Some(self.capture_rect)),
-                Err(mpsc::TrySendError::Full(_)) => {}
+                Err(mpsc::TrySendError::Full(_)) => {
+                    super::request_keyframe();
+                }
             }
             Ok(())
         }
@@ -1307,16 +1324,18 @@ mod windows {
             enc_n += 1;
             frame_detik += 1;
             super::catat_frame();
-            match tx.try_send(super::EncodedFrame {
-                data: encoded,
+            match tx.try_send(super::EncodedFrame::new(
+                encoded,
                 captured_at,
-                encode_us: encode_us as u64,
-            }) {
+                encode_us as u64,
+            )) {
                 // Konsumen berhenti — sesi selesai.
                 Err(mpsc::TrySendError::Disconnected(_)) => break,
                 // Channel penuh: buang frame usang (latency > kelengkapan).
                 Ok(()) => crate::desktop_geometry::publish(Some(capture_rect)),
-                Err(mpsc::TrySendError::Full(_)) => {}
+                Err(mpsc::TrySendError::Full(_)) => {
+                    super::request_keyframe();
+                }
             }
 
             if detik_terakhir.elapsed() >= std::time::Duration::from_secs(1) {
@@ -1455,14 +1474,16 @@ mod windows {
             enc_n += 1;
             frame_detik += 1;
             super::catat_frame();
-            match tx.try_send(super::EncodedFrame {
-                data: encoded,
+            match tx.try_send(super::EncodedFrame::new(
+                encoded,
                 captured_at,
-                encode_us: encode_us as u64,
-            }) {
+                encode_us as u64,
+            )) {
                 Err(mpsc::TrySendError::Disconnected(_)) => break,
                 Ok(()) => crate::desktop_geometry::publish(Some(capture_rect)),
-                Err(mpsc::TrySendError::Full(_)) => {}
+                Err(mpsc::TrySendError::Full(_)) => {
+                    super::request_keyframe();
+                }
             }
 
             if detik_terakhir.elapsed() >= std::time::Duration::from_secs(1) {
@@ -1802,7 +1823,10 @@ mod tests {
     }
 }
 
-/// WGC captures the native cursor in the image; other paths need an overlay.
+/// WGC embeds it; GDI/DXGI composite the Windows cursor on the host.
 pub fn cursor_embedded() -> bool {
-    BACKEND.load(std::sync::atomic::Ordering::Relaxed) == BACKEND_WGC
+    matches!(
+        BACKEND.load(std::sync::atomic::Ordering::Relaxed),
+        BACKEND_WGC | BACKEND_GDI | BACKEND_DXGI
+    )
 }

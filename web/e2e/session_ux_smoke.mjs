@@ -15,14 +15,14 @@ RtcSession.prototype.start = async function() {
  this.onPhase?.('pairing'); await new Promise(r=>setTimeout(r,600));
  this.onPhase?.('negotiating'); await new Promise(r=>setTimeout(r,300));
  this.onPhase?.('connected');
- const c=document.createElement('canvas'); c.width=1280; c.height=592;
- const ctx=c.getContext('2d'); ctx.fillStyle='#273446';ctx.fillRect(0,0,1280,592);
+ const c=document.createElement('canvas'); c.width=1280; c.height=720;
+ const ctx=c.getContext('2d'); ctx.fillStyle='black';ctx.fillRect(0,0,1280,720);ctx.fillStyle='#273446';ctx.fillRect(0,64,1280,592);
  ctx.fillStyle='white';ctx.font='36px sans-serif';ctx.fillText('Uji kontrol sintetis — bukan desktop Windows',80,280);
  this.onTrack?.(c.captureStream(15));
  const ac=new AudioContext();const dest=ac.createMediaStreamDestination();const osc=ac.createOscillator();osc.connect(dest);osc.start();
  this.onAudioTrack?.(dest.stream);
- this.onMeta?.({displays:[],wanted:0,audio:{available:true,pipeline:'fixture'},hardware:{hostname:'PC uji sintetis',cpu:'Fixture CPU',ram:'Fixture RAM'}});
- this.onMeta?.({displays:[],wanted:0,audio:{available:true,pipeline:'fixture'},hardware:{hostname:'PC uji sintetis',cpu:'Fixture CPU',ram:'Fixture RAM'}});
+ this.onMeta?.(this.meta={cursorEmbedded:true,video:{applied:[1280,720],contentRect:[0,64,1280,592],level:51,requested:1,fpsLimit:30},displays:[],wanted:0,audio:{available:true,pipeline:'fixture'},hardware:{hostname:'PC uji sintetis',cpu:'Fixture CPU',ram:'Fixture RAM'}});
+ this.onMeta?.(this.meta={cursorEmbedded:true,video:{applied:[1280,720],contentRect:[0,64,1280,592],level:51,requested:1,fpsLimit:30},displays:[],wanted:0,audio:{available:true,pipeline:'fixture'},hardware:{hostname:'PC uji sintetis',cpu:'Fixture CPU',ram:'Fixture RAM'}});
 
  window.__fixtureStartDone=(window.__fixtureStartDone||0)+1;
 };
@@ -32,7 +32,8 @@ RtcSession.prototype.sendInput=function(b){
   const id=new DataView(b.buffer,b.byteOffset,b.byteLength).getUint32(1,true),c=document.createElement('canvas');c.width=1920;c.height=1080;
   const ctx=c.getContext('2d');ctx.fillStyle='#245d45';ctx.fillRect(0,0,1920,1080);ctx.fillStyle='white';ctx.font='50px sans-serif';ctx.fillText('Wallpaper HD fixture — bukan frame aplikasi',90,400);
   const data=c.toDataURL('image/jpeg',.9).split(',')[1],total=Math.ceil(data.length/16384);
-  for(let index=0;index<total;index++)queueMicrotask(()=>this.wallpaperTransfer.receive({type:'wallpaper',id,index,total,data:data.slice(index*16384,(index+1)*16384)}));
+  const deliver=()=>{for(let index=0;index<total;index++)queueMicrotask(()=>this.wallpaperTransfer.receive({type:'wallpaper',id,index,total,data:data.slice(index*16384,(index+1)*16384)}));};
+  if(window.__holdWallpaper)window.__deliverWallpaper=deliver;else deliver();
  }
 };
 RtcSession.prototype.readStats=async function(){return null;};
@@ -68,16 +69,11 @@ try{
   assert.equal(await page.locator('.connect-form').count(),0);
   await page.waitForFunction(()=>document.querySelector('video')?.videoWidth===1280);
   console.log('video loaded');
-  await page.waitForTimeout(5500);
-  assert.equal(await page.evaluate(()=>localStorage.getItem('xydesk.guest.history.v1')),null);
-  await page.getByRole('button',{name:'Pengaturan sesi',exact:true}).click();
-  await page.getByRole('tab',{name:'Sesi',exact:true}).click();
-  await page.getByRole('button',{name:'Ambil / ganti wallpaper HD',exact:true}).click();
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('xydesk.guest.history.v1')||'[]')[0]?.preview);
   const previewSize=await page.evaluate(async()=>{const image=new Image();image.src=JSON.parse(localStorage.getItem('xydesk.guest.history.v1'))[0].preview;await image.decode();return [image.naturalWidth,image.naturalHeight];});assert.deepEqual(previewSize,[1920,1080]);
-  await page.locator('.spanel-close').click();
+  assert.equal(await page.evaluate(()=>window.__inputs.filter(b=>b[0]===13).length),1);
   await page.getByRole('button',{name:'Keyboard',exact:true}).click();
-  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/hostgeometry-keyboard-2026-09-18.png',import.meta.url).pathname});
+  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/letterbox-keyboard-2026-09-18.png',import.meta.url).pathname});
   await page.locator('.vkb').getByRole('button',{name:'Ctrl',exact:true}).click();
   await page.getByRole('button',{name:'Tutup keyboard',exact:true}).click();
   assert.equal(await page.locator('.vkb').count(),0);
@@ -94,7 +90,7 @@ try{
   assert.equal(await page.locator('audio').evaluate(e=>e.muted),true);
   await page.getByRole('button',{name:'Suara PC',exact:true}).click();
   assert.equal(await page.locator('audio').evaluate(e=>e.muted),false);
-await page.locator('.remote-control-cursor').waitFor({state:'visible'});
+assert.equal(await page.locator('.remote-control-cursor').isVisible(),false);
   assert.equal(await page.getByRole('button',{name:'Mode trackpad',exact:true}).getAttribute('aria-pressed'),'true');
   const cdp=await context.newCDPSession(page);
   const touch=async(type,points)=>{return cdp.send('Input.dispatchTouchEvent',{type,touchPoints:points.map(([id,x,y])=>({id,x,y}))});};
@@ -103,7 +99,7 @@ await page.locator('.remote-control-cursor').waitFor({state:'visible'});
   await touch('touchStart',[[1,x,y]]);await touch('touchMove',[[1,x+35,y+8]]);await touch('touchEnd',[]);
   let inputs=await page.evaluate(()=>window.__inputs);
   assert.ok(inputs.some(b=>b[0]===2));assert.equal(inputs.filter(b=>b[0]===3).length,0);
-  const arrow=await page.locator('.remote-control-cursor').boundingBox();assert.ok(arrow.x>viewport.width*.5-2);
+  assert.equal(await page.locator('.remote-control-cursor').isVisible(),false);
   await page.evaluate(()=>window.__inputs=[]);
   await touch('touchStart',[[1,x,y]]);await touch('touchEnd',[]);
   inputs=await page.evaluate(()=>window.__inputs);assert.deepEqual(inputs.filter(b=>b[0]===3).map(b=>b.slice(0,3)),[[3,0,1],[3,0,0]]);
@@ -128,24 +124,16 @@ await page.locator('.remote-control-cursor').waitFor({state:'visible'});
   await touch('touchStart',[[1,x,y]]);await touch('touchEnd',[]);
   inputs=await page.evaluate(()=>window.__inputs);assert.equal(inputs[0][0],2);
   assert.deepEqual(inputs.filter(b=>b[0]===3).map(b=>b.slice(0,3)),[[3,0,1],[3,0,0]]);
-  assert.ok(Math.abs((inputs[0][1]+inputs[0][2]*256)/65535-.30)<.005);
+  const expectedX=await page.evaluate(x=>{const v=document.querySelector('video'),b=v.getBoundingClientRect(),scale=Math.min(b.width/v.videoWidth,b.height/v.videoHeight),w=v.videoWidth*scale;return (x-b.left-(b.width-w)/2)/w;},x);
+  assert.ok(Math.abs((inputs[0][1]+inputs[0][2]*256)/65535-expectedX)<.002);
   await page.getByRole('button',{name:'Keluar layar penuh',exact:true}).click();
   await page.getByRole('button',{name:'Layar penuh',exact:true}).click();
   await page.waitForFunction(()=>document.fullscreenElement?.className==='video-surface');
-  assert.equal(await page.locator('.remote-control-cursor').isVisible(),true);
+  assert.equal(await page.locator('.remote-control-cursor').isVisible(),false);
   await page.getByRole('button',{name:'Keluar layar penuh',exact:true}).click();
   await page.getByRole('button',{name:'Temukan panah',exact:true}).click();
   let center=await page.evaluate(()=>window.__inputs.filter(b=>b[0]===2).at(-1));
   assert.ok(Math.abs((center[1]+center[2]*256)/65535-.5)<.001);
-  await page.evaluate(()=>document.querySelector('.remote-control-cursor').style.transform='translate3d(-500px,-500px,0)');
-  await page.waitForFunction(()=>!document.querySelector('.remote-control-cursor').style.transform.includes('-500'));
-  assert.equal(await page.locator('.remote-control-cursor').getAttribute('data-revision'),'pointer-v2');
-
-  await page.getByRole('button',{name:'Pengaturan sesi',exact:true}).click();
-  await page.getByRole('tab',{name:'Kontrol',exact:true}).click();
-  await page.getByRole('slider',{name:'Ukuran panah',exact:true}).fill('72');
-  await page.waitForFunction(()=>document.querySelector('.remote-control-cursor').getBoundingClientRect().width===72);
-  await page.locator('.spanel-close').click();
   await page.getByRole('button',{name:'Panel gaming',exact:true}).click();
   await page.getByRole('button',{name:'Atur tombol',exact:true}).click();
   const mapped=page.getByRole('button',{name:'Mapping Spasi',exact:true});const before=await mapped.boundingBox();
@@ -174,12 +162,12 @@ await page.locator('.remote-control-cursor').waitFor({state:'visible'});
   assert.deepEqual(errors,[]);
   const inputCount=await page.evaluate(()=>window.__inputs.length);
   await page.evaluate(()=>window.__fixtureSession.onCursor({x:.2,y:.4,visible:true}));await page.waitForTimeout(60);
-  const feedbackLeft=(await page.locator('.remote-control-cursor').boundingBox()).x;
+
   await page.evaluate(()=>window.__fixtureSession.onCursor({x:.8,y:.4,visible:true}));await page.waitForTimeout(60);
-  assert.ok((await page.locator('.remote-control-cursor').boundingBox()).x>feedbackLeft+100);
+  assert.equal(await page.locator('.remote-control-cursor').isVisible(),false);
   assert.equal(await page.evaluate(()=>window.__inputs.length),inputCount);
-  checks.push({wallpaperHD:true,previewIndependentOfVideo:true,cursorFeedbackNoInjection:true,connectFullscreen:true,viewport,defaultTrackpad:true,arrowVisible:true,swipe:true,tap:true,cancelNoClick:true,holdAndDrag:true,twoFingerScroll:true,directPositionBeforeClick:true,nativeFullscreenCursor:true,metadataRecovery:true,centerButton:true,audioPlayRetry:true,audioMute:true,savedPrefsSentOnce:true,randomUrl:true,loadingInsideSession:true,cancelDoesNotResurrect:true,guestHistoryPreviewAndPage:true,manualPreviewOnly:true,keyboardDismissReleasesModifier:true,cursorSize:true,mappingMoveResizeSave:true,chordWithPhysicalModifier:true,oneCardPerDevice:true,pageErrors:errors});
-  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/hostgeometry-ui-2026-09-18.png',import.meta.url).pathname});
+  checks.push({wallpaperHD:true,previewIndependentOfVideo:true,cursorFeedbackNoInjection:true,connectFullscreen:true,viewport,defaultTrackpad:true,localArrowHidden:true,swipe:true,tap:true,cancelNoClick:true,holdAndDrag:true,twoFingerScroll:true,directPositionBeforeClick:true,localArrowHiddenInFullscreen:true,centerButton:true,audioPlayRetry:true,audioMute:true,savedPrefsSentOnce:true,randomUrl:true,loadingInsideSession:true,cancelDoesNotResurrect:true,guestHistoryPreviewAndPage:true,automaticPreviewOnce:true,keyboardDismissReleasesModifier:true,mappingMoveResizeSave:true,chordWithPhysicalModifier:true,oneCardPerDevice:true,pageErrors:errors});
+  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/letterbox-ui-2026-09-18.png',import.meta.url).pathname});
   await page.getByRole('button',{name:'Putuskan',exact:true}).click();
   const rows=await page.evaluate(()=>JSON.parse(localStorage.getItem('xydesk.guest.history.v1')));
   assert.equal(rows.length,1);assert.equal(rows[0].state,'ended');assert.equal(rows[0].name,'PC uji sintetis');assert.ok(rows[0].preview?.startsWith('data:image/jpeg;base64,'));
@@ -187,9 +175,31 @@ await page.locator('.remote-control-cursor').waitFor({state:'visible'});
   await page.getByRole('link',{name:'Buka halaman riwayat',exact:true}).click();
   await page.getByRole('heading',{name:'Riwayat koneksi',exact:true}).waitFor();
   assert.equal(await page.getByRole('heading',{name:'PC uji sintetis',exact:true}).count(),1);
-  if(viewport.width===844)await page.screenshot({fullPage:true,path:new URL('../../docs/qa/hostgeometry-history-2026-09-18.png',import.meta.url).pathname});
+  if(viewport.width===844)await page.screenshot({fullPage:true,path:new URL('../../docs/qa/letterbox-history-2026-09-18.png',import.meta.url).pathname});
   await context.close();
  }
- writeFileSync(new URL('../../docs/qa/hostgeometry-ui-2026-09-18.json',import.meta.url),JSON.stringify({result:'PASS',boundary:'Real React handlers, Chromium CDP touch events, local canvas stream; stubbed RtcSession transport, not Windows/Android injection',checks},null,2)+'\n');
+ // Opt-out before connecting; then revoke while a transfer is in flight.
+ for(const scenario of ['opt-out','revoke-pending']){
+  const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();
+  await page.goto('http://127.0.0.1:4177/control-fixture');
+  await page.locator('input').nth(0).fill('123456789');await page.locator('input').nth(1).fill('fixture');
+  if(scenario==='opt-out')await page.locator('.history-consent input').uncheck();else await page.evaluate(()=>window.__holdWallpaper=true);
+  await page.getByRole('button',{name:'Konek sekarang',exact:true}).click();
+  await page.waitForFunction(()=>window.__fixtureStartDone===1);
+  if(scenario==='opt-out'){await page.waitForTimeout(200);assert.equal(await page.evaluate(()=>window.__inputs.filter(b=>b[0]===13).length),0);}
+  else{
+    await page.waitForFunction(()=>window.__deliverWallpaper);
+    await page.getByRole('button',{name:'Pengaturan sesi',exact:true}).click();await page.getByRole('tab',{name:'Sesi',exact:true}).click();
+    await page.getByRole('switch',{name:'Preview wallpaper otomatis',exact:true}).click();
+    await page.evaluate(()=>window.__deliverWallpaper());await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(()=>window.__fixtureSession.wallpaperTransfer.pending),null);
+    await page.locator('.spanel-close').click();
+  }
+  assert.equal(await page.evaluate(()=>localStorage.getItem('xydesk.guest.history.v1')),null);
+  await page.getByRole('button',{name:'Putuskan',exact:true}).click();
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('xydesk.guest.history.v1'))[0].preview),null);
+  checks.push({scenario,result:'PASS'});await context.close();
+ }
+ writeFileSync(new URL('../../docs/qa/letterbox-ui-2026-09-18.json',import.meta.url),JSON.stringify({result:'PASS',boundary:'Real React handlers, Chromium CDP touch events, local canvas stream; stubbed RtcSession transport, not Windows/Android injection',checks},null,2)+'\n');
  console.log(JSON.stringify(checks));
 }finally{await browser.close();await server.close();}

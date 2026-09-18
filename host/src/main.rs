@@ -823,23 +823,34 @@ async fn main() -> Result<()> {
                                                             .as_bytes()
                                                             .chunks(16384)
                                                             .collect();
-                                                        for (index, chunk) in
-                                                            chunks.iter().enumerate()
-                                                        {
-                                                            let message = serde_json::json!({"type":"wallpaper","id":id,"index":index,"total":chunks.len(),"data":std::str::from_utf8(chunk).unwrap()}).to_string();
-                                                            if !matches!(
-                                                                tokio::time::timeout(
-                                                                    std::time::Duration::from_secs(
-                                                                        3
-                                                                    ),
-                                                                    reply.send_text(message)
-                                                                )
-                                                                .await,
-                                                                Ok(Ok(_))
-                                                            ) {
-                                                                break;
+                                                        // Wallpaper is background traffic, not an
+                                                        // unbounded burst ahead of cursor/control replies.
+                                                        let transfer = async {
+                                                            for (index, chunk) in
+                                                                chunks.iter().enumerate()
+                                                            {
+                                                                while reply.buffered_amount().await
+                                                                    >= 32768
+                                                                {
+                                                                    if reply.ready_state()!=webrtc::data_channel::data_channel_state::RTCDataChannelState::Open{return;}
+                                                                    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+                                                                }
+                                                                let message=serde_json::json!({"type":"wallpaper","id":id,"index":index,"total":chunks.len(),"data":std::str::from_utf8(chunk).unwrap()}).to_string();
+                                                                if reply
+                                                                    .send_text(message)
+                                                                    .await
+                                                                    .is_err()
+                                                                {
+                                                                    return;
+                                                                }
+                                                                tokio::time::sleep(std::time::Duration::from_millis(80)).await;
                                                             }
-                                                        }
+                                                        };
+                                                        let _ = tokio::time::timeout(
+                                                            std::time::Duration::from_secs(12),
+                                                            transfer,
+                                                        )
+                                                        .await;
                                                     }
                                                     _ => {
                                                         let _ = reply.send_text(serde_json::json!({"type":"wallpaper-error","id":id}).to_string()).await;
@@ -984,8 +995,14 @@ async fn main() -> Result<()> {
                                 tokio::sync::mpsc::channel::<xydesk_host::screen::EncodedFrame>(1);
                             std::thread::spawn(move || {
                                 while let Ok(frame) = frames.recv() {
-                                    if vtx.blocking_send(frame).is_err() {
-                                        break;
+                                    match vtx.try_send(frame) {
+                                        Ok(()) => {}
+                                        Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
+                                            break
+                                        }
+                                        Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
+                                            xydesk_host::screen::request_keyframe()
+                                        }
                                     }
                                 }
                             });

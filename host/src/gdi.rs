@@ -355,6 +355,12 @@ impl Handle {
                 ));
             }
         }
+        let _ = crate::native_cursor::draw_bgra(
+            &mut self.bgra,
+            self.width as usize,
+            self.height as usize,
+            self.rect,
+        );
         Ok(&self.bgra)
     }
 }

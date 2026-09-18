@@ -313,20 +313,36 @@ mod windows_inject {
         }
     }
 
+    static POINTER_TARGET_VALID: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
     pub fn inject(ev: &InputEvent) -> bool {
         match *ev {
             InputEvent::MouseMoveRel { dx, dy } => {
-                send(&[mouse(MOUSEEVENTF_MOVE, dx as i32, dy as i32, 0)])
+                let ok = send(&[mouse(MOUSEEVENTF_MOVE, dx as i32, dy as i32, 0)]);
+                POINTER_TARGET_VALID.store(ok, std::sync::atomic::Ordering::Relaxed);
+                ok
             }
             InputEvent::MouseMoveAbs { x, y } => {
-                let Some((px, py)) = crate::desktop_geometry::active().and_then(|r| r.point(x, y))
-                else {
+                let point = crate::video_policy::layout()
+                    .and_then(|layout| layout.desktop_point(x, y))
+                    .and_then(|(x, y)| {
+                        crate::desktop_geometry::active().and_then(|r| r.point(x, y))
+                    });
+                POINTER_TARGET_VALID.store(false, std::sync::atomic::Ordering::Relaxed);
+                let Some((px, py)) = point else {
                     return false;
                 };
-                unsafe { windows::Win32::UI::WindowsAndMessaging::SetCursorPos(px, py).is_ok() }
+                let ok = unsafe {
+                    windows::Win32::UI::WindowsAndMessaging::SetCursorPos(px, py).is_ok()
+                };
+                POINTER_TARGET_VALID.store(ok, std::sync::atomic::Ordering::Relaxed);
+                ok
             }
             InputEvent::MouseButton { button, down } => {
-                if down && crate::desktop_geometry::active().is_none() {
+                if down
+                    && (crate::desktop_geometry::active().is_none()
+                        || !POINTER_TARGET_VALID.load(std::sync::atomic::Ordering::Relaxed))
+                {
                     return false;
                 }
                 let (flags, data) = match (button, down) {

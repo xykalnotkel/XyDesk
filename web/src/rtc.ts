@@ -220,7 +220,7 @@ export interface HostMeta {
   cursorEmbedded?: boolean;
   inputGeometry?: {left:number;top:number;width:number;height:number}|null;
   hardware?: Record<string, unknown>;
-  video?: {level:number;requested:number;applied:[number,number]|null;fpsLimit:number};
+  video?: {level:number;requested:number;applied:[number,number]|null;contentRect?:[number,number,number,number]|null;fpsLimit:number};
   displays: HostDisplay[];
   wanted: number;
   audio: { available: boolean; pipeline: string };
@@ -235,6 +235,12 @@ export interface SessionStats {
   mbps: number;
   rttMs: number;
   lossPct: number;
+  jitterMs?:number;
+  jitterBufferMs?:number;
+  decodeMs?:number;
+  recentLossPct?:number;
+  framesDropped?:number;
+  freezeCount?:number;
   codec: string;
   bytesReceived?: number;
   packetsReceived?: number;
@@ -263,6 +269,7 @@ export class RtcSession {
     if(this.input?.readyState!=='open')return Promise.reject(Error('Saluran kontrol belum siap.'));
     return this.wallpaperTransfer.request(bytes=>this.sendInput(bytes));
   }
+  cancelWallpaper(){this.wallpaperTransfer.cancel("Preview otomatis dinonaktifkan atau akun berubah.");}
   private ws?: WebSocket;
   private pc?: RTCPeerConnection;
   private input?: RTCDataChannel;
@@ -304,6 +311,7 @@ export class RtcSession {
   private lastFrames = -1;
   private lastAtMs = 0;
   private lastVideoStatsId = "";
+  private lastTiming?:{id:string;emitted:number;delay:number;frames:number;decode:number;received:number;lost:number};
 
   /// Satu-satunya jalan mengubah fase. Menangani watchdog secara terpusat
   /// supaya tidak ada transisi yang lupa mematikan atau menyalakannya.
@@ -565,7 +573,11 @@ export class RtcSession {
     pc.ontrack = (ev) => {
       if (this.stopped) return;
       const stream = ev.streams[0] ?? new MediaStream([ev.track]);
-      if (ev.track.kind === 'video') this.onTrack(stream);
+      if (ev.track.kind === 'video') {
+        // Optional browser hint, not a guarantee or a measured latency.
+        try {if(ev.receiver && 'jitterBufferTarget' in ev.receiver)(ev.receiver as RTCRtpReceiver & {jitterBufferTarget:number}).jitterBufferTarget=40;}catch{/* unsupported browser */}
+        this.onTrack(stream);
+      }
       else if (ev.track.kind === 'audio') this.onAudioTrack(stream);
     };
     pc.onconnectionstatechange = () => {
@@ -707,6 +719,17 @@ export class RtcSession {
           this.lastAtMs = now;
           const lost = Math.max(0, Number(x.packetsLost ?? 0));
           const recv = Number(x.packetsReceived ?? 0);
+          const timing={id:String(x.id),emitted:Number(x.jitterBufferEmittedCount),delay:Number(x.jitterBufferDelay),frames:Number(x.framesDecoded),decode:Number(x.totalDecodeTime),received:recv,lost};
+          const previous=this.lastTiming?.id===timing.id?this.lastTiming:undefined;
+          const average=(total:number,count:number,oldTotal?:number,oldCount?:number)=>{
+            if(oldTotal===undefined||oldCount===undefined||!Number.isFinite(total)||!Number.isFinite(count)||!Number.isFinite(oldTotal)||!Number.isFinite(oldCount)||count<=oldCount||total<oldTotal)return undefined;
+            return (total-oldTotal)/(count-oldCount)*1000;
+          };
+          const jitterBufferMs=average(timing.delay,timing.emitted,previous?.delay,previous?.emitted);
+          const decodeMs=average(timing.decode,timing.frames,previous?.decode,previous?.frames);
+          const lostDelta=previous?Math.max(0,lost-previous.lost):0,recvDelta=previous?recv-previous.received:0;
+          const recentLossPct=previous&&recvDelta>=0&&recvDelta+lostDelta>0?lostDelta/(recvDelta+lostDelta)*100:undefined;
+          this.lastTiming=timing;
           const codec = report.get(String(x.codecId)) as { sdpFmtpLine?: string; mimeType?: string } | undefined;
           const fmt = String(codec?.sdpFmtpLine ?? '');
           const profile = /profile-level-id=([0-9a-f]{6})/i.exec(fmt)?.[1] ?? '';
@@ -718,6 +741,10 @@ export class RtcSession {
             mbps,
             rttMs: 0,
             lossPct: recv + lost > 0 ? (lost / (recv + lost)) * 100 : 0,
+            jitterMs:typeof x.jitter==='number'&&Number.isFinite(x.jitter)&&x.jitter>=0?x.jitter*1000:undefined,
+            jitterBufferMs,decodeMs,recentLossPct,
+            framesDropped:typeof x.framesDropped==='number'?x.framesDropped:undefined,
+            freezeCount:typeof x.freezeCount==='number'?x.freezeCount:undefined,
             codec: `${codecName || '—'}${profile ? ` (${profile})` : ''}`,
             bytesReceived: bytes, packetsReceived: recv, packetsLost: lost,
             framesReceived: typeof x.framesReceived === 'number' ? x.framesReceived : undefined,

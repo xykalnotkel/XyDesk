@@ -202,14 +202,16 @@ unsafe impl Send for NvEnc {}
 impl NvEnc {
     /// Buat encoder H264 hardware [width]x[height] (harus genap).
     pub fn new(width: u32, height: u32, bitrate_bps: u32) -> Result<Self, String> {
-        if crate::video_policy::output_size(
+        let layout = crate::video_layout::VideoLayout::new(
             width as usize,
             height as usize,
             crate::video_policy::requested(),
             crate::video_policy::level(),
-        )? != (width as usize, height as usize)
+        )?;
+        if layout.canvas != [width as usize, height as usize]
+            || layout.content != [0, 0, width as usize, height as usize]
         {
-            return Err("resolusi butuh resize sesuai negosiasi; gunakan software".into());
+            return Err("letterbox/resize diperlukan; gunakan software".into());
         }
         let fns = load_api()?;
         if !width.is_multiple_of(2) || !height.is_multiple_of(2) {

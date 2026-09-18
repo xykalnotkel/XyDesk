@@ -27,8 +27,10 @@ async fn idle_capture_starts_after_connected_and_stops_without_another_frame() -
     pc.on_track(Box::new(move |track, _, _| {
         let tx = packets_tx.clone();
         Box::pin(async move {
-            if track.read_rtp().await.is_ok() {
-                let _ = tx.send(()).await;
+            while let Ok((packet, _)) = track.read_rtp().await {
+                if packet.header.marker {
+                    let _ = tx.send(packet.header.timestamp).await;
+                }
             }
         })
     }));
@@ -77,17 +79,31 @@ async fn idle_capture_starts_after_connected_and_stops_without_another_frame() -
         "pump berhenti saat menunggu frame pertama"
     );
     let mut encoder = screen::TestPatternEncoder::new()?;
+    let captured = Instant::now();
     frames_tx
-        .send(screen::EncodedFrame {
-            data: encoder.encode_next(320, 180)?,
-            captured_at: Instant::now(),
-            encode_us: 0,
-        })
+        .send(screen::EncodedFrame::new(
+            encoder.encode_next(320, 180)?,
+            captured,
+            0,
+        ))
         .await?;
-    assert!(
-        tokio::time::timeout(Duration::from_secs(3), packets_rx.recv())
-            .await?
-            .is_some()
+    let first = tokio::time::timeout(Duration::from_secs(3), packets_rx.recv())
+        .await?
+        .unwrap();
+    frames_tx
+        .send(screen::EncodedFrame::new(
+            encoder.encode_next(320, 180)?,
+            captured + Duration::from_millis(120),
+            0,
+        ))
+        .await?;
+    let second = tokio::time::timeout(Duration::from_secs(3), packets_rx.recv())
+        .await?
+        .unwrap();
+    assert_eq!(
+        second.wrapping_sub(first),
+        10800,
+        "RTP clock follows actual capture interval, not nominal 30 fps"
     );
     // Sumber diam, channel masih TERBUKA. Penutupan transport tetap harus
     // membangunkan pump; tidak boleh perlu frame kedua untuk teardown.

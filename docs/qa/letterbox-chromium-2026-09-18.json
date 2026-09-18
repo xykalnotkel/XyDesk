@@ -1,0 +1,89 @@
+{
+  "boundary": "Real Chromium SDP/RTP/decode with production Rust Session/SoftwareEncoder and synthetic pixels; no Windows or Android runtime.",
+  "results": [
+    {
+      "mode": 1,
+      "pixels": {
+        "top": [
+          0,
+          0,
+          0,
+          255
+        ],
+        "middle": [
+          125,
+          128,
+          212,
+          255
+        ]
+      },
+      "receiverLevel": "33",
+      "answerLevel": 51,
+      "width": 1920,
+      "height": 1080,
+      "framesDecoded": 3,
+      "codec": "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e033",
+      "jitterSeconds": 0.015,
+      "framesDropped": 0,
+      "totalDecodeTime": 0.025616999999999997,
+      "jitterBufferDelay": 0.065845,
+      "jitterBufferEmittedCount": 3
+    },
+    {
+      "mode": 2,
+      "pixels": {
+        "top": [
+          0,
+          12,
+          203,
+          255
+        ],
+        "middle": [
+          124,
+          130,
+          209,
+          255
+        ]
+      },
+      "receiverLevel": "33",
+      "answerLevel": 51,
+      "width": 2336,
+      "height": 1080,
+      "framesDecoded": 3,
+      "codec": "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e033",
+      "jitterSeconds": 0.002,
+      "framesDropped": 0,
+      "totalDecodeTime": 0.021016999999999997,
+      "jitterBufferDelay": 0.036278,
+      "jitterBufferEmittedCount": 3
+    },
+    {
+      "mode": 0,
+      "pixels": {
+        "top": [
+          0,
+          0,
+          0,
+          255
+        ],
+        "middle": [
+          127,
+          131,
+          204,
+          255
+        ]
+      },
+      "receiverLevel": "33",
+      "answerLevel": 51,
+      "width": 1280,
+      "height": 720,
+      "framesDecoded": 3,
+      "codec": "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e033",
+      "jitterSeconds": 0.006,
+      "framesDropped": 0,
+      "totalDecodeTime": 0.011888,
+      "jitterBufferDelay": 0.061557,
+      "jitterBufferEmittedCount": 3
+    }
+  ]
+}

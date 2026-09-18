@@ -91,6 +91,13 @@ pub struct VideoStats {
     pub latency_ms: f64,
     /// Latensi pipeline host maksimum yang pernah terukur (ms).
     pub latency_max_ms: f64,
+    /// Latest live frame's encode / post-encode queue / track-write timings.
+    /// Not network transit or glass-to-glass latency. Rescue frames excluded.
+    pub encode_ms: f64,
+    pub queue_ms: f64,
+    pub rtp_write_ms: f64,
+    /// Missing sequence numbers plus frames discarded by the video pump.
+    pub dropped_frames: u64,
 }
 
 impl VideoStats {

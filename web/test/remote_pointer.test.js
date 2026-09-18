@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {transformWithOxc} from 'vite';
-const {code} = await transformWithOxc(readFileSync(new URL('../src/remote_pointer.ts', import.meta.url), 'utf8').replace(/^export /gm, '') + '\nexports.api={imageRect,RemotePointer,KeyOwnership};', 'remote_pointer.ts');
+const {code} = await transformWithOxc(readFileSync(new URL('../src/remote_pointer.ts', import.meta.url), 'utf8').replace(/^export /gm, '') + '\nexports.api={imageRect,desktopRect,desktopToCanvas,RemotePointer,KeyOwnership};', 'remote_pointer.ts');
 const exports={}; vm.runInNewContext(code,{exports});
-const {imageRect,RemotePointer,KeyOwnership}=exports.api;
+const {imageRect,desktopRect,desktopToCanvas,RemotePointer,KeyOwnership}=exports.api;
 const plain = x => JSON.parse(JSON.stringify(x));
 function setup(){const events=[]; const r={left:0,top:100,width:400,height:200}; const p=new RemotePointer(()=>r,e=>events.push(plain(e)));return {p,events,r};}
 test('contain letterbox portrait/landscape dan dimensi belum tersedia',()=>{
@@ -58,3 +58,15 @@ test('physical, virtual and mapping owners share modifiers without early key-up'
 });
 
 test('host cursor feedback does not inject movement or change active drag anchor',()=>{const {p,events}=setup();p.applyHostPosition(.2,.3);assert.deepEqual(plain(p.cursor),{x:.2,y:.3});assert.equal(events.length,0);p.down(1,100,150,0,true,0);p.applyHostPosition(.9,.9);assert.deepEqual(plain(p.cursor),{x:.2,y:.3});p.reset();p.applyHostPosition(.9,.9);assert.deepEqual(plain(p.cursor),{x:.9,y:.9});});
+
+test('internal letterbox maps content endpoints to encoded canvas and rejects bars',()=>{
+ const video={applied:[1920,1080],contentRect:[0,96,1920,888]},box={left:0,top:0,width:1920,height:1080};
+ assert.deepEqual(plain(desktopRect(box,1920,1080,video)),{left:0,top:96,width:1920,height:888});
+ assert.deepEqual(plain(desktopToCanvas(0,0,1920,1080,video)),{x:0,y:96/1079});
+ assert.deepEqual(plain(desktopToCanvas(1,1,1920,1080,video)),{x:1,y:983/1079});
+ const events=[],p=new RemotePointer(()=>desktopRect(box,1920,1080,video),e=>events.push(e));
+ assert.equal(p.down(1,960,50,0,false,0),false);assert.equal(events.length,0);
+ p.down(1,960,540,0,false,1);assert.equal(events[0].x,.5);assert.equal(events[0].y,.5);
+ assert.deepEqual(plain(desktopRect(box,1920,1080,{...video,contentRect:[0,-1,1920,1080]})),box);
+ assert.deepEqual(plain(desktopToCanvas(.2,.4,1280,720,video)),{x:.2,y:.4});
+});

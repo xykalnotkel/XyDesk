@@ -3,7 +3,7 @@ import { SessionHistoryPage, saveSessionHistory, accountHistoryToken } from './s
 import type { HistoryItem, HistoryState } from './session_history';
 import { CustomControlMapping } from './control_mapping';
 import { cursorLayout, playRemoteAudio, newSessionFragment, isSessionFragment, SESSION_UI_REVISION } from './session_runtime';
-import { imageRect, RemotePointer, KeyOwnership } from './remote_pointer';
+import { desktopRect, desktopToCanvas, RemotePointer, KeyOwnership } from './remote_pointer';
 import { enterSessionFullscreen, leaveSessionFullscreen, enterSessionLandscape } from './session_fullscreen';
 import { videoOnlyStream, playRemoteVideo } from './video_playback';
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
@@ -2005,9 +2005,9 @@ function ConnectScreen({
   const [phase, setPhase] = useState<RtcPhase | ''>('');
   const sessionFragmentRef = useRef('');
   const [sessionOpen, setSessionOpen] = useState(false);
-  const [previewConsent, setPreviewConsent] = useState(false);
-  const previewConsentRef = useRef(false); previewConsentRef.current = previewConsent;
-  useEffect(()=>setPreviewConsent(false),[accountName]);
+  const [previewConsent, setPreviewConsent] = useState(true);
+  const previewConsentRef = useRef(true); previewConsentRef.current = previewConsent;
+  useEffect(()=>setPreviewConsent(true),[accountName]);
   const historyAttempt = useRef<{item:HistoryItem;token:string|null;done:boolean}|null>(null);
   const [recents, setRecents] = useState<RecentEntry[]>(loadRecents);
   const [recentsOpen, setRecentsOpen] = useState(false);
@@ -2066,6 +2066,8 @@ function ConnectScreen({
   // onAudioTrack) selalu membaca nilai terbaru.
   const prefsRef = useRef(DEFAULT_PREFS as SessionPrefs);
   const sessionRef = useRef<RtcSession | null>(null);
+  const setPreviewAllowed=(allowed:boolean)=>{previewConsentRef.current=allowed;setPreviewConsent(allowed);if(!allowed)sessionRef.current?.cancelWallpaper();};
+  useEffect(()=>()=>{sessionRef.current?.cancelWallpaper();},[accountName]);
   const retryRef = useRef({ tries: 0, timer: 0 as ReturnType<typeof setTimeout> | 0, wasConnected: false });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -2110,12 +2112,12 @@ function ConnectScreen({
   if(!keyOwners.current)keyOwners.current=new KeyOwnership((vk,down)=>sessionRef.current?.sendInput(InputCodec.key(vk,down)));
   const getImageRect = () => {
     const video = videoRef.current, surface = surfaceRef.current;
-    return video && surface ? imageRect(video.getBoundingClientRect(), video.videoWidth, video.videoHeight) : null;
+    return video && surface ? desktopRect(video.getBoundingClientRect(), video.videoWidth, video.videoHeight, sessionRef.current?.meta?.video) : null;
   };
   const hostCursorRef=useRef<{x:number;y:number;visible:boolean}|null>(null);
   const cursorRaf = useRef(0);
   const paintCursor = () => {
-    if (cursorRaf.current) return;
+    if (cursorRef.current?.hidden || cursorRaf.current) return;
     cursorRaf.current = requestAnimationFrame(() => {
       cursorRaf.current = 0;
       const el = cursorRef.current, surface = surfaceRef.current;
@@ -2131,7 +2133,9 @@ function ConnectScreen({
   };
   if (!pointerRef.current) pointerRef.current = new RemotePointer(getImageRect, (event) => {
     if (event.type === 'move') {
-      sessionRef.current?.sendInput(InputCodec.mouseMoveAbs(event.x, event.y));
+      const video=videoRef.current;
+      const p=desktopToCanvas(event.x,event.y,video?.videoWidth||0,video?.videoHeight||0,sessionRef.current?.meta?.video);
+      sessionRef.current?.sendInput(InputCodec.mouseMoveAbs(p.x, p.y));
       paintCursor();
     } else if (event.type === 'button') {
       sessionRef.current?.sendInput(InputCodec.mouseButton(event.button, event.down));
@@ -2214,11 +2218,20 @@ function ConnectScreen({
     if(sessionRef.current!==session || historyAttempt.current!==attempt || attempt.done || !previewConsentRef.current || attempt.token!==accountHistoryToken())return;
     attempt.item.preview=preview;attempt.item.previewConsent=true;
     void saveSessionHistory({...attempt.item,endedAt:Date.now(),state:'interrupted'},attempt.token)
-      .then(()=>setHudToast('Preview disimpan untuk ID ini. Tidak diambil ulang otomatis.'))
+      .then(()=>setHudToast('Preview wallpaper disimpan untuk ID ini.'))
       .catch(()=>setHudToast('Preview belum tersimpan. Periksa koneksi atau penyimpanan.'));
   };
 
+  const automaticPreviewAttempt=useRef<string|null>(null);
+  useEffect(()=>{
+    const attempt=historyAttempt.current;
+    if(!connected||!hostMeta||!previewConsent||!attempt||attempt.done||automaticPreviewAttempt.current===attempt.item.id)return;
+    automaticPreviewAttempt.current=attempt.item.id;
+    void capturePreview();
+  },[connected,hostMeta,previewConsent]);
+
   const connect = async (isRetry = false) => {
+    setHostMeta(null);
     flushSync(()=>setSessionOpen(true));
     historyAttempt.current={item:{id:crypto.randomUUID(),deviceId:hostId.replace(/[\s-]/g,''),name:`PC ${hostId}`,startedAt:Date.now(),endedAt:Date.now(),state:'failed',specs:{},preview:null},token:accountHistoryToken(),done:false};
     const attemptId = historyAttempt.current.item.id;
@@ -2352,7 +2365,7 @@ function ConnectScreen({
   const disconnect = useCallback(() => {
     keyOwners.current?.reset();
     finishHistory(historyAttempt.current && retryRef.current.wasConnected ? 'ended' : 'cancelled');
-    setSessionOpen(false); setPreviewConsent(false);
+    setSessionOpen(false);
     if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
     retryRef.current.tries = 3; // blok retry setelah putus manual
     pointerRef.current?.reset();
@@ -2610,7 +2623,7 @@ function ConnectScreen({
             </p>
           )}
           {retryInfo && <p className="status-text">{retryInfo}</p>}
-          <label className="history-consent"><input type="checkbox" checked={previewConsent} onChange={e=>setPreviewConsent(e.target.checked)}/> {accountHistoryToken()?'Izinkan simpan/ganti wallpaper HD manual pada akun di server':'Izinkan simpan/ganti wallpaper HD manual di browser ini'} (bisa berisi data pribadi).</label>
+          <label className="history-consent"><input type="checkbox" checked={previewConsent} onChange={e=>setPreviewAllowed(e.target.checked)}/> {accountHistoryToken()?'Preview wallpaper otomatis: simpan pada akun di server':'Preview wallpaper otomatis: simpan di browser ini'} (bisa berisi data pribadi).</label>
           <a className="text-action" href="/history">Buka halaman riwayat</a>
           <button className="connect-cta" disabled={!canConnect} onClick={() => void connect()}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
           <p className="microcopy">Sesi tamu berlaku dua jam. Riwayat tamu disimpan lokal di browser ini.</p>
@@ -2638,7 +2651,7 @@ function ConnectScreen({
           <button className="btn ghost" onClick={disconnect}>Kembali / batalkan</button>
         </div>}
         <div className="remote-input-area" aria-hidden="true" hidden={!connected} />
-        <div ref={cursorRef} className="remote-control-cursor" hidden={!connected || prefs.cursorInVideo || hostMeta?.cursorEmbedded===true} style={{width:prefs.cursorSize,height:prefs.cursorSize*4/3}} aria-hidden="true" data-revision={SESSION_UI_REVISION}>
+        <div ref={cursorRef} className="remote-control-cursor" hidden={true} style={{display:"none",width:prefs.cursorSize,height:prefs.cursorSize*4/3}} aria-hidden="true" data-revision={SESSION_UI_REVISION}>
           <svg viewBox="0 0 24 32">
             <path d="M2 2 L2 25 L8 20 L13 30 L18 27 L13 18 L22 17 Z" fill="white" stroke="#111" strokeWidth="2" strokeLinejoin="round" />
           </svg>
@@ -2726,7 +2739,6 @@ function ConnectScreen({
         />
         <div className="hud-mouse" aria-hidden="false">
           <button className="hud-icon-btn" type="button" title="Temukan panah" aria-label="Temukan panah" onClick={() => {
-            setPrefs(p=>({...p,cursorInVideo:false}));
             pointerRef.current!.reset(); pointerRef.current!.cursor = {x: 0.5, y: 0.5}; pointerRef.current!.sync(); paintCursor();
             setHudToast('Panah dikembalikan ke tengah gambar. Geser satu jari untuk bergerak.');
           }}>⌖</button>
@@ -2758,7 +2770,7 @@ function ConnectScreen({
             prefs={prefs}
             onChange={setPrefs}
             previewConsent={previewConsent}
-            onPreviewConsent={setPreviewConsent}
+            onPreviewConsent={setPreviewAllowed}
             onCapturePreview={capturePreview}
             onClose={() => setPanelOpen(false)}
             hostId={hostId}

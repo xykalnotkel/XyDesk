@@ -414,6 +414,7 @@ function ToggleRow({
       <button
         type="button"
         role="switch"
+        aria-label={label}
         aria-checked={on}
         className={`spanel-switch${on ? ' on' : ''}`}
         onClick={onToggle}
@@ -592,7 +593,7 @@ export function SessionPanel({
               </button>
             ))}
           </div>
-          <p className="spanel-note">Bitrate adalah target, bukan pemakaian tetap. Resolusi, fps, dan bitrate efektif mengikuti batas encoder host; software mengikuti negosiasi H264: 720p, 1080p atau asli hingga 4096×2160. Mode asli maksimum 15 fps untuk mengutamakan detail; browser lama dapat dibatasi 720p.</p>
+          <p className="spanel-note">Bitrate adalah target, bukan pemakaian tetap. Resolusi, fps, dan bitrate efektif mengikuti batas encoder host; software mengikuti negosiasi H264: kanvas 1280×720, 1920×1080 (desktop utuh + pita hitam), atau asli hingga 4096×2160. Tidak menambah detail lewat upscale. RTT bukan latensi layar-ke-layar. Mode asli maksimum 15 fps untuk mengutamakan detail; browser lama dapat dibatasi 720p.</p>
 
           <p className="spanel-section">Yang sedang berjalan</p>
           <div className="spanel-card">
@@ -601,8 +602,13 @@ export function SessionPanel({
                 <StatRow label="Ukuran gambar" value={stats.width ? `${stats.width}×${stats.height}` : '—'} />
                 <StatRow label="Kehalusan" value={stats.fps ? `${idNum(stats.fps)} fps` : '—'} />
                 <StatRow label="Pemakaian data" value={`${idNum(stats.mbps, stats.mbps > 0 && stats.mbps < 0.1 ? 3 : 1)} Mbps`} />
-                <StatRow label="Ping" value={stats.rttMs ? `${idNum(stats.rttMs)} ms` : '—'} />
-                <StatRow label="Paket hilang" value={`${idNum(stats.lossPct, 1)} %`} />
+                <StatRow label="RTT jaringan" value={stats.rttMs ? `${idNum(stats.rttMs)} ms` : '—'} />
+                <StatRow label="Paket hilang (total)" value={`${idNum(stats.lossPct, 1)} %`} />
+                <StatRow label="Jitter RTP" value={stats.jitterMs===undefined?'—':`${idNum(stats.jitterMs,1)} ms`}/>
+                <StatRow label="Buffer video (interval)" value={stats.jitterBufferMs===undefined?'—':`${idNum(stats.jitterBufferMs,1)} ms`}/>
+                <StatRow label="Decode / frame (interval)" value={stats.decodeMs===undefined?'—':`${idNum(stats.decodeMs,1)} ms`}/>
+                <StatRow label="Paket hilang (interval)" value={stats.recentLossPct===undefined?'—':`${idNum(stats.recentLossPct,1)} %`}/>
+                <StatRow label="Freeze / frame dibuang (total)" value={`${stats.freezeCount??'—'} / ${stats.framesDropped??'—'}`}/>
                 <StatRow label="Codec" value={stats.codec || '—'} />
                 <StatRow label="Status video" value={stats.videoState || '—'} />
                 <StatRow label="Penunjuk kontrol" value={stats.cursorState || '—'} />
@@ -669,8 +675,7 @@ export function SessionPanel({
       {tab === 'kontrol' && (
         <>
           <p className="spanel-section">Penunjuk mouse</p>
-          <label className="spanel-note">Ukuran panah lokal: {prefs.cursorSize}px<input aria-label="Ukuran panah" type="range" min="24" max="96" value={prefs.cursorSize} onChange={e=>onChange({...prefs,cursorSize:Number(e.target.value)})}/></label>
-          <ToggleRow label="Gunakan panah dalam video" hint="Aktifkan hanya jika panah Windows sudah terlihat dalam video. Host GDI bisa tidak menyertakannya. Tombol Temukan panah memulihkan panah lokal." on={prefs.cursorInVideo} onToggle={()=>onChange({...prefs,cursorInVideo:!prefs.cursorInVideo})}/>
+          <p className="spanel-note">Kursor Windows asli dikirim dalam video oleh host terbaru. Tidak ada panah lokal pengganti. Bentuk dan geraknya mengikuti desktop host.</p>
           <p className="spanel-section">Gerak kursor</p>
           <div className="spanel-seg">
             <button
@@ -689,7 +694,7 @@ export function SessionPanel({
             </button>
           </div>
           <p className="spanel-note">
-            Trackpad: geser satu jari untuk menggerakkan panah, ketuk untuk klik, dua jari untuk scroll. Tahan tombol klik kiri sambil geser untuk drag. Langsung: sentuh tepat pada gambar. Panah menunjukkan posisi perintah dari perangkat ini, bukan gerakan mouse di PC.
+            Trackpad: geser satu jari untuk menggerakkan panah, ketuk untuk klik, dua jari untuk scroll. Tahan tombol klik kiri sambil geser untuk drag. Langsung: sentuh tepat pada gambar. Kursor yang terlihat adalah kursor Windows dalam video, termasuk saat mouse digerakkan di PC.
           </p>
           <div className="spanel-row">
             <div className="spanel-copy">
@@ -722,7 +727,7 @@ export function SessionPanel({
       {tab === 'sesi' && (
         <>
           <p className="spanel-section">Riwayat</p>
-          <ToggleRow label="Izinkan simpan/ganti wallpaper HD" hint="Wallpaper Windows saja, tanpa aplikasi terbuka, ikon, atau taskbar. Tidak ada jendela yang diminimalkan. Tamu: lokal; akun: server." on={!!previewConsent} onToggle={()=>onPreviewConsent?.(!previewConsent)}/>
+          <ToggleRow label="Preview wallpaper otomatis" hint="Diambil sekali saat sesi terhubung. Wallpaper Windows saja, tanpa aplikasi terbuka, ikon, atau taskbar. Tidak ada jendela yang diminimalkan. Tamu: lokal; akun: server." on={!!previewConsent} onToggle={()=>onPreviewConsent?.(!previewConsent)}/>
           <button type="button" className="btn ghost" disabled={!previewConsent} onClick={onCapturePreview}>Ambil / ganti wallpaper HD</button>
           <p className="spanel-section">Sesi</p>
           <div className="spanel-card">

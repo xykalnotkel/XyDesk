@@ -228,6 +228,19 @@ impl DxgiCapture {
                 return Err(format!("acquire: {e}"));
             }
             let hasil = self.salin_ke_staging(res.as_ref());
+            if matches!(hasil, Ok(true)) && info.PointerPosition.Visible.as_bool() {
+                let _ = crate::native_cursor::draw_bgra(
+                    &mut self.buf,
+                    self.width,
+                    self.height,
+                    self.rect,
+                );
+            }
+            if matches!(hasil, Ok(true)) {
+                for pixel in self.buf.chunks_exact_mut(4) {
+                    pixel.swap(0, 2);
+                }
+            }
             let _ = self.dupl.ReleaseFrame();
             hasil
         }

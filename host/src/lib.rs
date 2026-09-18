@@ -90,3 +90,6 @@ pub mod desktop_geometry;
 pub mod wallpaper;
 
 pub mod video_policy;
+
+pub mod native_cursor;
+pub mod video_layout;

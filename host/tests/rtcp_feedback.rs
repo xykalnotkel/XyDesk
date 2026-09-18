@@ -92,11 +92,11 @@ async fn receiver_can_recover_a_lost_packet_and_request_a_keyframe() -> anyhow::
     );
     let mut encoder = screen::TestPatternEncoder::new()?;
     frames_tx
-        .send(screen::EncodedFrame {
-            data: encoder.encode_next(320, 180)?,
-            captured_at: Instant::now(),
-            encode_us: 0,
-        })
+        .send(screen::EncodedFrame::new(
+            encoder.encode_next(320, 180)?,
+            Instant::now(),
+            0,
+        ))
         .await?;
     let (sequence, ssrc) = tokio::time::timeout(Duration::from_secs(3), packets_rx.recv())
         .await?

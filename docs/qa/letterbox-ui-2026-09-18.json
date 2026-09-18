@@ -1,0 +1,80 @@
+{
+  "result": "PASS",
+  "boundary": "Real React handlers, Chromium CDP touch events, local canvas stream; stubbed RtcSession transport, not Windows/Android injection",
+  "checks": [
+    {
+      "wallpaperHD": true,
+      "previewIndependentOfVideo": true,
+      "cursorFeedbackNoInjection": true,
+      "connectFullscreen": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "defaultTrackpad": true,
+      "localArrowHidden": true,
+      "swipe": true,
+      "tap": true,
+      "cancelNoClick": true,
+      "holdAndDrag": true,
+      "twoFingerScroll": true,
+      "directPositionBeforeClick": true,
+      "localArrowHiddenInFullscreen": true,
+      "centerButton": true,
+      "audioPlayRetry": true,
+      "audioMute": true,
+      "savedPrefsSentOnce": true,
+      "randomUrl": true,
+      "loadingInsideSession": true,
+      "cancelDoesNotResurrect": true,
+      "guestHistoryPreviewAndPage": true,
+      "automaticPreviewOnce": true,
+      "keyboardDismissReleasesModifier": true,
+      "mappingMoveResizeSave": true,
+      "chordWithPhysicalModifier": true,
+      "oneCardPerDevice": true,
+      "pageErrors": []
+    },
+    {
+      "wallpaperHD": true,
+      "previewIndependentOfVideo": true,
+      "cursorFeedbackNoInjection": true,
+      "connectFullscreen": true,
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "defaultTrackpad": true,
+      "localArrowHidden": true,
+      "swipe": true,
+      "tap": true,
+      "cancelNoClick": true,
+      "holdAndDrag": true,
+      "twoFingerScroll": true,
+      "directPositionBeforeClick": true,
+      "localArrowHiddenInFullscreen": true,
+      "centerButton": true,
+      "audioPlayRetry": true,
+      "audioMute": true,
+      "savedPrefsSentOnce": true,
+      "randomUrl": true,
+      "loadingInsideSession": true,
+      "cancelDoesNotResurrect": true,
+      "guestHistoryPreviewAndPage": true,
+      "automaticPreviewOnce": true,
+      "keyboardDismissReleasesModifier": true,
+      "mappingMoveResizeSave": true,
+      "chordWithPhysicalModifier": true,
+      "oneCardPerDevice": true,
+      "pageErrors": []
+    },
+    {
+      "scenario": "opt-out",
+      "result": "PASS"
+    },
+    {
+      "scenario": "revoke-pending",
+      "result": "PASS"
+    }
+  ]
+}

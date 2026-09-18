@@ -5,7 +5,7 @@ use std::sync::{
 };
 static LEVEL: AtomicU8 = AtomicU8::new(31);
 static REQUESTED: AtomicU8 = AtomicU8::new(1);
-static APPLIED: Mutex<Option<(usize, usize)>> = Mutex::new(None);
+static APPLIED: Mutex<Option<crate::video_layout::VideoLayout>> = Mutex::new(None);
 pub fn level() -> u8 {
     LEVEL.load(Ordering::Relaxed)
 }
@@ -41,12 +41,24 @@ pub fn fps() -> u32 {
     }
 }
 pub fn record(size: Option<(usize, usize)>) {
+    record_layout(size.map(|(w, h)| crate::video_layout::VideoLayout {
+        canvas: [w, h],
+        content: [0, 0, w, h],
+    }));
+}
+pub fn record_layout(layout: Option<crate::video_layout::VideoLayout>) {
     *APPLIED
         .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner) = size;
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = layout;
+}
+pub fn layout() -> Option<crate::video_layout::VideoLayout> {
+    *APPLIED
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 pub fn telemetry() -> serde_json::Value {
-    serde_json::json!({"level":level(),"requested":requested(),"applied":*APPLIED.lock().unwrap_or_else(std::sync::PoisonError::into_inner),"fpsLimit":fps()})
+    let layout = layout();
+    serde_json::json!({"level":level(),"requested":requested(),"applied":layout.map(|r|r.canvas),"contentRect":layout.map(|r|r.content),"fpsLimit":fps()})
 }
 pub fn output_size(w: usize, h: usize, mode: u8, level: u8) -> Result<(usize, usize), String> {
     if w < 2 || h < 2 {

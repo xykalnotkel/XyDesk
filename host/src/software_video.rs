@@ -93,6 +93,7 @@ impl ResizePlan {
 pub struct SoftwareEncoder {
     encoder: Encoder,
     resized: Vec<u8>,
+    canvas: Vec<u8>,
     resize_plan: ResizePlan,
     logged_size: Option<(usize, usize)>,
     mode: u8,
@@ -115,6 +116,7 @@ impl SoftwareEncoder {
                 ),
             )?,
             resized: Vec::new(),
+            canvas: Vec::new(),
             resize_plan: ResizePlan::default(),
             logged_size: None,
             mode,
@@ -129,11 +131,8 @@ impl SoftwareEncoder {
         if rgba.len() != len {
             return Err("panjang RGBA tidak cocok dengan dimensi capture".into());
         }
-        let (w, h) = if self.level == 31 {
-            output_size(width, height)?
-        } else {
-            crate::video_policy::output_size(width, height, self.mode, self.level)?
-        };
+        let layout = crate::video_layout::VideoLayout::new(width, height, self.mode, self.level)?;
+        let [left, top, w, h] = layout.content;
         let pixels = if (w, h) == (width, height) {
             rgba
         } else {
@@ -141,7 +140,19 @@ impl SoftwareEncoder {
                 .resize(rgba, width, height, w, h, &mut self.resized);
             &self.resized
         };
-        let yuv = YUVBuffer::from_rgb_source(RgbaSliceU8::new(pixels, (w, h)));
+        let [cw, ch] = layout.canvas;
+        let pixels = if (cw, ch) == (w, h) {
+            pixels
+        } else {
+            self.canvas.resize(cw * ch * 4, 0);
+            self.canvas.fill(0);
+            for y in 0..h {
+                self.canvas[((top + y) * cw + left) * 4..((top + y) * cw + left + w) * 4]
+                    .copy_from_slice(&pixels[y * w * 4..(y + 1) * w * 4]);
+            }
+            &self.canvas
+        };
+        let yuv = YUVBuffer::from_rgb_source(RgbaSliceU8::new(pixels, (cw, ch)));
         let data = self
             .encoder
             .encode(&yuv)
@@ -154,11 +165,11 @@ impl SoftwareEncoder {
                 } else {
                     30
                 };
-                println!("[xydesk-host] video software: capture {width}x{height} -> kirim {w}x{h}, filter bilinear, maks {fps} fps, bitrate {} bps, SPS {profile:02x}{constraints:02x}{level:02x}", crate::screen::target_bitrate_bps().min(MAX_BITRATE));
+                println!("[xydesk-host] video software: capture {width}x{height} -> kirim {cw}x{ch} (desktop {w}x{h}), filter bilinear, maks {fps} fps, bitrate {} bps, SPS {profile:02x}{constraints:02x}{level:02x}", crate::screen::target_bitrate_bps().min(MAX_BITRATE));
                 self.logged_size = Some((width, height));
             }
         }
-        crate::video_policy::record(Some((w, h)));
+        crate::video_policy::record_layout(Some(layout));
         Ok(data)
     }
 }
@@ -197,7 +208,7 @@ mod tests {
         assert_eq!(level, 31, "SPS harus sesuai batas Level3.1, bukan 5.1");
         let mut decoder = openh264::decoder::Decoder::new().unwrap();
         let decoded = decoder.decode(&data).unwrap().expect("IDR harus terdecode");
-        assert_eq!(decoded.dimensions(), output_size(w, h).unwrap());
+        assert_eq!(decoded.dimensions(), (1280, 720));
     }
     #[test]
     fn negotiated_hd_and_native_are_real_decodable_pixels() {
@@ -212,6 +223,25 @@ mod tests {
             let mut decoder = openh264::decoder::Decoder::new().unwrap();
             let decoded = decoder.decode(&bytes).unwrap().unwrap();
             assert_eq!(decoded.dimensions(), expected);
+        }
+    }
+    #[test]
+    fn odd_aspect_desktop_encodes_black_bars_not_crop_or_stretch() {
+        for (mode, level) in [(0, 31), (1, 40), (1, 51)] {
+            let (w, h) = (2336, 1080);
+            let layout = crate::video_layout::VideoLayout::new(w, h, mode, level).unwrap();
+            let mut encoder = SoftwareEncoder::with_policy(mode, level).unwrap();
+            let bytes = encoder.encode(&vec![220; w * h * 4], w, h).unwrap();
+            let mut decoder = openh264::decoder::Decoder::new().unwrap();
+            let frame = decoder.decode(&bytes).unwrap().unwrap();
+            assert_eq!(frame.dimensions(), (layout.canvas[0], layout.canvas[1]));
+            let mut rgb = vec![0; layout.canvas[0] * layout.canvas[1] * 3];
+            frame.write_rgb8(&mut rgb);
+            let pixel = |x: usize, y: usize| rgb[(y * layout.canvas[0] + x) * 3];
+            assert!(pixel(10, 10) < 20);
+            assert!(pixel(10, layout.canvas[1] - 10) < 20);
+            assert!(pixel(10, layout.content[1] + 10) > 190);
+            assert!(pixel(layout.canvas[0] - 10, layout.content[1] + 10) > 190);
         }
     }
     #[test]

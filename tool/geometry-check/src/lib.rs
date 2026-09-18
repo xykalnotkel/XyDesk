@@ -10,3 +10,6 @@
 #[path="../../../host/src/nvenc_types.rs"] pub mod nvenc_types;
 #[path="../../../host/src/nvenc_config.rs"] pub mod nvenc_config;
 #[path="../../../host/src/nvenc.rs"] pub mod nvenc;
+
+#[path="../../../host/src/video_layout.rs"] pub mod video_layout;
+#[path="../../../host/src/native_cursor.rs"] pub mod native_cursor;

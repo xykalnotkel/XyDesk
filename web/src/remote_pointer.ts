@@ -12,6 +12,23 @@ export function imageRect(box: Rect, width: number, height: number): Rect | null
   const w = width * scale, h = height * scale;
   return { left: box.left + (box.width - w) / 2, top: box.top + (box.height - h) / 2, width: w, height: h };
 }
+// Host contentRect is in encoded pixels. Ignore stale/invalid metadata,
+// but never stretch the desktop or count the encoded padding as its content.
+export type VideoGeometry={applied:[number,number]|null;contentRect?:[number,number,number,number]|null};
+export function validContent(video:VideoGeometry|undefined,width:number,height:number):[number,number,number,number]|null {
+ const r=video?.contentRect;
+ if(!r||video?.applied?.[0]!==width||video?.applied?.[1]!==height||r.length!==4||!r.every(Number.isFinite))return null;
+ return r[0]>=0&&r[1]>=0&&r[2]>=2&&r[3]>=2&&r[0]+r[2]<=width&&r[1]+r[3]<=height?r:null;
+}
+export function desktopRect(box:Rect,width:number,height:number,video?:VideoGeometry):Rect|null {
+ const frame=imageRect(box,width,height);if(!frame)return null;
+ const r=validContent(video,width,height);if(!r)return frame;
+ return {left:frame.left+r[0]/width*frame.width,top:frame.top+r[1]/height*frame.height,width:r[2]/width*frame.width,height:r[3]/height*frame.height};
+}
+export function desktopToCanvas(x:number,y:number,width:number,height:number,video?:VideoGeometry):Position {
+ const r=validContent(video,width,height);if(!r)return{x,y};
+ return{x:(r[0]+Math.max(0,Math.min(1,x))*(r[2]-1))/(width-1),y:(r[1]+Math.max(0,Math.min(1,y))*(r[3]-1))/(height-1)};
+}
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
 type Contact = Position & { startX: number; startY: number; at: number; moved: boolean; trackpad: boolean; button: number };
 

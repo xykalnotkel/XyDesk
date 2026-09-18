@@ -80,6 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260918-OPERATOR-LETTERBOX-LATENCY | Operator - XyDesk Team | Host + Web | LAGI KERJA | Source+uji lokal selesai: Linux152/web66/Win cross-check/Chromium PASS. Menunggu izin dedicated Windows/NSIS; belum deploy. | 2026-09-18 |
 
 ## Antrean izin push
 

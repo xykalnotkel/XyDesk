@@ -77,11 +77,35 @@ impl Stats {
 ///
 /// Mengembalikan `false` bila track menolak tulisan — artinya sesi sudah tidak
 /// bisa dipakai dan pemanggil harus berhenti.
-async fn tulis_frame(track: &Arc<TrackLocalStaticSample>, data: Vec<u8>) -> bool {
+async fn tulis_frame(
+    track: &Arc<TrackLocalStaticSample>,
+    data: Vec<u8>,
+    at: Instant,
+    clock: &mut Option<Instant>,
+) -> bool {
+    // webrtc 0.11 advances its timestamp AFTER packetization; an empty
+    // sample advances without packets, so THIS frame has the capture delta.
+    let at = clock.map_or(at, |last| at.max(last + Duration::from_nanos(11112)));
+    let delta = clock
+        .map(|last| at.saturating_duration_since(last))
+        .unwrap_or_default();
+    if !delta.is_zero()
+        && track
+            .write_sample(&Sample {
+                duration: delta,
+                ..Default::default()
+            })
+            .await
+            .is_err()
+    {
+        return false;
+    }
+    *clock = Some(clock.map_or(at, |last| last.max(at)));
+
     let sample = Sample {
         data: bytes::Bytes::from(data),
         timestamp: SystemTime::now(),
-        duration: screen::frame_duration(),
+        duration: Duration::ZERO,
         packet_timestamp: 0,
         prev_dropped_packets: 0,
         prev_padding_packets: 0,
@@ -91,6 +115,31 @@ async fn tulis_frame(track: &Arc<TrackLocalStaticSample>, data: Vec<u8>) -> bool
         return false;
     }
     true
+}
+
+/// Sequence gaps invalidate predictive frames until a fresh IDR arrives.
+#[derive(Default)]
+struct FrameChain {
+    last: Option<u64>,
+    waiting: bool,
+}
+impl FrameChain {
+    fn accept(&mut self, sequence: u64, idr: bool, stale: bool) -> bool {
+        let gap = self
+            .last
+            .is_some_and(|last| sequence != last.wrapping_add(1));
+        if self.last.is_none() || gap || stale {
+            self.waiting = true;
+        }
+        self.last = Some(sequence);
+        if stale {
+            return false;
+        }
+        if idr {
+            self.waiting = false;
+        }
+        !self.waiting
+    }
 }
 
 /// Alirkan frame dari channel ke track RTP sampai channel tertutup atau
@@ -126,6 +175,8 @@ pub async fn pump_video(
 ) {
     println!("[xydesk-host] track video siap — streaming");
     let mut prev_connected = false;
+    let mut clock = None;
+    let mut chain = FrameChain::default();
     let mut rescue: Option<Rescue> = None;
     let mut stats = Stats {
         fps_window: 0,
@@ -208,14 +259,34 @@ pub async fn pump_video(
 
         match diterima {
             Some(frame) => {
-                // Latensi pipeline host: sejak frame ditangkap di thread
-                // capture sampai sesaat sebelum ditulis ke track RTP.
-                let latency_ms = frame.captured_at.elapsed().as_secs_f64() * 1000.0;
                 let idr_hidup = screen::annexb_has_idr(&frame.data);
-                if !tulis_frame(track, frame.data).await {
+                if frame.data.is_empty() {
+                    continue;
+                }
+                let queue_ms = frame.encoded_at.elapsed().as_secs_f64() * 1000.0;
+                let missing = chain.last.map_or(0, |last| {
+                    frame.sequence.saturating_sub(last.saturating_add(1))
+                });
+                let accepted = chain.accept(frame.sequence, idr_hidup, queue_ms > 100.0);
+                crate::recover_lock(&control).video.dropped_frames +=
+                    missing + u64::from(!accepted);
+                if !accepted {
+                    screen::request_keyframe();
+                    continue;
+                }
+                let write_started = Instant::now();
+                if !tulis_frame(track, frame.data, frame.captured_at, &mut clock).await {
                     break;
                 }
+                let write_ms = write_started.elapsed().as_secs_f64() * 1000.0;
+                let latency_ms = frame.captured_at.elapsed().as_secs_f64() * 1000.0;
                 stats.catat(&control, Some(latency_ms));
+                {
+                    let mut st = crate::recover_lock(&control);
+                    st.video.encode_ms = frame.encode_us as f64 / 1000.0;
+                    st.video.queue_ms = queue_ms;
+                    st.video.rtp_write_ms = write_ms;
+                }
                 if idr_hidup {
                     if rescue.is_some() {
                         println!("[xydesk-host] IDR hidup tiba — penyelamatan keyframe selesai");
@@ -245,7 +316,7 @@ pub async fn pump_video(
                 }
                 r.next = now + KEYFRAME_RESCUE_INTERVAL;
                 r.sent += 1;
-                if !tulis_frame(track, r.data.clone()).await {
+                if !tulis_frame(track, r.data.clone(), Instant::now(), &mut clock).await {
                     break;
                 }
                 stats.catat(&control, None);
@@ -258,6 +329,19 @@ pub async fn pump_video(
 mod tests {
     use super::*;
 
+    #[test]
+    fn dropped_prediction_requires_fresh_idr() {
+        let mut c = FrameChain::default();
+        assert!(!c.accept(1, false, false));
+        assert!(c.accept(2, true, false));
+        assert!(c.accept(3, false, false));
+        assert!(!c.accept(5, false, false));
+        assert!(!c.accept(6, false, false));
+        assert!(c.accept(7, true, false));
+        assert!(!c.accept(8, true, true));
+        assert!(!c.accept(9, false, false));
+        assert!(c.accept(10, true, false));
+    }
     #[test]
     fn jeda_dan_jendela_penyelamatan_masuk_akal() {
         // Jendela harus jauh lebih panjang dari jeda, kalau tidak
