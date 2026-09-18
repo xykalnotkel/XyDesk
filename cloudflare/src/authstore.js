@@ -1,3 +1,4 @@
+import { memberClaims, memberMatches, sameMember, guestClaims, accountClaims } from './member_session.js';
 import { historyEndpoint, deleteUserHistory } from './session_history.js';
 import { AdminSecurity } from './admin_security.js';
 import { validMaintenancePatch, emptyMaintenance } from './maintenance.js';
@@ -42,7 +43,7 @@ const CLAIM_IP_WINDOW = 10 * 60;
 const CLAIM_IP_MAX_REQUESTS = 30;
 
 const json = (obj, status = 200) =>
-  new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
+  new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 
 function normalizeName(value) {
   if (value === undefined || value === null || value === '') return null;
@@ -95,6 +96,7 @@ export class AuthStore {
     if (path === '/auth/guest' && request.method === 'POST') {
       return this.guest(request);
     }
+    if (path === '/auth/authorize-session' && request.method === 'POST') return this.authorizeSession(request);
     if (path === '/auth/authorize-host' && request.method === 'POST') {
       return this.authorizeHost(request);
     }
@@ -168,37 +170,45 @@ export class AuthStore {
       let body; try { body = await request.json(); } catch { return json({ error: 'bad-json' }, 400); }
       const email = String(body.email||'').toLowerCase();
       if (!email) return json({ error: 'email required' }, 400);
-      const user = await this.ctx.storage.get(`user:${email}`);
-      if (!user) return json({ error: 'user not found' }, 404);
-      user.banned = true;
-      user.banned_at = Date.now();
-      user.banned_by = body.by || 'admin';
-      await this.ctx.storage.put(`user:${email}`, user);
-      await this.ctx.storage.put(`admin:log:${Date.now()}:ban:${email}`, { action: 'ban', email, by: body.by || 'admin', at: Date.now() });
-      return json({ ok: true, banned: email }, 200);
+      return this.ctx.storage.transaction(async tx => {
+        const user = await tx.get(`user:${email}`);
+        if (!user) return json({ error: 'user not found' }, 404);
+        user.banned = true;
+        user.banned_at = Date.now();
+        user.banned_by = body.by || 'admin';
+        await tx.put(`user:${email}`, user);
+        await tx.put(`admin:log:${Date.now()}:ban:${email}`, { action: 'ban', email, by: body.by || 'admin', at: Date.now() });
+        return json({ ok: true, banned: email }, 200);
+      });
     }
     if (path === '/admin/role' && request.headers.get('x-internal-admin') === '1' && request.method === 'POST') {
       let body; try { body = await request.json(); } catch { return json({ error: 'bad-json' }, 400); }
       const email = String(body.email||'').toLowerCase();
       const role = body.role;
       if (!['admin','support','viewer'].includes(role)) return json({ error: 'bad role' }, 400);
-      const user = await this.ctx.storage.get(`user:${email}`);
-      if (!user) return json({ error: 'user not found' }, 404);
-      user.role = role;
-      await this.ctx.storage.put(`user:${email}`, user);
-      await this.ctx.storage.put(`admin:log:${Date.now()}:role:${email}`, { action: 'role', email, role, by: body.by || 'admin', at: Date.now() });
-      return json({ ok: true, email, role }, 200);
+      return this.ctx.storage.transaction(async tx => {
+        const user = await tx.get(`user:${email}`);
+        if (!user) return json({ error: 'user not found' }, 404);
+        user.role = role;
+        await tx.put(`user:${email}`, user);
+        await tx.put(`admin:log:${Date.now()}:role:${email}`, { action: 'role', email, role, by: body.by || 'admin', at: Date.now() });
+        return json({ ok: true, email, role }, 200);
+      });
     }
     if (path === '/admin/revoke' && request.headers.get('x-internal-admin') === '1' && request.method === 'POST') {
       let body; try { body = await request.json(); } catch { return json({ error: 'bad-json' }, 400); }
       const email = String(body.email||'').toLowerCase();
-      const user = await this.ctx.storage.get(`user:${email}`);
-      if (!user) return json({ error: 'user not found' }, 404);
-      // revoke = hapus semua otp/session? untuk sekarang reset token dengan bump versi
-      user.token_version = (user.token_version||0)+1;
-      await this.ctx.storage.put(`user:${email}`, user);
-      await this.ctx.storage.put(`admin:log:${Date.now()}:revoke:${email}`, { action: 'revoke', email, by: body.by || 'admin', at: Date.now() });
-      return json({ ok: true, revoked: email }, 200);
+      return this.ctx.storage.transaction(async tx => {
+        const user = await tx.get(`user:${email}`);
+        if (!user) return json({ error: 'user not found' }, 404);
+        // Generasi baru membatalkan JWT akun lama pada permintaan berikutnya.
+        const version = user.token_version ?? 0;
+        if (!Number.isSafeInteger(version) || version < 0 || version >= Number.MAX_SAFE_INTEGER) return json({error:'invalid-token-version'},409);
+        user.token_version = version + 1;
+        await tx.put(`user:${email}`, user);
+        await tx.put(`admin:log:${Date.now()}:revoke:${email}:${user.token_version}`, { action: 'revoke', email, by: body.by || 'admin', at: Date.now() });
+        return json({ ok: true, revoked: email }, 200);
+      });
     }
     if (path === '/admin/logs' && request.headers.get('x-internal-admin') === '1' && request.method === 'GET') {
       const map = await this.ctx.storage.list({ prefix: 'admin:log:' });
@@ -347,36 +357,43 @@ export class AuthStore {
     email = email.toLowerCase();
     const now = Math.floor(Date.now() / 1000);
 
-    const row = await this.ctx.storage.get(`otp:${email}`);
-    if (!row || now > row.expires_at) return json({ error: 'otp-expired' }, 401);
-    if (row.attempts >= OTP_MAX_ATTEMPTS) return json({ error: 'too-many-attempts' }, 429);
+    const result = await this.ctx.storage.transaction(async tx => {
+      const row = await tx.get(`otp:${email}`);
+      if (!row || now > row.expires_at) return json({ error: 'otp-expired' }, 401);
+      if (row.attempts >= OTP_MAX_ATTEMPTS) return json({ error: 'too-many-attempts' }, 429);
 
-    const expect = await hashOtp(this.secret(), email, otp);
-    if (!timingSafeEqual(expect, row.hash)) {
-      row.attempts += 1;
-      await this.ctx.storage.put(`otp:${email}`, row);
-      return json({ error: 'wrong-otp' }, 401);
-    }
+      const expect = await hashOtp(this.secret(), email, otp);
+      if (!timingSafeEqual(expect, row.hash)) {
+        row.attempts += 1;
+        await tx.put(`otp:${email}`, row);
+        return json({ error: 'wrong-otp' }, 401);
+      }
 
-    await this.ctx.storage.delete(`otp:${email}`); // sekali pakai
+      await tx.delete(`otp:${email}`); // sekali pakai
 
-    let user = await this.ctx.storage.get(`user:${email}`);
-    if (!user) {
-      user = {
-        id: crypto.randomUUID(),
-        email,
-        name: row.pending_name || null,
-        created_at: now,
-      };
-      await this.ctx.storage.put(`user:${email}`, user);
-    } else if (!user.name && row.pending_name) {
-      // Nama hanya diterapkan setelah OTP benar; request tanpa kepemilikan
-      // email tidak dapat mengubah profil akun yang sudah ada.
-      user.name = row.pending_name;
-      await this.ctx.storage.put(`user:${email}`, user);
-    }
+      let user = await tx.get(`user:${email}`);
+      if (user?.banned) return json({error:'account-disabled'},403);
+      if (!user) {
+        user = {
+          id: crypto.randomUUID(),
+          email,
+          name: row.pending_name || null,
+          created_at: now,
+        };
+        await tx.put(`user:${email}`, user);
+      } else if (!user.name && row.pending_name) {
+        // Nama hanya diterapkan setelah OTP benar; request tanpa kepemilikan
+        // email tidak dapat mengubah profil akun yang sudah ada.
+        user.name = row.pending_name;
+        await tx.put(`user:${email}`, user);
+      }
 
-    const token = await signJwt({ sub: user.id, email: user.email }, this.secret());
+      return user;
+    });
+    if (result instanceof Response) return result;
+    const user = result;
+    if (!memberMatches(accountClaims(user), user)) return json({error:'account-disabled'},403);
+    const token = await signJwt(accountClaims(user), this.secret());
     return json({ token, user: this.publicUser(user) }, 200);
   }
 
@@ -415,40 +432,58 @@ export class AuthStore {
 
     const email = r.email;
     const now = Math.floor(Date.now() / 1000);
-    let user = await this.ctx.storage.get(`user:${email}`);
-    if (!user) {
-      user = {
-        id: crypto.randomUUID(),
-        email,
-        name: r.name || null,
-        picture: r.picture || null,
-        google_sub: r.sub,
-        created_at: now,
-      };
-      await this.ctx.storage.put(`user:${email}`, user);
-    } else {
-      if (user.google_sub && user.google_sub !== r.sub) {
-        return json({ error: 'identity-conflict' }, 409);
+    const result = await this.ctx.storage.transaction(async tx => {
+      let user = await tx.get(`user:${email}`);
+      if (user?.banned) return json({error:'account-disabled'},403);
+      if (!user) {
+        user = {
+          id: crypto.randomUUID(),
+          email,
+          name: r.name || null,
+          picture: r.picture || null,
+          google_sub: r.sub,
+          created_at: now,
+        };
+        await tx.put(`user:${email}`, user);
+      } else {
+        if (user.google_sub && user.google_sub !== r.sub) {
+          return json({ error: 'identity-conflict' }, 409);
+        }
+        let changed = false;
+        if (!user.google_sub) {
+          user.google_sub = r.sub;
+          changed = true;
+        }
+        if (r.name && !user.name) {
+          user.name = r.name;
+          changed = true;
+        }
+        // Foto profil Google boleh berubah; selalu segarkan bila berbeda.
+        if (r.picture && user.picture !== r.picture) {
+          user.picture = r.picture;
+          changed = true;
+        }
+        if (changed) await tx.put(`user:${email}`, user);
       }
-      let changed = false;
-      if (!user.google_sub) {
-        user.google_sub = r.sub;
-        changed = true;
-      }
-      if (r.name && !user.name) {
-        user.name = r.name;
-        changed = true;
-      }
-      // Foto profil Google boleh berubah; selalu segarkan bila berbeda.
-      if (r.picture && user.picture !== r.picture) {
-        user.picture = r.picture;
-        changed = true;
-      }
-      if (changed) await this.ctx.storage.put(`user:${email}`, user);
-    }
 
-    const token = await signJwt({ sub: user.id, email: user.email }, this.secret());
+      return user;
+    });
+    if (result instanceof Response) return result;
+    const user = result;
+    if (!memberMatches(accountClaims(user), user)) return json({error:'account-disabled'},403);
+    const token = await signJwt(accountClaims(user), this.secret());
     return json({ token, user: this.publicUser(user) }, 200);
+  }
+
+  async authorizeSession(request) {
+    const internal = request.headers.get('X-XyDesk-Internal') || '';
+    if (!this.env.XYDESK_SECRET || !timingSafeEqual(internal, this.env.XYDESK_SECRET)) return json({error:'forbidden'},403);
+    const auth = request.headers.get('Authorization') || '';
+    const payload = await verifyJwt(auth.startsWith('Bearer ') ? auth.slice(7) : '', this.secret());
+    if (guestClaims(payload)) return json({sub:payload.sub,guest:true});
+    if (!memberClaims(payload)) return json({error:'unauthorized'},401);
+    const user = await this.ctx.storage.get(`user:${payload.email}`);
+    return memberMatches(payload,user) ? json({sub:user.id,guest:false}) : json({error:'unauthorized'},401);
   }
 
   async authorizeHost(request) {
@@ -669,12 +704,8 @@ export class AuthStore {
   }
 
   async me(request) {
-    const auth = request.headers.get('Authorization') || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-    const payload = await verifyJwt(token, this.secret());
-    if (!payload) return json({ error: 'unauthorized' }, 401);
-    const user = await this.ctx.storage.get(`user:${payload.email}`);
-    if (!user) return json({ error: 'user-not-found' }, 404);
+    const user = await this.userFromRequest(request);
+    if (!user) return json({ error: 'unauthorized' }, 401);
     return json({ user: this.publicUser(user) }, 200);
   }
 
@@ -704,17 +735,22 @@ export class AuthStore {
       return json({ error: 'invalid-name' }, 400);
     }
 
-    user.name = name;
-    await this.ctx.storage.put(`user:${user.email}`, user);
-    return json({ user: this.publicUser(user) }, 200);
+    const current = await this.ctx.storage.transaction(async tx => {
+      const fresh = await tx.get(`user:${user.email}`);
+      if (!sameMember(fresh, user)) return null;
+      fresh.name = name;
+      await tx.put(`user:${user.email}`, fresh);
+      return fresh;
+    });
+    return current ? json({ user: this.publicUser(current) }) : json({error:'unauthorized'},401);
   }
 
   /// Hapus akun permanen. JWT lama otomatis tidak berguna karena record
-  /// user hilang (me() akan menjawab 404).
+  /// user hilang (me() akan menjawab 401).
   async deleteAccount(request) {
     const user = await this.userFromRequest(request);
     if (!user) return json({ error: 'unauthorized' }, 401);
-    if (!await deleteUserHistory(this.ctx.storage, user.id, user.email)) return json({error:'unauthorized'},401);
+    if (!await deleteUserHistory(this.ctx.storage, user.id, user.email, user.token_version ?? 0)) return json({error:'unauthorized'},401);
     return json({ ok: true }, 200);
   }
 
@@ -723,10 +759,9 @@ export class AuthStore {
     const auth = request.headers.get('Authorization') || '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
     const payload = await verifyJwt(token, this.secret());
-    if (!payload) return null;
+    if (!memberClaims(payload)) return null;
     const user = await this.ctx.storage.get(`user:${payload.email}`);
-    // sub harus cocok — token lama dari akun terhapus/dibuat ulang ditolak.
-    if (!user || user.id !== payload.sub) return null;
+    if (!memberMatches(payload, user)) return null;
     return user;
   }
 }

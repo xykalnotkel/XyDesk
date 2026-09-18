@@ -7,8 +7,10 @@ import { AuthStore } from '../src/authstore.js';
 class MemoryStorage {
   values = new Map();
 
+  async transaction(fn) { return fn(this); }
+
   async get(key) {
-    return this.values.get(key);
+    return structuredClone(this.values.get(key));
   }
 
   async put(key, value) {

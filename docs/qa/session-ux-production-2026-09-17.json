@@ -1,0 +1,54 @@
+{
+  "result": "PASS",
+  "sourceSha": "8a10709ace0fc8d96a2d82c63ad63dfc18cedb2f",
+  "versions": {
+    "backend": "074726a2-d1c7-4ff1-805c-1030a2f8373b",
+    "web": "115ae5f2-d0cd-43fa-b7a2-e81de989b3ec"
+  },
+  "assets": [
+    {
+      "asset": "/assets/index-BPi3CJO7.js",
+      "sha256": "82533ef93712eb6c77b64b105d63e377ddcfc53201da636241d0679ca4778f80",
+      "contentType": "text/javascript",
+      "exactBuildMatch": true
+    },
+    {
+      "asset": "/assets/rolldown-runtime-CbXtAM7H.js",
+      "sha256": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+      "contentType": "text/javascript",
+      "exactBuildMatch": true
+    },
+    {
+      "asset": "/assets/index-D0yy38lb.css",
+      "sha256": "ce4dcd3f988f93327a65c5af50027c846fffab412ec874c0f06b02366792293a",
+      "contentType": "text/css",
+      "exactBuildMatch": true
+    }
+  ],
+  "health": 200,
+  "historyUnauthenticated": 401,
+  "historyPreflight": 204,
+  "historyResponsePrivate": true,
+  "adminPasswordStillEnabled": true,
+  "webOAuthPreserved": true,
+  "hostRestarted": false,
+  "driverChanged": false,
+  "productionAccountWriteTested": false,
+  "browser": {
+    "results": [
+      {
+        "path": "/connect",
+        "status": 200,
+        "visible": true
+      },
+      {
+        "path": "/history",
+        "status": 200,
+        "visible": true
+      }
+    ],
+    "errors": [],
+    "authenticated": false,
+    "paired": false
+  }
+}

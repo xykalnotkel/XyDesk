@@ -17,7 +17,6 @@
 // Auth signaling: token HMAC-SHA256 berumur 5 menit (format ts.purpose.sig).
 import { Hub } from './hub.js';
 import { AuthStore } from './authstore.js';
-import { verifyJwt } from './auth.js';
 import { collectIceServers, TURN_PROVIDERS } from './turn.js';
 import { handleAdmin } from './admin.js';
 
@@ -122,6 +121,7 @@ export function corsResponse(response, request, env) {
       : '';
 
   const headers = new Headers(response.headers);
+  headers.set('Cache-Control', 'no-store');
   if (allowOrigin) headers.set('Access-Control-Allow-Origin', allowOrigin);
   headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
@@ -347,12 +347,17 @@ async function authStoreCall(env, action, body, source) {
 // Rantai kepercayaan: login -> JWT (AUTH_SECRET) -> token signaling
 // (XYDESK_SECRET, 5 menit) -> /ws.
 async function handleSignalToken(request, url, env) {
-  const auth = request.headers.get('Authorization') || '';
-  const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  const secret = env.AUTH_SECRET || env.XYDESK_SECRET;
-  const payload = jwt ? await verifyJwt(jwt, secret) : null;
-  if (!payload) {
-    return new Response('unauthorized', { status: 401 });
+  let payload;
+  try {
+    const store = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'));
+    const result = await store.fetch(new Request('https://internal/auth/authorize-session', {
+      method:'POST', headers:{Authorization:request.headers.get('Authorization') || '', 'X-XyDesk-Internal':env.XYDESK_SECRET},
+    }));
+    if (!result.ok) return new Response('unauthorized', {status:result.status >= 500 ? 503 : 401});
+    payload = await result.json();
+    if (typeof payload.sub !== 'string' || typeof payload.guest !== 'boolean') throw new Error('invalid-principal');
+  } catch {
+    return new Response('authorization unavailable', {status:503});
   }
 
   let id = (url.searchParams.get('id') || '').trim();

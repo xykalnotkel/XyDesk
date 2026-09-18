@@ -1,3 +1,4 @@
+import { sameMember } from './member_session.js';
 const MAX_ITEMS = 20;
 const MAX_BODY = 48 * 1024;
 const json = (data, status = 200) => new Response(JSON.stringify(data), {status, headers: {'content-type':'application/json','cache-control':'no-store'}});
@@ -43,7 +44,7 @@ export async function historyEndpoint(request, storage, user) {
   try {if(body.action==='save')record=normalizeHistory(body.record);if(body.action==='delete'&&!validId(body.id))throw Error('invalid-id');}catch(e){return json({error:e.message},400);}
   const result = await storage.transaction(async tx=>{
     const current=await tx.get(`user:${user.email}`);
-    if(!current || current.id!==user.id || current.banned)return {unauthorized:true};
+    if(!sameMember(current,user))return {unauthorized:true};
     const now=Date.now(), rateKey=prefix+'rate';let rate=await tx.get(rateKey);
     if(!rate||now-rate.at>60000)rate={at:now,n:0};
     if(rate.n>=40)return {limited:true};rate.n++;await tx.put(rateKey,rate);
@@ -59,7 +60,7 @@ export async function historyEndpoint(request, storage, user) {
   return result.unauthorized ? json({error:'unauthorized'},401) : result.limited ? json({error:'rate-limited'},429) : json(result);
 }
 
-export async function deleteUserHistory(storage, userId, email) {
+export async function deleteUserHistory(storage, userId, email, version = 0) {
   const prefix=`history:${userId}:`;
-  return storage.transaction(async tx=>{if(email){const current=await tx.get(`user:${email}`);if(!current||current.id!==userId)return false;}const ids=await tx.get(prefix+'index')||[];for(const id of ids)await tx.delete(prefix+id);await tx.delete(prefix+'index');await tx.delete(prefix+'rate');if(email){await tx.delete(`user:${email}`);await tx.delete(`otp:${email}`);}return true;});
+  return storage.transaction(async tx=>{if(email){const current=await tx.get(`user:${email}`);if(!sameMember(current,{id:userId,email,token_version:version}))return false;}const ids=await tx.get(prefix+'index')||[];for(const id of ids)await tx.delete(prefix+id);await tx.delete(prefix+'index');await tx.delete(prefix+'rate');if(email){await tx.delete(`user:${email}`);await tx.delete(`otp:${email}`);}return true;});
 }

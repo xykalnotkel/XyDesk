@@ -80,8 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260917-OPERATOR-SESSIONUX | Operator - XyDesk Team | Web + Backend | LAGI KERJA | Loading dalam sesi, pointer size/sensitivity, mapping bebas, riwayat lokal/server berotorisasi; resolusi HD perlu negosiasi encoder/decoder, tidak sekadar label. | 2026-09-17 |
-| SESI-20260909-OPERATOR-UNIFY | Operator - XyDesk Team | Operator (semua area) | SELESAI | Unifikasi UI/UX: acuan=web (token Paper→web), radius web→8/12/16/20, hapus garis desktop+web, brand installer wizard | 2026-09-09 |
+| SESI-20260918-OPERATOR-COREGUARD | Operator - XyDesk Team | Backend / auth | LAGI KERJA | Identitas, ban, versi token, uji regresi dan deploy setelah lulus; izin khusus operator melalui pilihan uji/push/deploy. | 2026-09-18 |
 
 ## Antrean izin push
 
@@ -110,6 +109,8 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260917-OPERATOR-SESSIONUX | Operator - XyDesk Team | Web + Backend | SELESAI | Shipped 8a10709; web51/backend155, runtime dan produksi PASS. Bukti docs/qa/session-ux-production-2026-09-17.json; CI tidak didispatch. | 2026-09-17 |
+| SESI-20260909-OPERATOR-UNIFY | Operator - XyDesk Team | Operator (semua area) | SELESAI | Unifikasi UI/UX: acuan=web (token Paper→web), radius web→8/12/16/20, hapus garis desktop+web, brand installer wizard | 2026-09-09 |
 | SESI-20260917-OPERATOR-SESSION | Operator - XyDesk Team | Web + audit Host/Backend | SELESAI TAHAP WEB | pointer-v2/audio playback+mute/prefs/random URL.42tes+Chromium PASS, live d929ff32 exact assets/OAuth. Android pending; resume/120fps/audio Windows dan ACK settings BELUM selesai, lihat HANDOFF/audit. | 2026-09-17 |
 | SESI-20260917-OPERATOR-CONTROL | Operator - XyDesk Team | Web + Host + NSIS | SELESAI | Web36 + Chromium touch portrait/landscape PASS; live8d88b081 exact assets/OAuth. Rust130+5+3 PASS; Windows35283806642/NSIS35284257815 PASS. Bilinear + input ordering + cursor/trackpad. Field control/quality pending user. | 2026-09-17 |
 | SESI-20260917-OPERATOR-H264COMPAT | Operator - XyDesk Team | Host + NSIS | SELESAI | Probe SPS5.1 vs SDP3.1; software resize1280x592/30fps/SPS3.1. Rust128+5+3, OpenH264 decode, Chromium12frame PASS. Windows35278330146/NSIS35278907733 PASS. Android manual belum terbukti; tanpa web/driver/RDP changes. | 2026-09-17 |

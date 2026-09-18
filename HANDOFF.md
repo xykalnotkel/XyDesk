@@ -1859,3 +1859,31 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
   Audit tambahan: receive_mic host menunggu track hanya~30s, sehingga enable
   mic terlambat perlu perbaikan host+installer dan tes. Tidak boleh mengklaim
   semua audio/mic Windows berfungsi hanya dari tes frontend.
+
+### COREGUARD — pemeriksaan akun pada gerbang backend (2026-09-18)
+
+- Izin khusus operator: pilihan **Uji, lalu push dan deploy**; backend saja,
+  tanpa rotasi secret, perubahan OAuth, restart host/RDP atau bump versi.
+- `member_session.js`: audience, sub/email, banned, versi token; JWT lama
+  tanpa versi diterima hanya pada akun generasi nol. /auth/me memakai
+  pemeriksaan yang sama dengan mutasi akun dan riwayat. /signal-token
+  meminta principal ke AuthStore; gangguan storage gagal tertutup 503.
+- OTP/Google menerbitkan claim aud+ver. Konsumsi OTP dan perubahan akun
+  transaksional; profil, history write dan delete mengecek versi kembali
+  dalam transaksi agar tidak menimpa revocation yang baru terjadi.
+- Verifikasi: 171 unit test PASS, runtime admin auth PASS, runtime SQLite
+  member (5 concurrent revoke, concurrent OTP single-use, old JWT rejection,
+  fresh login, ban) PASS; history retention/delete-race PASS. Tidak ada CI
+  GitHub didispatch. Google diuji dengan RSA lokal/JWKS tiruan, bukan login
+  produksi memakai akun operator. Bukti: docs/qa/coreguard-2026-09-18.md.
+- Dampak pengguna: hanya token invalid/dicabut/akun diblokir yang ditolak;
+  token akun aktif generasi nol tetap diterima. Tidak ada perubahan visual,
+  screenshot tidak relevan. Tidak menerbitkan artikel berita.
+- **Batas penting:** ticket signaling yang SUDAH terbit masih diterima sesuai
+  masa berlaku 5 menit; /ws dan /turn-ice belum mengikat principal akun.
+  Sesi P2P yang sudah aktif tidak otomatis diputus oleh ban/revoke akun.
+  Perlu owner-bound ticket + revocation aktif dengan rollout kompatibel.
+- **Antrian host/web:** capability dan ACK pengaturan efektif; resolusi
+  720/1080/native dengan negosiasi nyata; mic late-enable (~30s timeout);
+  reconnect/resume berotorisasi; pengukuran Windows/Chrome Android. Belum
+  ada patch host, installer baru, atau klaim semua fungsi selesai.
