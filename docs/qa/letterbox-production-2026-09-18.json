@@ -1,0 +1,68 @@
+{
+  "date": "2026-09-18",
+  "source": "37c5eeaee4fe39a1ee4f3cbbf2f44ba65a17d7ab",
+  "deploymentCheckout": "d0b3d033528bc3a617dbda9e6ec8e9cbee5abef5",
+  "authorization": "User gas in reply to explicit backend + web production deployment request",
+  "workerVersions": {
+    "backend": "55cdda7c-a007-4bf4-9507-f8d6dee627b4",
+    "web": "8f093d6d-cf6b-45b8-800b-1240d7dcc21a"
+  },
+  "previousVersions": {
+    "backend": "ff4d95d4-746c-4183-ab17-629cd2dd2893",
+    "web": "d2328824-9ee3-407d-a255-b5e92b1d9a3d"
+  },
+  "checks": {
+    "GET /healthz": 200,
+    "GET /auth/session-history": 401,
+    "GET /signal-token?id=letterbox-deploy-check": 401,
+    "GET /admin/auth/config": 200,
+    "POST /auth/session-history": 401,
+    "/connect": "200; exact HTML after removing Cloudflare-injected analytics beacon",
+    "/history": "200; exact HTML after removing Cloudflare-injected analytics beacon",
+    "/login": "200; exact HTML after removing Cloudflare-injected analytics beacon"
+  },
+  "exactAssetHashes": {
+    "index-wHy7Jto2.js": "0ddf6daa5831f69aa139a1691b43f1edb22fb565f025d70b1c6542cb1146c60e",
+    "jsQR-BZfqIBYG.js": "b018a387d6225f60553429286df8c7aed6c4c3d24a53782f2d866ca35ad2939e",
+    "LicenseInventory-Cujw2f8r.js": "f5d73ec75a827ec3d499dc49e25feef27537cef91a39a47868dc2236024b7694",
+    "rolldown-runtime-CbXtAM7H.js": "bbf7c5086ae414dc3f33777e3eebf16ea8631325b8bb4690d25091c03567f31a",
+    "index-vDSKjZrW.css": "7376080a0169cf683eafee8d45b8f78ea0b61ff47f18b65854d432d2bcb7311a"
+  },
+  "oauthClientPreserved": true,
+  "bindingsUnchanged": true,
+  "secretsRotated": false,
+  "backendTests": 184,
+  "webTests": 66,
+  "sqliteHistoryRuntime": "PASS: HD chunks/concurrency21/retention20/delete race",
+  "hostOrRdpChanged": false,
+  "versionBumped": false,
+  "realAccountLoginTested": false,
+  "realAccountHistoryWriteTested": false,
+  "rdpAndroidPerformanceTested": false,
+  "initialVerificationNote": "Python default User-Agent received edge 403 on health; browser-style User-Agent returned health200 and expected auth401. No access controls were changed.",
+  "productionBrowser": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "productionReactRendered": true,
+      "automaticWallpaperDefault": true,
+      "correctBundle": true,
+      "historyRendered": true,
+      "pageErrors": []
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "productionReactRendered": true,
+      "automaticWallpaperDefault": true,
+      "correctBundle": true,
+      "historyRendered": true,
+      "pageErrors": []
+    }
+  ],
+  "htmlNormalizationNote": "Existing Cloudflare analytics beacon and its inserted newline were present before deployment and are excluded from HTML byte comparison; all JS/CSS bytes match exactly."
+}

@@ -1,5 +1,7 @@
 # LETTERBOX-LATENCY — source checkpoint, 18 September 2026
 
+Production follow-up: backend + web deployed with explicit user approval; verified in `letterbox-production-2026-09-18.json`. Pending-deploy statements below describe the earlier package checkpoint. RDP/device performance remains untested.
+
 Session: SESI-20260918-OPERATOR-LETTERBOX-LATENCY. Operator - XyDesk Team.
 Base: 6817fb803f019674b6daf97bb708d9d129849b52. Version remains 6.8.5.
 **Update: dedicated Windows and NSIS builds approved and passed for source37c5eea. Production not deployed.**

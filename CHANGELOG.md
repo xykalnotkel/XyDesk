@@ -24,10 +24,11 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
-### LETTERBOX-LATENCY — paket uji tervalidasi; belum deploy
+### LETTERBOX-LATENCY — paket uji tervalidasi; web/backend sudah deploy
 - Menggantikan interpretasi HD/preview sebelumnya: kanvas tepat1280×720/1920×1080 dengan desktop utuh + pita hitam, pemetaan input padding, cursor Windows di video GDI/DXGI/WGC tanpa panah web pengganti, wallpaper otomatis sekali saat koneksi dengan opt-out/cancellation.
 - Gap frame H264 memerlukan IDR baru, antrean lama dibuang, RTP mengikuti timestamp capture; telemetry host encode/queue/write dan web RTT/jitter/buffer/decode/loss dipisah. Wallpaper background dibatasi buffering/pacing/deadline.
-- Linux152, web66, Windows release141, NSIS builder7/install-reinstall-uninstall, narrow Windows cross-check dan Chromium real decode3mode/UI2viewport+privacy PASS. Installer baru source37c5eea, Windows35391667677/NSIS35392306102. Bukan bukti runtime RDP/Android atau bebas lag. Versi tetap; belum deploy. Bukti `docs/qa/letterbox-package-2026-09-18.json`.
+- Linux152, web66, Windows release141, NSIS builder7/install-reinstall-uninstall, narrow Windows cross-check dan Chromium real decode3mode/UI2viewport+privacy PASS. Installer baru source37c5eea, Windows35391667677/NSIS35392306102. Bukan bukti runtime RDP/Android atau bebas lag. Versi tetap. Bukti paket `docs/qa/letterbox-package-2026-09-18.json`.
+- Rollout produksi diizinkan operator: backend55cdda7c/web8f093d6d. Backend184/web66 dan SQLite runtime PASS; hash JS/CSS sama dengan build, HTML cocok setelah mengabaikan beacon analytics Cloudflare yang sudah ada. OAuth/bindings dipertahankan, auth tanpa login401, React produksi portrait/landscape PASS. RDP/host tidak diubah; login akun dan streaming perangkat nyata belum diuji. Bukti `docs/qa/letterbox-production-2026-09-18.json`.
 
 ### Perbaikan dalam validasi — HOSTGEOMETRY
 - Host: konteks DPI proses/thread, koordinat fisik monitor capture untuk pointer absolut, pemilihan WGC melalui nama perangkat (bukan indeks nol ke API indeks satu), origin fallback GDI, dan deteksi perubahan geometri GDI/RDP setiap 500 ms.
