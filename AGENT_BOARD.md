@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260919-OPERATOR-CONSOLE-GUEST | Operator - XyDesk Team | Host + web + backend | LAGI KERJA | Cursor suppressed, host reconnect/token refresh, no guest duration limit, revocable remembered browser pairing. Explicit user approval. | 2026-09-19 |
 | SESI-20260919-OPERATOR-VDD3010 | Operator - XyDesk Team | Host provisioning | SELESAI | Hotfix31380fc; Windows35412599966 SUCCESS PS5/PS7 masing-masing35. Patch resume siap; field driver/720p belum terverifikasi, tanpa restart otomatis. | 2026-09-19 |
 
 ## Antrean izin push
@@ -110,6 +109,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260919-OPERATOR-CONSOLE-GUEST | Operator - XyDesk Team | Host + web + backend | SELESAI | Sourcece95f51; Windows35421194650/Linux176/Windows165, PS5/PS7 job lifetime, NSIS35421544833 PASS. Web84/backend188 + browser/live guest gates. Web470d26c2/backend5d1d6b94 deployed, NSIS update ready; native cursor/reconnect field follow-up pending. | 2026-09-19 |
 | SESI-20260918-OPERATOR-VDISPLAY720 | Operator - XyDesk Team | Host/packaging | SELESAI (integration candidate) | Source691dd09: strict virtual720 + adapter/current-session checks + explicit pinned/catalog-verified provisioning. Windows35408521780 Linux168/Windows157 PASS; NSIS35408977237 PASS. No actual driver install/capture/user RDP proof, no production deploy. docs/qa/virtual720-2026-09-18.md. | 2026-09-18 |
 | SESI-20260918-OPERATOR-HOST-FINISH | Operator - XyDesk Team | Host/Web/CI | SELESAI | Auto16:9 supported/readback + audio/input. Source56317a2 Windows35403913522 Linux164/Windows153 PASS; NSIS35404435326 PASS. Web76/browser2viewport + exact assets/OAuth/bindings PASS, live1d669576; backend tetap. Installer SHA704f2add; docs/qa/host-finish-2026-09-18.md. Belum userRDP/latency field proof. | 2026-09-18 |
 | SESI-20260918-OPERATOR-INPUT-LATENCY | Operator - XyDesk Team | Host input | SELESAI (patch input) | Backpressure full queue + coalesce absolute, preserve key/click barriers. Linux161/fmt PASS; belum Windows device/latency/auto16:9. Lanjutan HANDOFF; docs/qa/input-queue-2026-09-18.md. No deploy/RDP change. | 2026-09-18 |

@@ -1,0 +1,55 @@
+{
+  "backendGuestRefresh": "PASS",
+  "guestMemberEndpoint": 401,
+  "guestHostRole": 403,
+  "boundTicket": "PASS",
+  "assets": [
+    {
+      "path": "/assets/index-D5spjcC8.js",
+      "sha256": "aa2e18c1f81cac483f679f70f2c8bbbd24cda736d87b485bf3d3798b634ae745",
+      "mime": "text/javascript"
+    }
+  ],
+  "oauthClientPreserved": true,
+  "source": "7f34a5b65991907597a5ff475d305766472e4d02",
+  "browser": {
+    "pass": true,
+    "welcome": true,
+    "pong": true,
+    "pageErrors": [],
+    "guestDurationCopy": true,
+    "scope": "Live isolated guest admission only; no connection to a user host."
+  },
+  "workers": {
+    "xydesk-signaling": {
+      "version": [
+        {
+          "version_id": "5d1d6b94-1d7d-46e1-bd12-db1cae7edf2c",
+          "percentage": 100
+        }
+      ],
+      "rollback": [
+        {
+          "version_id": "55cdda7c-a007-4bf4-9507-f8d6dee627b4",
+          "percentage": 100
+        }
+      ],
+      "nonAssetBindingsUnchanged": true
+    },
+    "xydesk-web": {
+      "version": [
+        {
+          "version_id": "470d26c2-2611-463f-ab01-ac92461640a0",
+          "percentage": 100
+        }
+      ],
+      "rollback": [
+        {
+          "version_id": "1d669576-3d69-4fb5-8019-ad7c41d80942",
+          "percentage": 100
+        }
+      ],
+      "nonAssetBindingsUnchanged": true
+    }
+  }
+}

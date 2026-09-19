@@ -1,0 +1,119 @@
+{
+  "source": "ce95f51547991c93d1b6a9e79ee3fde6ef1ef690",
+  "installer": "XyDesk-Console-Guest-ce95f51-Setup-x64.exe",
+  "installerSha256": "37575b12a59ff851b49f6e1e0eb74a7ef5d4a753f3fcddac3021017c237bc199",
+  "installerBytes": 4712288,
+  "engineSha256": "4fc417267a5c0eff46f86f77ad0e7b91659d13baa530ac43aa8b8969c46f0fbe",
+  "windowsRun": 35421194650,
+  "nsisRun": 35421544833,
+  "windowsValidation": [
+    {
+      "job": "Gerbang regresi host (Linux)",
+      "result": "success",
+      "testCounts": [
+        "166",
+        "0",
+        "5",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "0"
+      ],
+      "consoleJobPassCount": 0
+    },
+    {
+      "job": "Engine Windows x64 (MSVC)",
+      "result": "success",
+      "testCounts": [
+        "165"
+      ],
+      "consoleJobPassCount": 2
+    }
+  ],
+  "localValidation": {
+    "linuxRustTests": 176,
+    "webTests": 84,
+    "backendTests": 188,
+    "nsisBuilderTests": 7,
+    "browserRegression": "portrait/landscape controls, audio, wallpaper, history PASS (fixture transport)",
+    "rememberedBrowser": "reload, no password persistence, error retry, revoke, site-data clear PASS",
+    "backendRuntime": {
+      "pass": true,
+      "checks": [
+        "real Worker + SQLite + WebSockets",
+        "bound ticket issued",
+        "old ticket WS401/TURN403 after revoke",
+        "idle alarm sends host bye and client close1008",
+        "admitted guest survives credential expiry; expired JWT cannot open a new admission",
+        "host and unrelated guest stay connected"
+      ],
+      "alarmObservedMs": 15023,
+      "limit": "Host is protocol fixture, not Windows/Rust media process; no real P2P termination claim."
+    },
+    "windowsGate": "SUCCESS 35421194650",
+    "fieldLimit": "User reported old build real1280x720 success; new native cursor and reconnect changes not installed/tested on user RDP yet."
+  },
+  "production": {
+    "backendGuestRefresh": "PASS",
+    "guestMemberEndpoint": 401,
+    "guestHostRole": 403,
+    "boundTicket": "PASS",
+    "assets": [
+      {
+        "path": "/assets/index-D5spjcC8.js",
+        "sha256": "aa2e18c1f81cac483f679f70f2c8bbbd24cda736d87b485bf3d3798b634ae745",
+        "mime": "text/javascript"
+      }
+    ],
+    "oauthClientPreserved": true,
+    "source": "7f34a5b65991907597a5ff475d305766472e4d02",
+    "browser": {
+      "pass": true,
+      "welcome": true,
+      "pong": true,
+      "pageErrors": [],
+      "guestDurationCopy": true,
+      "scope": "Live isolated guest admission only; no connection to a user host."
+    },
+    "workers": {
+      "xydesk-signaling": {
+        "version": [
+          {
+            "version_id": "5d1d6b94-1d7d-46e1-bd12-db1cae7edf2c",
+            "percentage": 100
+          }
+        ],
+        "rollback": [
+          {
+            "version_id": "55cdda7c-a007-4bf4-9507-f8d6dee627b4",
+            "percentage": 100
+          }
+        ],
+        "nonAssetBindingsUnchanged": true
+      },
+      "xydesk-web": {
+        "version": [
+          {
+            "version_id": "470d26c2-2611-463f-ab01-ac92461640a0",
+            "percentage": 100
+          }
+        ],
+        "rollback": [
+          {
+            "version_id": "1d669576-3d69-4fb5-8019-ad7c41d80942",
+            "percentage": 100
+          }
+        ],
+        "nonAssetBindingsUnchanged": true
+      }
+    }
+  },
+  "limits": [
+    "New cursor/reconnect behavior not yet field-tested on user console.",
+    "Windows job-tree lifetime tested in PowerShell5/7; no physical driver installation/session transfer in CI.",
+    "Unsigned test installer; existing app version retained, source revision identifies new build."
+  ],
+  "bundleSha256": "0820b16f8e33dce2cc2d3eaafce893085595899aa0ea8b4193ade27722df2edc"
+}
