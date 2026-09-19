@@ -138,25 +138,13 @@ export function SessionRail({
   onPanel: () => void;
   onDisconnect: () => void;
 }) {
-  if (collapsed) {
-    return (
-      <button
-        type="button"
-        className="srail-pill"
-        title="Tampilkan kontrol"
-        aria-label="Tampilkan kontrol"
-        onPointerDown={(e) => e.stopPropagation()}
-        onPointerUp={(e) => e.stopPropagation()}
-        onClick={onToggleCollapsed}
-      >
-        <IcChevronLeft />
+  return (<>
+      <button type="button" className={`srail-keyboard${kbOpen ? ' on' : ''}`} title="Keyboard" aria-label="Keyboard" aria-pressed={kbOpen} onClick={onKeyboard}>
+        <IcKeyboard />
       </button>
-    );
-  }
-  return (
-    <div className="srail" role="toolbar" aria-label="Kontrol sesi" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
-      <button type="button" className="srail-btn" title="Sembunyikan kontrol" aria-label="Sembunyikan kontrol" onClick={onToggleCollapsed}>
-        <IcChevronRight />
+    <div className={collapsed?"srail compact":"srail"} role="toolbar" aria-label="Kontrol sesi" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
+      <button type="button" className="srail-btn" title={collapsed?"Kontrol":"Sembunyikan kontrol"} aria-label={collapsed?"Kontrol":"Sembunyikan kontrol"} onClick={onToggleCollapsed}>
+        {collapsed?<IcChevronLeft />:<IcChevronRight />}
       </button>
       <span className="srail-sep" />
       <button type="button" className={`srail-btn${audioOn ? ' on' : ''}`} title="Suara PC" aria-label="Suara PC" aria-pressed={audioOn} onClick={onAudio}>
@@ -165,13 +153,11 @@ export function SessionRail({
       <button type="button" className={`srail-btn${micOn ? ' on' : ''}`} title="Mik ke PC" aria-label="Mik ke PC" aria-pressed={micOn} onClick={onMic}>
         <IcMic />
       </button>
-      <button type="button" className={`srail-btn${kbOpen ? ' on' : ''}`} title="Keyboard" aria-label="Keyboard" aria-pressed={kbOpen} onClick={onKeyboard}>
-        <IcKeyboard />
-      </button>
-      <button type="button" className={`srail-btn${padOpen ? ' on' : ''}`} title="Panel gaming: WASD, Shift, Spasi, E/Q/R/F — tombol tahan" aria-label="Panel gaming" aria-pressed={padOpen} onClick={onPad}>
+
+      <button type="button" className={`srail-btn${padOpen ? ' on' : ''}`} title="Tombol mapping" aria-label="Panel gaming" aria-pressed={padOpen} onClick={onPad}>
         <IcGamepad />
       </button>
-      <button type="button" className={`srail-btn${trackpad ? ' on' : ''}`} title="Mode trackpad: geser = gerak kursor, ketuk = klik, dua jari = scroll" aria-label="Mode trackpad" aria-pressed={trackpad} onClick={onTrackpad}>
+      <button type="button" className={`srail-btn${trackpad ? ' on' : ''}`} title={trackpad?'Trackpad':'Direct'} aria-label="Mode trackpad" aria-pressed={trackpad} onClick={onTrackpad}>
         <IcMove />
       </button>
       <button type="button" className="srail-btn" title="Kirim ke papan klip PC" aria-label="Kirim ke papan klip PC" onClick={onClipboardPush}>
@@ -190,7 +176,7 @@ export function SessionRail({
       <button type="button" className="srail-btn danger" title="Putuskan" aria-label="Putuskan" onClick={onDisconnect}>
         <IcPower />
       </button>
-    </div>
+    </div></>
   );
 }
 
@@ -240,21 +226,21 @@ export function VirtualKeyboard({ send, onClose }: { send: Send; onClose?:()=>vo
 
   const tap = (vk: number, modifier: boolean) => {
     if (modifier) {
-      if (held.has(vk)) {
+      if (heldRef.current.has(vk)) {
         send(InputCodec.key(vk, false));
-        const next = new Set(held);
+        const next = new Set(heldRef.current);
         next.delete(vk);
         setHeld(next);
       } else {
         send(InputCodec.key(vk, true));
-        setHeld(new Set(held).add(vk));
+        setHeld(new Set(heldRef.current).add(vk));
       }
       return;
     }
     send(InputCodec.key(vk, true));
     send(InputCodec.key(vk, false));
-    if (held.size) {
-      for (const m of held) send(InputCodec.key(m, false));
+    if (heldRef.current.size) {
+      for (const m of heldRef.current) send(InputCodec.key(m, false));
       setHeld(new Set());
     }
   };
@@ -270,7 +256,9 @@ export function VirtualKeyboard({ send, onClose }: { send: Send; onClose?:()=>vo
               type="button"
               className={`vkb-key${modifier ? ' mod' : ''}${held.has(vk) ? ' on' : ''}`}
               style={{ flexGrow: flex, flexBasis: 0 }}
-              onClick={() => tap(vk, modifier)}
+              onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();tap(vk,modifier);}}
+              onClick={e=>{if(e.detail===0)tap(vk,modifier);}}
+              onContextMenu={e=>e.preventDefault()}
             >
               {label}
             </button>
@@ -365,17 +353,18 @@ export type SessionPrefs = {
   resolution: '720p'|'1080p'|'native';
   quality: StreamQuality;
   bitrateMbps: BitrateMbps;
+  fps:30|60;
 };
 
 export const QUALITY_META: Record<StreamQuality, { label: string; desc: string; bitrate: BitrateMbps; num: number }> = {
-  auto:   { label: 'Bawaan host', desc: 'Target bawaan host — belum adaptif ke jaringan', bitrate: 0,  num: 0 },
+  auto:   { label: 'Otomatis', desc: 'Bitrate menyesuaikan kehilangan paket dan antrean jaringan', bitrate: 0,  num: 0 },
   medium: { label: 'Sedang',   desc: 'Target 8 Mbps • seimbang',    bitrate: 8,  num: 1 },
   high:   { label: 'Tinggi',   desc: 'Target 15 Mbps • detail lebih tinggi',      bitrate: 15, num: 2 },
-  ultra:  { label: 'Ultra',    desc: 'Target 25 Mbps • bandwidth tinggi',    bitrate: 25, num: 3 },
+  ultra:  { label: 'Sangat tinggi',    desc: 'Target 25 Mbps • bandwidth tinggi',    bitrate: 25, num: 3 },
 };
 
 export const BITRATE_OPTIONS: { value: BitrateMbps; label: string; hint: string }[] = [
-  { value: 0,  label: 'Bawaan host', hint: 'Target bawaan host' },
+  { value: 0,  label: 'Otomatis', hint: 'Adaptif berdasarkan kondisi jaringan' },
   { value: 8,  label: '8 Mbps',   hint: 'Hemat' },
   { value: 15, label: '15 Mbps',  hint: 'Seimbang' },
   { value: 25, label: '25 Mbps',  hint: 'Tajam' },
@@ -392,6 +381,7 @@ export const DEFAULT_PREFS: SessionPrefs = {
   resolution: '1080p',
   quality: 'auto',
   bitrateMbps: 0,
+  fps:30,
 };
 
 function ToggleRow({
@@ -468,9 +458,6 @@ export function fmtDurasi(totalDetik: number): string {
 }
 
 export function SessionPanel({
-  previewConsent,
-  onPreviewConsent,
-  onCapturePreview,
   prefs,
   onChange,
   onClose,
@@ -489,10 +476,11 @@ export function SessionPanel({
   onQuality,
   onResolution,
   onBitrate,
+  onFps,
+  fpsLimit,
 }: {
-  onCapturePreview?:()=>void;
-  previewConsent?: boolean;
-  onPreviewConsent?: (on:boolean)=>void;
+  onFps?:(fps:30|60)=>void;
+  fpsLimit?:number;
   prefs: SessionPrefs;
   onChange: (next: SessionPrefs) => void;
   onClose: () => void;
@@ -573,6 +561,9 @@ export function SessionPanel({
           </div>
           <p className="spanel-note">{QUALITY_META[prefs.quality].desc}</p>
 
+          <p className="spanel-section">Frame per detik</p>
+          <div className="display-chips">{([30,60] as const).map(fps=><button type="button" key={fps} className={prefs.fps===fps?'active':''} onClick={()=>{onChange({...prefs,fps});onFps?.(fps);}}>{fps} FPS</button>)}</div>
+          <p className="spanel-note">Batas host: {fpsLimit??'belum tersedia'} FPS. FPS nyata terlihat pada statistik; mengikuti encoder, negosiasi H264, dan jaringan. Resolusi desktop tidak diubah oleh pilihan FPS.</p>
           <p className="spanel-section">Resolusi maksimal</p>
           <div className="display-chips">{(['720p','1080p','native'] as const).map(resolution=><button key={resolution} type="button" className={(prefs.resolution||'1080p')===resolution?'active':''} onClick={()=>{onChange({...prefs,resolution});onResolution?.(resolution);}}>{resolution==='native'?'Asli (maks. 4K)':resolution}</button>)}</div>
           <p className="spanel-note">Seluruh desktop dipertahankan tanpa zoom/crop. Layar ultrawide tetap ultrawide; angka di bawah adalah ukuran yang benar-benar diterima, bukan upscale.</p>
@@ -735,9 +726,6 @@ export function SessionPanel({
 
       {tab === 'sesi' && (
         <>
-          <p className="spanel-section">Riwayat</p>
-          <ToggleRow label="Preview wallpaper otomatis" hint="Diambil sekali saat sesi terhubung. Wallpaper Windows saja, tanpa aplikasi terbuka, ikon, atau taskbar. Tidak ada jendela yang diminimalkan. Tamu: lokal; akun: server." on={!!previewConsent} onToggle={()=>onPreviewConsent?.(!previewConsent)}/>
-          <button type="button" className="btn ghost" disabled={!previewConsent} onClick={onCapturePreview}>Ambil / ganti wallpaper HD</button>
           <p className="spanel-section">Sesi</p>
           <div className="spanel-card">
             <StatRow label="Terhubung ke" value={hostId} />

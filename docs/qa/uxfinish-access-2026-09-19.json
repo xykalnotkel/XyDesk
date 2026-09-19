@@ -1,0 +1,12 @@
+{
+  "pass": true,
+  "checks": [
+    "password not persisted",
+    "error reconnect uses saved grant, no captured password",
+    "reload remembers access without password",
+    "owner rejection clears grant and blocks auto reconnect",
+    "clearing site data requires new pairing",
+    "guest no countdown copy"
+  ],
+  "scope": "React/browser fixture; no physical Windows cursor or RDP test"
+}

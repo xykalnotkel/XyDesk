@@ -32,12 +32,15 @@ VIAddVersionKey /LANG=1033 "LegalCopyright" "Copyright 2026 XySpace Tech"
 !define MUI_ICON "..\windows\xydesk.ico"
 !define MUI_UNICON "..\windows\xydesk.ico"
 !define MUI_ABORTWARNING
-!define MUI_WELCOMEPAGE_TEXT "Memasang paket uji engine Windows x64 yang terpisah dari XyDesk lama.$\r$\n$\r$\nTidak memasang driver, service, autostart, atau membuka RDP. Host hanya dimulai lewat shortcut setelah Anda memilih menjalankannya.$\r$\n$\r$\nIdentitas uji disimpan terpisah dan tetap ada setelah uninstall."
+!define MUI_WELCOMEPAGE_TEXT "Memasang paket uji engine Windows x64 yang terpisah dari XyDesk lama.$\r$\n$\r$\nDriver layar dibundel. Penyiapan opsional di halaman akhir meminta izin Administrator; driver yang sudah ada dipertahankan. Tidak membuka RDP. Host hanya dimulai lewat shortcut setelah Anda memilih menjalankannya.$\r$\n$\r$\nIdentitas uji disimpan terpisah dan tetap ada setelah uninstall."
 !define MUI_FINISHPAGE_TEXT "Paket uji berhasil dipasang.$\r$\n$\r$\nJalankan XyDesk Host Test dari Desktop atau Start Menu. Biarkan RDP terbuka pada pengujian pertama.$\r$\n$\r$\nBaca Panduan Uji Manual sebelum menguji capture dan input."
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${PAYLOAD}\LICENSE-XyDesk.txt"
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_TEXT "Siapkan layar virtual 720p (izin Administrator; tanpa restart otomatis)"
+!define MUI_FINISHPAGE_RUN_FUNCTION SetupVirtualDisplay
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
@@ -174,3 +177,9 @@ blocked:
   Abort
 done:
 SectionEnd
+
+Function SetupVirtualDisplay
+  ExecShell "runas" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy RemoteSigned -File "$INSTDIR\Configure-Display.ps1"'
+  IfErrors 0 +2
+    MessageBox MB_OK "Penyiapan layar belum dimulai. Host tetap terpasang; jalankan Configure-Display.ps1 dengan izin Administrator bila diperlukan."
+FunctionEnd

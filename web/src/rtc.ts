@@ -223,7 +223,7 @@ export interface HostMeta {
   cursorEmbedded?: boolean;
   inputGeometry?: {left:number;top:number;width:number;height:number}|null;
   hardware?: Record<string, unknown>;
-  video?: {level:number;requested:number;applied:[number,number]|null;contentRect?:[number,number,number,number]|null;fpsLimit:number};
+  video?: {level:number;requested:number;applied:[number,number]|null;contentRect?:[number,number,number,number]|null;fpsLimit:number;fpsControl?:boolean;fpsRequested?:number};
   displays: HostDisplay[];
   wanted: number;
   audio: { available: boolean; pipeline: string };
@@ -269,6 +269,7 @@ export interface SessionStats {
 
 export class RtcSession {
   private receiverLevel = '1f';
+  setFps(fps:30|60){if(this.meta?.video?.fpsControl)this.sendInput(new Uint8Array([0x0f,fps]));}
   setResolution(mode:'720p'|'1080p'|'native'){this.sendInput(new Uint8Array([0x0c,mode==='720p'?0:mode==='native'?2:1]));}
   private wallpaperTransfer = new WallpaperTransfer();
   requestWallpaper():Promise<string>{

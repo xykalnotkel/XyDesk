@@ -935,6 +935,15 @@ async fn main() -> Result<()> {
                                         .unwrap();
                                     while let Some(data) = tokio::select! {biased; _=closed_rx.changed()=>None, data=rx.recv()=>data}
                                     {
+                                        if data.len() == 2 && data[0] == 0x0f {
+                                            if xydesk_host::video_policy::request_fps(data[1]) {
+                                                xydesk_host::screen::set_target_bitrate_bps(
+                                                    xydesk_host::screen::target_bitrate_bps(),
+                                                );
+                                                let _ = dc.send_text(meta_json().to_string()).await;
+                                            }
+                                            continue;
+                                        }
                                         if data.len() == 2 && data[0] == 0x0c {
                                             if xydesk_host::video_policy::request(data[1]) {
                                                 xydesk_host::screen::set_target_bitrate_bps(

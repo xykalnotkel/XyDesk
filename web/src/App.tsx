@@ -1,5 +1,5 @@
-import {ensureGuestAccess,loadHostAccess,saveHostAccess,forgetHostAccess,mayRetrySession,retryDelay} from './guest_access';
-import {MouseHud} from './mouse_hud';
+import {browserAccessScope,ensureGuestAccess,loadHostAccess,saveHostAccess,forgetHostAccess,mayRetrySession,retryDelay} from './guest_access';
+import {AdaptiveVideo} from './adaptive_video';
 import { flushSync } from 'react-dom';
 import { SessionHistoryPage, saveSessionHistory, accountHistoryToken } from './session_history';
 import type { HistoryItem, HistoryState } from './session_history';
@@ -389,7 +389,7 @@ function LandingPage({ navigate }: { navigate: (r: Route) => void }) {
           </p>
         </div>
         <div className="hero-art" aria-hidden="true">
-          <img className="hero-cartoon" src="/hero-cartoon.png" alt="Ilustrasi remote desktop XyDesk — kontrol PC dari HP" width="640" height="360" loading="eager" decoding="async" />
+          <img className="hero-cartoon" src="/hero-cartoon.webp" alt="Ilustrasi remote desktop XyDesk — kontrol PC dari HP" width="640" height="360" loading="eager" decoding="async" />
         </div>
       </section>
 
@@ -2013,9 +2013,6 @@ function ConnectScreen({
   const [phase, setPhase] = useState<RtcPhase | ''>('');
   const sessionFragmentRef = useRef('');
   const [sessionOpen, setSessionOpen] = useState(false);
-  const [previewConsent, setPreviewConsent] = useState(true);
-  const previewConsentRef = useRef(true); previewConsentRef.current = previewConsent;
-  useEffect(()=>setPreviewConsent(true),[accountName]);
   const historyAttempt = useRef<{item:HistoryItem;token:string|null;done:boolean}|null>(null);
   const [recents, setRecents] = useState<RecentEntry[]>(loadRecents);
   const [recentsOpen, setRecentsOpen] = useState(false);
@@ -2026,7 +2023,7 @@ function ConnectScreen({
   const canScanQr =
     typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
   const [kbOpen, setKbOpen] = useState(false);
-  const [padOpen, setPadOpen] = useState(false);
+  const [padOpen, setPadOpen] = useState(true);
   const [trackpad, setTrackpad] = useState(() => window.matchMedia?.('(pointer: coarse)').matches ?? false);
   const [panelOpen, setPanelOpen] = useState(false);
   // Password pairing bisa diperlihatkan — sengaja huruf besar semua di sisi
@@ -2039,6 +2036,7 @@ function ConnectScreen({
   useEffect(() => {
     localStorage.setItem('xydesk.session.railHidden', railHidden ? '1' : '0');
   }, [railHidden]);
+  const adaptive=useRef(new AdaptiveVideo());
   const [stats, setStats] = useState<SessionStats | null>(null);
   const [connectedAt, setConnectedAt] = useState<number | null>(null);
   const [hudToast, setHudToast] = useState('');
@@ -2048,8 +2046,7 @@ function ConnectScreen({
   const pairingSecretRef=useRef(pin); pairingSecretRef.current=pin;
   const [rememberBrowser,setRememberBrowser]=useState(true);
   const [,updateAccess]=useState(0);
-  const guestMode=!accountHistoryToken();
-  const savedAccess=guestMode?loadHostAccess(hostId.replace(/[\s-]/g,'')):null;
+  const savedAccess=loadHostAccess(hostId.replace(/[\s-]/g,''));
   // Preferensi sesi — bertahan antar sesi di perangkat ini. Migrasi: entri lama tanpa quality/bitrate tetap jalan.
   const [prefs, setPrefs] = useState<SessionPrefs>(() => {
     try {
@@ -2073,7 +2070,6 @@ function ConnectScreen({
   // onAudioTrack) selalu membaca nilai terbaru.
   const prefsRef = useRef(DEFAULT_PREFS as SessionPrefs);
   const sessionRef = useRef<RtcSession | null>(null);
-  const setPreviewAllowed=(allowed:boolean)=>{previewConsentRef.current=allowed;setPreviewConsent(allowed);if(!allowed)sessionRef.current?.cancelWallpaper();};
   useEffect(()=>()=>{sessionRef.current?.cancelWallpaper();},[accountName]);
   const retryRef = useRef({ tries: 0, timer: 0 as ReturnType<typeof setTimeout> | 0, wasConnected: false });
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -2215,14 +2211,14 @@ function ConnectScreen({
   };
   const capturePreview = async () => {
     const attempt=historyAttempt.current;
-    if(!connected || !previewConsentRef.current || !attempt || attempt.done) return;
+    if(!connected || !attempt || attempt.done) return;
     if(attempt.token!==accountHistoryToken()){setHudToast('Akun berubah. Sambungkan ulang sebelum menyimpan preview.');return;}
     const session=sessionRef.current;
     if(!session)return;
     setHudToast('Mengambil wallpaper HD dari host, tanpa menangkap aplikasi terbuka…');
     let preview:string;
     try{preview=await session.requestWallpaper();}catch(e){if(sessionRef.current===session && historyAttempt.current===attempt && !attempt.done)setHudToast(e instanceof Error?e.message:'Wallpaper belum tersedia.');return;}
-    if(sessionRef.current!==session || historyAttempt.current!==attempt || attempt.done || !previewConsentRef.current || attempt.token!==accountHistoryToken())return;
+    if(sessionRef.current!==session || historyAttempt.current!==attempt || attempt.done || attempt.token!==accountHistoryToken())return;
     attempt.item.preview=preview;attempt.item.previewConsent=true;
     void saveSessionHistory({...attempt.item,endedAt:Date.now(),state:'interrupted'},attempt.token)
       .then(()=>setHudToast('Preview wallpaper disimpan untuk ID ini.'))
@@ -2232,10 +2228,10 @@ function ConnectScreen({
   const automaticPreviewAttempt=useRef<string|null>(null);
   useEffect(()=>{
     const attempt=historyAttempt.current;
-    if(!connected||!hostMeta||!previewConsent||!attempt||attempt.done||automaticPreviewAttempt.current===attempt.item.id)return;
+    if(!connected||!hostMeta||!attempt||attempt.done||automaticPreviewAttempt.current===attempt.item.id)return;
     automaticPreviewAttempt.current=attempt.item.id;
     void capturePreview();
-  },[connected,hostMeta,previewConsent]);
+  },[connected,hostMeta]);
 
   const connect = async (isRetry = false) => {
     setHostMeta(null);
@@ -2267,12 +2263,13 @@ function ConnectScreen({
       // tidak kosongkan supaya rtc.ts memakai tebakan browser + OS.
       session.selfName = accountName;
       sessionRef.current = session;
+      const accessScope=browserAccessScope();
       session.onRememberedAccess=token=>{
-        if(sessionRef.current!==session||accountHistoryToken()||!rememberBrowser)return;
-        if(saveHostAccess(hostId.replace(/[\s-]/g,''),token)){pairingSecretRef.current='';setPin('');updateAccess(x=>x+1);}
+        if(sessionRef.current!==session||browserAccessScope()!==accessScope||!rememberBrowser)return;
+        if(saveHostAccess(hostId.replace(/[\s-]/g,''),token,accessScope)){pairingSecretRef.current='';setPin('');updateAccess(x=>x+1);}
         else setHudToast('Sesi aktif, tetapi browser tidak dapat menyimpan izin reconnect.');
       };
-      session.onRememberedRejected=()=>{forgetHostAccess(hostId.replace(/[\s-]/g,''));updateAccess(x=>x+1);};
+      session.onRememberedRejected=()=>{forgetHostAccess(hostId.replace(/[\s-]/g,''),accessScope);updateAccess(x=>x+1);};
       hostCursorRef.current=null;
       session.onCursor=cursor=>{
         if(sessionRef.current!==session)return;
@@ -2331,6 +2328,7 @@ function ConnectScreen({
       session.onMeta = (meta) => {
         if (sessionRef.current !== session) return;
         setHostMeta(meta);
+        if(meta.video?.fpsControl&&meta.video.fpsRequested!==(prefsRef.current.fps===60?60:30))session.setFps(prefsRef.current.fps===60?60:30);
         const attempt=historyAttempt.current;
         if(attempt && !attempt.done && meta.hardware) {
           const specs:Record<string,string>={};
@@ -2344,6 +2342,8 @@ function ConnectScreen({
           session.setResolution(prefsRef.current.resolution||'1080p');
           session.setQuality(QUALITY_META[prefsRef.current.quality]?.num ?? 0);
           session.setBitrate(prefsRef.current.bitrateMbps);
+          adaptive.current.reset(prefsRef.current.bitrateMbps||8);
+          session.setFps(prefsRef.current.fps===60?60:30);
         }
       };
       // Balasan "ambil dari papan klip PC": salin ke papan klip perangkat
@@ -2356,8 +2356,8 @@ function ConnectScreen({
           setHudToast(`Papan klip PC: ${text.slice(0, 80)}${text.length > 80 ? '…' : ''}`);
         }
       };
-      const access=guestMode&&rememberBrowser?loadHostAccess(hostId.replace(/[\s-]/g,'')):null;
-      await session.start(jwt, hostId, pairingSecretRef.current, {remember:guestMode&&rememberBrowser,resumeToken:access||undefined});
+      const access=rememberBrowser?loadHostAccess(hostId.replace(/[\s-]/g,'')):null;
+      await session.start(jwt, hostId, pairingSecretRef.current, {remember:rememberBrowser,resumeToken:access||undefined});
     } catch (err) {
       // `ensureToken()` atau `signalToken()` gagal = server tidak terjangkau.
       // Sebelumnya ini jatuh ke `ended` ("Sesi berakhir") — terdengar seperti
@@ -2379,6 +2379,8 @@ function ConnectScreen({
     }
   };
 
+  const historyAutoStarted=useRef(false);
+  useEffect(()=>{if(returnPath!=='/history'||!savedAccess||historyAutoStarted.current)return;const timer=setTimeout(()=>{historyAutoStarted.current=true;void connect();},0);return()=>clearTimeout(timer);},[returnPath,savedAccess]);
   const disconnect = useCallback(() => {
     keyOwners.current?.reset();
     finishHistory(historyAttempt.current && retryRef.current.wasConnected ? 'ended' : 'cancelled');
@@ -2433,6 +2435,10 @@ function ConnectScreen({
         const audio = audioRef.current;
         s.cursorState = `${SESSION_UI_REVISION}; ${cursor?.dataset.ready ?? 'not-mounted'}; ${Math.round(pointerRef.current!.cursor.x * 100)}%,${Math.round(pointerRef.current!.cursor.y * 100)}%`;
         s.audioPlayerState = audio ? `${audio.paused ? 'paused' : 'playing'}; muted=${audio.muted}; volume=${Math.round(audio.volume * 100)}%; readyState=${audio.readyState}; error=${audio.error?.code ?? 'none'}` : 'Belum ada pemutar';
+        const p=prefsRef.current;
+        const ceiling=p.bitrateMbps||((s.width??1280)*(s.height??720)>1280*720?20:12);
+        const next=adaptive.current.update(s,ceiling,performance.now());
+        if(next!==null)sessionRef.current?.setBitrate(next);
         setStats(s);
       }
     };
@@ -2514,15 +2520,11 @@ function ConnectScreen({
   const onPointerEnd = (e: React.PointerEvent<HTMLDivElement>, cancel: boolean) => {
     pointerRef.current!.up(e.pointerId, cancel, prefs.tapClick, performance.now());
   };
-  const mouseHold = (e: React.PointerEvent<HTMLButtonElement>, button: number, down: boolean) => {
-    e.stopPropagation(); e.preventDefault();
-    if (down) { e.currentTarget.setPointerCapture(e.pointerId); pointerRef.current!.sync(); }
-    pointerRef.current!.button(button, down, 'hud:'+e.pointerId);
-  };
+
 
   const labels: Record<string, string> = {
-    pairing: 'Menghubungi host…',
-    negotiating: 'Menyiapkan koneksi langsung…',
+    pairing: 'Menyambungkan',
+    negotiating: 'Menyambungkan',
     connected: 'Tersambung',
     rejected:
       'ID atau password salah. Periksa keduanya lalu coba lagi — huruf besar dan kecil ikut dihitung.',
@@ -2606,9 +2608,9 @@ function ConnectScreen({
             setHostId(value);
             if (value.replace(/\s/g, '').length === 9) pinRef.current?.focus();
           }} />
-          {guestMode&&<label className="remember-access"><input type="checkbox" checked={rememberBrowser} onChange={e=>{setRememberBrowser(e.target.checked);if(!e.target.checked){forgetHostAccess(hostId.replace(/[\s-]/g,''));updateAccess(x=>x+1);}}}/> Ingat akses di browser ini. Jangan aktifkan pada perangkat bersama.</label>}
+          {<label className="remember-access"><input type="checkbox" checked={rememberBrowser} onChange={e=>{setRememberBrowser(e.target.checked);if(!e.target.checked){forgetHostAccess(hostId.replace(/[\s-]/g,''));updateAccess(x=>x+1);}}}/> Ingat akses di browser ini. Jangan aktifkan pada perangkat bersama.</label>}
           {savedAccess&&<p>Izin PC ini tersimpan. <button type="button" className="text-action" onClick={()=>{forgetHostAccess(hostId.replace(/[\s-]/g,''));updateAccess(x=>x+1);}}>Lupakan akses browser</button></p>}
-          <span className="field-label">Password pairing</span>
+          {!savedAccess&&<><span className="field-label">Password pairing</span>
           <div className="pw-field">
             {/* autoCapitalize "none", bukan "characters" seperti dulu: host
                 membandingkan password secara peka-kasus, jadi peramban mobile
@@ -2636,14 +2638,13 @@ function ConnectScreen({
             >
               {showPw ? <EyeOffIcon /> : <EyeIcon />}
             </button>
-          </div>
+          </div></>}
           {phase && (
             <p className="status-text">
               {fasePesan || labels[phase] || phase}
             </p>
           )}
           {retryInfo && <p className="status-text">{retryInfo}</p>}
-          <label className="history-consent"><input type="checkbox" checked={previewConsent} onChange={e=>setPreviewAllowed(e.target.checked)}/> {accountHistoryToken()?'Preview wallpaper otomatis: simpan pada akun di server':'Preview wallpaper otomatis: simpan di browser ini'} (bisa berisi data pribadi).</label>
           <a className="text-action" href="/history">Buka halaman riwayat</a>
           <button className="connect-cta" disabled={!canConnect} onClick={() => void connect()}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
           <p className="microcopy">Sesi tamu tanpa batas durasi. Izin dan riwayat tersimpan di browser ini; pemilik PC tetap dapat mencabut akses.</p>
@@ -2755,20 +2756,15 @@ function ConnectScreen({
           onPanel={() => setPanelOpen((v) => !v)}
           onDisconnect={disconnect}
         />
-        <MouseHud onMouse={mouseHold} trackpad={trackpad} onSwitch={toggleTrackpad}
-          onMouseClick={button=>{pointerRef.current!.sync();pointerRef.current!.button(button,true,'hud-keyboard');pointerRef.current!.button(button,false,'hud-keyboard');}}
-          onScroll={delta=>{pointerRef.current!.sync();send(InputCodec.scroll(0,delta));}}
-          onWindows={(id,down)=>send(InputCodec.key(91,down),'hud-windows:'+id)}
-          onCenter={()=>{pointerRef.current!.reset();pointerRef.current!.cursor={x:.5,y:.5};pointerRef.current!.sync();setHudToast('Kursor Windows dikembalikan ke tengah desktop.');}}/>
+
         {retryInfo && <p className="session-retry">{retryInfo}</p>}
         {hudToast && <p className="hud-toast" role="status">{hudToast}</p>}
         {panelOpen && (
           <SessionPanel
             prefs={prefs}
             onChange={setPrefs}
-            previewConsent={previewConsent}
-            onPreviewConsent={setPreviewAllowed}
-            onCapturePreview={capturePreview}
+            onFps={fps=>sessionRef.current?.setFps(fps)}
+            fpsLimit={hostMeta?.video?.fpsLimit}
             onClose={() => setPanelOpen(false)}
             hostId={hostId}
             onDisconnect={disconnect}
@@ -2791,6 +2787,7 @@ function ConnectScreen({
             }}
             onBitrate={(mbps: BitrateMbps) => {
               sessionRef.current?.setBitrate(mbps);
+              adaptive.current.reset(mbps||8);
             }}
           />
         )}

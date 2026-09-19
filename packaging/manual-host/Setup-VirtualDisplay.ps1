@@ -108,7 +108,9 @@ $installAccepted = $false
 try {
     New-Item -ItemType Directory $temp | Out-Null
     $zip = Join-Path $temp 'driver.zip'
-    Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $zip
+    $bundled = Join-Path $PSScriptRoot 'VirtualDisplayDriver.zip'
+    if (Test-Path -LiteralPath $bundled) { Copy-Item -LiteralPath $bundled -Destination $zip }
+    else { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $zip }
     if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'e24210692b442b39af763536330ce78b423f19342b7a7792c26de3944e418b3a') { throw 'Driver archive hash mismatch.' }
     Expand-Archive $zip -DestinationPath $temp
     $payload = Join-Path $temp 'VirtualDisplayDriver'

@@ -107,3 +107,6 @@ Build, tes unit, roundtrip codec, dan uji installer bukan bukti suara, injeksi,
 resolusi atau latensi pada RDP fisik Anda. Paket ini belum diuji pada PC Anda.
 
 Lisensi: LICENSE-XyDesk.txt, THIRD-PARTY-LICENSES.md, dan folder licenses.
+
+DISPLAY TERBUNDEL
+Halaman akhir menawarkan penyiapan layar virtual dengan izin Administrator. Driver resmi dipin SHA256 dan diverifikasi katalog Windows; konfigurasi baru1280x720/60Hz. Driver/config yang sudah ada tidak ditimpa. Tidak ada reboot otomatis, pemutusan RDP, perpindahan pengguna console atau restart host. Jika Windows meminta reboot, lakukan hanya setelah merencanakan pemulihan akses. Silent install tidak menjalankan setup driver.

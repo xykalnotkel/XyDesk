@@ -30,3 +30,4 @@ test('network error retries; owner revocation/rejection/manual stop do not',()=>
  assert.equal(s.mayRetrySession('error',false,true,0),false);assert.equal(s.mayRetrySession('error',true,false,0),false);assert.equal(s.mayRetrySession('error',true,true,10),false);
  assert.equal(s.retryDelay(1),2000);assert.equal(s.retryDelay(9),30000);
 });
+test('member grants isolated by account; guests retain their own grants',()=>{const s=setup(),id='123456789';s.saveHostAccess(id,'a'.repeat(64));const login=sub=>s.local.set('xydesk.web.jwt','e30.'+btoa(JSON.stringify({sub}))+'.fixture');login('one');assert.equal(s.loadHostAccess(id),null);assert.equal(s.saveHostAccess(id,'b'.repeat(64)),true);login('two');assert.equal(s.loadHostAccess(id),null);login('one');assert.equal(s.loadHostAccess(id),'b'.repeat(64));s.local.delete('xydesk.web.jwt');assert.equal(s.loadHostAccess(id),'a'.repeat(64));});

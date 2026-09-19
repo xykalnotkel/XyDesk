@@ -76,6 +76,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Display probe failed' }
           ./packaging/manual-host/Setup-VirtualDisplay.ps1 -Install -WhatIf
           ./packaging/manual-host/Setup-VirtualDisplay.ps1 -VerifyOnly
+          ./packaging/tests/test-bundled-display.ps1
       - name: Console worker lifetime (Windows PowerShell)
         shell: powershell
         run: ./packaging/tests/test-console-job.ps1

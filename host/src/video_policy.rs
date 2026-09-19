@@ -3,6 +3,7 @@ use std::sync::{
     atomic::{AtomicU8, Ordering},
     Mutex,
 };
+static FPS: AtomicU8 = AtomicU8::new(30);
 static LEVEL: AtomicU8 = AtomicU8::new(31);
 static REQUESTED: AtomicU8 = AtomicU8::new(1);
 static APPLIED: Mutex<Option<crate::video_layout::VideoLayout>> = Mutex::new(None);
@@ -33,6 +34,7 @@ pub fn configure(level: u8) {
         },
         Ordering::Relaxed,
     );
+    FPS.store(30, Ordering::Relaxed);
     REQUESTED.store(1, Ordering::Relaxed);
     record(None);
 }
@@ -43,12 +45,24 @@ pub fn request(mode: u8) -> bool {
     REQUESTED.store(mode, Ordering::Relaxed);
     true
 }
-pub fn fps() -> u32 {
-    if requested() == 2 && level() >= 51 {
+pub fn request_fps(fps: u8) -> bool {
+    if fps != 30 && fps != 60 {
+        return false;
+    }
+    FPS.store(fps, Ordering::Relaxed);
+    true
+}
+pub fn fps_limit(mode: u8, level: u8, wanted: u8) -> u32 {
+    if mode == 2 && level >= 51 {
         15
+    } else if wanted == 60 && ((mode == 0 && level >= 40) || level >= 51) {
+        60
     } else {
         30
     }
+}
+pub fn fps() -> u32 {
+    fps_limit(requested(), level(), FPS.load(Ordering::Relaxed))
 }
 pub fn record(size: Option<(usize, usize)>) {
     record_layout(size.map(|(w, h)| crate::video_layout::VideoLayout {
@@ -68,7 +82,7 @@ pub fn layout() -> Option<crate::video_layout::VideoLayout> {
 }
 pub fn telemetry() -> serde_json::Value {
     let layout = layout();
-    serde_json::json!({"level":level(),"requested":requested(),"applied":layout.map(|r|r.canvas),"contentRect":layout.map(|r|r.content),"fpsLimit":fps()})
+    serde_json::json!({"level":level(),"requested":requested(),"applied":layout.map(|r|r.canvas),"contentRect":layout.map(|r|r.content),"fpsLimit":fps(),"fpsRequested":FPS.load(Ordering::Relaxed),"fpsControl":true})
 }
 pub fn output_size(w: usize, h: usize, mode: u8, level: u8) -> Result<(usize, usize), String> {
     if w < 2 || h < 2 {
@@ -195,5 +209,22 @@ mod virtual720_tests {
             assert_eq!(layout.content, [0, 0, 1280, 720]);
             assert_eq!(super::effective_mode(false, requested), requested);
         }
+    }
+}
+
+#[cfg(test)]
+mod fps_tests {
+    #[test]
+    fn negotiated_macroblock_limits() {
+        for mode in 0..3 {
+            assert_eq!(super::fps_limit(mode, 31, 60), 30);
+        }
+        assert_eq!(super::fps_limit(0, 40, 60), 60);
+        assert_eq!(super::fps_limit(1, 40, 60), 30);
+        assert_eq!(super::fps_limit(1, 51, 60), 60);
+        assert_eq!(super::fps_limit(2, 51, 60), 15);
+        assert_eq!(super::fps_limit(0, 51, 30), 30);
+        assert!(!super::request_fps(0));
+        assert!(!super::request_fps(120));
     }
 }

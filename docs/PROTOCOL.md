@@ -130,3 +130,7 @@ Tambahan kompatibel pada data channel input yang sudah diotorisasi sesi:
 - Input down yang sukses dicatat dan dilepas saat data channel tutup. Antrean dibatasi. Tidak menjamin injeksi ke secure desktop/UAC atau aplikasi dengan privilege lebih tinggi.
 
 Batas bukti: uji SDP/RTP/decoder sintetis bukan bukti Windows/RDP atau Chrome Android nyata. Pergantian monitor/resizing masih memiliki jeda polling500ms dan transport; tidak ada jaminan sinkron per-frame lintas video dan data channel.
+
+## Browser adaptive video and FPS (2026-09-19)
+Authenticated input-channel packet `0x0f fps:u8` accepts exactly30 or60. Host advertises `video.fpsControl`, `fpsRequested`, and negotiated `fpsLimit`. Level3.1 caps720p30; Level4.0 allows720p60 but1080p30; Level5.1 allows1080p60, native4K remains15. Never changes the Windows display mode. Actual decoded FPS is measured separately. Old hosts omit capability and receive no FPS command.
+Browser presets are bitrate ceilings; interval packet loss, jitter-buffer delay and RTT reduce targets, with12s cooldown and20 healthy samples before gradual recovery. No upscaling or latency guarantee.

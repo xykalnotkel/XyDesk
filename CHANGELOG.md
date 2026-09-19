@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- **UXFINISH:** scoped member/guest remembered history with automatic resume; automatic wallpaper without opt-in/manual capture panel; WebP hero; border/name mouse/key controls with automatic chord labels and size/radius; pointer-down keyboard; adaptive bitrate presets and capability-gated30/60FPS through real encoder policy; bundled pinned VDD with explicit administrator setup preserving existing devices/configuration and no reboot/RDP changes. Validation and exact package revision recorded separately; no claim of zero lag or user-machine validation.
+
 - **Console/guest repair (Windows35421194650 + NSIS35421544833 SUCCESS):** suppressed native pointer composition + real mouse events; managed host ticket refresh/heartbeat and console process-tree supervision; no guest duration cap; short connection tickets with remembered, host-revocable browser grants. Sourcece95f51; Linux176/Windows165, web84/backend188, PS5/PS7 kill-on-close PASS. Web/backend deployed; user verified real console720 with previous build, new cursor/reconnect still requires field verification. No RDP/driver/security-policy changes. `docs/qa/console-guest-2026-09-19.md`.
 
 - **VDD3010 hotfix (Windows35412599966 SUCCESS; PS5/PS7 masing-masing35 assertions, WhatIf dan catalog trust PASS):**3010 adalah sukses-butuh-reboot, bukan penolakan. Jangan rollback device accepted0/3010; simpan pending state, jangan ulang install pada boot yang sama. Resume opt-in memvalidasi ownership, pinned driver bytes, config dan existing hardware ID sebelum meneruskan setup lama. Tanpa reboot/service/RDP restart otomatis. Bug lama menghapus device setelah3010 pada laporan pengguna; visibleVirtual kosong sesudah cleanup bukan bukti session isolation.

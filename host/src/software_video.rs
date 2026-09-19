@@ -98,22 +98,24 @@ pub struct SoftwareEncoder {
     logged_size: Option<(usize, usize)>,
     mode: u8,
     level: u8,
+    fps: u32,
 }
 impl SoftwareEncoder {
     pub fn new() -> Result<Self, openh264::Error> {
-        Self::with_policy(
+        Self::with_fps(
             crate::video_policy::requested(),
             crate::video_policy::level(),
+            crate::video_policy::fps(),
         )
     }
     pub fn with_policy(mode: u8, level: u8) -> Result<Self, openh264::Error> {
+        Self::with_fps(mode, level, if mode == 2 && level >= 51 { 15 } else { 30 })
+    }
+    fn with_fps(mode: u8, level: u8, fps: u32) -> Result<Self, openh264::Error> {
         Ok(Self {
             encoder: Encoder::with_api_config(
                 openh264::OpenH264API::from_source(),
-                crate::screen::prod_encoder_config_for(
-                    level,
-                    if mode == 2 && level >= 51 { 15 } else { 30 },
-                ),
+                crate::screen::prod_encoder_config_for(level, fps),
             )?,
             resized: Vec::new(),
             canvas: Vec::new(),
@@ -121,6 +123,7 @@ impl SoftwareEncoder {
             logged_size: None,
             mode,
             level,
+            fps,
         })
     }
     pub fn encode(&mut self, rgba: &[u8], width: usize, height: usize) -> Result<Vec<u8>, String> {
@@ -160,11 +163,7 @@ impl SoftwareEncoder {
             .to_vec();
         if self.logged_size != Some((width, height)) {
             if let Some([profile, constraints, level]) = sps_profile_level(&data) {
-                let fps = if self.mode == 2 && self.level >= 51 {
-                    15
-                } else {
-                    30
-                };
+                let fps = self.fps;
                 println!("[xydesk-host] video software: capture {width}x{height} -> kirim {cw}x{ch} (desktop {w}x{h}), filter bilinear, maks {fps} fps, bitrate {} bps, SPS {profile:02x}{constraints:02x}{level:02x}", crate::screen::target_bitrate_bps().min(MAX_BITRATE));
                 self.logged_size = Some((width, height));
             }

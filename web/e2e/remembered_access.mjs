@@ -23,13 +23,13 @@ try{
  await page.evaluate(()=>window.__session.onPhase('error'));
  await page.waitForFunction(()=>window.__calls.length===2);
  let calls=await page.evaluate(()=>window.__calls);assert.equal(calls[1].pin,'');assert.equal(calls[1].access.resumeToken,'a'.repeat(64));
- await page.reload();await page.waitForSelector('.connect-cta');assert.equal(await page.locator('.pw-field input').inputValue(),'');assert.equal(await page.locator('.connect-cta').isEnabled(),true);
- await page.screenshot({path:new URL('../../docs/qa/remembered-access-2026-09-19.png',import.meta.url).pathname,fullPage:true});
+ await page.reload();await page.waitForSelector('.connect-cta');assert.equal(await page.locator('.pw-field input').count(),0);assert.equal(await page.locator('.connect-cta').isEnabled(),true);
+ await page.screenshot({path:new URL('../../docs/qa/uxfinish-access-2026-09-19.png',import.meta.url).pathname,fullPage:true});
  await page.locator('.connect-cta').click();await page.waitForFunction(()=>window.__calls?.length===1&&window.__ready===true);
  calls=await page.evaluate(()=>window.__calls);assert.equal(calls[0].access.resumeToken,'a'.repeat(64));assert.equal(calls[0].pin,'');
  await page.evaluate(()=>{window.__session.onRememberedRejected();window.__session.reconnectAllowed=false;window.__session.onPhase('ended');});await page.waitForTimeout(2400);
  assert.equal(await page.evaluate(()=>window.__calls.length),1);assert.equal(await page.evaluate(()=>localStorage.getItem('xydesk.guest.hostAccess.v1.123456789')),null);
  await page.evaluate(()=>localStorage.clear());await page.reload();await page.waitForSelector('.connect-cta');assert.equal(await page.locator('.connect-cta').isDisabled(),true);
  assert.ok((await page.locator('.microcopy').innerText()).includes('tanpa batas durasi'));assert.deepEqual(errors,[]);
- const proof={pass:true,checks:['password not persisted','error reconnect uses saved grant, no captured password','reload remembers access without password','owner rejection clears grant and blocks auto reconnect','clearing site data requires new pairing','guest no countdown copy'],scope:'React/browser fixture; no physical Windows cursor or RDP test'};writeFileSync(new URL('../../docs/qa/remembered-access-browser-2026-09-19.json',import.meta.url),JSON.stringify(proof,null,2));console.log(JSON.stringify(proof));
+ const proof={pass:true,checks:['password not persisted','error reconnect uses saved grant, no captured password','reload remembers access without password','owner rejection clears grant and blocks auto reconnect','clearing site data requires new pairing','guest no countdown copy'],scope:'React/browser fixture; no physical Windows cursor or RDP test'};writeFileSync(new URL('../../docs/qa/uxfinish-access-2026-09-19.json',import.meta.url),JSON.stringify(proof,null,2));console.log(JSON.stringify(proof));
 }finally{await browser.close();await server.close();}

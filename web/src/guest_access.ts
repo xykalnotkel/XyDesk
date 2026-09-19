@@ -2,15 +2,18 @@
 const REFRESH_KEY='xydesk.guest.browser.v1';
 const ACCESS_KEY='xydesk.web.guestJwt';
 const GRANT_PREFIX='xydesk.guest.hostAccess.v1.';
-function hostKey(id:string){return /^\d{9}$/.test(id)?GRANT_PREFIX+id:null;}
-export function loadHostAccess(id:string):string|null {
- try{const key=hostKey(id),token=key?localStorage.getItem(key):null;return token&&/^[0-9a-f]{64}$/.test(token)?token:null;}catch{return null;}
+export function browserAccessScope():string|null {
+ try {const token=localStorage.getItem('xydesk.web.jwt');if(!token)return 'guest';const p=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return typeof p.sub==='string'&&p.sub.length>0&&p.sub.length<=200?'member:'+p.sub:null;}catch{return null;}
 }
-export function saveHostAccess(id:string,token:string):boolean {
- const key=hostKey(id);if(!key||!/^[0-9a-f]{64}$/.test(token))return false;
+function hostKey(id:string,scope:string|null){return /^\d{9}$/.test(id)&&scope?(scope==='guest'?GRANT_PREFIX:'xydesk.member.hostAccess.v1.'+encodeURIComponent(scope)+'.')+id:null;}
+export function loadHostAccess(id:string,scope=browserAccessScope()):string|null {
+ try{const key=hostKey(id,scope),token=key?localStorage.getItem(key):null;return token&&/^[0-9a-f]{64}$/.test(token)?token:null;}catch{return null;}
+}
+export function saveHostAccess(id:string,token:string,scope=browserAccessScope()):boolean {
+ const key=hostKey(id,scope);if(!key||!/^[0-9a-f]{64}$/.test(token))return false;
  try{localStorage.setItem(key,token);return true;}catch{return false;}
 }
-export function forgetHostAccess(id:string){try{const key=hostKey(id);if(key)localStorage.removeItem(key);}catch{}}
+export function forgetHostAccess(id:string,scope=browserAccessScope()){try{const key=hostKey(id,scope);if(key)localStorage.removeItem(key);}catch{}}
 function fresh(token:string|null){
  try {const p=JSON.parse(atob(token!.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return p.guest===true&&typeof p.exp==='number'&&p.exp>Date.now()/1000+60;}catch{return false;}
 }
