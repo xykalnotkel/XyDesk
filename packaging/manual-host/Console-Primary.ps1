@@ -27,10 +27,11 @@ public static class XyDeskDisplayLayout {
 }
 $displays=@()
 for($i=0;;$i++){
- $dev=New-Object XyDeskDisplayLayout+DISPLAY_DEVICE; $dev.cb=[System.Runtime.InteropServices.Marshal]::SizeOf([type]XyDeskDisplayLayout+DISPLAY_DEVICE)
+ $dev=New-Object -TypeName 'XyDeskDisplayLayout+DISPLAY_DEVICE'
+ $dev.cb=[System.Runtime.InteropServices.Marshal]::SizeOf($dev.GetType())
  if(-not [XyDeskDisplayLayout]::EnumDisplayDevices($null,$i,[ref]$dev,0)){break}
  if(($dev.StateFlags -band [XyDeskDisplayLayout]::ATTACHED_TO_DESKTOP) -ne [XyDeskDisplayLayout]::ATTACHED_TO_DESKTOP){continue}
- $mode=New-Object XyDeskDisplayLayout+DEVMODE
+ $mode=New-Object -TypeName 'XyDeskDisplayLayout+DEVMODE'
  if(-not [XyDeskDisplayLayout]::Current($dev.DeviceName,[ref]$mode)){continue}
  $displays+=[pscustomobject]@{Name=$dev.DeviceName;Label=$dev.DeviceString;DeviceId=$dev.DeviceID;Primary=(($dev.StateFlags -band [XyDeskDisplayLayout]::PRIMARY) -eq [XyDeskDisplayLayout]::PRIMARY);Width=$mode.dmPelsWidth;Height=$mode.dmPelsHeight;Mode=$mode}
 }
@@ -49,7 +50,7 @@ foreach($display in $ordered){
  if($code -ne 0){ throw "ChangeDisplaySettingsEx gagal untuk $($display.Name) dengan kode $code. Topologi sebelumnya dipertahankan sampai panggilan commit." }
  $x+=$display.Width
 }
-$empty=New-Object XyDeskDisplayLayout+DEVMODE
+$empty=New-Object -TypeName 'XyDeskDisplayLayout+DEVMODE'
 $commit=[XyDeskDisplayLayout]::ChangeDisplaySettingsEx($null,[ref]$empty,[IntPtr]::Zero,0,[IntPtr]::Zero)
 if($commit -ne 0){ throw "Commit tata letak gagal dengan kode $commit." }
 Write-Host "Monitor virtual ${Width}x${Height} kini primary di sesi ini. Jendela baru terbuka di layar yang di-stream. Tidak ada reboot."
