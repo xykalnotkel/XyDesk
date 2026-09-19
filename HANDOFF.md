@@ -825,6 +825,8 @@ _(kosong)_
 
 ## Untuk: Host Engine
 
+- [ ] (Operator - XyDesk Team, 2026-09-19) — **VDD3010 FIELD REGRESSION**: pengguna membuktikan catalog/hash PASS, stagingoem13.inf, install3010, lalu skrip691dd09 keliru menghapus ROOT\MTTVDD\0000. Probe setelah removal hanya membuktikan tiada monitor saat itu, bukan penolakan RDP terhadap monitor yang aktif. Hotfix preserves accepted device, pending reboot state + verified resume. Native driver install/720p acceptance masih perlu pembuktian di host pengguna; jangan sarankan reboot hosted runner tanpa recovery plan.
+
 - [ ] (Operator - XyDesk Team, 2026-09-18) — **VDISPLAY720**: user meminta virtual source1280×720 setelah audio56317a2 berhasil tetapi RDP tetap2336×1080. Implementasi profil ketat, adapter identity, same-session visibility, no wrong-screen fallback, explicit signed/pinned provisioning. Gate Windows35408521780 dan NSIS35408977237 sukses; source691dd09. Driver activation/virtual capture/user RDP tetap belum diuji. Batas pokok: virtual console monitor tidak otomatis menjadi monitor RDP. Jangan klaim driver install melewati batas sesi/lock. Host lama tetap entrypoint biasa; shortcut Virtual720 terpisah.
 
 - [ ] (Operator - XyDesk Team, 2026-09-18) — **Status terbaru setelah HOST-FINISH**: auto16:9 supported-mode/test/readback sudah diimplementasikan, audio/input sudah dikemas dan web live. Windows153 termasuk real Opus PASS. Bukan bukti userRDP: tetap perlu suara nyata/recording endpoint/Windows mode acceptance/physical controls/latency lapangan. Forward-audio idle cancellation/backpressure, COM balancing dan hotplug tetap follow-up; jangan mengklaim sudah diimplementasikan. Tidak perlu build ulang source yang sama kecuali ada perubahan. Bukti `docs/qa/host-finish-2026-09-18.md`.

@@ -1,0 +1,25 @@
+name: Test VDD Setup Policy
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  policy:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        shell: [powershell, pwsh]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse and test 3010 ownership and rollback policy
+        shell: ${{ matrix.shell }}
+        run: ./packaging/tests/test-vdd-policy.ps1
+      - name: Compile native helper without device changes
+        shell: ${{ matrix.shell }}
+        run: |
+          ./packaging/manual-host/Setup-VirtualDisplay.ps1 -Install -WhatIf
+          ./packaging/manual-host/Setup-VirtualDisplay.ps1 -Install -Resume -WhatIf
+      - name: Verify pinned archive and catalog without installation
+        shell: ${{ matrix.shell }}
+        run: ./packaging/manual-host/Setup-VirtualDisplay.ps1 -VerifyOnly

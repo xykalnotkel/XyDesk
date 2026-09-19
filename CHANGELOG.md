@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- **VDD3010 hotfix (gate Windows menyusul):**3010 adalah sukses-butuh-reboot, bukan penolakan. Jangan rollback device accepted0/3010; simpan pending state, jangan ulang install pada boot yang sama. Resume opt-in memvalidasi ownership, pinned driver bytes, config dan existing hardware ID sebelum meneruskan setup lama. Tanpa reboot/service/RDP restart otomatis. Bug lama menghapus device setelah3010 pada laporan pengguna; visibleVirtual kosong sesudah cleanup bukan bukti session isolation.
+
 - **VDISPLAY720 closure:** source691dd09, Windows35408521780 **SUCCESS Linux168/Windows157**; setup/native helper WhatIf + real pinned archive/Windows catalog trust PASS. NSIS35408977237 **SUCCESS** termasuk shortcut Virtual720. Belum driver install/virtual capture di runner atau RDP pengguna; integration candidate, bukan bukti lock mutlak. Tidak deploy web/backend. `docs/qa/virtual720-package-2026-09-18.json`.
 
 - **Virtual720 — paket uji siap:** profil opt-in1280×720 dengan adapter identity + current-session monitor verification, canvas720 terkunci, monitor lain/fallbackRDP ditolak. Discovery lama tidak lagi menebak dari resolusi/file, install/service restart/manager command tebakan dihapus. Setup eksplisit memakai driver resmi terpinSHA dan Windows catalog trust, tanpa security bypass/reboot/tscon; driver console belum tentu terlihat dari RDP. Tidak mengklaim field proof atau session-isolation bypass.
