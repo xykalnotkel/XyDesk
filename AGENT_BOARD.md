@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260918-OPERATOR-VDISPLAY720 | Operator - XyDesk Team | Host/packaging | LAGI KERJA | Explicit virtual720 preflight, adapter identity, safe provisioning, no RDP fallback. | 2026-09-18 |
 
 ## Antrean izin push
 
@@ -109,6 +108,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|
+| SESI-20260918-OPERATOR-VDISPLAY720 | Operator - XyDesk Team | Host/packaging | SELESAI (integration candidate) | Source691dd09: strict virtual720 + adapter/current-session checks + explicit pinned/catalog-verified provisioning. Windows35408521780 Linux168/Windows157 PASS; NSIS35408977237 PASS. No actual driver install/capture/user RDP proof, no production deploy. docs/qa/virtual720-2026-09-18.md. | 2026-09-18 |
 | SESI-20260918-OPERATOR-HOST-FINISH | Operator - XyDesk Team | Host/Web/CI | SELESAI | Auto16:9 supported/readback + audio/input. Source56317a2 Windows35403913522 Linux164/Windows153 PASS; NSIS35404435326 PASS. Web76/browser2viewport + exact assets/OAuth/bindings PASS, live1d669576; backend tetap. Installer SHA704f2add; docs/qa/host-finish-2026-09-18.md. Belum userRDP/latency field proof. | 2026-09-18 |
 | SESI-20260918-OPERATOR-INPUT-LATENCY | Operator - XyDesk Team | Host input | SELESAI (patch input) | Backpressure full queue + coalesce absolute, preserve key/click barriers. Linux161/fmt PASS; belum Windows device/latency/auto16:9. Lanjutan HANDOFF; docs/qa/input-queue-2026-09-18.md. No deploy/RDP change. | 2026-09-18 |
 | SESI-20260918-OPERATOR-AUDIO-REPAIR | Operator - XyDesk Team | Host + Web audio | SELESAI (patch audio); lanjutan di HANDOFF | WASAPI/PCM/render + late mic/replaceTrack/virtual-input guards. Linux156/web76 + fmt/build web/Windows ABI checker PASS; bukan device proof. Input lambat/auto16:9 belum selesai. Tidak build installer/deploy/RDP/driver. Bukti: docs/qa/audio-repair-2026-09-18.md. | 2026-09-18 |

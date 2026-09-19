@@ -1,0 +1,86 @@
+{
+  "source": "691dd09bdeee3acfdabadc90d753ab8a2f64e4dc",
+  "engineRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35408521780",
+  "nsisRun": "https://github.com/xykalnotkel/XyDesk/actions/runs/35408977237",
+  "tests": [
+    {
+      "job": "Gerbang regresi host (Linux)",
+      "id": 105803197741,
+      "result": "success",
+      "passed": 168,
+      "driverHashAndCatalogVerified": false,
+      "provisioningWhatIfTested": false,
+      "actualDriverInstalled": false
+    },
+    {
+      "job": "Engine Windows x64 (MSVC)",
+      "id": 105803519396,
+      "result": "success",
+      "passed": 157,
+      "driverHashAndCatalogVerified": true,
+      "provisioningWhatIfTested": true,
+      "actualDriverInstalled": false,
+      "runnerDisplayProbe": {
+        "adapters": [
+          {
+            "attached": true,
+            "description": "Microsoft Hyper-V Video",
+            "device": "\\\\.\\DISPLAY1",
+            "hardwareId": "VMBUS\\{da0a7802-e377-4aac-8e77-0558eb1073f8}",
+            "knownVirtual": false
+          }
+        ],
+        "displays": [
+          {
+            "height": 768,
+            "index": 0,
+            "isPrimary": true,
+            "name": "\\\\.\\DISPLAY1",
+            "refreshRate": 64,
+            "width": 1024
+          }
+        ],
+        "lockedDevice": null,
+        "rdpSession": false,
+        "target": [
+          1280,
+          720
+        ],
+        "visibleVirtual": []
+      }
+    }
+  ],
+  "installer": "XyDesk-Host-Virtual720-691dd09-Setup-x64.exe",
+  "installerBytes": 4546284,
+  "installerSha256": "f9ee3884ba29f30dc870050828e0fb6c0d31cadcd75bf9e1013764662187e84b",
+  "engineSha256": "e82550d103b1dcba91929b8bf72bd6ef2cee728c991bba79b5569ac56bc06a3b",
+  "nsisValidation": {
+    "result": "PASS",
+    "sourceSha": "691dd09bdeee3acfdabadc90d753ab8a2f64e4dc",
+    "testedAt": "2026-09-19T00:20:40.7456620Z",
+    "installer": "XyDesk-Host-Test-Setup-x64.exe",
+    "sha256": "f9ee3884ba29f30dc870050828e0fb6c0d31cadcd75bf9e1013764662187e84b",
+    "bytes": 4546284,
+    "engineSha256": "e82550d103b1dcba91929b8bf72bd6ef2cee728c991bba79b5569ac56bc06a3b",
+    "checks": [
+      "non-empty unrelated directory rejected without changes",
+      "silent install to path with spaces; installed MSVC engine hash and --help verified",
+      "Apps registration, desktop/Start Menu shortcuts and actual PowerShell shortcut command verified",
+      "reinstall preserves extra files; different install location cannot hijack registration",
+      "silent uninstall removes engine/registration/shortcuts but preserves identity and extra files",
+      "default per-user install and uninstall verified separately from explicit /D"
+    ],
+    "remoteDesktopHardwareTested": false,
+    "productionDeployed": false
+  },
+  "packageVerification": [
+    "ZIP CRC",
+    "archive and installer SHA256",
+    "engine SHA256 and PE x64",
+    "launcher and guide match source after Windows CRLF normalization"
+  ],
+  "driverInstalledOrCapturedOnRunner": false,
+  "userRdpTested": false,
+  "webOrBackendDeployed": false,
+  "versionBumped": false
+}
