@@ -823,6 +823,8 @@ _(kosong)_
 
 ## Untuk: Host Engine
 
+- [ ] (Operator - XyDesk Team, 2026-09-18) — **VDISPLAY720**: user meminta virtual source1280×720 setelah audio56317a2 berhasil tetapi RDP tetap2336×1080. Implementasi profil ketat, adapter identity, same-session visibility, no wrong-screen fallback, explicit signed/pinned provisioning. Gate Windows/NSIS sedang disiapkan. Batas pokok: virtual console monitor tidak otomatis menjadi monitor RDP. Jangan klaim driver install melewati batas sesi/lock. Host lama tetap entrypoint biasa; shortcut Virtual720 terpisah.
+
 - [ ] (Operator - XyDesk Team, 2026-09-18) — **Status terbaru setelah HOST-FINISH**: auto16:9 supported-mode/test/readback sudah diimplementasikan, audio/input sudah dikemas dan web live. Windows153 termasuk real Opus PASS. Bukan bukti userRDP: tetap perlu suara nyata/recording endpoint/Windows mode acceptance/physical controls/latency lapangan. Forward-audio idle cancellation/backpressure, COM balancing dan hotplug tetap follow-up; jangan mengklaim sudah diimplementasikan. Tidak perlu build ulang source yang sama kecuali ada perubahan. Bukti `docs/qa/host-finish-2026-09-18.md`.
 
 - [ ] (Operator - XyDesk Team, 2026-09-18) — **INPUT-LATENCY**: overflow yang menghentikan input sudah diperbaiki; bounded async backpressure + adjacent absolute coalescing, Linux161 PASS. Masih perlu native Windows/physical responsiveness, RTT/encode/decode measurement, otomatis16:9 supported/applied verification, audio field acceptance. Jangan klaim zero-lag atau seluruh keluhan selesai. Bukti `docs/qa/input-queue-2026-09-18.md`; belum packaging/deploy.

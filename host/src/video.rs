@@ -83,6 +83,9 @@ async fn tulis_frame(
     at: Instant,
     clock: &mut Option<Instant>,
 ) -> bool {
+    if !crate::virtual_target::healthy() {
+        return false;
+    }
     // webrtc 0.11 advances its timestamp AFTER packetization; an empty
     // sample advances without packets, so THIS frame has the capture delta.
     let at = clock.map_or(at, |last| at.max(last + Duration::from_nanos(11112)));

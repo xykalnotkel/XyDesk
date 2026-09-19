@@ -34,7 +34,11 @@ $desktop = [Environment]::GetFolderPath('Desktop')
 $programs = [Environment]::GetFolderPath('Programs')
 $shortcut = Join-Path $programs 'XyDesk Host Test\XyDesk Host Test.lnk'
 if (-not (Test-Path $shortcut) -or -not (Test-Path (Join-Path $desktop 'XyDesk Host Test.lnk'))) { throw 'Shortcut hilang' }
+$virtualShortcut = Join-Path $desktop 'XyDesk Virtual720.lnk'
+if (-not (Test-Path $virtualShortcut)) { throw 'Virtual720 shortcut missing' }
 $shell = New-Object -ComObject WScript.Shell
+$virtualLink = $shell.CreateShortcut($virtualShortcut)
+if ($virtualLink.Arguments -notlike '*Start-Virtual720.ps1*') { throw 'Virtual720 shortcut target incorrect' }
 $link = $shell.CreateShortcut($shortcut)
 if ($link.Arguments -notlike '*Start-TestHost.ps1*') { throw 'Target shortcut salah' }
 # Uji perintah shortcut dengan CheckOnly, tanpa NoExit, tanpa meminta token/stream.
@@ -64,7 +68,7 @@ Set-Content $sentinel 'identity-preservation-fixture'
 $uninstaller = Join-Path $installed 'Uninstall-XyDesk-Host-Test.exe'
 $p = Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
 if ($p.ExitCode -ne 0) { throw 'Uninstall gagal' }
-if ((Test-Path $engine) -or (Test-Path $key) -or (Test-Path $shortcut) -or (Test-Path (Join-Path $desktop 'XyDesk Host Test.lnk'))) { throw 'Uninstall meninggalkan engine/registrasi/shortcut' }
+if ((Test-Path $virtualShortcut) -or (Test-Path $engine) -or (Test-Path $key) -or (Test-Path $shortcut) -or (Test-Path (Join-Path $desktop 'XyDesk Host Test.lnk'))) { throw 'Uninstall meninggalkan engine/registrasi/shortcut' }
 if (-not (Test-Path $sentinel) -or -not (Test-Path (Join-Path $installed 'keep-user.txt'))) { throw 'Uninstall menghapus data yang harus dipertahankan' }
 $checks.Add('silent uninstall removes engine/registration/shortcuts but preserves identity and extra files')
 $defaultDir = Join-Path $env:LOCALAPPDATA 'Programs\XyDesk Host Test'

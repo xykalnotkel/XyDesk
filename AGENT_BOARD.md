@@ -80,6 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260918-OPERATOR-VDISPLAY720 | Operator - XyDesk Team | Host/packaging | LAGI KERJA | Explicit virtual720 preflight, adapter identity, safe provisioning, no RDP fallback. | 2026-09-18 |
 
 ## Antrean izin push
 

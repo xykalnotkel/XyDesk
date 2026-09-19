@@ -151,6 +151,15 @@ async fn close_signaling_session(
 #[derive(Parser, Debug)]
 #[command(name = "xydesk-host", about = "XyDesk host — stream layar ke client")]
 struct Args {
+    /// Mode strict: hanya virtual display terverifikasi1280x720, tanpa fallback RDP.
+    #[arg(long, conflicts_with = "keep_desktop_resolution")]
+    virtual_display_720p: bool,
+    #[arg(long, requires = "virtual_display_720p")]
+    virtual_display_device: Option<String>,
+    /// Diagnosis display tanpa identitas/token, perubahan mode, atau install.
+    #[arg(long)]
+    display_probe: bool,
+
     /// Jangan meminta mode desktop 16:9 saat sesi terotorisasi dimulai.
     #[arg(long)]
     keep_desktop_resolution: bool,
@@ -233,6 +242,10 @@ fn meta_json() -> serde_json::Value {
 async fn main() -> Result<()> {
     xydesk_host::desktop_geometry::init_process_dpi();
     let args = Args::parse();
+    if args.display_probe {
+        println!("{}", xydesk_host::virtual_target::probe());
+        return Ok(());
+    }
     if args.capture_test {
         jalankan_capture_test();
         return Ok(());
@@ -310,6 +323,10 @@ async fn main() -> Result<()> {
             })
         );
         return Ok(());
+    }
+    if args.virtual_display_720p {
+        xydesk_host::virtual_target::prepare(args.virtual_display_device.as_deref())
+            .map_err(anyhow::Error::msg)?;
     }
     let token = args
         .token
@@ -614,7 +631,7 @@ async fn main() -> Result<()> {
                     let mic_on = xydesk_host::audio::mic_capture_available();
                     let media = session.answer_media(&sdp.sdp, audio_on, mic_on).await?;
                     xydesk_host::video_policy::configure(video_level);
-                    if !args.keep_desktop_resolution {
+                    if !args.keep_desktop_resolution && !args.virtual_display_720p {
                         let wanted = xydesk_host::screen::wanted_display();
                         if let Some(display) = xydesk_host::screen::list_displays()
                             .into_iter()

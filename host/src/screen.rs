@@ -386,7 +386,9 @@ pub fn spawn_frame_source() -> FrameSource {
             let mut current = wanted_display();
             let rdp = is_rdp_session();
             BACKEND.store(backend_awal_sesi(rdp), Ordering::Relaxed);
-            if rdp {
+            if crate::virtual_target::enabled() {
+                BACKEND.store(BACKEND_GDI, Ordering::Relaxed);
+            } else if rdp {
                 eprintln!("[xydesk-host] RDP terdeteksi — memilih gdi-bitblt untuk desktop sesi aktif; tidak membuat atau memasang virtual display");
             } else {
                 // Virtual display driver — driver-first untuk headless/RDP (jangan DXGI fisik)
@@ -426,6 +428,13 @@ pub fn spawn_frame_source() -> FrameSource {
                 // Belum ada penonton: tidur, jangan buka sesi capture. Ini
                 // yang menahan border kuning WGC sampai transport Connected.
                 if !capture_armed() {
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                    continue;
+                }
+                if crate::virtual_target::enabled()
+                    && !crate::virtual_target::permits_index(current)
+                {
+                    crate::desktop_geometry::publish(None);
                     std::thread::sleep(std::time::Duration::from_millis(100));
                     continue;
                 }
@@ -499,7 +508,11 @@ pub fn spawn_frame_source() -> FrameSource {
                     // ada gunanya memberi waktu kepada backend yang melempar
                     // error, dan menunggunya memperlama layar hitam.
                     if gagal.is_some() || lama >= NO_FRAME_GRACE {
-                        match backend_berikutnya(backend) {
+                        match if crate::virtual_target::enabled() {
+                            None
+                        } else {
+                            backend_berikutnya(backend)
+                        } {
                             Some(next) => {
                                 eprintln!(
                                     "[xydesk-host] PERINGATAN: backend {} tidak mengirim satu frame pun selama {:.1} detik — pindah ke {}",
@@ -884,6 +897,9 @@ const NO_FRAME_GRACE: std::time::Duration = std::time::Duration::from_secs(2);
 /// Pilih monitor. Berlaku langsung bila ada sesi berjalan (capture di-respawn);
 /// selain itu menjadi pilihan sesi berikutnya.
 pub fn select_display(index: usize) -> bool {
+    if !crate::virtual_target::permits_index(index) {
+        return false;
+    }
     let count = list_displays().len();
     if count == 0 || index >= count {
         return false;
@@ -1310,6 +1326,9 @@ mod windows {
                     break;
                 }
             };
+            if !crate::virtual_target::accepts_rect(capture_rect) {
+                break;
+            }
             let t0 = std::time::Instant::now();
             let encoded = match encoder.encode(rgba, fw, fh, &mut nv12) {
                 Ok(data) => data,
@@ -1459,6 +1478,9 @@ mod windows {
                     eprintln!("[xydesk-host] DXGI tidak bisa mengambil frame: {e}");
                     break;
                 }
+            }
+            if !crate::virtual_target::accepts_rect(capture_rect) {
+                break;
             }
             let t0 = std::time::Instant::now();
             let encoded = match encoder.encode(cap.pixels(), w, h, &mut nv12) {

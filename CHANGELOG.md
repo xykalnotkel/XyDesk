@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- **Virtual720 (kode, gate Windows/NSIS menyusul):** profil opt-in1280×720 dengan adapter identity + current-session monitor verification, canvas720 terkunci, monitor lain/fallbackRDP ditolak. Discovery lama tidak lagi menebak dari resolusi/file, install/service restart/manager command tebakan dihapus. Setup eksplisit memakai driver resmi terpinSHA dan Windows catalog trust, tanpa security bypass/reboot/tscon; driver console belum tentu terlihat dari RDP. Tidak mengklaim field proof atau session-isolation bypass.
+
 - **HOST-FINISH closure:** final source56317a2 (runtime43fc35c), Windows run35403913522 **SUCCESS: Linux164/Windows153** termasuk real-Opus roundtrip; NSIS35404435326 **SUCCESS** install/reinstall/uninstall. Installer baru SHA256704f2adda398d034042fa22648fd07e110359a333a757c30826405b01e5f91fd. Web76/browser2viewport + live asset/OAuth/bindings PASS, versi1d669576; backend55cdda7c tetap. Petunjuk installer diperbaiki dan paket43fc35c disupersede. Tidak version bump/official release/driver/RDP access. Bukti `docs/qa/host-finish-{package,production}-2026-09-18.json`; batas field-test di `host-finish-2026-09-18.md`.
 
 - **Host finish — siap installer + web live:** permintaan otomatis mode desktop16:9 pada sesi terotorisasi, hanya mode terdaftar + CDS_TEST, baca ukuran kembali dan status penolakan/override. Tidak registry/driver/restart RDP; opt-out launcher -KeepDesktopResolution. Web menampilkan requested/observed, bukan label HD palsu. Tambah Windows real-Opus roundtrip44.1/48/96kHz. Menyertakan patch audio bd75757 dan input ec0f047.

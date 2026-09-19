@@ -15,3 +15,5 @@
 #[path="../../../host/src/native_cursor.rs"] pub mod native_cursor;
 
 #[path="../../../host/src/desktop_mode.rs"] pub mod desktop_mode;
+
+pub mod virtual_target { pub fn enabled() -> bool { false } }

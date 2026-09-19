@@ -1,3 +1,32 @@
+MODE BARU: XYDESK VIRTUAL720 (OPT-IN)
+Gunakan shortcut desktop "XyDesk Virtual720" untuk sumber virtual1280x720.
+Shortcut "XyDesk Host Test" tetap mode biasa, bukan kunci virtual.
+
+Jika belum ada driver, buka PowerShell Administrator di folder instalasi:
+  .\Setup-VirtualDisplay.ps1 -VerifyOnly
+  .\Setup-VirtualDisplay.ps1 -Install
+Install meminta konfirmasi, memvalidasi SHA256 arsip terpin dan tanda tangan
+katalog melalui Windows, lalu membuat adapter MttVDD dengan satu mode1280x720.
+Tidak import certificate, disable Secure Boot, testsigning, reboot, tscon,
+atau restart layanan. Config/driver yang sudah ada tidak ditimpa.
+
+Untuk driver yang sudah ada, tambahkan1280x720 menggunakan kontrol driver
+tersebut. Jangan membuat adapter duplikat. Lalu jalankan:
+  .\xydesk-host.exe --display-probe
+  .\Start-Virtual720.ps1
+
+PENTING: driver aktif di sesi console belum tentu tampak pada sesi RDP.
+Virtual720 memeriksa identitas adapter DAN monitor yang terlihat pada sesi ini.
+Jika tidak ada, host berhenti dengan penjelasan, tidak fallback ke2336x1080 RDP.
+Perubahan dimensi/hilangnya sumber menghentikan frame, bukan mengirim monitor
+lain. Mode ini tidak memindahkan aplikasi dari layar RDP/monitor lain.
+Tidak menjanjikan bisa melewati session isolation/lock screen Windows.
+
+Driver adalah komponen Windows terpisah yang diminta secara eksplisit. Uninstall
+host tidak menghapus driver/config. Lihat VIRTUAL720.md untuk rollback driver.
+
+--- PETUNJUK MODE HOST BIASA ---
+
 XyDesk Host Test — installer NSIS Windows x64
 
 Engine uji 6.8.5 dengan perbaikan audio, antrean keyboard/mouse, serta

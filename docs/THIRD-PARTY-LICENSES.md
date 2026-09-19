@@ -711,3 +711,14 @@ Teks penuh setiap lisensi tersedia di dalam paketnya masing-masing:
 Di aplikasi Android, **Pengaturan → Tentang → Lisensi → Lisensi pihak ketiga
 lengkap** membuka registry lisensi bawaan Flutter yang memuat teks penuh
 setiap paket Dart secara langsung dari biner yang sedang berjalan.
+
+## Optional virtual display provisioning (2026-09-18)
+
+`Setup-VirtualDisplay.ps1` optionally downloads the existing VirtualDrivers /
+MikeTheTech Virtual Display Driver25.7.23 AMD64 package from its official GitHub
+release, pinned SHA256e24210692b442b39af763536330ce78b423f19342b7a7792c26de3944e418b3a.
+The archive is not bundled into the host. Source/license and vendor notices:
+https://github.com/VirtualDrivers/Virtual-Display-Driver . Windows verifies the
+catalog signature before provisioning; no certificate/security-policy bypass.
+The XyDesk script is not the vendor's installer and makes no RDP compatibility
+claim. Existing installations are not overwritten. See packaging/manual-host/VIRTUAL720.md.

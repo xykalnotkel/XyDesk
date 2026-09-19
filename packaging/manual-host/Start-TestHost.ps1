@@ -1,6 +1,6 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param([switch]$CheckOnly, [switch]$KeepDesktopResolution)
+param([switch]$CheckOnly, [switch]$KeepDesktopResolution, [switch]$VirtualDisplay720p)
 $ErrorActionPreference = 'Stop'
 $engine = Join-Path $PSScriptRoot 'xydesk-host.exe'
 $manifest = Get-Content (Join-Path $PSScriptRoot 'manifest.json') -Raw | ConvertFrom-Json
@@ -41,7 +41,9 @@ try {
     Write-Host 'Host uji dimulai. Biarkan RDP terbuka dan desktop tidak terkunci selama uji pertama.'
     Write-Host 'Gunakan ID/password yang ditampilkan engine pada client. Ctrl+C untuk berhenti.'
     $extra = @()
+    if ($KeepDesktopResolution -and $VirtualDisplay720p) { throw 'Choose keep resolution OR virtual720.' }
     if ($KeepDesktopResolution) { $extra += '--keep-desktop-resolution' }
+    if ($VirtualDisplay720p) { $extra += '--virtual-display-720p' }
     Write-Host 'Saat tersambung, host meminta mode desktop 16:9 yang didukung. Gunakan -KeepDesktopResolution untuk menonaktifkan.'
     & $engine --url 'wss://signal.xydesk.my.id/ws' --token $token @extra
     if ($LASTEXITCODE -ne 0) { throw 'Host uji berhenti dengan galat. Mulai ulang launcher secara manual bila ingin mencoba lagi.' }

@@ -123,6 +123,8 @@ safe:
   WriteRegDWORD HKCU "${UNKEY}" "NoRepair" 1
   WriteRegDWORD HKCU "${UNKEY}" "EstimatedSize" ${ESTIMATED_KB}
   CreateDirectory "$SMPROGRAMS\${PRODUCT}"
+  CreateShortcut "$DESKTOP\XyDesk Virtual720.lnk" "$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" '-NoLogo -NoProfile -NoExit -ExecutionPolicy RemoteSigned -File $\"$INSTDIR\Start-Virtual720.ps1$\"' "$INSTDIR\xydesk.ico"
+
   CreateShortcut "$SMPROGRAMS\${PRODUCT}\${PRODUCT}.lnk" "$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" '-NoLogo -NoProfile -NoExit -ExecutionPolicy RemoteSigned -File $\"$INSTDIR\Start-TestHost.ps1$\"' "$INSTDIR\xydesk.ico"
   CreateShortcut "$DESKTOP\${PRODUCT}.lnk" "$WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" '-NoLogo -NoProfile -NoExit -ExecutionPolicy RemoteSigned -File $\"$INSTDIR\Start-TestHost.ps1$\"' "$INSTDIR\xydesk.ico"
   CreateShortcut "$SMPROGRAMS\${PRODUCT}\Panduan Uji Manual.lnk" "$WINDIR\System32\notepad.exe" '$\"$INSTDIR\README-INSTALLER.txt$\"' "$INSTDIR\xydesk.ico"
@@ -156,6 +158,7 @@ Section "Uninstall"
   !include "${GENERATED}\uninstall-files.nsh"
   IfFileExists "$INSTDIR\xydesk-host.exe" blocked
   Delete "$DESKTOP\${PRODUCT}.lnk"
+  Delete "$DESKTOP\XyDesk Virtual720.lnk"
   Delete "$SMPROGRAMS\${PRODUCT}\${PRODUCT}.lnk"
   Delete "$SMPROGRAMS\${PRODUCT}\Panduan Uji Manual.lnk"
   Delete "$SMPROGRAMS\${PRODUCT}\Uninstall.lnk"

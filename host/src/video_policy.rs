@@ -6,11 +6,21 @@ use std::sync::{
 static LEVEL: AtomicU8 = AtomicU8::new(31);
 static REQUESTED: AtomicU8 = AtomicU8::new(1);
 static APPLIED: Mutex<Option<crate::video_layout::VideoLayout>> = Mutex::new(None);
+fn effective_mode(locked720: bool, requested: u8) -> u8 {
+    if locked720 {
+        0
+    } else {
+        requested
+    }
+}
 pub fn level() -> u8 {
     LEVEL.load(Ordering::Relaxed)
 }
 pub fn requested() -> u8 {
-    REQUESTED.load(Ordering::Relaxed)
+    effective_mode(
+        crate::virtual_target::enabled(),
+        REQUESTED.load(Ordering::Relaxed),
+    )
 }
 pub fn configure(level: u8) {
     LEVEL.store(
@@ -27,7 +37,7 @@ pub fn configure(level: u8) {
     record(None);
 }
 pub fn request(mode: u8) -> bool {
-    if mode > 2 {
+    if mode > 2 || (crate::virtual_target::enabled() && mode != 0) {
         return false;
     }
     REQUESTED.store(mode, Ordering::Relaxed);
@@ -170,5 +180,20 @@ mod tests {
         assert_eq!(offer_level(&s.replace("m=video", "m=audio")), 31);
         assert_eq!(offer_level(&s.replace("H264", "VP8")), 31);
         assert_eq!(offer_level(&s.replace("mode=1", "mode=0")), 31);
+    }
+}
+
+#[cfg(test)]
+mod virtual720_tests {
+    #[test]
+    fn strict_canvas_cannot_be_changed_by_client_preset() {
+        for requested in 0..=2 {
+            let mode = super::effective_mode(true, requested);
+            assert_eq!(mode, 0);
+            let layout = crate::video_layout::VideoLayout::new(1280, 720, mode, 51).unwrap();
+            assert_eq!(layout.canvas, [1280, 720]);
+            assert_eq!(layout.content, [0, 0, 1280, 720]);
+            assert_eq!(super::effective_mode(false, requested), requested);
+        }
     }
 }
