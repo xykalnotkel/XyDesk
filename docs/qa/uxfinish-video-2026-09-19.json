@@ -1,0 +1,24 @@
+{
+  "pass": true,
+  "checks": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "automaticWallpaperOnce": true,
+      "fpsCommand": true,
+      "qualityPresets": true
+    },
+    {
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "automaticWallpaperOnce": true,
+      "fpsCommand": true,
+      "qualityPresets": true
+    }
+  ],
+  "scope": "Browser/protocol fixture only; not Windows performance proof"
+}

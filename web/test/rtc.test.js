@@ -318,3 +318,4 @@ test('network bye permits reconnect but owner bye and 1008 do not',async()=>{
  }
  const {session,sockets}=setup();await session.start('jwt','123456789','password');sockets[0].onclose({code:1008});assert.equal(session.reconnectAllowed,false);session.stop();
 });
+test('FPS command requires advertised host capability and serializes selected target',()=>{const {session}=setup();const sent=[];session.sendInput=b=>sent.push(Array.from(b));session.setFps(60);assert.equal(sent.length,0);session.meta={video:{fpsControl:true}};session.setFps(60);session.setFps(30);assert.deepEqual(sent,[[15,60],[15,30]]);session.meta={video:{fpsLimit:30}};session.setFps(60);assert.equal(sent.length,2);});
