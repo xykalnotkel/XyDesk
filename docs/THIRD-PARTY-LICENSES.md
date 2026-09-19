@@ -717,7 +717,7 @@ setiap paket Dart secara langsung dari biner yang sedang berjalan.
 `Setup-VirtualDisplay.ps1` validates the bundled (or optionally downloaded) VirtualDrivers /
 MikeTheTech Virtual Display Driver25.7.23 AMD64 package from its official GitHub
 release, pinned SHA256e24210692b442b39af763536330ce78b423f19342b7a7792c26de3944e418b3a.
-The official archive is bundled unchanged with its vendor notices. Source/license:
+The official archive is bundled unchanged. MIT license text is shipped as LICENSE-VirtualDisplayDriver.txt. Source/license:
 https://github.com/VirtualDrivers/Virtual-Display-Driver . Windows verifies the
 catalog signature before provisioning; no certificate/security-policy bypass.
 The XyDesk script is not the vendor's installer and makes no RDP compatibility

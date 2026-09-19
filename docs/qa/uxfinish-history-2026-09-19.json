@@ -1,0 +1,22 @@
+{
+  "pass": true,
+  "results": [
+    {
+      "member": false,
+      "historyCardAutoResume": true,
+      "noPassword": true,
+      "transparentNamedControls": true,
+      "radiusSize": true,
+      "keyboard": true
+    },
+    {
+      "member": true,
+      "historyCardAutoResume": true,
+      "noPassword": true,
+      "transparentNamedControls": true,
+      "radiusSize": true,
+      "keyboard": true
+    }
+  ],
+  "scope": "Real React history-card/dialog/browser storage and controls with transport fixture; not Windows field validation"
+}

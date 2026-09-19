@@ -2949,3 +2949,5 @@ img{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 @media(max-width:600px){.vkb-row{min-width:650px}.vkb{overscroll-behavior:contain}.video-surface .srail-btn{font-size:10px;padding:4px 6px}.srail-btn svg{display:none}}
 
 .srail-keyboard{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:45;min-width:48px;min-height:48px;border:1px solid #fff9;background:transparent;color:white;border-radius:14px}.srail-keyboard svg{width:24px;height:24px}
+.video-surface .vkb{z-index:60;max-height:75dvh}.vkb-dismiss{position:sticky;top:0;z-index:2}.video-surface:has(.srail.compact) .mapping-tools{top:56px}
+@media(orientation:landscape) and (max-height:500px){.vkb-key{min-height:30px}.vkb-row{gap:3px}.vkb{gap:3px}}

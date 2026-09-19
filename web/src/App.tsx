@@ -2205,7 +2205,7 @@ function ConnectScreen({
     if(!attempt || attempt.done) return;
     attempt.done = true;
     attempt.item.endedAt = Date.now(); attempt.item.state = state;
-    // Gambar hanya berubah melalui tombol ambil/ganti, bukan saat sesi berakhir.
+    // Wallpaper datang dari transfer host, tidak pernah dari frame aplikasi.
     attempt.item.previewConsent = !!attempt.item.preview;
     void saveSessionHistory(attempt.item, attempt.token).then(()=>setHudToast('Riwayat sesi tersimpan.')).catch(()=>setHudToast('Riwayat belum tersimpan di server. Periksa koneksi akun.'));
   };
@@ -2215,7 +2215,6 @@ function ConnectScreen({
     if(attempt.token!==accountHistoryToken()){setHudToast('Akun berubah. Sambungkan ulang sebelum menyimpan preview.');return;}
     const session=sessionRef.current;
     if(!session)return;
-    setHudToast('Mengambil wallpaper HD dari host, tanpa menangkap aplikasi terbuka…');
     let preview:string;
     try{preview=await session.requestWallpaper();}catch(e){if(sessionRef.current===session && historyAttempt.current===attempt && !attempt.done)setHudToast(e instanceof Error?e.message:'Wallpaper belum tersedia.');return;}
     if(sessionRef.current!==session || historyAttempt.current!==attempt || attempt.done || attempt.token!==accountHistoryToken())return;
