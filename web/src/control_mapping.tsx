@@ -33,9 +33,15 @@ export function mappingLabel(m:{kind:string;code:number;keys?:number[]}):string 
 }
 const defaults=()=>normalizeMappings([
  {id:'w',label:'W',kind:'key',code:87,x:14,y:52,size:52},{id:'a',label:'A',kind:'key',code:65,x:7,y:68,size:52},{id:'s',label:'S',kind:'key',code:83,x:14,y:68,size:52},{id:'d',label:'D',kind:'key',code:68,x:21,y:68,size:52},
- {id:'right',kind:'mouse',code:1,x:88,y:68,size:60},{id:'up',kind:'scroll',code:120,x:76,y:84,size:52},{id:'down',kind:'scroll',code:-120,x:88,y:84,size:52},{id:'win',kind:'key',code:91,x:14,y:84,size:52},
- {id:'left',label:'Klik kiri',kind:'mouse',code:0,x:76,y:68,size:60},{id:'space',label:'Spasi',kind:'key',code:32,x:85,y:48,size:60},
+ {id:'right',kind:'mouse',code:1,x:78,y:64,size:52},{id:'up',kind:'scroll',code:120,x:62,y:82,size:52},{id:'down',kind:'scroll',code:-120,x:78,y:82,size:52},{id:'win',kind:'key',code:91,x:14,y:84,size:52},
+ {id:'left',label:'Klik kiri',kind:'mouse',code:0,x:62,y:64,size:52},{id:'space',label:'Spasi',kind:'key',code:32,x:85,y:48,size:60},
 ]);
+export function withPointerDefaults(items:Mapping[]):Mapping[]{
+ if(localStorage.getItem('xydesk.mapping.pointer.v1'))return items;
+ localStorage.setItem('xydesk.mapping.pointer.v1','1');
+ const missing=defaults().filter(d=>(d.kind==='mouse'||d.kind==='scroll')&&!items.some(x=>x.kind===d.kind&&x.code===d.code));
+ return missing.length?normalizeMappings([...items,...missing]):items;
+}
 export class MappingHolds {
  private owners=new Map<string,Mapping>();private counts=new Map<string,number>();
  constructor(private send:(b:Uint8Array)=>void){}
@@ -47,7 +53,7 @@ export class MappingHolds {
 export function CustomControlMapping({send}:{send:(b:Uint8Array)=>void}){
  const [landscape,setLandscape]=useState(()=>innerWidth>innerHeight);const orientation=landscape?'landscape':'portrait';
  const load=()=>{try{const raw=JSON.parse(localStorage.getItem(KEY)||'{}')[orientation];return Array.isArray(raw)?normalizeMappings(raw):null;}catch{return null;}};
- const [items,setItems]=useState<Mapping[]>(()=>{return load()??defaults();});
+ const [items,setItems]=useState<Mapping[]>(()=>{return withPointerDefaults(load()??defaults());});
  const [edit,setEdit]=useState(false),[selected,setSelected]=useState('');const [inspector,setInspector]=useState(false);const selectedItem=items.find(x=>x.id===selected);
  const sendRef=useRef(send);sendRef.current=send;const holds=useRef<MappingHolds|null>(null);if(!holds.current)holds.current=new MappingHolds(b=>sendRef.current(b));
  const drag=useRef<{pointer:number;id:string;dx:number;dy:number}|null>(null);const [notice,setNotice]=useState('');

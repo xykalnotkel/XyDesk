@@ -35,7 +35,7 @@ try{
   assert.equal(await page.locator('.pw-field').count(),0);assert.equal(await page.locator('.history-consent').count(),0);
   assert.equal(await page.locator('.mouse-hud').count(),0);
   await page.getByRole('button',{name:'Mapping Klik kanan',exact:true}).waitFor();
-  assert.equal(await page.locator('.mapping-button').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
+  assert.equal(await page.locator('.mapping-button').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(10, 10, 14, 0.34)');
   await page.getByRole('button',{name:'Keyboard',exact:true}).click();await page.locator('.vkb').waitFor();
   await page.screenshot({path:new URL('../../docs/qa/uxfinish-keyboard-'+(member?'member':'guest')+'.png',import.meta.url).pathname});
   await page.getByRole('button',{name:'Tutup keyboard',exact:true}).click();

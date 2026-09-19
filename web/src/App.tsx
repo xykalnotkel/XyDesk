@@ -2044,7 +2044,7 @@ function ConnectScreen({
   const durasiDetik = useElapsedSec(phase === 'connected' ? connectedAt : null);
   const sisaDetik:number|null = null;
   const pairingSecretRef=useRef(pin); pairingSecretRef.current=pin;
-  const [rememberBrowser,setRememberBrowser]=useState(true);
+  const rememberBrowser=true;
   const [,updateAccess]=useState(0);
   const savedAccess=loadHostAccess(hostId.replace(/[\s-]/g,''));
   // Preferensi sesi — bertahan antar sesi di perangkat ini. Migrasi: entri lama tanpa quality/bitrate tetap jalan.
@@ -2607,7 +2607,6 @@ function ConnectScreen({
             setHostId(value);
             if (value.replace(/\s/g, '').length === 9) pinRef.current?.focus();
           }} />
-          {<label className="remember-access"><input type="checkbox" checked={rememberBrowser} onChange={e=>{setRememberBrowser(e.target.checked);if(!e.target.checked){forgetHostAccess(hostId.replace(/[\s-]/g,''));updateAccess(x=>x+1);}}}/> Ingat akses di browser ini. Jangan aktifkan pada perangkat bersama.</label>}
           {savedAccess&&<p>Izin PC ini tersimpan. <button type="button" className="text-action" onClick={()=>{forgetHostAccess(hostId.replace(/[\s-]/g,''));updateAccess(x=>x+1);}}>Lupakan akses browser</button></p>}
           {!savedAccess&&<><span className="field-label">Password pairing</span>
           <div className="pw-field">

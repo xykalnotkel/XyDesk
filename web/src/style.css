@@ -2935,22 +2935,14 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
 .remember-access{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.5;margin:8px 0}.remember-access input{flex:none;margin-top:3px}
 
 img{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
-.mapping-button{background:transparent;box-shadow:none;white-space:normal;overflow-wrap:anywhere;padding:5px;font-size:12px}
+.mapping-button{background:rgba(10,10,14,.34);backdrop-filter:blur(2px);box-shadow:none;white-space:normal;overflow-wrap:anywhere;padding:5px;font-size:12px}
 
-/* Session actions share the transparent border vocabulary; only keyboard stays in the corner. */
-.video-surface .srail{position:absolute;top:max(10px,env(safe-area-inset-top));left:50%;right:auto;bottom:auto;transform:translateX(-50%);display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;width:min(92%,850px);height:auto;padding:0;background:transparent;border:0;box-shadow:none;backdrop-filter:none;gap:5px;overflow:visible}
-.video-surface .srail-btn{width:auto;min-width:44px;height:40px;padding:6px 9px;border:1px solid #ffffffa0;border-radius:12px;background:transparent;color:white;text-shadow:0 1px 3px black;display:flex;gap:5px;font-size:11px}
-.srail-btn:after{content:attr(title)}.srail-btn svg{width:15px;height:15px}.srail-sep{display:none}
-.video-surface .srail-btn[title="Keyboard"]{position:fixed;right:0;top:calc(100dvh - 75px - env(safe-area-inset-bottom));height:48px}
-.srail.compact .srail-btn:not(:first-child):not([title="Keyboard"]){display:none}
-.video-surface .mapping-tools{top:105px;left:50%;right:auto;bottom:auto;transform:translateX(-50%);background:transparent;border:0;box-shadow:none}
-.mapping-tools button{background:transparent;border:1px solid #ffffffa0;color:white;border-radius:12px;text-shadow:0 1px 3px black}
+/* Rail kembali ke kolom kanan seperti semula; hanya pembuka keyboard di pojok. */
 .vkb{max-height:55dvh;overflow:auto;touch-action:manipulation;padding-bottom:max(8px,env(safe-area-inset-bottom))}.vkb-key{touch-action:manipulation;min-height:36px}
-@media(max-width:600px){.vkb-row{min-width:650px}.vkb{overscroll-behavior:contain}.video-surface .srail-btn{font-size:10px;padding:4px 6px}.srail-btn svg{display:none}}
+@media(max-width:600px){.vkb-row{min-width:650px}.vkb{overscroll-behavior:contain}}
 
 .srail-keyboard{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:45;min-width:48px;min-height:48px;border:1px solid #fff9;background:transparent;color:white;border-radius:14px}.srail-keyboard svg{width:24px;height:24px}
-.video-surface .vkb{z-index:60;max-height:75dvh}.vkb-dismiss{position:sticky;top:0;z-index:2}.video-surface:has(.srail.compact) .mapping-tools{top:56px}
+.video-surface .vkb{z-index:60;max-height:75dvh}.vkb-dismiss{position:sticky;top:0;z-index:2}
 @media(orientation:landscape) and (max-height:500px){.vkb-key{min-height:30px}.vkb-row{gap:3px}.vkb{gap:3px}}
-.video-surface .mapping-tools,.video-surface:has(.srail.compact) .mapping-tools{top:auto;bottom:max(12px,env(safe-area-inset-bottom))}
 .video-surface .spanel,.video-surface .spanel:not(.no-rail){z-index:70;right:max(12px,env(safe-area-inset-right));top:60px;bottom:12px;width:min(440px,calc(100% - 24px));max-height:calc(100% - 72px)}
-.video-surface .mapping-editor{z-index:65}
+.video-surface .mapping-editor{z-index:80}
