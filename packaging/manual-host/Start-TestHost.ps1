@@ -47,6 +47,9 @@ try {
             $PSNativeCommandUseErrorActionPreference = $false
             & $engine --url 'wss://signal.xydesk.my.id/ws' --managed-auth @extra 2>&1 | ForEach-Object {
                 $line = $_.ToString()
+                if ($line -match '^\[xydesk-host\] pairing (DITERIMA|DITOLAK|GAGAL)') {
+                    Add-Content -LiteralPath $LogPath -Value (([DateTime]::UtcNow.ToString('o')) + ' [pair-diag] ' + $Matches[1])
+                }
                 # Allow-list operational messages. Never log ID/password, control tokens,
                 # peer labels, pairing grants, or arbitrary server response bodies.
                 if ($line -match '^\[cursor\]' -or $line -match '^\[xydesk-host\] (terhubung ke|terdaftar sebagai|koneksi signaling putus|signaling heartbeat timeout|token endpoint|refresh |identity unavailable)') {

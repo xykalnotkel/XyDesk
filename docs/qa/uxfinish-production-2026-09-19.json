@@ -1,0 +1,12 @@
+{
+  "pass": true,
+  "asset": "/assets/index-BhGg6mP4.js",
+  "sha256": "fe97afe5569a3022e44bce33db976a0bc4ba3adcd5f792538a3f6b52032b4ff9",
+  "oauthPreserved": true,
+  "bindingsPreserved": true,
+  "cspPresent": true,
+  "historyConnectRoutes": true,
+  "heroWebpBytes": 88320,
+  "oldHeroBytes": 1727110,
+  "hostNotFieldTested": true
+}

@@ -28,6 +28,11 @@ if ($manifest.sha256 -ne $expected) { throw 'Manifest engine salah' }
 & $engine --help | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Engine hasil instalasi tidak bisa dijalankan' }
 $checks.Add('silent install to path with spaces; installed MSVC engine hash and --help verified')
+if ((Get-FileHash (Join-Path $installed 'VirtualDisplayDriver.zip') -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'e24210692b442b39af763536330ce78b423f19342b7a7792c26de3944e418b3a') { throw 'Installed bundled driver differs' }
+foreach($file in @('Configure-Display.ps1','Setup-VirtualDisplay.ps1','LICENSE-VirtualDisplayDriver.txt')) {
+ if(!(Test-Path (Join-Path $installed $file))){throw "Missing bundled setup file $file"}
+}
+$checks.Add('installed pinned driver bytes, configuration entrypoint and MIT license verified; silent install does not provision driver')
 $props = Get-ItemProperty $key
 if ($props.InstallLocation -ne $installed -or $props.DisplayVersion -ne '6.8.5') { throw 'Registrasi Apps tidak cocok' }
 $desktop = [Environment]::GetFolderPath('Desktop')

@@ -179,7 +179,14 @@ done:
 SectionEnd
 
 Function SetupVirtualDisplay
+  ${DisableX64FSRedirection}
+  ClearErrors
   ExecShell "runas" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy RemoteSigned -File "$INSTDIR\Configure-Display.ps1"'
-  IfErrors 0 +2
-    MessageBox MB_OK "Penyiapan layar belum dimulai. Host tetap terpasang; jalankan Configure-Display.ps1 dengan izin Administrator bila diperlukan."
+  IfErrors display_declined display_started
+display_declined:
+  ${EnableX64FSRedirection}
+  MessageBox MB_OK "Penyiapan layar belum dimulai. Host tetap terpasang; jalankan Configure-Display.ps1 dengan izin Administrator bila diperlukan."
+  Return
+display_started:
+  ${EnableX64FSRedirection}
 FunctionEnd

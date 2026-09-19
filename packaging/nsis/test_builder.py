@@ -71,6 +71,8 @@ class BuilderTests(unittest.TestCase):
         self.assertNotIn('Exec ', commands)
         self.assertNotIn('DeleteRegKey HKLM', commands)
         self.assertIn('RequestExecutionLevel user', commands)
+        self.assertIn('${DisableX64FSRedirection}', commands.split('Function SetupVirtualDisplay')[1])
+        self.assertIn('${EnableX64FSRedirection}', commands.split('Function SetupVirtualDisplay')[1])
         self.assertIn('MUI_PAGE_FINISH', commands)
 
 
