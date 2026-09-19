@@ -47,6 +47,8 @@ interface SignalMessage {
   to?: string;
   from?: string;
   pin?: string;
+  remember?: boolean;
+  resumeToken?: string;
   accepted?: boolean;
   sdp?: { type: string; sdp: string };
   candidate?: {
@@ -281,6 +283,10 @@ export class RtcSession {
   private coalescedMoves=0;
   private deviceId = '';
   private token = '';
+  reconnectAllowed = true;
+  onRememberedAccess:(token:string)=>void=()=>{};
+  onRememberedRejected:()=>void=()=>{};
+  private resumedAccess = false;
   private hostId = '';
   private stopped = false;
   private recoveryAttempt = 0;
@@ -406,7 +412,8 @@ export class RtcSession {
     this.setPhase('error', message);
   }
 
-  async start(jwt: string, hostId: string, pin: string) {
+  async start(jwt: string, hostId: string, pin: string, access?:{remember:boolean;resumeToken?:string}) {
+    this.resumedAccess=!!access?.resumeToken;
     this.hostId = hostId.replace(/[\s-]/g, '');
     this.deviceId = `web-${crypto.randomUUID()}`;
     this.wsFailed = false;
@@ -425,7 +432,9 @@ export class RtcSession {
       this.send({
         type: 'pair',
         to: this.hostId,
-        pin,
+        pin: access?.resumeToken ? undefined : pin,
+        remember: access?.remember,
+        resumeToken: access?.resumeToken,
         name: (this.selfName?.trim() || browserLabel()).slice(0, 48),
         platform: 'web',
       });
@@ -438,6 +447,7 @@ export class RtcSession {
     };
     ws.onclose = (ev) => {
       if (this.stopped) return;
+      if(ev.code===1008){this.reconnectAllowed=false;this.fail('Izin koneksi berakhir atau dicabut.');return;}
       if (this.phase === 'connected') {
         // Sesi sedang berjalan lalu soket putus — itu kegagalan, bukan akhir
         // yang rapi (akhir yang rapi lewat pesan `bye`).
@@ -473,6 +483,8 @@ export class RtcSession {
     switch (m.type) {
       case 'pair-response':
         if (!m.accepted) {
+          this.reconnectAllowed=false;
+          if(this.resumedAccess){this.onRememberedRejected();return this.setPhase('rejected','Izin tersimpan ditolak atau dicabut. Masukkan password pairing lagi.');}
           // Host sengaja TIDAK mengirim sebab penolakan (biar respons pairing
           // tidak jadi oracle password). Dugaan paling umum disalin dari sisi
           // Flutter: sejak 3 Sep 2026 host membandingkan password PEKA-KASUS.
@@ -482,6 +494,7 @@ export class RtcSession {
               '— ketik ulang, jangan salin dari catatan yang sudah terkapitalisasi.',
           );
         }
+        if(m.resumeToken&&/^[0-9a-f]{64}$/.test(m.resumeToken))this.onRememberedAccess(m.resumeToken);
         this.setPhase('negotiating');
         return this.negotiate();
       case 'answer':
@@ -502,6 +515,8 @@ export class RtcSession {
         }
         return;
       case 'bye':
+        this.reconnectAllowed=m.reason==='peer-disconnected';
+        if(m.reason==='remembered-access-revoked')this.onRememberedRejected();
         return this.stop();
       case 'error':
         if (m.error === 'peer-offline') this.setPhase('peer-offline');

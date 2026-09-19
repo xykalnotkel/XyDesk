@@ -229,12 +229,21 @@ impl DxgiCapture {
             }
             let hasil = self.salin_ke_staging(res.as_ref());
             if matches!(hasil, Ok(true)) && info.PointerPosition.Visible.as_bool() {
-                let _ = crate::native_cursor::draw_bgra(
+                let cursor_result = crate::native_cursor::draw_bgra(
                     &mut self.buf,
                     self.width,
                     self.height,
                     self.rect,
                 );
+                static CURSOR_ERROR: std::sync::atomic::AtomicBool =
+                    std::sync::atomic::AtomicBool::new(false);
+                if let Err(error) = cursor_result {
+                    if !CURSOR_ERROR.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                        eprintln!("[cursor] gagal menggambar pointer Windows: {error}");
+                    }
+                } else {
+                    CURSOR_ERROR.store(false, std::sync::atomic::Ordering::Relaxed);
+                }
             }
             if matches!(hasil, Ok(true)) {
                 for pixel in self.buf.chunks_exact_mut(4) {

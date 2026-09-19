@@ -1,3 +1,4 @@
+import {createGuestRefresh,verifyGuestRefresh} from './guest_refresh.js';
 import { validPrincipal } from './bound_ticket.js';
 import { memberClaims, memberMatches, sameMember, guestClaims, accountClaims } from './member_session.js';
 import { historyEndpoint, deleteUserHistory } from './session_history.js';
@@ -482,7 +483,7 @@ export class AuthStore {
     if (!this.env.XYDESK_SECRET || !timingSafeEqual(internal, this.env.XYDESK_SECRET)) return json({error:'forbidden'},403);
     const auth = request.headers.get('Authorization') || '';
     const payload = await verifyJwt(auth.startsWith('Bearer ') ? auth.slice(7) : '', this.secret());
-    if (guestClaims(payload)) return json({sub:payload.sub,guest:true,expiresAt:payload.exp});
+    if (guestClaims(payload)) return json({sub:payload.sub,guest:true,unlimited:true,expiresAt:payload.exp});
     if (!memberClaims(payload)) return json({error:'unauthorized'},401);
     return this.ctx.storage.transaction(async tx => {
       const user = await tx.get(`user:${payload.email}`);
@@ -699,26 +700,20 @@ export class AuthStore {
   }
 
   async guest(request) {
-    // Sesi tamu hanya memberi hak sebagai client signaling selama dua jam.
-    // Tidak disimpan, tidak punya email, dan tidak dapat mengklaim host.
-    const now = Math.floor(Date.now() / 1000);
-    const rateLimit = await this.consumeRateLimit(
-      request,
-      now,
-      'guest',
-      GUEST_IP_WINDOW,
-      GUEST_IP_MAX_REQUESTS,
-    );
-    if (!rateLimit.ok) {
-      return json({ error: 'rate-limited', retry_in: rateLimit.retryIn }, 429);
-    }
-    const id = crypto.randomUUID();
-    const token = await signJwt(
-      { sub: `guest:${id}`, guest: true },
-      this.secret(),
-      2 * 60 * 60,
-    );
-    return json({ token, guest: true }, 200);
+    let body={};try{if(request.body!==null)body=await request.json();}catch{return json({error:'bad-json'},400);}
+    if(!body||typeof body!=='object')return json({error:'bad-json'},400);
+    const renewing=body.refresh!==undefined;
+    const now=Math.floor(Date.now()/1000);
+    const limit=await this.consumeRateLimit(request,now,renewing?'guest-refresh':'guest',renewing?60:GUEST_IP_WINDOW,renewing?60:GUEST_IP_MAX_REQUESTS);
+    if(!limit.ok)return json({error:'rate-limited',retry_in:limit.retryIn},429);
+    let identity;
+    if(renewing){
+      const sub=await verifyGuestRefresh(body.refresh,this.secret());
+      if(!sub)return json({error:'guest-refresh-invalid'},401);
+      identity={sub,refresh:body.refresh};
+    }else identity=await createGuestRefresh(this.secret());
+    const token=await signJwt({sub:identity.sub,guest:true,aud:'xydesk-guest'},this.secret(),15*60);
+    return json({token,refresh:identity.refresh,guest:true},200);
   }
 
   async me(request) {

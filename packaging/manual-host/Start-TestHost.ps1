@@ -1,6 +1,6 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param([switch]$CheckOnly, [switch]$KeepDesktopResolution, [switch]$VirtualDisplay720p)
+param([switch]$CheckOnly, [switch]$KeepDesktopResolution, [switch]$VirtualDisplay720p, [switch]$Supervise, [string]$LogPath)
 $ErrorActionPreference = 'Stop'
 $engine = Join-Path $PSScriptRoot 'xydesk-host.exe'
 $manifest = Get-Content (Join-Path $PSScriptRoot 'manifest.json') -Raw | ConvertFrom-Json
@@ -29,15 +29,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Engine gagal menyiapkan identitas uji.' }
     $identity = $identityText | ConvertFrom-Json
     if ($identity.deviceId -notmatch '^\d{9}$' -or $identity.password.Length -lt 6) { throw 'Format identitas engine tidak valid.' }
-    Write-Host 'Meminta izin signaling untuk perangkat uji. Jangan membagikan isi konsol atau merekam transcript.'
-    $body = @{ id = $identity.deviceId; claim = $identity.password } | ConvertTo-Json -Compress
-    try {
-        $token = [string](Invoke-RestMethod -Method Post -Uri 'https://signal.xydesk.my.id/host-token' -ContentType 'application/json' -Body $body -TimeoutSec 20)
-    } catch {
-        throw 'Gagal memperoleh izin signaling. Periksa jaringan dan layanan XyDesk; jangan kirim password/token ke chat.'
-    }
-    $token = $token.Trim()
-    if ($token -notmatch '^\d+\.\d{9}\.[a-f0-9]{64}$') { throw 'Respons signaling bukan token host yang valid.' }
+    Write-Host 'Engine memperbarui izin signaling otomatis; ID/password tetap tersimpan. Jangan membagikan isi konsol.'
     Write-Host 'Host uji dimulai. Biarkan RDP terbuka dan desktop tidak terkunci selama uji pertama.'
     Write-Host 'Gunakan ID/password yang ditampilkan engine pada client. Ctrl+C untuk berhenti.'
     $extra = @()
@@ -45,8 +37,38 @@ try {
     if ($KeepDesktopResolution) { $extra += '--keep-desktop-resolution' }
     if ($VirtualDisplay720p) { $extra += '--virtual-display-720p' }
     Write-Host 'Saat tersambung, host meminta mode desktop 16:9 yang didukung. Gunakan -KeepDesktopResolution untuk menonaktifkan.'
-    & $engine --url 'wss://signal.xydesk.my.id/ws' --token $token @extra
-    if ($LASTEXITCODE -ne 0) { throw 'Host uji berhenti dengan galat. Mulai ulang launcher secara manual bila ingin mencoba lagi.' }
+    $delay = 1
+    do {
+        $started = [DateTime]::UtcNow
+        if ($LogPath) {
+            if ((Test-Path $LogPath) -and (Get-Item $LogPath).Length -gt 1048576) { Move-Item $LogPath ($LogPath + '.previous') -Force }
+            $savedPreference = $ErrorActionPreference
+            $ErrorActionPreference = 'Continue'
+            $PSNativeCommandUseErrorActionPreference = $false
+            & $engine --url 'wss://signal.xydesk.my.id/ws' --managed-auth @extra 2>&1 | ForEach-Object {
+                $line = $_.ToString()
+                # Allow-list operational messages. Never log ID/password, control tokens,
+                # peer labels, pairing grants, or arbitrary server response bodies.
+                if ($line -match '^\[cursor\]' -or $line -match '^\[xydesk-host\] (terhubung ke|terdaftar sebagai|koneksi signaling putus|signaling heartbeat timeout|token endpoint|refresh |identity unavailable)') {
+                    Add-Content -LiteralPath $LogPath -Value (([DateTime]::UtcNow.ToString('o')) + ' ' + $line.Substring(0,[Math]::Min(256,$line.Length)))
+                }
+            }
+            $exitCode = $LASTEXITCODE
+            $ErrorActionPreference = $savedPreference
+        } else {
+            & $engine --url 'wss://signal.xydesk.my.id/ws' --managed-auth @extra
+            $exitCode = $LASTEXITCODE
+        }
+        if (-not $Supervise) {
+            if ($exitCode -ne 0) { throw "Host stopped/code $exitCode." }
+            break
+        }
+        if (([DateTime]::UtcNow - $started).TotalSeconds -ge 60) { $delay = 1 }
+        if ($LogPath) { Add-Content -LiteralPath $LogPath -Value "Host exited/code $exitCode; retry after $delay seconds." }
+        Start-Sleep -Seconds $delay
+        $delay = [Math]::Min(30, $delay * 2)
+    } while ($Supervise)
+
 } finally {
     $token = $null
     $body = $null

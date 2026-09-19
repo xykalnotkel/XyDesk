@@ -54,6 +54,14 @@ struct Msg {
     from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pin: Option<String>,
+    #[serde(default, rename = "remember", skip_serializing_if = "Option::is_none")]
+    remember: Option<bool>,
+    #[serde(
+        default,
+        rename = "resumeToken",
+        skip_serializing_if = "Option::is_none"
+    )]
+    resume_token: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     accepted: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -176,6 +184,12 @@ struct Args {
     /// Token signaling host berumur pendek dari aplikasi XyDesk
     #[arg(long)]
     token: Option<String>,
+    /// Renew signaling tickets from the local host identity (official server only).
+    #[arg(long)]
+    managed_auth: bool,
+    /// Revoke all saved browser access for this host identity.
+    #[arg(long)]
+    revoke_remembered: bool,
     /// Cetak identitas host sebagai JSON untuk launcher terpadu, lalu keluar
     #[arg(long)]
     identity_json: bool,
@@ -242,6 +256,11 @@ fn meta_json() -> serde_json::Value {
 async fn main() -> Result<()> {
     xydesk_host::desktop_geometry::init_process_dpi();
     let args = Args::parse();
+    if args.revoke_remembered {
+        xydesk_host::remembered::revoke_all()?;
+        println!("Saved browser access revoked. Active remembered sessions close at the next authorization check.");
+        return Ok(());
+    }
     if args.display_probe {
         println!("{}", xydesk_host::virtual_target::probe());
         return Ok(());
@@ -328,10 +347,12 @@ async fn main() -> Result<()> {
         xydesk_host::virtual_target::prepare(args.virtual_display_device.as_deref())
             .map_err(anyhow::Error::msg)?;
     }
-    let token = args
-        .token
-        .as_deref()
-        .context("--token wajib saat menjalankan Host")?;
+    if args.managed_auth && args.url != "wss://signal.xydesk.my.id/ws" {
+        anyhow::bail!("managed auth only supports the official signaling origin");
+    }
+    if !args.managed_auth && args.token.is_none() {
+        anyhow::bail!("--token or --managed-auth required");
+    }
 
     // ── Control API lokal (shell desktop: Electron + Next.js, desktop/) ──
     // Keadaan mesin ini dibagikan ke loop signaling di bawah DAN ke server
@@ -404,6 +425,21 @@ async fn main() -> Result<()> {
         let mut active: Option<Arc<Session>> = None;
         recover_lock(&control).state = EngineState::Connecting;
 
+        let token = if args.managed_auth {
+            match xydesk_host::host_auth::token(&device_id).await {
+                Ok(token) => token,
+                Err(error) => {
+                    attempt = attempt.saturating_add(1);
+                    eprintln!("[xydesk-host] {error}; identitas dipertahankan, mencoba lagi");
+                    tokio::time::sleep(reconnect_delay(attempt)).await;
+                    continue;
+                }
+            }
+        } else {
+            args.token.clone().unwrap_or_default()
+        };
+        let mut remembered_peers: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
         let mut req = format!("{}?id={}&role=host", args.url, device_id)
             .into_client_request()
             .context("URL tidak valid")?;
@@ -422,11 +458,16 @@ async fn main() -> Result<()> {
                 eprintln!(
                     "[xydesk-host] signaling menolak token (HTTP {code}) — keluar; supervisor akan meminta token baru"
                 );
+                if args.managed_auth {
+                    attempt = attempt.saturating_add(1);
+                    tokio::time::sleep(reconnect_delay(attempt)).await;
+                    continue;
+                }
                 return Err(anyhow::anyhow!("signaling menolak token (HTTP {code})"));
             }
             Err(e) => {
                 attempt += 1;
-                if attempt > RECONNECT_MAX_ATTEMPTS {
+                if attempt > RECONNECT_MAX_ATTEMPTS && !args.managed_auth {
                     eprintln!(
                         "[xydesk-host] signaling tak terjangkau setelah {attempt} percobaan — keluar; supervisor akan mencoba lagi"
                     );
@@ -461,7 +502,32 @@ async fn main() -> Result<()> {
             continue;
         }
 
-        while let Some(m) = ws.next().await {
+        let mut heartbeat = tokio::time::interval(std::time::Duration::from_secs(20));
+        heartbeat.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        let mut last_received = std::time::Instant::now();
+        loop {
+            let incoming = tokio::select! {
+                next=ws.next()=>next,
+                _=heartbeat.tick()=>{
+                    if last_received.elapsed()>std::time::Duration::from_secs(70) {eprintln!("[xydesk-host] signaling heartbeat timeout");break;}
+                    let client=recover_lock(&control).session.as_ref().map(|s|s.client_id.clone());
+                    if let Some(client)=client {
+                        if let Some(grant)=remembered_peers.get(&client) {
+                            let valid=xydesk_host::remembered::current_password().map(|p|xydesk_host::remembered::valid(grant,&p)).unwrap_or(false);
+                            if !valid {
+                                let _=send_msg(&mut ws,&Msg{kind:"bye".into(),to:Some(client.clone()),reason:Some("remembered-access-revoked".into()),..Default::default()}).await;
+                                let _=close_signaling_session(&mut active,&paired,&control).await;
+                                remembered_peers.remove(&client);
+                            }
+                        }
+                    }
+                    if send_msg(&mut ws,&Msg{kind:"ping".into(),..Default::default()}).await.is_err(){break;}
+                    continue;
+                }
+            };
+            let Some(m) = incoming else {
+                break;
+            };
             let m = match m {
                 Ok(m) => m,
                 Err(e) => {
@@ -469,6 +535,7 @@ async fn main() -> Result<()> {
                     break;
                 }
             };
+            last_received = std::time::Instant::now();
             // Balas ping WebSocket: server signaling menutup koneksi yang
             // tidak membalas dalam 90 dtk (pongTimeout di signaling/client.go).
             // Tanpa ini, host idle terputus dan di-restart supervisor tiap
@@ -490,6 +557,7 @@ async fn main() -> Result<()> {
             };
 
             match msg.kind.as_str() {
+                "pong" => {}
                 "welcome" => {
                     println!("[xydesk-host] terdaftar sebagai {}", device_id);
                     recover_lock(&control).state = EngineState::Ready;
@@ -526,11 +594,40 @@ async fn main() -> Result<()> {
                     }
 
                     // Perbandingan konstan-waktu; lihat identity::verify_password.
-                    let ok = msg
+                    let current_password = xydesk_host::remembered::current_password().ok();
+                    let resumed = msg
+                        .resume_token
+                        .as_deref()
+                        .zip(current_password.as_deref())
+                        .map(|(token, password)| xydesk_host::remembered::valid(token, password))
+                        .unwrap_or(false);
+                    let password_ok = msg
                         .pin
                         .as_deref()
-                        .map(|p| xydesk_host::identity::verify_password(p, &password))
+                        .zip(current_password.as_deref())
+                        .map(|(pin, password)| {
+                            xydesk_host::identity::verify_password(pin, password)
+                        })
                         .unwrap_or(false);
+                    let ok = resumed || password_ok;
+                    let resume_token = if resumed {
+                        msg.resume_token.clone()
+                    } else if password_ok && msg.remember == Some(true) {
+                        match xydesk_host::remembered::issue(
+                            current_password.as_deref().unwrap_or_default(),
+                        ) {
+                            Ok(token) => Some(token),
+                            Err(_) => {
+                                eprintln!("[pairing] akses diterima tetapi izin browser tidak dapat disimpan");
+                                None
+                            }
+                        }
+                    } else {
+                        None
+                    };
+                    if let Some(token) = &resume_token {
+                        remembered_peers.insert(from.clone(), token.clone());
+                    }
 
                     if ok {
                         guard.record_success(&from);
@@ -578,6 +675,7 @@ async fn main() -> Result<()> {
                             kind: "pair-response".into(),
                             to: Some(from),
                             accepted: Some(ok),
+                            resume_token,
                             ..Default::default()
                         },
                     )

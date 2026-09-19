@@ -58,8 +58,8 @@ export function requestOtp(email: string, name?: string) {
   );
 }
 
-export function createGuestSession() {
-  return post<{ token: string; guest: true }>('/auth/guest', {});
+export function createGuestSession(refresh?:string) {
+  return post<{ token: string; refresh?:string; guest: true }>('/auth/guest', refresh?{refresh}:{});
 }
 
 export function verifyOtp(email: string, otp: string) {

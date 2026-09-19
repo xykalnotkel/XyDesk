@@ -2931,3 +2931,5 @@ input::placeholder, textarea::placeholder { color: var(--text-low); }
 @media(max-width:600px){.history-device{gap:12px}.history-device .history-banner{flex-basis:112px}.history-device-name h2{font-size:15px}.history-chevron{margin-right:12px}.history-reconnect{padding:16px}}
 .remote-session .hud-toast { bottom:calc(80px + env(safe-area-inset-bottom));pointer-events:none; }
 @media(orientation:landscape) and (max-height:540px){.remote-session .hud-mouse{right:calc(122px + env(safe-area-inset-right));max-width:calc(100% - 146px)}}
+
+.remember-access{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.5;margin:8px 0}.remember-access input{flex:none;margin-top:3px}

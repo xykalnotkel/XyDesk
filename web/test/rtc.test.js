@@ -299,3 +299,22 @@ test('disable during replaceTrack is serialized after attachment',async()=>{
   assert.deepEqual(changes,[stream.track,null]);assert.equal(session.micEnabled,false);
   assert.ok(stream.track.stopped>=1);
 });
+
+test('remembered pairing sends grant, not pairing password; rejects foreign grant response',async()=>{
+ const {session,sockets}=setup();session.negotiate=async()=>{};let remembered=null;session.onRememberedAccess=t=>{remembered=t;};
+ await session.start('jwt','123456789','not-transmitted',{remember:true,resumeToken:'a'.repeat(64)});sockets[0].onopen();
+ const pair=sockets[0].sent.find(x=>x.type==='pair');assert.equal(pair.pin,undefined);assert.equal(pair.resumeToken,'a'.repeat(64));
+ await session.handle({type:'pair-response',from:'987654321',accepted:true,resumeToken:'b'.repeat(64)});assert.equal(remembered,null);
+ await session.handle({type:'pair-response',from:'123456789',accepted:true,resumeToken:'b'.repeat(64)});assert.equal(remembered,'b'.repeat(64));session.stop();
+});
+test('revoked remembered access stops automatic reconnect and clears the saved grant',async()=>{
+ const {session}=setup();let cleared=0;session.onRememberedRejected=()=>cleared++;
+ await session.start('jwt','123456789','',{remember:true,resumeToken:'a'.repeat(64)});
+ await session.handle({type:'pair-response',from:'123456789',accepted:false});assert.equal(cleared,1);assert.equal(session.reconnectAllowed,false);assert.equal(session.phase,'rejected');session.stop();
+});
+test('network bye permits reconnect but owner bye and 1008 do not',async()=>{
+ for(const [reason,allowed] of [['peer-disconnected',true],['remembered-access-revoked',false],['admin-disconnect',false],['stop-session',false]]) {
+  const {session}=setup();await session.start('jwt','123456789','password');await session.handle({type:'bye',from:'123456789',reason});assert.equal(session.reconnectAllowed,allowed);session.stop();
+ }
+ const {session,sockets}=setup();await session.start('jwt','123456789','password');sockets[0].onclose({code:1008});assert.equal(session.reconnectAllowed,false);session.stop();
+});

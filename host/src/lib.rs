@@ -99,3 +99,6 @@ pub mod input_queue;
 pub mod desktop_mode;
 
 pub mod virtual_target;
+
+pub mod host_auth;
+pub mod remembered;

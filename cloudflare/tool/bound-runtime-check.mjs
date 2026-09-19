@@ -42,10 +42,12 @@ try {
  assert.equal((await call('/ws?id=bound-client',ticket)).status,401);
  assert.equal((await call('/turn-ice?id=bound-client',ticket)).status,403);
  // No client message triggers the check: let the real Durable Object alarm run.
- const [bye,closed,expired]=await Promise.all([host.box.waitBye(),client.box.waitClose(),expiring.box.waitClose()]);
- assert.equal(bye.from,'bound-client');assert.equal(bye.reason,'account-authorization-ended');assert.equal(closed.code,1008);assert.equal(expired.code,1008);
+ const [bye,closed]=await Promise.all([host.box.waitBye(),client.box.waitClose()]);
+ assert.equal(bye.from,'bound-client');assert.equal(bye.reason,'account-authorization-ended');assert.equal(closed.code,1008);assert.equal(expiring.box.closed(),undefined);
+ expiring.ws.send(JSON.stringify({type:'ping'}));await expiring.box.waitType('pong');
+ assert.equal((await call('/signal-token?id=short-new',expiredJwt)).status,401);
  assert.equal(host.box.closed(),undefined);assert.equal(guest.box.closed(),undefined);
  guest.ws.send(JSON.stringify({type:'ping'}));await guest.box.waitType('pong');
  assert.equal((await call('/signal-token?id=bound-client',jwt)).status,401);
- console.log(JSON.stringify({pass:true,checks:['real Worker + SQLite + WebSockets','bound ticket issued','old ticket WS401/TURN403 after revoke','idle alarm sends host bye and client close1008','idle guest expiry close1008','host and unrelated guest stay connected'],alarmObservedMs:Date.now()-began,limit:'Host is protocol fixture, not Windows/Rust media process; no real P2P termination claim.'},null,2));
+ console.log(JSON.stringify({pass:true,checks:['real Worker + SQLite + WebSockets','bound ticket issued','old ticket WS401/TURN403 after revoke','idle alarm sends host bye and client close1008','admitted guest survives credential expiry; expired JWT cannot open a new admission','host and unrelated guest stay connected'],alarmObservedMs:Date.now()-began,limit:'Host is protocol fixture, not Windows/Rust media process; no real P2P termination claim.'},null,2));
 }finally {for(const ws of sockets){try{ws.close();}catch{}}await mf.dispose();}

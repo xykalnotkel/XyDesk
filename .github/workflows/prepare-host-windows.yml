@@ -76,6 +76,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Display probe failed' }
           ./packaging/manual-host/Setup-VirtualDisplay.ps1 -Install -WhatIf
           ./packaging/manual-host/Setup-VirtualDisplay.ps1 -VerifyOnly
+      - name: Console worker lifetime (Windows PowerShell)
+        shell: powershell
+        run: ./packaging/tests/test-console-job.ps1
+      - name: Console worker lifetime (PowerShell 7)
+        shell: pwsh
+        run: ./packaging/tests/test-console-job.ps1
       - name: Paket, smoke executable, parser launcher, dan checksum
         shell: pwsh
         run: |

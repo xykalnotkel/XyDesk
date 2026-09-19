@@ -80,6 +80,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
+| SESI-20260919-OPERATOR-CONSOLE-GUEST | Operator - XyDesk Team | Host + web + backend | LAGI KERJA | Cursor suppressed, host reconnect/token refresh, no guest duration limit, revocable remembered browser pairing. Explicit user approval. | 2026-09-19 |
 | SESI-20260919-OPERATOR-VDD3010 | Operator - XyDesk Team | Host provisioning | SELESAI | Hotfix31380fc; Windows35412599966 SUCCESS PS5/PS7 masing-masing35. Patch resume siap; field driver/720p belum terverifikasi, tanpa restart otomatis. | 2026-09-19 |
 
 ## Antrean izin push

@@ -355,12 +355,22 @@ impl Handle {
                 ));
             }
         }
-        let _ = crate::native_cursor::draw_bgra(
+        let cursor_result = crate::native_cursor::draw_bgra(
             &mut self.bgra,
             self.width as usize,
             self.height as usize,
             self.rect,
         );
+        static CURSOR_ERROR: std::sync::atomic::AtomicBool =
+            std::sync::atomic::AtomicBool::new(false);
+        if let Err(error) = cursor_result {
+            if !CURSOR_ERROR.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                eprintln!("[cursor] gagal menggambar pointer Windows: {error}");
+            }
+        } else {
+            CURSOR_ERROR.store(false, std::sync::atomic::Ordering::Relaxed);
+        }
+
         Ok(&self.bgra)
     }
 }

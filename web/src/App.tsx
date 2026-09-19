@@ -1,3 +1,4 @@
+import {ensureGuestAccess,loadHostAccess,saveHostAccess,forgetHostAccess,mayRetrySession,retryDelay} from './guest_access';
 import {MouseHud} from './mouse_hud';
 import { flushSync } from 'react-dom';
 import { SessionHistoryPage, saveSessionHistory, accountHistoryToken } from './session_history';
@@ -92,9 +93,6 @@ type AuthStep = 'closed' | 'login' | 'otp';
 const NEWS_IMAGE_BLOCK = /^!\[([^\]]*)\]\((https:\/\/(app\.)?xydesk\.my\.id\/[^)\s]+)\)$/;
 
 const TOKEN_KEY = 'xydesk.web.jwt';const GUEST_TOKEN_KEY = 'xydesk.web.guestJwt';
-/// Batas sesi tamu: token signaling tamu terbit 2 jam (authstore.js) —
-/// dipakai untuk menampilkan sisa waktu di layar sesi.
-const GUEST_SESI_DETIK = 2 * 60 * 60;
 const LAST_HOST_KEY = 'xydesk.web.lastHost';
 const RELEASE_BASE =
   'https://github.com/xykalnotkel/XyDesk/releases/latest/download';
@@ -885,7 +883,7 @@ function LegalPage() {
         <h2>Data akun</h2>
         <p>
           Login email memakai kode sekali pakai. Kodenya disimpan sebagai hash dan punya
-          batas waktu serta batas percobaan. Sesi tamu berumur pendek dan tidak menyimpan
+          batas waktu serta batas percobaan. Token koneksi tamu diperbarui otomatis; izin browser dapat disimpan terpisah tanpa menyimpan
           identitas pengguna.
         </p>
       </section>
@@ -1667,11 +1665,11 @@ function RemoteApp({reconnectDevice}:{reconnectDevice?:{deviceId:string;name:str
   };
 
   const ensureToken = useCallback(async () => {
-    if (jwt) return jwt;
-    const guest = await createGuestSession();
-    sessionStorage.setItem(GUEST_TOKEN_KEY, guest.token);
-    setJwt(guest.token);
-    return guest.token;
+    const member=localStorage.getItem(TOKEN_KEY);
+    if (member) return member;
+    const token=await ensureGuestAccess(createGuestSession);
+    setJwt(token);
+    return token;
   }, [jwt]);
 
   const doRequestOtp = async () => {
@@ -2044,15 +2042,14 @@ function ConnectScreen({
   const [stats, setStats] = useState<SessionStats | null>(null);
   const [connectedAt, setConnectedAt] = useState<number | null>(null);
   const [hudToast, setHudToast] = useState('');
-  // Sesi tamu berbatas 2 jam (token signaling); pengguna login tidak.
-  // Dihitung per render: token tamu baru tersimpan saat connect dimulai.
-  const tamu = !localStorage.getItem(TOKEN_KEY) && !!sessionStorage.getItem(GUEST_TOKEN_KEY);
-  const totalSesiDetik = tamu ? GUEST_SESI_DETIK : null;
+  const totalSesiDetik:number|null = null;
   const durasiDetik = useElapsedSec(phase === 'connected' ? connectedAt : null);
-  const sisaDetik =
-    totalSesiDetik !== null && durasiDetik !== null
-      ? Math.max(0, totalSesiDetik - durasiDetik)
-      : null;
+  const sisaDetik:number|null = null;
+  const pairingSecretRef=useRef(pin); pairingSecretRef.current=pin;
+  const [rememberBrowser,setRememberBrowser]=useState(true);
+  const [,updateAccess]=useState(0);
+  const guestMode=!accountHistoryToken();
+  const savedAccess=guestMode?loadHostAccess(hostId.replace(/[\s-]/g,'')):null;
   // Preferensi sesi — bertahan antar sesi di perangkat ini. Migrasi: entri lama tanpa quality/bitrate tetap jalan.
   const [prefs, setPrefs] = useState<SessionPrefs>(() => {
     try {
@@ -2172,7 +2169,7 @@ function ConnectScreen({
   }, [connected]);
 
   useEffect(()=>{paintCursor();},[prefs.cursorSize,prefs.cursorInVideo]);
-  const canConnect = hostId.replace(/[\s-]/g, '').length === 9 && pin.length >= 6 && !['pairing', 'negotiating'].includes(phase);
+  const canConnect = hostId.replace(/[\s-]/g, '').length === 9 && (pin.length >= 6 || !!savedAccess) && !['pairing', 'negotiating'].includes(phase);
 
   // Layout sesi selalu memenuhi viewport; fullscreen browser hanya dari gesture.
   const [fullscreenOn, setFullscreenOn] = useState(false);
@@ -2270,6 +2267,12 @@ function ConnectScreen({
       // tidak kosongkan supaya rtc.ts memakai tebakan browser + OS.
       session.selfName = accountName;
       sessionRef.current = session;
+      session.onRememberedAccess=token=>{
+        if(sessionRef.current!==session||accountHistoryToken()||!rememberBrowser)return;
+        if(saveHostAccess(hostId.replace(/[\s-]/g,''),token)){pairingSecretRef.current='';setPin('');updateAccess(x=>x+1);}
+        else setHudToast('Sesi aktif, tetapi browser tidak dapat menyimpan izin reconnect.');
+      };
+      session.onRememberedRejected=()=>{forgetHostAccess(hostId.replace(/[\s-]/g,''));updateAccess(x=>x+1);};
       hostCursorRef.current=null;
       session.onCursor=cursor=>{
         if(sessionRef.current!==session)return;
@@ -2281,7 +2284,7 @@ function ConnectScreen({
         if(sessionRef.current!==session) return;
         setPhase(next);
         if(['ended','error','rejected','peer-offline','host-busy'].includes(next)) finishHistory(next==='ended'||retryRef.current.wasConnected?'interrupted':'failed');
-        setFasePesan(next === 'error' ? session.lastError : null);
+        setFasePesan(session.lastError);
         if (next === 'connected') {
           retryRef.current.tries = 0;
           retryRef.current.wasConnected = true;
@@ -2296,18 +2299,16 @@ function ConnectScreen({
         // Reconnect otomatis HANYA bila sesi pernah live lalu putus
         // (jaringan goyah) — bukan untuk pairing gagal/password salah.
         if (
-          next === 'ended' &&
-          retryRef.current.wasConnected &&
-          retryRef.current.tries < 3 &&
+          mayRetrySession(next,session.reconnectAllowed,retryRef.current.wasConnected,retryRef.current.tries) &&
           sessionRef.current === session
         ) {
           retryRef.current.tries += 1;
-          const wait = retryRef.current.tries * 2000;
+          const wait = retryDelay(retryRef.current.tries);
           setRetryInfo(
-            `Koneksi terputus — mencoba ulang (${retryRef.current.tries}/3)…`,
+            `Koneksi terputus — mencoba ulang (${retryRef.current.tries}/10)…`,
           );
           retryRef.current.timer = setTimeout(() => void connect(true), wait);
-        } else if (next === 'ended' && retryRef.current.tries >= 3) {
+        } else if (['ended','error','peer-offline'].includes(next) && retryRef.current.tries >= 10) {
           setRetryInfo('Gagal menyambung ulang. Coba konek manual.');
         }
       };
@@ -2355,7 +2356,8 @@ function ConnectScreen({
           setHudToast(`Papan klip PC: ${text.slice(0, 80)}${text.length > 80 ? '…' : ''}`);
         }
       };
-      await session.start(jwt, hostId, pin);
+      const access=guestMode&&rememberBrowser?loadHostAccess(hostId.replace(/[\s-]/g,'')):null;
+      await session.start(jwt, hostId, pairingSecretRef.current, {remember:guestMode&&rememberBrowser,resumeToken:access||undefined});
     } catch (err) {
       // `ensureToken()` atau `signalToken()` gagal = server tidak terjangkau.
       // Sebelumnya ini jatuh ke `ended` ("Sesi berakhir") — terdengar seperti
@@ -2368,6 +2370,11 @@ function ConnectScreen({
           'lalu coba lagi.',
       );
       finishHistory('failed');
+      if(retryRef.current.wasConnected && retryRef.current.tries<10 && !(err instanceof ApiError && [401,403].includes(err.status))) {
+        retryRef.current.tries+=1;
+        setRetryInfo(`Server belum dapat dijangkau — mencoba ulang (${retryRef.current.tries}/10)…`);
+        retryRef.current.timer=setTimeout(()=>void connect(true),retryDelay(retryRef.current.tries));
+      }
       console.warn('[xydesk] connect gagal:', err);
     }
   };
@@ -2377,7 +2384,7 @@ function ConnectScreen({
     finishHistory(historyAttempt.current && retryRef.current.wasConnected ? 'ended' : 'cancelled');
     setSessionOpen(false);
     if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
-    retryRef.current.tries = 3; // blok retry setelah putus manual
+    retryRef.current.tries = 10; // blok retry setelah putus manual
     pointerRef.current?.reset();
     sessionRef.current?.stop();
     sessionRef.current = null;
@@ -2599,6 +2606,8 @@ function ConnectScreen({
             setHostId(value);
             if (value.replace(/\s/g, '').length === 9) pinRef.current?.focus();
           }} />
+          {guestMode&&<label className="remember-access"><input type="checkbox" checked={rememberBrowser} onChange={e=>{setRememberBrowser(e.target.checked);if(!e.target.checked){forgetHostAccess(hostId.replace(/[\s-]/g,''));updateAccess(x=>x+1);}}}/> Ingat akses di browser ini. Jangan aktifkan pada perangkat bersama.</label>}
+          {savedAccess&&<p>Izin PC ini tersimpan. <button type="button" className="text-action" onClick={()=>{forgetHostAccess(hostId.replace(/[\s-]/g,''));updateAccess(x=>x+1);}}>Lupakan akses browser</button></p>}
           <span className="field-label">Password pairing</span>
           <div className="pw-field">
             {/* autoCapitalize "none", bukan "characters" seperti dulu: host
@@ -2608,7 +2617,7 @@ function ConnectScreen({
             <input
               ref={pinRef}
               type={showPw ? 'text' : 'password'}
-              placeholder="Password pairing"
+              placeholder={savedAccess?"Izin browser tersimpan — password tidak diperlukan":"Password pairing"}
               value={pin}
               autoCapitalize="none"
               autoCorrect="off"
@@ -2630,14 +2639,14 @@ function ConnectScreen({
           </div>
           {phase && (
             <p className="status-text">
-              {(phase === 'error' && fasePesan) || labels[phase] || phase}
+              {fasePesan || labels[phase] || phase}
             </p>
           )}
           {retryInfo && <p className="status-text">{retryInfo}</p>}
           <label className="history-consent"><input type="checkbox" checked={previewConsent} onChange={e=>setPreviewAllowed(e.target.checked)}/> {accountHistoryToken()?'Preview wallpaper otomatis: simpan pada akun di server':'Preview wallpaper otomatis: simpan di browser ini'} (bisa berisi data pribadi).</label>
           <a className="text-action" href="/history">Buka halaman riwayat</a>
           <button className="connect-cta" disabled={!canConnect} onClick={() => void connect()}>{['pairing', 'negotiating'].includes(phase) ? labels[phase] : 'Konek sekarang'}</button>
-          <p className="microcopy">Sesi tamu berlaku dua jam. Riwayat tamu disimpan lokal di browser ini.</p>
+          <p className="microcopy">Sesi tamu tanpa batas durasi. Izin dan riwayat tersimpan di browser ini; pemilik PC tetap dapat mencabut akses.</p>
         </div>
       )}
       <div
@@ -2696,9 +2705,7 @@ function ConnectScreen({
           <div
             className={`sesi-waktu${sisaDetik !== null && sisaDetik <= 300 ? ' kritis' : ''}`}
             title={
-              tamu
-                ? 'Sesi tamu berlaku dua jam — putuskan lalu konek ulang bila habis'
-                : 'Durasi sesi berjalan'
+              'Durasi sesi berjalan — tanpa batas durasi tamu'
             }
           >
             <span>{fmtDurasi(durasiDetik ?? 0)}</span>

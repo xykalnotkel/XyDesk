@@ -332,9 +332,30 @@ mod windows_inject {
                 let Some((px, py)) = point else {
                     return false;
                 };
-                let ok = unsafe {
-                    windows::Win32::UI::WindowsAndMessaging::SetCursorPos(px, py).is_ok()
+                use windows::Win32::UI::WindowsAndMessaging::{
+                    GetSystemMetrics, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
+                    SM_YVIRTUALSCREEN,
                 };
+                let (left, top, width, height) = unsafe {
+                    (
+                        GetSystemMetrics(SM_XVIRTUALSCREEN),
+                        GetSystemMetrics(SM_YVIRTUALSCREEN),
+                        GetSystemMetrics(SM_CXVIRTUALSCREEN),
+                        GetSystemMetrics(SM_CYVIRTUALSCREEN),
+                    )
+                };
+                let Some((dx, dy)) = super::absolute_mouse_point(px, py, left, top, width, height)
+                else {
+                    return false;
+                };
+                // Send a real mouse event, not just SetCursorPos. Touch suppression
+                // can survive position-only updates on a headless console.
+                let ok = send(&[mouse(
+                    MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
+                    dx,
+                    dy,
+                    0,
+                )]);
                 POINTER_TARGET_VALID.store(ok, std::sync::atomic::Ordering::Relaxed);
                 ok
             }
@@ -766,5 +787,42 @@ mod lease_tests {
             ]
         );
         assert!(lease.releases().is_empty());
+    }
+}
+
+/// Pixel-center mapping avoids edge rounding and supports negative monitor origins.
+fn absolute_mouse_point(
+    x: i32,
+    y: i32,
+    left: i32,
+    top: i32,
+    width: i32,
+    height: i32,
+) -> Option<(i32, i32)> {
+    fn axis(p: i32, origin: i32, size: i32) -> Option<i32> {
+        let offset = i64::from(p) - i64::from(origin);
+        if size <= 0 || offset < 0 || offset >= i64::from(size) {
+            return None;
+        }
+        Some((((offset * 2 + 1) * 65536) / (i64::from(size) * 2)).clamp(0, 65535) as i32)
+    }
+    Some((axis(x, left, width)?, axis(y, top, height)?))
+}
+#[cfg(test)]
+mod absolute_tests {
+    use super::absolute_mouse_point;
+    #[test]
+    fn virtual_monitor_pixel_centers_round_trip() {
+        for x in 0..2304 {
+            let (dx, _) = absolute_mouse_point(x, 0, 0, 0, 2304, 768).unwrap();
+            assert_eq!((i64::from(dx) * 2304 / 65536) as i32, x);
+        }
+    }
+    #[test]
+    fn negative_origin_and_outside_fail_closed() {
+        assert!(absolute_mouse_point(-1280, -720, -1280, -720, 2304, 1488).is_some());
+        assert!(absolute_mouse_point(-1281, 0, -1280, 0, 2304, 720).is_none());
+        assert!(absolute_mouse_point(0, 0, 0, 0, 0, 720).is_none());
+        assert!(absolute_mouse_point(2304, 0, 0, 0, 2304, 768).is_none());
     }
 }

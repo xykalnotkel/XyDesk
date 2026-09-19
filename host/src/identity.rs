@@ -236,6 +236,7 @@ pub fn set_password(pw: &str) -> std::io::Result<()> {
         ));
     }
     fs::create_dir_all(config_dir())?;
+    crate::remembered::revoke_all()?;
     fs::write(config_dir().join("password"), pw)
 }
 
@@ -243,7 +244,7 @@ pub fn set_password(pw: &str) -> std::io::Result<()> {
 ///
 /// Bisa diarahkan ulang lewat env `XYDESK_HOME` — dipakai test otomatis dan
 /// mode portable (installer tanpa instalasi: identitas ikut folder aplikasi).
-fn config_dir() -> PathBuf {
+pub(crate) fn config_dir() -> PathBuf {
     if let Ok(dir) = std::env::var("XYDESK_HOME") {
         let dir = dir.trim();
         if !dir.is_empty() {

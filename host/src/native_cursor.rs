@@ -1,4 +1,12 @@
 //! Draw the current Windows cursor into a small desktop tile, not a client arrow.
+// A suppressed touch/pen pointer is different from an application's hidden cursor.
+// Only suppression permits the Windows standard arrow when no current shape exists.
+pub fn cursor_policy(flags: u32, has_shape: bool) -> (bool, bool) {
+    let showing = flags & 1 != 0;
+    let suppressed = flags & 2 != 0;
+    (showing || suppressed, suppressed && !has_shape)
+}
+
 #[cfg(target_os = "windows")]
 pub fn draw_bgra(
     pixels: &mut [u8],
@@ -16,8 +24,17 @@ pub fn draw_bgra(
             ..Default::default()
         };
         GetCursorInfo(&mut cursor).map_err(|e| e.to_string())?;
-        if cursor.flags != CURSOR_SHOWING {
+        let (draw, default_shape) = cursor_policy(cursor.flags.0, !cursor.hCursor.is_invalid());
+        if !draw {
             return Ok(());
+        }
+        let handle = if default_shape {
+            LoadCursorW(None, IDC_ARROW).map_err(|e| e.to_string())?
+        } else {
+            cursor.hCursor
+        };
+        if handle.is_invalid() {
+            return Err("cursor: Windows tidak menyediakan bentuk".into());
         }
         struct Icon {
             handle: HICON,
@@ -33,7 +50,7 @@ pub fn draw_bgra(
             }
         }
         let mut icon = Icon {
-            handle: CopyIcon(HICON(cursor.hCursor.0)).map_err(|e| e.to_string())?,
+            handle: CopyIcon(HICON(handle.0)).map_err(|e| e.to_string())?,
             info: ICONINFO::default(),
         };
         GetIconInfo(icon.handle, &mut icon.info).map_err(|e| e.to_string())?;
@@ -133,4 +150,21 @@ pub fn draw_bgra(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn suppression_uses_native_default_only_when_shape_missing() {
+        assert_eq!(cursor_policy(2, false), (true, true));
+        assert_eq!(cursor_policy(2, true), (true, false));
+        assert_eq!(cursor_policy(1, true), (true, false));
+        assert_eq!(cursor_policy(3, true), (true, false));
+    }
+    #[test]
+    fn deliberate_application_hide_is_preserved() {
+        assert_eq!(cursor_policy(0, true), (false, false));
+        assert_eq!(cursor_policy(0, false), (false, false));
+    }
 }

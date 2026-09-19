@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- **Console/guest repair (gates pending):** suppressed native pointer composition + real mouse events; managed host ticket refresh/heartbeat and console process-tree supervision; no guest duration cap; short connection tickets with remembered, host-revocable browser grants. User verified real console720 with previous build; cursor/reconnect repair still requires new-package field verification. No RDP/driver/security-policy changes. `docs/qa/console-guest-2026-09-19.md`.
+
 - **VDD3010 hotfix (Windows35412599966 SUCCESS; PS5/PS7 masing-masing35 assertions, WhatIf dan catalog trust PASS):**3010 adalah sukses-butuh-reboot, bukan penolakan. Jangan rollback device accepted0/3010; simpan pending state, jangan ulang install pada boot yang sama. Resume opt-in memvalidasi ownership, pinned driver bytes, config dan existing hardware ID sebelum meneruskan setup lama. Tanpa reboot/service/RDP restart otomatis. Bug lama menghapus device setelah3010 pada laporan pengguna; visibleVirtual kosong sesudah cleanup bukan bukti session isolation.
 
 - **VDISPLAY720 closure:** source691dd09, Windows35408521780 **SUCCESS Linux168/Windows157**; setup/native helper WhatIf + real pinned archive/Windows catalog trust PASS. NSIS35408977237 **SUCCESS** termasuk shortcut Virtual720. Belum driver install/virtual capture di runner atau RDP pengguna; integration candidate, bukan bukti lock mutlak. Tidak deploy web/backend. `docs/qa/virtual720-package-2026-09-18.json`.

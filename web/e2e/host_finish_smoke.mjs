@@ -55,7 +55,7 @@ try{
  HTMLMediaElement.prototype.play=function(){if(this.tagName==='AUDIO'&&++window.__audioCalls===1)return Promise.reject(new DOMException('fixture autoplay block','NotAllowedError'));return original.call(this);};
  });
  await page.goto('http://127.0.0.1:4177/control-fixture');
-  await page.locator('input').nth(0).fill('123456789');await page.locator('input').nth(1).fill('fixture');
+  await page.locator('input').nth(0).fill('123456789');await page.locator('.pw-field input').fill('fixture');
   await page.getByRole('button',{name:'Konek sekarang',exact:true}).click();
   await page.locator('.session-connecting').waitFor({state:'visible'});
   await page.getByRole('button',{name:'Kembali / batalkan',exact:true}).click();
@@ -166,7 +166,7 @@ assert.equal(await page.locator('.remote-control-cursor').isVisible(),false);
   await page.getByRole('group',{name:'Kombinasi',exact:true}).getByRole('button',{name:'Ctrl',exact:true}).click();
   await page.getByRole('group',{name:'Kombinasi',exact:true}).getByRole('button',{name:'C',exact:true}).click();
   await page.getByLabel('Nama',{exact:true}).fill('Ctrl+C');
-  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/host-finish-editor-2026-09-18.png',import.meta.url).pathname});
+  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/console-guest-editor-2026-09-19.png',import.meta.url).pathname});
   await page.getByRole('button',{name:'Simpan layout',exact:true}).click();
   await page.evaluate(()=>window.__inputs=[]);
   await page.keyboard.down('ControlLeft');
@@ -194,7 +194,7 @@ assert.equal(await page.locator('.remote-control-cursor').isVisible(),false);
   assert.equal(await page.locator('.remote-control-cursor').isVisible(),false);
   assert.equal(await page.evaluate(()=>window.__inputs.length),inputCount);
   checks.push({wallpaperHD:true,previewIndependentOfVideo:true,cursorFeedbackNoInjection:true,connectFullscreen:true,viewport,defaultTrackpad:true,localArrowHidden:true,swipe:true,tap:true,cancelNoClick:true,holdAndDrag:true,twoFingerScroll:true,directPositionBeforeClick:true,localArrowHiddenInFullscreen:true,centerButton:true,audioPlayRetry:true,audioMute:true,savedPrefsSentOnce:true,randomUrl:true,loadingInsideSession:true,cancelDoesNotResurrect:true,guestHistoryPreviewAndPage:true,automaticPreviewOnce:true,keyboardDismissReleasesModifier:true,mappingMoveResizeSave:true,borderOnly:true,customPickers:true,mappingDownImmediateBeforeRelease:true,longPressRightBothModes:true,mouseHudWindowsScroll:true,chordWithPhysicalModifier:true,oneCardPerDevice:true,pageErrors:errors});
-  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/host-finish-ui-2026-09-18.png',import.meta.url).pathname});
+  if(viewport.width===844)await page.screenshot({path:new URL('../../docs/qa/console-guest-ui-2026-09-19.png',import.meta.url).pathname});
   await page.getByRole('button',{name:'Putuskan',exact:true}).click();
   const rows=await page.evaluate(()=>JSON.parse(localStorage.getItem('xydesk.guest.history.v1')));
   assert.equal(rows.length,1);assert.equal(rows[0].state,'ended');assert.equal(rows[0].name,'PC uji sintetis');assert.ok(rows[0].preview?.startsWith('data:image/jpeg;base64,'));
@@ -219,14 +219,14 @@ assert.equal(await page.locator('.remote-control-cursor').isVisible(),false);
  for(const scenario of ['opt-out','revoke-pending']){
   const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();
   await page.goto('http://127.0.0.1:4177/control-fixture');
-  await page.locator('input').nth(0).fill('123456789');await page.locator('input').nth(1).fill('fixture');
+  await page.locator('input').nth(0).fill('123456789');await page.locator('.pw-field input').fill('fixture');
   if(scenario==='opt-out')await page.locator('.history-consent input').uncheck();else await page.evaluate(()=>window.__holdWallpaper=true);
   await page.getByRole('button',{name:'Konek sekarang',exact:true}).click();
   await page.waitForFunction(()=>window.__fixtureStartDone===1);
   if(scenario==='opt-out'){await page.waitForTimeout(200);assert.equal(await page.evaluate(()=>window.__inputs.filter(b=>b[0]===13).length),0);}
   else{
     await page.waitForFunction(()=>window.__deliverWallpaper);
-    await page.getByRole('button',{name:'Pengaturan sesi',exact:true}).click();await page.getByRole('tab',{name:'Gambar',exact:true}).click();await page.getByText('Windows/RDP menolak perubahan.',{exact:false}).waitFor();await page.getByText('Windows/RDP menolak perubahan.',{exact:false}).scrollIntoViewIfNeeded();await page.screenshot({fullPage:true,path:new URL('../../docs/qa/host-finish-desktop-status-2026-09-18.png',import.meta.url).pathname});await page.getByRole('tab',{name:'Sesi',exact:true}).click();
+    await page.getByRole('button',{name:'Pengaturan sesi',exact:true}).click();await page.getByRole('tab',{name:'Gambar',exact:true}).click();await page.getByText('Windows/RDP menolak perubahan.',{exact:false}).waitFor();await page.getByText('Windows/RDP menolak perubahan.',{exact:false}).scrollIntoViewIfNeeded();await page.screenshot({fullPage:true,path:new URL('../../docs/qa/console-guest-desktop-status-2026-09-19.png',import.meta.url).pathname});await page.getByRole('tab',{name:'Sesi',exact:true}).click();
     await page.getByRole('switch',{name:'Preview wallpaper otomatis',exact:true}).click();
     await page.evaluate(()=>window.__deliverWallpaper());await page.waitForTimeout(100);
     assert.equal(await page.evaluate(()=>window.__fixtureSession.wallpaperTransfer.pending),null);

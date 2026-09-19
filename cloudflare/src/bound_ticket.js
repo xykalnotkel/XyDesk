@@ -18,8 +18,12 @@ export async function readBoundTicket(token, id, role, secret) {
 // An authenticated internal caller supplies the signed/attached principal,
 // never an arbitrary browser header. Failure to reach AuthStore is not approval.
 export async function checkPrincipal(env, principal) {
+  // Ticket expiry is enforced on admission. An admitted guest media session
+  // has no duration cap; this exception never applies to member authorization.
+  if (principal?.guest === true && principal.unlimited === true &&
+      Number.isSafeInteger(principal.expiresAt) && principal.expiresAt > 0 &&
+      validPrincipal({...principal,expiresAt:Math.floor(Date.now()/1000)+1})) return true;
   if (!validPrincipal(principal)) return false;
-  // Guests have no mutable account record; their signed expiry is the limit.
   if (principal.guest) return true;
   const store = env.AUTH_STORE.get(env.AUTH_STORE.idFromName('auth'));
   const r = await store.fetch(new Request('https://internal/auth/check-principal', {

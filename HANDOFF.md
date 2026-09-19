@@ -2034,3 +2034,9 @@ Operator - XyDesk Team, SESI-20260917-OPERATOR-PASSWORDMFA. Pemilik memilih pass
 - [x] Perbaikan provisioner source31380fc: accepted0/3010 tidak rollback; verified opt-in resume dan same-boot pending guard. Windows35412599966 SUCCESS: PS5/PS7 masing-masing35 assertions, native helper WhatIf, pinned catalog trust. Bukti `docs/qa/vdd3010-2026-09-19.json`. Workflow awal35412555463 gagal parsing dynamic shell; diganti shell literal lalu tes benar-benar dijalankan.
 - [ ] Field follow-up: pengguna perlu menjalankan patch Repair-VirtualDisplay3010.ps1 -Install -Resume dan read-only display-probe. Installer691dd09 yang telah dikirim masih membundel provisioner lama; jangan menganggap installer tersebut sudah diperbaiki. Patch hanya script, bukan rebuild engine/NSIS atau rilis versi aplikasi. Jangan reboot runner tanpa rencana recovery. Empty visibleVirtual setelah cleanup lama tidak membuktikan RDP isolation.
 - Bahan berita (belum dipublikasikan): penyiapan layar virtual kini membedakan permintaan restart Windows dari kegagalan pemasangan, mempertahankan perangkat yang diterima, dan memeriksa kepemilikan sebelum melanjutkan setup terputus. Belum klaim desktop720p pengguna berhasil.
+
+## Console / guest repair — Operator, 2026-09-19
+
+- User confirmed console1280×720 streaming; cursor probe flags2/null shape. Treat suppression separately from deliberately hidden application cursor.
+- Explicit scope: no guest duration cap, browser remembered access with owner revocation; technical tokens refreshed, not permanent privileged tokens. No auth database migration or global rotation. New host needed to issue remembered grants.
+- Pending final gates, runtime rollout and NSIS packaging; see `docs/qa/console-guest-2026-09-19.md`. Keep already-working audio/input/Virtual720 and OAuth clients.

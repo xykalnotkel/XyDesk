@@ -1,0 +1,23 @@
+{
+  "linuxRustTests": 176,
+  "webTests": 84,
+  "backendTests": 188,
+  "nsisBuilderTests": 7,
+  "browserRegression": "portrait/landscape controls, audio, wallpaper, history PASS (fixture transport)",
+  "rememberedBrowser": "reload, no password persistence, error retry, revoke, site-data clear PASS",
+  "backendRuntime": {
+    "pass": true,
+    "checks": [
+      "real Worker + SQLite + WebSockets",
+      "bound ticket issued",
+      "old ticket WS401/TURN403 after revoke",
+      "idle alarm sends host bye and client close1008",
+      "admitted guest survives credential expiry; expired JWT cannot open a new admission",
+      "host and unrelated guest stay connected"
+    ],
+    "alarmObservedMs": 15023,
+    "limit": "Host is protocol fixture, not Windows/Rust media process; no real P2P termination claim."
+  },
+  "windowsGate": "pending",
+  "fieldLimit": "User reported old build real1280x720 success; new native cursor and reconnect changes not installed/tested on user RDP yet."
+}
