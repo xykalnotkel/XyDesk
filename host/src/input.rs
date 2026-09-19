@@ -332,6 +332,9 @@ mod windows_inject {
                 let Some((px, py)) = point else {
                     return false;
                 };
+                use windows::Win32::UI::Input::KeyboardAndMouse::{
+                    MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_VIRTUALDESK,
+                };
                 use windows::Win32::UI::WindowsAndMessaging::{
                     GetSystemMetrics, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
                     SM_YVIRTUALSCREEN,

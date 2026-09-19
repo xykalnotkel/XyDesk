@@ -18,4 +18,4 @@ Operator authorization: fix cursor/reconnect; no guest session duration limit; b
 - Web automatic transport retry capped10 attempts, delay2s increasing to30s. No re-pair on owner/account revocation or manual stop. Guest session duration is not the same as network availability or unlimited retry budget.
 
 ## Validation
-Pending final Linux/Windows gates, browser fixture, runtime backend and package proof. No claim of Windows field cursor/reconnect success before the new binary is installed by user.
+Linux176, web84, backend188, NSIS builder7 PASS. Browser controls (two viewports) and remembered-access/revoke fixture PASS. Real Worker/SQLite/WebSocket runtime authorization PASS. Windows first run35420994164 caught two missing mouse-flag imports; fixed before delivery, rerun pending. Backend/web deployed separately after tests; package proof pending. No claim of Windows field cursor/reconnect success before the new binary is installed by user.

@@ -9,7 +9,8 @@ $ErrorActionPreference='Stop'
 & '__WORKER__' -CheckOnly
 [XyDeskConsoleLifetime]::OwnChildren()
 $child=Start-Process -FilePath "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -ArgumentList '-NoProfile -Command Start-Sleep -Seconds 120' -PassThru
-$child.Id | Set-Content '__PID__'
+$child.Id | Set-Content '__PID__.tmp'
+Move-Item '__PID__.tmp' '__PID__'
 Start-Sleep -Seconds 120
 '@
 $body=$body.Replace('__WORKER__',$worker.Replace("'","''")).Replace('__PID__',$pidFile.Replace("'","''"))
@@ -20,7 +21,9 @@ try {
  $parent=Start-Process -FilePath $shell -ArgumentList "-NoProfile -NonInteractive -EncodedCommand $encoded" -RedirectStandardOutput (Join-Path $root 'out.txt') -RedirectStandardError (Join-Path $root 'err.txt') -PassThru
  for($i=0;$i -lt 60;$i++){if(Test-Path $pidFile){break};if($parent.HasExited){throw (Get-Content (Join-Path $root 'err.txt') -Raw)};Start-Sleep -Milliseconds 250}
  if(!(Test-Path $pidFile)){throw 'Child PID was not recorded.'}
- $child=Get-Process -Id ([int](Get-Content $pidFile -Raw))
+ $childId=(Get-Content $pidFile -Raw).Trim()
+ if($childId -notmatch '^\d+$' -or [int]$childId -le 4){throw 'Invalid child PID.'}
+ $child=Get-Process -Id ([int]$childId)
  Stop-Process -Id $parent.Id -Force
  for($i=0;$i -lt 40;$i++){if($child.HasExited){break};Start-Sleep -Milliseconds 100}
  if(!$child.HasExited){throw 'Stopping worker left its child alive.'}
