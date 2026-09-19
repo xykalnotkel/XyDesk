@@ -7,19 +7,27 @@ jobs:
   policy:
     runs-on: windows-latest
     timeout-minutes: 10
-    strategy:
-      matrix:
-        shell: [powershell, pwsh]
     steps:
       - uses: actions/checkout@v4
-      - name: Parse and test 3010 ownership and rollback policy
-        shell: ${{ matrix.shell }}
+      - name: Policy regression (powershell)
+        shell: powershell
         run: ./packaging/tests/test-vdd-policy.ps1
-      - name: Compile native helper without device changes
-        shell: ${{ matrix.shell }}
+      - name: Native helper WhatIf (powershell)
+        shell: powershell
         run: |
           ./packaging/manual-host/Setup-VirtualDisplay.ps1 -Install -WhatIf
           ./packaging/manual-host/Setup-VirtualDisplay.ps1 -Install -Resume -WhatIf
-      - name: Verify pinned archive and catalog without installation
-        shell: ${{ matrix.shell }}
+      - name: Pinned catalog verification (powershell)
+        shell: powershell
+        run: ./packaging/manual-host/Setup-VirtualDisplay.ps1 -VerifyOnly
+      - name: Policy regression (pwsh)
+        shell: pwsh
+        run: ./packaging/tests/test-vdd-policy.ps1
+      - name: Native helper WhatIf (pwsh)
+        shell: pwsh
+        run: |
+          ./packaging/manual-host/Setup-VirtualDisplay.ps1 -Install -WhatIf
+          ./packaging/manual-host/Setup-VirtualDisplay.ps1 -Install -Resume -WhatIf
+      - name: Pinned catalog verification (pwsh)
+        shell: pwsh
         run: ./packaging/manual-host/Setup-VirtualDisplay.ps1 -VerifyOnly
