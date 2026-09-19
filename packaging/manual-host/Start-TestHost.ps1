@@ -38,7 +38,11 @@ try {
     if ($VirtualDisplay720p) { $extra += '--virtual-display-720p' }
     # Jendela aplikasi baru harus terbuka di layar yang di-stream, jadi monitor
     # virtual 720p dijadikan primary pada sesi console sebelum engine berjalan.
-    try { & (Join-Path $PSScriptRoot 'Console-Primary.ps1') | Out-Host } catch { Write-Warning "Penataan layar primary dilewati: $($_.Exception.Message)" }
+    try {
+      $primaryMsg = & (Join-Path $PSScriptRoot 'Console-Primary.ps1')
+      if ($LogPath) { Add-Content -LiteralPath $LogPath -Value (([DateTime]::UtcNow.ToString('o')) + ' [primary] ' + (($primaryMsg | ForEach-Object { $_.ToString() }) -join ' ')) }
+      else { $primaryMsg | Out-Host }
+    } catch { Write-Warning "Penataan layar primary dilewati: $($_.Exception.Message)" }
     Write-Host 'Saat tersambung, host meminta mode desktop 16:9 yang didukung. Gunakan -KeepDesktopResolution untuk menonaktifkan.'
     $delay = 1
     do {
@@ -55,7 +59,7 @@ try {
                 }
                 # Allow-list operational messages. Never log ID/password, control tokens,
                 # peer labels, pairing grants, or arbitrary server response bodies.
-                if ($line -match '^\[cursor\]' -or $line -match '^\[xydesk-host\] (terhubung ke|terdaftar sebagai|koneksi signaling putus|signaling heartbeat timeout|token endpoint|refresh |identity unavailable)') {
+                if ($line -match '^\[cursor\]' -or $line -match '^\[xydesk-host\] (terhubung ke|terdaftar sebagai|koneksi signaling putus|signaling heartbeat timeout|token endpoint|refresh |identity unavailable|NVENC |video software|capture di-respawn|quality dari client|bitrate dari client|bitrate auto)') {
                     Add-Content -LiteralPath $LogPath -Value (([DateTime]::UtcNow.ToString('o')) + ' ' + $line.Substring(0,[Math]::Min(256,$line.Length)))
                 }
             }
