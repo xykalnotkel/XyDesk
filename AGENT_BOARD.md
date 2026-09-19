@@ -80,7 +80,6 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 
 | ID Sesi | Agent | Role / Area | Status | Sedang mengerjakan | Mulai |
 |---|---|---|---|---|---|
-| SESI-20260919-OPERATOR-UXFINISH | Operator - XyDesk Team | Host/web/installer | LAGI KERJA | Complete UXHD, adaptive FPS, controls, bundled display setup, validation and packaging. | 2026-09-19 |
 | SESI-20260919-OPERATOR-VDD3010 | Operator - XyDesk Team | Host provisioning | SELESAI | Hotfix31380fc; Windows35412599966 SUCCESS PS5/PS7 masing-masing35. Patch resume siap; field driver/720p belum terverifikasi, tanpa restart otomatis. | 2026-09-19 |
 
 ## Antrean izin push
@@ -107,6 +106,8 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260903-TARA-TESTS | Tara - XySpace Team | Backend / Edge (dipilih operator via chat): audit & perkuat tes worker signaling/berita — verifyGoogleIdToken (nol-test) dikunci 14 kasus RSA sungguhan, verifyJwt +6 kasus tepi, token signaling +kasus tamper/rusak, relayAllowed bye/ice, adminPublish +8 kasus (slug changelog); tanpa perubahan kode produksi; cloudflare/ 51/51 + news/ 20/20 hijau | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi izin push (run gate) — lihat push sesi ini |
 
 ## Riwayat sesi (hanya bertambah)
+
+UXFINISH SESI-20260919-OPERATOR-UXFINISH — SELESAI: web89 + browser history/controls/wallpaper/FPS fixtures PASS; web live3cb7742 (versi1112cb9e) OAuth/CSP preserved; host Windows35426926255 SUCCESS (Linux+Windows+PS5/PS7+VDD guards); NSIS35427200341 SUCCESS installer b2e142fd…da070 source02b5212; bundled pinned driver MIT, silent install tidak provision; field Windows user belum diuji. Run: https://github.com/xykalnotkel/XyDesk/actions/runs/35427200341
 
 | ID Sesi | Agent | Area | Status | Ringkasan | Selesai |
 |---|---|---|---|---|---|

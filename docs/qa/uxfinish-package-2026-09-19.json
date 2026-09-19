@@ -1,0 +1,23 @@
+{
+  "sourceSha": "02b5212cc40e8b916651ffcc666cc91601451d5f",
+  "windowsRun": 35426926255,
+  "nsisRun": 35427200341,
+  "installer": {
+    "file": "XyDesk-Host-Test-Setup-x64.exe",
+    "bytes": 4859481,
+    "sha256": "b2e142fdd44b6e933794c69e4e72f9299a776fb808d5fdd225bc8001567da070"
+  },
+  "engineSha256": "bafd25359b87f922b8d62d4dca9323c61145c3ea5b76fd8aeb57132fae3ddd00",
+  "manualZip": {
+    "file": "XyDesk-Host-Test-x64-02b5212.zip",
+    "sha256": "f4df71cca469f4ef9f054fc343b4a826bdac882ecf9eb0234b088ba3c576cf6c"
+  },
+  "bundledDriver": {
+    "sha256": "e24210692b442b39af763536330ce78b423f19342b7a7792c26de3944e418b3a",
+    "license": "MIT",
+    "silentInstallProvisions": false
+  },
+  "webDeployedAsset": "/assets/index-BhGg6mP4.js",
+  "webVersionId": "1112cb9e-021c-462b-bdb5-421598a73af8",
+  "fieldTestedOnUserWindows": false
+}
