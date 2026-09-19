@@ -1,0 +1,61 @@
+{
+  "run": 35412599966,
+  "source": "31380fcf3539a8401fcf15f6ab93cdfd7c4d6e2d",
+  "url": "https://github.com/xykalnotkel/XyDesk/actions/runs/35412599966",
+  "result": "success",
+  "jobs": [
+    {
+      "id": 105815013354,
+      "result": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "result": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "result": "success"
+        },
+        {
+          "name": "Policy regression (powershell)",
+          "result": "success"
+        },
+        {
+          "name": "Native helper WhatIf (powershell)",
+          "result": "success"
+        },
+        {
+          "name": "Pinned catalog verification (powershell)",
+          "result": "success"
+        },
+        {
+          "name": "Policy regression (pwsh)",
+          "result": "success"
+        },
+        {
+          "name": "Native helper WhatIf (pwsh)",
+          "result": "success"
+        },
+        {
+          "name": "Pinned catalog verification (pwsh)",
+          "result": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "result": "success"
+        },
+        {
+          "name": "Complete job",
+          "result": "success"
+        }
+      ],
+      "policyAssertions": [
+        "35",
+        "35"
+      ],
+      "catalogPassCount": 2
+    }
+  ],
+  "scriptSha256": "c1166bdba78605b80b6280ca46a7c3264e530dc033f5fcb48962c0e823d741ff",
+  "scope": "Provisioning script hotfix only; no host engine rebuild, no physical driver installation or RDP capture test."
+}
