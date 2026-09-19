@@ -1,0 +1,16 @@
+{
+  "sourceSha": "7ccebefa240ff54b3375cb24d642929644f4927a",
+  "windowsRun": 35439050512,
+  "nsisRun": 35439383518,
+  "installer": {
+    "file": "XyDesk-Host-Test-Setup-x64.exe",
+    "bytes": 4860211,
+    "sha256": "b888e1960b9ccb1097543c6f278017fef33946dbedebca78233d2a0d36af8b3d"
+  },
+  "fixes": [
+    "Console-Primary SizeOf PowerShell 5.1 (7ccebef)",
+    "semua isi uxhd3: Console-Fit/Launch/Primary, log NVENC/quality/bitrate, driver pinned MIT"
+  ],
+  "supersedes": "uxhd3-471c438",
+  "fieldTestedOnUserWindows": false
+}

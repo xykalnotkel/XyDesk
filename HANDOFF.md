@@ -2063,3 +2063,8 @@ Field note for next session: installed ce95f51 host remains valid; new web alone
 - Paket 471c438: Windows 35436838712 + NSIS 35437155953 SUCCESS; installer 47e26c24…e48b (4867245 byte) di deliverables/uxhd3-471c438. Bundled: Console-Fit/Console-Launch/Console-Primary/manager + driver pinned MIT; log status kini mencatat NVENC/video software/respawn/quality/bitrate dan hasil primary.
 - Status jujur: UI/UX modern live di web (8fcbd46 deploy index-CdcDnWJ7); host fungsional lengkap; yang tersisa hanya bukti lapangan VM GPU (NVENC aktif?, rasa 60 FPS, presisi game) dan keputusan rilis/versi. VM RDP saat ini valid untuk tes fungsi, bukan tolok ukur kehalusan.
 - Checklist tes GPU VM: install uxhd3 → Start → Statistik panel (FPS terima/loss/jitter/rtt) → coba 60 FPS + Sangat tinggi → tail console-status.log untuk baris NVENC → buka aplikasi dari dalam stream → Console-Fit bila ada jendela nyasar → uji game/input fisik.
+
+## Paket tunggal uxhd4 — Operator, 2026-09-19
+
+- 7ccebef: Windows 35439050512 + NSIS 35439383518 SUCCESS; installer di deliverables/uxhd4-7ccebef menggantikan uxhd3 (dihapus). Memperbaiki Console-Primary di PowerShell 5.1 (SizeOf dipindah ke C#) sehingga penataan layar primary benar-benar jalan dari manager Start; semua skrip console + log diagnostik + driver pinned tetap terbundel.
+- Status lapangan: host VM RDP user sempat STOP setelah percobaan shortcut Virtual720 di RDP (penolakan by design); pemulihan = install uxhd4 atau overwrite Console-Primary lalu manager Start. Bukti kehalusan/NVENC menunggu tes user (RDP untuk fungsi, VM GPU untuk performa).
