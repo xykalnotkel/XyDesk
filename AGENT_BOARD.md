@@ -106,6 +106,7 @@ lintas role; papan ini mencatat *keadaan saat ini* (real-time).
 | SESI-20260903-TARA-TESTS | Tara - XySpace Team | Backend / Edge (dipilih operator via chat): audit & perkuat tes worker signaling/berita — verifyGoogleIdToken (nol-test) dikunci 14 kasus RSA sungguhan, verifyJwt +6 kasus tepi, token signaling +kasus tamper/rusak, relayAllowed bye/ice, adminPublish +8 kasus (slug changelog); tanpa perubahan kode produksi; cloudflare/ 51/51 + news/ 20/20 hijau | DISETUJUI | Xyckal (chat) | 2026-09-03 | Verifikasi izin push (run gate) — lihat push sesi ini |
 
 ## Riwayat sesi (hanya bertambah)
+UXHD-2 SESI-20260919-OPERATOR-UXFINISH — SELESAI PARSIAL: web live 8fcbd46 (rail kanan, tanpa checkbox, mapping terlihat); paket cf9bb7b (Console-Primary otomatis, thread encoder 4) Windows35431190277+NSIS35431520756 SUCCESS installer b14784b5…f845; kehalusan lapangan menunggu angka statistik user. https://github.com/xykalnotkel/XyDesk/actions/runs/35431520756
 
 UXFINISH SESI-20260919-OPERATOR-UXFINISH — SELESAI: web89 + browser history/controls/wallpaper/FPS fixtures PASS; web live3cb7742 (versi1112cb9e) OAuth/CSP preserved; host Windows35426926255 SUCCESS (Linux+Windows+PS5/PS7+VDD guards); NSIS35427200341 SUCCESS installer b2e142fd…da070 source02b5212; bundled pinned driver MIT, silent install tidak provision; field Windows user belum diuji. Run: https://github.com/xykalnotkel/XyDesk/actions/runs/35427200341
 

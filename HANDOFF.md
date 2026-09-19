@@ -2050,3 +2050,10 @@ Host fc16aa9 tests Linux/Windows, pinned VDD trust and existing-device WhatIf, P
 Not Windows user-machine performance proof: FPS60 follows negotiated limits and available encoder/network; native4K remains15. Driver setup preserves existing config/device, requires visible admin permission, no reboot/RDP change. Account browsers that never received a grant must pair once; no plaintext password saved.
 
 Field note for next session: installed ce95f51 host remains valid; new web alone fixes remembered history because resume-token host support already exists there. FPS/quality/bundled driver require installing package02b5212; never reinstall over a working host without user choice. User-machine streaming/FPS quality remains unproven by CI.
+
+## Perbaikan lapangan UXHD-2 — Operator, 2026-09-19
+
+- Keluhan user: video+input tidak halus, rail atas tidak disukai, mapping terasa hilang, jendela aplikasi hanya muncul di taskbar stream, checkbox preview di connect tidak diinginkan.
+- Web 8fcbd46 live (index-CdcDnWJ7): rail kanan kembali, checkbox dihapus (izin otomatis + tombol lupakan), tombol pointer mapping dipindah dari zona rail/keyboard dan diberi tint, migrasi satu kali menambah mouse/scroll yang hilang, editor di atas panel. 90 tes unit + fixture browser PASS sebelum deploy.
+- Host cf9bb7b: Console-Primary.ps1 (monitor virtual 720p jadi primary sesi console, idempoten, tanpa reboot) dipanggil otomatis launcher; openh264 num_threads 4 untuk latensi encode. Windows 35431190277 + NSIS 35431520756 SUCCESS; installer b14784b5…f845 di deliverables/uxhd2-cf9bb7b. Jendela yang sudah terbuka sebelum primary tetap harus ditutup-buka ulang.
+- Belum terbukti di mesin user: kehalusan 60 FPS (butuh angka statistik panel: FPS terima, loss, jitter, rtt) dan presisi game. Reboot pending 3010 dari install driver tadi tetap pilihan user; device sudah Status OK tidak wajib reboot.

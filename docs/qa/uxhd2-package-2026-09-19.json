@@ -1,0 +1,19 @@
+{
+  "sourceSha": "cf9bb7b59151621ff64c9be8a40bdbf2bbec6ec9",
+  "windowsRun": 35431190277,
+  "nsisRun": 35431520756,
+  "installer": {
+    "file": "XyDesk-Host-Test-Setup-x64.exe",
+    "bytes": 4861412,
+    "sha256": "b14784b5e97043338d0e1bbbc1a1118b1ce7042fc166640a57a377fd81bcf845"
+  },
+  "engineSha256Prefix": "40ebdb795e97",
+  "manualZipSha256": "bbee8595483cba887347f85ac26ba1172c05055df97f74c17756843044bcf5a4",
+  "contents": [
+    "Console-Primary.ps1 otomatis oleh Start-TestHost -VirtualDisplay720p",
+    "Console-Launch.ps1",
+    "openh264 num_threads 4"
+  ],
+  "webLiveAsset": "/assets/index-CdcDnWJ7.js",
+  "fieldTestedOnUserWindows": false
+}
