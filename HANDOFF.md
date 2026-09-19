@@ -2057,3 +2057,9 @@ Field note for next session: installed ce95f51 host remains valid; new web alone
 - Web 8fcbd46 live (index-CdcDnWJ7): rail kanan kembali, checkbox dihapus (izin otomatis + tombol lupakan), tombol pointer mapping dipindah dari zona rail/keyboard dan diberi tint, migrasi satu kali menambah mouse/scroll yang hilang, editor di atas panel. 90 tes unit + fixture browser PASS sebelum deploy.
 - Host cf9bb7b: Console-Primary.ps1 (monitor virtual 720p jadi primary sesi console, idempoten, tanpa reboot) dipanggil otomatis launcher; openh264 num_threads 4 untuk latensi encode. Windows 35431190277 + NSIS 35431520756 SUCCESS; installer b14784b5…f845 di deliverables/uxhd2-cf9bb7b. Jendela yang sudah terbuka sebelum primary tetap harus ditutup-buka ulang.
 - Belum terbukti di mesin user: kehalusan 60 FPS (butuh angka statistik panel: FPS terima, loss, jitter, rtt) dan presisi game. Reboot pending 3010 dari install driver tadi tetap pilihan user; device sudah Status OK tidak wajib reboot.
+
+## Kandidat tes VM GPU (uxhd3) — Operator, 2026-09-19
+
+- Paket 471c438: Windows 35436838712 + NSIS 35437155953 SUCCESS; installer 47e26c24…e48b (4867245 byte) di deliverables/uxhd3-471c438. Bundled: Console-Fit/Console-Launch/Console-Primary/manager + driver pinned MIT; log status kini mencatat NVENC/video software/respawn/quality/bitrate dan hasil primary.
+- Status jujur: UI/UX modern live di web (8fcbd46 deploy index-CdcDnWJ7); host fungsional lengkap; yang tersisa hanya bukti lapangan VM GPU (NVENC aktif?, rasa 60 FPS, presisi game) dan keputusan rilis/versi. VM RDP saat ini valid untuk tes fungsi, bukan tolok ukur kehalusan.
+- Checklist tes GPU VM: install uxhd3 → Start → Statistik panel (FPS terima/loss/jitter/rtt) → coba 60 FPS + Sangat tinggi → tail console-status.log untuk baris NVENC → buka aplikasi dari dalam stream → Console-Fit bila ada jendela nyasar → uji game/input fisik.

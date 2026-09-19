@@ -1,0 +1,23 @@
+{
+  "sourceSha": "471c4385f528ed2a400131167c95a5acb3de73ac",
+  "windowsRun": 35436838712,
+  "nsisRun": 35437155953,
+  "installer": {
+    "file": "XyDesk-Host-Test-Setup-x64.exe",
+    "bytes": 4867245,
+    "sha256": "47e26c24411d9326a1716cf1a068d26c90cb66659f2232b9b3b5b45cec24e48b"
+  },
+  "engineSha256Prefix": "d28ffdf7edb77918",
+  "manualZipSha256": "8759033f9ddc098c82fe271a62d140817a1108fa1007b95e8206f4af9eb66a5c",
+  "bundled": [
+    "Console-Fit.ps1",
+    "Console-Launch.ps1",
+    "Console-Primary.ps1",
+    "Console-Virtual720.ps1",
+    "Console-Worker.ps1",
+    "VirtualDisplayDriver.zip (MIT, pinned)"
+  ],
+  "diagnostics": "console-status.log kini memuat baris NVENC/video software/respawn/quality/bitrate dan hasil Console-Primary",
+  "purpose": "Kandidat tes VM GPU; fungsional penuh di VM RDP saat ini",
+  "fieldTestedOnUserWindows": false
+}
