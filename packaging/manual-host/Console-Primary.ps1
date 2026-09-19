@@ -21,6 +21,7 @@ public static class XyDeskDisplayLayout {
  public const int ATTACHED_TO_DESKTOP=0x1; public const int PRIMARY=0x4;
  public const int DM_POSITION=0x20; public const int DM_PRIMARY=0x40000;
  public const int CDS_NORESET=0x10000000; public const int CDS_UPDATEREGISTRY=0x1;
+ public static int DeviceCb(){ return Marshal.SizeOf(typeof(DISPLAY_DEVICE)); }
  public static bool Current(string deviceName,ref DEVMODE mode){ mode.dmSize=(short)Marshal.SizeOf(typeof(DEVMODE)); return EnumDisplaySettings(deviceName,ENUM_CURRENT_SETTINGS,ref mode); }
 }
 '@
@@ -28,7 +29,7 @@ public static class XyDeskDisplayLayout {
 $displays=@()
 for($i=0;;$i++){
  $dev=New-Object -TypeName 'XyDeskDisplayLayout+DISPLAY_DEVICE'
- $dev.cb=[System.Runtime.InteropServices.Marshal]::SizeOf($dev.GetType())
+ $dev.cb=[XyDeskDisplayLayout]::DeviceCb()
  if(-not [XyDeskDisplayLayout]::EnumDisplayDevices($null,$i,[ref]$dev,0)){break}
  if(($dev.StateFlags -band [XyDeskDisplayLayout]::ATTACHED_TO_DESKTOP) -ne [XyDeskDisplayLayout]::ATTACHED_TO_DESKTOP){continue}
  $mode=New-Object -TypeName 'XyDeskDisplayLayout+DEVMODE'
