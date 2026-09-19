@@ -24,6 +24,8 @@ Kebijakan rilis:
 
 ## [Belum terbit]
 
+- **Perbaikan lapangan UXHD:** rail kontrol kembali kolom kanan; checkbox izin preview dihapus (izin mengingat otomatis, tetap bisa dilupakan/dicabut); tombol pointer mapping dipisah dari rail dan diberi tint terlihat; layout lama sekali dimigrasi menambah tombol mouse/scroll yang hilang; monitor virtual 720p dijadikan primary di sesi console supaya jendela aplikasi terbuka di layar yang di-stream; thread encoder software 4 untuk latensi encode lebih rendah. Paket baru menyusul dengan hash terpisah.
+
 - **UXFINISH:** scoped member/guest remembered history with automatic resume; automatic wallpaper without opt-in/manual capture panel; WebP hero; border/name mouse/key controls with automatic chord labels and size/radius; pointer-down keyboard; adaptive bitrate presets and capability-gated30/60FPS through real encoder policy; bundled pinned VDD with explicit administrator setup preserving existing devices/configuration and no reboot/RDP changes. Validation and exact package revision recorded separately; no claim of zero lag or user-machine validation.
 
 - **Console/guest repair (Windows35421194650 + NSIS35421544833 SUCCESS):** suppressed native pointer composition + real mouse events; managed host ticket refresh/heartbeat and console process-tree supervision; no guest duration cap; short connection tickets with remembered, host-revocable browser grants. Sourcece95f51; Linux176/Windows165, web84/backend188, PS5/PS7 kill-on-close PASS. Web/backend deployed; user verified real console720 with previous build, new cursor/reconnect still requires field verification. No RDP/driver/security-policy changes. `docs/qa/console-guest-2026-09-19.md`.

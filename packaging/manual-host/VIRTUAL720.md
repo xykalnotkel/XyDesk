@@ -60,3 +60,7 @@ not remove shared drivers. Do not use global device-disable or testsigning comma
 This package has no claim of physical RDP acceptance, protected-desktop capture,
 zero latency, or automatic app migration. Native tests and signature checks are
 reported separately from actual adapter installation/capture on a user's machine.
+
+## Layar primary (2026-09-19)
+
+Console-Primary.ps1 menjadikan monitor virtual 1280x720 layar primary pada sesi pemanggil supaya jendela aplikasi baru dan ikon desktop muncul di layar yang di-stream. Dipanggil otomatis oleh Start-TestHost.ps1 -VirtualDisplay720p sebelum engine berjalan, idempoten, tanpa reboot, dan tidak mengubah resolusi maupun sesi lain.

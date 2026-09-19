@@ -274,7 +274,7 @@ pub fn prod_encoder_config_for(level: u8, fps: u32) -> EncoderConfig {
         .complexity(Complexity::Low)
         .sps_pps_strategy(SpsPpsStrategy::ConstantId)
         .intra_frame_period(IntraFramePeriod::from_num_frames(IDR_INTERVAL_FRAMES))
-        .num_threads(2)
+        .num_threads(4)
 }
 
 /// Encoder pola uji — menghasilkan frame H264 (Annex-B) dari pola I420.

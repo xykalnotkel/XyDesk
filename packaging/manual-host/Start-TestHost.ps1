@@ -36,6 +36,9 @@ try {
     if ($KeepDesktopResolution -and $VirtualDisplay720p) { throw 'Choose keep resolution OR virtual720.' }
     if ($KeepDesktopResolution) { $extra += '--keep-desktop-resolution' }
     if ($VirtualDisplay720p) { $extra += '--virtual-display-720p' }
+    # Jendela aplikasi baru harus terbuka di layar yang di-stream, jadi monitor
+    # virtual 720p dijadikan primary pada sesi console sebelum engine berjalan.
+    try { & (Join-Path $PSScriptRoot 'Console-Primary.ps1') | Out-Host } catch { Write-Warning "Penataan layar primary dilewati: $($_.Exception.Message)" }
     Write-Host 'Saat tersambung, host meminta mode desktop 16:9 yang didukung. Gunakan -KeepDesktopResolution untuk menonaktifkan.'
     $delay = 1
     do {
